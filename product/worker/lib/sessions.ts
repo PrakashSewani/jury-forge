@@ -1,7 +1,7 @@
 import type { SessionUser } from '@jury-forge/shared';
 import { randomToken, sha256Hex } from './crypto';
 
-const SESSION_COOKIE = 'jf_session';
+export const SESSION_COOKIE = 'jf_session';
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30;
 
 export async function createSession(db: D1Database, user: SessionUser): Promise<string> {
@@ -45,7 +45,7 @@ export function clearSessionCookie(): string {
   return `${SESSION_COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`;
 }
 
-export function sessionIdFromCookie(request: Request): string | null {
+export function cookieValue(request: Request, name: string): string | null {
   const header = request.headers.get('Cookie');
   if (!header) {
     return null;
@@ -55,9 +55,13 @@ export function sessionIdFromCookie(request: Request): string | null {
     if (separator === -1) {
       continue;
     }
-    if (part.slice(0, separator).trim() === SESSION_COOKIE) {
+    if (part.slice(0, separator).trim() === name) {
       return part.slice(separator + 1).trim();
     }
   }
   return null;
+}
+
+export function sessionIdFromCookie(request: Request): string | null {
+  return cookieValue(request, SESSION_COOKIE);
 }

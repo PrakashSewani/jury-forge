@@ -9,6 +9,28 @@ export interface SetupState {
   installed: boolean;
 }
 
+export interface AppManifest {
+  name: string;
+  url: string;
+  hook_attributes: { url: string; active: boolean };
+  redirect_url: string;
+  callback_urls: string[];
+  public: boolean;
+  default_permissions: Record<string, string>;
+  default_events: string[];
+}
+
+export interface SetupCodeResponse {
+  actionsUrl: string;
+  state: string;
+  manifest: AppManifest;
+}
+
+export interface InstallationInfo {
+  installed: boolean;
+  account: { login: string; type: 'user' | 'org' } | null;
+}
+
 export type ProviderFlavor = 'openai' | 'anthropic';
 
 export type FindingSeverity = 'info' | 'warning' | 'error';
