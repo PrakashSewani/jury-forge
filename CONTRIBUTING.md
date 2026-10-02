@@ -4,9 +4,8 @@ Thanks for wanting to help. This project is small on purpose — please keep it 
 
 ## Setup
 
-The stack is chosen when the project starts; the commands that actually work live in
-[docs/development.md](./docs/development.md). If that file is still empty, the project has not
-been scaffolded yet — see the `project-bootstrap` skill.
+Node 24 (see `.nvmrc`) and npm, then `npm install` and `npm run check`. The exact commands and
+the deploy procedure live in [docs/development.md](./docs/development.md).
 
 ## Before you open a PR
 
@@ -20,9 +19,9 @@ directly to `dev` or `main`. The only PRs targeting `main` are release PRs from 
 - Docs updated when behavior changes (`docs/` is the source of truth).
 - No new dependencies without a note explaining why.
 - For release PRs to `main`, apply exactly one `release:patch`, `release:minor`, or
-	`release:major` label. Merges without one of these labels do not publish a release.
+  `release:major` label. Merges without one of these labels do not publish a release.
 - A labeled release merge to `main` creates the version tag and GitHub release. Product and site
-	deployment remains manual.
+  deployment remains manual.
 
 ## Reporting bugs
 
