@@ -240,3 +240,22 @@ counts reviews. Recommended in `docs/design.md` and accepted by the user in chat
 
 **Rejected:** `REQUEST_CHANGES` (blocks merges); posting findings as individual comments (loses
 the one-review contract and the caps).
+
+## D-014: Outbound request mocking — MSW via `@msw/cloudflare`
+
+**Date:** 2026-10-02
+
+**Decision:** Tests mock outbound HTTP (GitHub now, model providers later) with Mock Service
+Worker: `msw` and `@msw/cloudflare` as product dev dependencies, a shared `setupNetwork()`
+module, and per-test handlers via `network.use()`. Versions resolved live on 2026-10-02:
+`@msw/cloudflare` 0.2.0 (peers `msw >= 3`; current `msw` 3.0.1 satisfies it). The dependencies
+land with phase-2 slice 2a.
+
+**Why:** it is the Workers Vitest plugin's supported path for outbound mocking — the old
+`fetchMock` export is gone and the plugin's guide directs to `@msw/cloudflare`; per-test
+handlers stay declarative, and interception covers worker and Durable Object code without
+production-code seams.
+
+**Rejected:** `vi.stubGlobal("fetch")` (Workers globals are not stubbable); fetch-injection
+plumbing through routes and the run engine (production code shaped by tests); a config-level
+`miniflare.outboundService` mock (no per-test control).

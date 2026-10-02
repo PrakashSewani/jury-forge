@@ -15,24 +15,21 @@ rule 4. Keep exactly one phase `in progress`.
 
 ## Current handoff
 
-**Phase:** 2 in progress — the product core, built as stacked pull requests. The design (PR #4)
-is in review; slice 1 (foundations) stacks on it in this PR (merge order: #4 → this PR → later
-slices).
+**Phase:** 2 in progress — the product core, built as stacked pull requests. The design and
+slice 1 (foundations) are merged to `dev` (PRs #4 and #5; CI green on merge commit `ba6fae3`).
 
-**Done this session:** started the phase-2 stack; recorded D-011 (checks on every pull request
-for stacked slices), D-012 (the installation-access gate) and D-013 (one `COMMENT` review per
-run); migration `0002` with the full phase-2 schema; `worker/lib/crypto.ts` (AES-256-GCM via
-`ENCRYPTION_KEY`, versioned format) and `worker/lib/sessions.ts` (D1-backed sessions, cookie
-helpers); shared API contracts (`shared/src/contracts.ts`); test D1 migrations wired through
-the Vitest plugin with crypto and sessions suites; CI now checks every pull request.
+**Done this session:** verified both merges and synced `dev`; deleted the merged local branches;
+refreshed this tracker; recorded D-014 (outbound mocking with MSW via `@msw/cloudflare`, the
+Vitest plugin's supported path).
 
-**Verified:** `npm run check` exits 0 — typecheck (3 programs + `astro check` + shared), lint,
-Prettier check, every Vitest suite (health, crypto, sessions) on migrated D1, and both builds.
+**Verified:** `dev` fast-forwarded to `ba6fae3`; the merge CI run (`36998197313`) succeeded;
+`git status` clean.
 
-**Blocked by:** nothing. Later slices stack on this branch; merge the stack bottom-up.
+**Blocked by:** nothing.
 
-**Next action:** review and merge #4, then this PR; slice 2 follows — the setup wizard (manifest
-flow, installation check, access gate, claim) with GitHub API mocking for tests.
+**Next action:** on the owner's go, start slice 2a — GitHub plumbing (app JWT, installation and
+OAuth calls, the access gate) with the setup and auth routes plus MSW-backed tests; slice 2b
+(the wizard UI) stacks on it.
 
 ## Backlog (owner-owned, deferred)
 
