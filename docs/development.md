@@ -22,8 +22,7 @@ skips dev dependencies — run `npm install --include=dev` in that case.
 | Command                                                                 | What it does                                                                                                                     |
 | ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | `npm run check`                                                         | typecheck + lint + format check + tests + build — the one command that must pass before anything is "done"; CI runs exactly this |
-| `npm run typecheck`                                                     | typecheck in every workspace (three `tsc` programs in `product/`, `astro check` in `site/`,                                      |
-| `tsc` in `shared/`)                                                     |
+| `npm run typecheck`                                                     | typecheck in every workspace (three `tsc` programs in `product/`, `astro check` in `site/`, `tsc` in `shared/`)                  |
 | `npm run lint`                                                          | ESLint across the repo                                                                                                           |
 | `npm run format` / `npm run format:check`                               | Prettier write / verify                                                                                                          |
 | `npm run test`                                                          | Vitest in `product/` — runs inside the Workers runtime via the Cloudflare Vitest plugin                                          |
@@ -40,10 +39,11 @@ skips dev dependencies — run `npm install --include=dev` in that case.
 
 - Local development and tests need no environment variables — the Vite plugin emulates bindings
   (including D1) locally.
-- Instance secrets (phase 2): `product/.dev.vars.example` is the reference. For local runs, copy
-  it to `product/.dev.vars` (gitignored); deployed instances set the same names with
-  `npx wrangler secret put <NAME>`. Nothing secret is ever committed — see the boundaries in
-  `docs/architecture.md`.
+- Instance secrets (phase 2): `product/.dev.vars.example` is the reference — `ENCRYPTION_KEY`
+  encrypts credentials at rest, and `SETUP_CODE` gates the one-time instance claim (D-008). For
+  local runs, copy it to `product/.dev.vars` (gitignored); deployed instances set the same names
+  with `npx wrangler secret put <NAME>`. Nothing secret is ever committed — see the boundaries
+  in `docs/architecture.md`.
 - Releases need the repository secret `RELEASE_TOKEN` (a repo-admin token with
   `contents: write`) before the first release — `main` is protected and the release workflow
   pushes with this token (D-007). Without it, the release job fails with instructions.

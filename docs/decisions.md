@@ -150,3 +150,49 @@ standard workaround is an admin token, which bypasses classic protection when
 
 **Manual step:** create the token and set the secret before the first release (see
 `docs/development.md`, Releases and deploys).
+
+## D-008: First-run setup protection — deploy-time setup code
+
+**Date:** 2026-10-02
+
+**Decision:** A fresh instance cannot be claimed until the owner sets a random `SETUP_CODE`
+Worker secret at deploy time. The setup wizard requires the code to complete the one-time
+claim, and claiming closes the wizard once an owner exists. The code lives only as a Worker
+secret — never in D1, never logged.
+
+**Why:** protects the window between deploy and claim without extra services or Zero Trust
+setup, and it fits the existing manual deploy flow, which already sets `ENCRYPTION_KEY`.
+Confirmed by the user in chat on 2026-10-02.
+
+**Rejected:** first-visitor claim (a deploy-to-claim race; it does not actually prevent a
+stranger); Cloudflare Access for Workers (strong, but adds Zero Trust setup, blocks webhook
+delivery while enabled, and needs relaxing after the claim).
+
+## D-009: Comment volume caps
+
+**Date:** 2026-10-02
+
+**Decision:** A run posts at most 10 inline comments per reviewer and 25 inline comments in
+total. Overflow, and findings without a file/line, land in the consolidated review summary,
+attributed per reviewer with `file:line` references.
+
+**Why:** keeps reviews actionable instead of noisy and bounds GitHub API calls per run.
+Confirmed by the user in chat on 2026-10-02.
+
+**Rejected:** 20 per reviewer / 50 per run (noisier, heavier); uncapped — every finding inline
+(noisy and unbounded).
+
+## D-010: Diff size budget for review context
+
+**Date:** 2026-10-02
+
+**Decision:** The context builder caps the diff sent per reviewer at 200 KB in total and 32 KB
+per file; lockfiles, generated files, and binaries are skipped; truncation is stated in the
+review. v1 ships these as fixed defaults — not per-instance configuration.
+
+**Why:** keeps prompts within common model context windows and processing within free-tier CPU
+budgets (see `docs/architecture.md`, free-tier posture). Confirmed by the user in chat on
+2026-10-02.
+
+**Rejected:** 64 KB total / 16 KB per file (over-truncates large PRs); no cap (token overflows,
+CPU spikes).

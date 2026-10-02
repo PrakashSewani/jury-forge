@@ -31,8 +31,9 @@ App. There is no central service — nothing runs anywhere but the owner's accou
 
 1. **Setup** — the owner deploys the Worker, opens the dashboard, and the wizard registers a
    private GitHub App through GitHub's manifest flow (webhook URL and OAuth callback pointing at
-   the instance itself). The owner installs the app, claims the instance, and configures
-   reviewers. All generated credentials and provider keys are encrypted into D1 (D-005).
+   the instance itself). The owner installs the app, claims the instance (the one-time claim
+   requires the deploy-time `SETUP_CODE` secret, D-008), and configures reviewers. All generated
+   credentials and provider keys are encrypted into D1 (D-005).
 2. **Review** — GitHub delivers a pull request event to the instance's webhook URL. The Worker
    verifies the HMAC signature, de-duplicates the delivery, and kicks a per-run Durable Object,
    which fetches PR context, runs the enabled reviewers against their configured providers
@@ -55,8 +56,7 @@ configured. Nothing else.
   is limited to the owner or owning-organization members.
 - **Free-tier posture.** Worker and Durable Object invocations are capped at 10 ms CPU on the
   free plan (30 s on Workers Paid). Review processing must stay I/O-bound and chunked: prefer raw
-  diff text over large JSON payloads, cap diff size, and split work across alarm segments. See
-  `docs/product.md` open questions.
+  diff text over large JSON payloads, cap diff size (D-010), and split work across alarm segments.
 - **Deployments are manual**, always to the owner's own account, and only when asked.
 
 ## Branch and release flow

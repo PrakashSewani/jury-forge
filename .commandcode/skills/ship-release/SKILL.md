@@ -56,11 +56,17 @@ authenticate with `npx wrangler login` (or `CLOUDFLARE_API_TOKEN`) first.
 ```bash
 # One time per instance, before the first deploy:
 npx wrangler d1 create jury-forge     # copy the returned database_id into product/wrangler.jsonc
-cd product && npx wrangler d1 migrations apply jury-forge --remote
+cd product
+npx wrangler d1 migrations apply jury-forge --remote
+npx wrangler secret put ENCRYPTION_KEY   # openssl rand -base64 32 — encrypts credentials at rest
+npx wrangler secret put SETUP_CODE       # openssl rand -base64 24 — one-time instance claim (D-008)
 
 # Every deploy:
 cd product && npm run deploy          # vite build && wrangler deploy (uses the build output config)
 ```
+
+Both secrets must exist before the setup wizard runs — the one-time claim requires `SETUP_CODE`
+(D-008).
 
 ### Promo site (static assets)
 
