@@ -35,7 +35,7 @@ eslint, prettier check, 2/2 Vitest tests inside the Workers runtime, vite + astr
 resolves the build-output configuration and lists the D1 binding; the D1 migration applies
 locally; dev/preview smoke tests served `/api/health` and both sites (HTTP 200). An independent
 verifier subagent re-ran the checks and its findings (this tracker, residual template text in
-`AGENTS.md` and the bootstrap skill, two doc nits) are fixed in this PR.
+`AGENTS.md` and the bootstrap skill, two doc nits) are fixed in this PR. CI is green on PR #1 (the `check` workflow on GitHub runners).
 
 **Blocked by:** nothing for the PR. Before the first release (phase 4): set the `RELEASE_TOKEN`
 secret — a repo-admin token with `contents: write` (D-007). Until it exists, the release
