@@ -88,11 +88,17 @@ manages reviewers, credentials, setup, and run history.
   personal account or an organization you administer) → install it on repositories → claim the
   instance → configure reviewers. Private apps are installable only on the owning account, and
   only the owner (or members of the owning organization) can authorize them.
+- Claim protection: the setup wizard requires the deploy-time `SETUP_CODE` secret to claim a
+  fresh instance; once claimed, the claim closes (D-008).
 - Triggers: pull request `opened`, `reopened`, `synchronize`, and `ready_for_review`; draft PRs
   are skipped.
 - Every trigger re-runs the team against the latest revision, reviewing the PR's cumulative diff
   against the base branch.
 - Findings are published as a single consolidated GitHub review per run.
+- Comment volume: at most 10 inline comments per reviewer and 25 per run; overflow lands in the
+  consolidated summary, attributed with `file:line` references (D-009).
+- Diff budget: per reviewer, 200 KB of diff total and 32 KB per file; lockfiles, generated
+  files, and binaries are skipped; truncation is noted in the review (D-010).
 - Reviewers run in parallel within a run; one reviewer failing does not cancel the others.
 - Reviewers are defined once per instance and enabled per repository.
 - Cost posture: designed to run within Cloudflare's free plan for typical personal use;
@@ -101,10 +107,5 @@ manages reviewers, credentials, setup, and run history.
 
 ## Open questions (resolve before implementing the related part)
 
-- First-run setup protection: how a fresh deployment prevents a stranger from claiming it
-  (deploy-time setup code, first-visitor claim, or Cloudflare Access) — decide before building
-  the setup wizard.
-- Comment volume controls: maximum inline comments per reviewer/run before overflow into the
-  summary — decide with the publishing logic.
-- Diff size limits: truncation strategy per model, plus bounded processing to stay within
-  free-tier CPU budgets — decide with the context builder.
+None open — the phase-2 questions were resolved on 2026-10-02 (D-008–D-010). Record new
+questions here as they come up.

@@ -10,3 +10,7 @@
 # AES-256-GCM master key that encrypts credentials at rest in D1.
 # Generate one with: openssl rand -base64 32
 ENCRYPTION_KEY=
+
+# One-time code required to claim a fresh instance from the setup wizard.
+# Generate one with: openssl rand -base64 24
+SETUP_CODE=

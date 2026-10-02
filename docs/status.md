@@ -8,42 +8,36 @@ rule 4. Keep exactly one phase `in progress`.
 | Phase | Scope                                                                                                 | Status      |
 | ----- | ----------------------------------------------------------------------------------------------------- | ----------- |
 | 0     | Requirements + stack selection: fill `docs/product.md`, choose the stack, record D-001                | completed   |
-| 1     | Scaffold: structure, checks, CI, release path — recorded in `docs/architecture.md` / `development.md` | in progress |
+| 1     | Scaffold: structure, checks, CI, release path — recorded in `docs/architecture.md` / `development.md` | completed   |
 | 2     | Product: the core workflow, end to end                                                                | not started |
 | 3     | Promo site: the site that explains it and sends people to it                                          | not started |
 | 4     | Launch: first release tagged, site deployed                                                           | not started |
 
 ## Current handoff
 
-**Phase:** 1 complete — the bootstrap scaffold is merged to `dev`; phase 2 (the product core) is
-not started, awaiting the owner's go.
+**Phase:** 1 complete. Phase-2 readiness review done — the three open product decisions are
+resolved (D-008–D-010) and the docs are current; phase 2 (the product core) is not started,
+awaiting the owner's go.
 
-**Done this session:** renamed the template to **Jury Forge**; captured the brief and the
-confirmed v1 contract in `docs/product.md`; recorded D-001 (full stack, versions resolved live)
-and D-004–D-007 (self-hosted single-tenant, per-instance private GitHub App via the manifest
-flow, Durable Object run engine, branch protections + release token) in `docs/decisions.md`.
-Scaffolded the npm-workspaces monorepo — `product/` (Cloudflare Worker with a Hono health API,
-a D1 binding + migration, the React dashboard, and Workers-runtime tests), `site/` (Astro promo
-site), `shared/` — with one `npm run check` command, CI on PRs to `dev`/`main` and pushes to
-`dev`, and the label-driven release workflow + `scripts/release.mjs`. Configured repository
-settings: `dev` as default, `release:*` labels, protections on both branches, release labels
-created (D-007).
+**Done this session:** cross-checked the docs against the repository (worker/dashboard layout,
+migrations, workflows, release script, workspace scripts) and fixed two inconsistencies — the
+phase tracker listed phase 1 "in progress" while the handoff said complete, and the
+`npm run typecheck` row in `docs/development.md` was a broken markdown table. Resolved the open
+questions from `docs/product.md`: D-008 — deploy-time `SETUP_CODE` claim protection; D-009 —
+inline comment caps (10 per reviewer, 25 per run); D-010 — diff budget (200 KB per reviewer,
+32 KB per file). Added `SETUP_CODE` to `product/.dev.vars.example` and to the deploy procedure
+in the `ship-release` skill, and refreshed this handoff.
 
-**Verified:** `npm run check` exits 0 (product 3× `tsc`, `astro check` 0 errors, shared `tsc`,
-eslint, prettier check, 2/2 Vitest tests inside the Workers runtime, vite + astro builds);
-`wrangler types --check` reports the committed Worker types current; `wrangler deploy --dry-run`
-resolves the build-output configuration and lists the D1 binding; the D1 migration applies
-locally; dev/preview smoke tests served `/api/health` and both sites (HTTP 200). An independent
-verifier subagent re-ran the checks and its findings (this tracker, residual template text in
-`AGENTS.md` and the bootstrap skill, two doc nits) are fixed in this PR. CI is green on PR #1 (the `check` workflow on GitHub runners).
+**Verified:** docs diff reviewed against the repository state; Prettier clean on every edited
+file; `npm run check` exits 0.
 
-**Blocked by:** nothing for the PR. Before the first release (phase 4): set the `RELEASE_TOKEN`
-secret — a repo-admin token with `contents: write` (D-007). Until it exists, the release
-workflow fails with instructions rather than publishing.
+**Blocked by:** nothing. Phase-2 implementation starts after `docs/design.md` is written and
+reviewed (docs-first), and on the owner's go.
 
-**Next action:** on the owner's go, start phase 2 docs-first — reviewer model and storage, the
-setup wizard (first-run claim protection; GitHub App manifest flow), and the Durable Object run
-engine — then implement the end-to-end review loop.
+**Next action:** on the owner's go, write `docs/design.md` — D1 schema (reviewers, provider
+bindings, repositories, runs, sessions), API surface, setup wizard/OAuth flow, Durable Object
+state machine, consolidation format, dashboard screens — then implement the end-to-end review
+loop.
 
 ## Backlog (owner-owned, deferred)
 
@@ -51,8 +45,8 @@ engine — then implement the end-to-end review loop.
   add it as the `RELEASE_TOKEN` repository secret — the release workflow fails, with
   instructions, until it exists (D-007; steps in `docs/development.md`). Deferred by the owner.
 - **Before the first instance deploy (manual):** generate an `ENCRYPTION_KEY`
-  (`openssl rand -base64 32`) and set it as a Worker secret alongside the D1 create step — see
-  the `ship-release` skill.
+  (`openssl rand -base64 32`) and a one-time `SETUP_CODE` (`openssl rand -base64 24`), and set
+  both as Worker secrets alongside the D1 create step — see the `ship-release` skill (D-008).
 
 ---
 
