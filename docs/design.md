@@ -217,9 +217,9 @@ Workers Vitest plugin with stubbed `fetch`. No test performs real network calls.
 
 Each slice lands as a PR to `dev` with docs kept current and `npm run check` green:
 
-1. **Foundations** — migration `0002`, crypto module, sessions and the access gate, shared
-   contracts, route skeleton.
-2. **Setup wizard** — manifest flow, installation verification, claim; wizard UI.
+1. **Foundations** — migration `0002`, crypto module, sessions, shared contracts, test
+   migrations.
+2. **Setup wizard** — manifest flow, installation verification, access gate, claim; wizard UI.
 3. **Reviewers and providers** — reviewers CRUD API, provider adapters, context builder and
    consolidation as tested pure modules.
 4. **Intake and engine** — webhook receiver, `RunEngine` end to end, run history records.
