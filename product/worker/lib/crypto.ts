@@ -73,3 +73,12 @@ function fromBase64Url(value: string): Uint8Array {
   }
   return bytes;
 }
+
+export async function constantTimeEqual(left: string, right: string): Promise<boolean> {
+  const [leftHash, rightHash] = await Promise.all([sha256Hex(left), sha256Hex(right)]);
+  let mismatch = 0;
+  for (let index = 0; index < leftHash.length; index += 1) {
+    mismatch |= leftHash.charCodeAt(index) ^ rightHash.charCodeAt(index);
+  }
+  return mismatch === 0;
+}

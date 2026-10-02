@@ -15,21 +15,26 @@ rule 4. Keep exactly one phase `in progress`.
 
 ## Current handoff
 
-**Phase:** 2 in progress — the product core, built as stacked pull requests. The design and
-slice 1 (foundations) are merged to `dev` (PRs #4 and #5; CI green on merge commit `ba6fae3`).
+**Phase:** 2 in progress — slice 2a (the wizard backend) is in review on
+`phase-2/2a-wizard-flows`; the design (#4), slice 1 (#5), and the post-merge tracker refresh
+(#7) are merged to `dev`.
 
-**Done this session:** verified both merges and synced `dev`; deleted the merged local branches;
-refreshed this tracker; recorded D-014 (outbound mocking with MSW via `@msw/cloudflare`, the
-Vitest plugin's supported path).
+**Done this session:** built slice 2a — GitHub plumbing (app JWT via `@octokit/auth-app`,
+manifest conversion, installation lookup, OAuth exchange, `/user` + `/user/installations`
+calls, the D-012 access gate), including normalizing GitHub's PKCS#1 app keys to PKCS#8 for the
+JWT library; setup routes (state, code, manifest callback, installation verification gated by
+the short-lived `jf_setup` cookie) and auth routes (OAuth start/callback with claim, session,
+logout); same-origin and session middleware; MSW wired into the test setup (`msw` 3.0.1,
+`@msw/cloudflare` 0.2.0 — D-014) with setup-flow, auth-flow, and access-gate suites; design
+note updated.
 
-**Verified:** `dev` fast-forwarded to `ba6fae3`; the merge CI run (`36998197313`) succeeded;
-`git status` clean.
+**Verified:** `npm run check` exits 0 — typecheck, lint, Prettier, 32/32 tests across 6 files on
+migrated D1 (including the MSW-backed flows), both builds.
 
-**Blocked by:** nothing.
+**Blocked by:** nothing. Slice 2b stacks on this branch once this merges.
 
-**Next action:** on the owner's go, start slice 2a — GitHub plumbing (app JWT, installation and
-OAuth calls, the access gate) with the setup and auth routes plus MSW-backed tests; slice 2b
-(the wizard UI) stacks on it.
+**Next action:** build slice 2b — the React wizard (code → create app → install → claim) — then
+the reviewers/providers slice.
 
 ## Backlog (owner-owned, deferred)
 

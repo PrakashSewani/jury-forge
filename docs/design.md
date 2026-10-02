@@ -76,7 +76,8 @@ Steps, in order:
    exchanged at `POST /app-manifests/{code}/conversions`; the returned credentials are encrypted
    and stored; the state is consumed.
 3. **Install** — the wizard links to `https://github.com/apps/{slug}/installations/new`; "Verify"
-   calls `GET /app/installations` with an app JWT and stores `installation_id`.
+   (gated by a short-lived `jf_setup` cookie issued when the setup code was accepted) calls
+   `GET /app/installations` with an app JWT and stores `installation_id`.
 4. **Claim** — sign in through the OAuth flow above; the first successful access-gated user is
    recorded as the owner (`owner_login`, `owner_id`, `owner_type`, `claimed_at`). Later sign-ins
    are ordinary logins.
