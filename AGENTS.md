@@ -103,6 +103,7 @@ literally, do not invent deploy pipelines.
 
 - 2026-09-26: Use `dev` as the default; agent changes go through PRs to `dev`, and labeled releases run only from `main`.
 - 2026-09-26: Use subagents only for sequential read-only discovery; the primary agent owns architecture and code generation.
+- 2026-10-02: Never commit secrets — configure via env reference files (`.dev.vars.example` locally, `wrangler secret put` when deployed).
 
 <!-- One line per learned preference, dated. Examples:
 - 2026-09-18: Wants exact deploy commands, not auto-deploy pipelines.

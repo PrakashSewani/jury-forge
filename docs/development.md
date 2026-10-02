@@ -40,8 +40,9 @@ skips dev dependencies — run `npm install --include=dev` in that case.
 
 - Local development and tests need no environment variables — the Vite plugin emulates bindings
   (including D1) locally.
-- Planned runtime secrets for phase 2 (encryption master key and friends) will go in `.dev.vars`
-  for local runs and in Worker secrets when deployed; see the boundaries in
+- Instance secrets (phase 2): `product/.dev.vars.example` is the reference. For local runs, copy
+  it to `product/.dev.vars` (gitignored); deployed instances set the same names with
+  `npx wrangler secret put <NAME>`. Nothing secret is ever committed — see the boundaries in
   `docs/architecture.md`.
 - Releases need the repository secret `RELEASE_TOKEN` (a repo-admin token with
   `contents: write`) before the first release — `main` is protected and the release workflow
