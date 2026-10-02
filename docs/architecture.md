@@ -14,6 +14,9 @@ Jury Forge is a self-hosted, single-tenant GitHub App. One repository holds:
 Each instance is one Cloudflare account, one Worker, one D1 database, and its own private GitHub
 App. There is no central service — nothing runs anywhere but the owner's account.
 
+The detailed phase-2 design — data model, API surface, setup and run flows — lives in
+`docs/design.md`.
+
 ## Components
 
 | Piece                | Where                                                  | Responsibility                                                                                                                                  |
