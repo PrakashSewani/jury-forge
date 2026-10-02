@@ -1,0 +1,67 @@
+---
+import { PRODUCT_NAME, PRODUCT_TAGLINE, REPO_URL } from '@jury-forge/shared';
+import '../styles/global.css';
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{PRODUCT_NAME} — {PRODUCT_TAGLINE}</title>
+    <meta name="description" content={PRODUCT_TAGLINE} />
+  </head>
+  <body class="bg-neutral-950 text-neutral-100 antialiased">
+    <main class="mx-auto flex min-h-screen max-w-3xl flex-col justify-center gap-12 px-6 py-16">
+      <header class="space-y-4">
+        <p class="text-xs uppercase tracking-[0.2em] text-neutral-400">
+          Self-hosted · Bring your own keys
+        </p>
+        <h1 class="text-5xl font-semibold tracking-tight">{PRODUCT_NAME}</h1>
+        <p class="max-w-xl text-lg text-neutral-300">{PRODUCT_TAGLINE}</p>
+      </header>
+
+      <ul class="grid gap-4 sm:grid-cols-2">
+        <li class="rounded-lg border border-neutral-800 p-5">
+          <h2 class="font-medium">A team, not a bot</h2>
+          <p class="mt-1 text-sm text-neutral-400">
+            Security, architecture, performance, docs — or reviewers you define yourself.
+          </p>
+        </li>
+        <li class="rounded-lg border border-neutral-800 p-5">
+          <h2 class="font-medium">Your models</h2>
+          <p class="mt-1 text-sm text-neutral-400">
+            OpenAI- and Anthropic-compatible APIs, any base URL, your own keys.
+          </p>
+        </li>
+        <li class="rounded-lg border border-neutral-800 p-5">
+          <h2 class="font-medium">Your infrastructure</h2>
+          <p class="mt-1 text-sm text-neutral-400">
+            Runs in your Cloudflare account — no middleman, free-tier friendly.
+          </p>
+        </li>
+        <li class="rounded-lg border border-neutral-800 p-5">
+          <h2 class="font-medium">GitHub-native</h2>
+          <p class="mt-1 text-sm text-neutral-400">
+            One consolidated review per pull request, inline comments included.
+          </p>
+        </li>
+      </ul>
+
+      <section class="space-y-3">
+        <h2 class="text-lg font-medium">Run your own</h2>
+        <pre
+          class="overflow-x-auto rounded-lg border border-neutral-800 bg-neutral-900 p-4 text-sm"><code>git clone {REPO_URL}
+cd jury-forge
+npm install
+npm run check</code></pre>
+        <p class="text-sm text-neutral-400">
+          Setup and deployment live in the repository docs — <a
+            class="underline underline-offset-4 hover:text-neutral-200"
+            href={REPO_URL}>{REPO_URL.replace('https://', '')}</a
+          >.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>
