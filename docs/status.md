@@ -15,24 +15,24 @@ rule 4. Keep exactly one phase `in progress`.
 
 ## Current handoff
 
-**Phase:** 2 in progress — the product core. The detailed design (`docs/design.md`) is written
-and awaiting review; implementation has not started.
+**Phase:** 2 in progress — the product core, built as stacked pull requests. The design (PR #4)
+is in review; slice 1 (foundations) stacks on it in this PR (merge order: #4 → this PR → later
+slices).
 
-**Done this session:** verified the readiness PR merged to `dev` (PR #3, CI green) and started
-phase 2 docs-first with `docs/design.md`: D1 schema, encryption module, sessions and the access
-gate, setup wizard (manifest flow, installation check, claim), webhook intake, the per-run
-Durable Object state machine, provider adapters, consolidation and publishing, dashboard
-screens, API surface, testing, and the build order. Linked the design from
-`docs/architecture.md` and refreshed this tracker.
+**Done this session:** started the phase-2 stack; recorded D-011 (checks on every pull request
+for stacked slices), D-012 (the installation-access gate) and D-013 (one `COMMENT` review per
+run); migration `0002` with the full phase-2 schema; `worker/lib/crypto.ts` (AES-256-GCM via
+`ENCRYPTION_KEY`, versioned format) and `worker/lib/sessions.ts` (D1-backed sessions, cookie
+helpers); shared API contracts (`shared/src/contracts.ts`); test D1 migrations wired through
+the Vitest plugin with crypto and sessions suites; CI now checks every pull request.
 
-**Verified:** `npm run check` exits 0; Prettier clean on every edited file.
+**Verified:** `npm run check` exits 0 — typecheck (3 programs + `astro check` + shared), lint,
+Prettier check, every Vitest suite (health, crypto, sessions) on migrated D1, and both builds.
 
-**Blocked by:** two product-facing choices need the owner's confirmation before implementation,
-flagged in `docs/design.md`: the review event (`COMMENT` recommended) and the dashboard access
-model (installation-access gate; no separate allowlist UI in v1).
+**Blocked by:** nothing. Later slices stack on this branch; merge the stack bottom-up.
 
-**Next action:** on confirmation, record the choices in `docs/decisions.md`, then implement
-slice 1 (foundations: migration `0002`, crypto module, sessions, API contracts).
+**Next action:** review and merge #4, then this PR; slice 2 follows — the setup wizard (manifest
+flow, installation check, access gate, claim) with GitHub API mocking for tests.
 
 ## Backlog (owner-owned, deferred)
 

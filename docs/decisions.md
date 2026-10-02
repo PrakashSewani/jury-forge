@@ -196,3 +196,47 @@ budgets (see `docs/architecture.md`, free-tier posture). Confirmed by the user i
 
 **Rejected:** 64 KB total / 16 KB per file (over-truncates large PRs); no cap (token overflows,
 CPU spikes).
+
+## D-011: Pull-request checks for stacked slices
+
+**Date:** 2026-10-02
+
+**Decision:** The CI workflow runs `npm run check` on every pull request, whatever its base
+branch; pushes are still checked only on `dev`. This supersedes the pull-request trigger detail
+in D-001. Phase-2 work lands as stacked pull requests — each slice targets the previous slice's
+branch — and every layer must show the check.
+
+**Why:** the user asked for the stacked-PR workflow on 2026-10-02; with the old
+`branches: [dev, main]` filter on `pull_request`, layers targeting each other showed no checks
+at all.
+
+**Rejected:** keeping the filter and checking only after a layer retargets to `dev` (feedback
+arrives too late); checking pushes everywhere too (no benefit).
+
+## D-012: Dashboard access — installation-access gate
+
+**Date:** 2026-10-02
+
+**Decision:** Dashboard access requires a GitHub OAuth sign-in whose token can see the
+instance's installation (`GET /user/installations`); the first access-gated user claims the
+instance. No separate allowlist is built in v1. Implementation lands in phase-2 slice 2.
+
+**Why:** GitHub's rules for private apps already bound who may authorize the app; following
+installation access covers the owner and the org members GitHub grants access. Recommended in
+`docs/design.md` and accepted by the user in chat on 2026-10-02.
+
+**Rejected:** an allowlist UI (extra state and surface for v1); an open dashboard.
+
+## D-013: Publishing — one COMMENT review per run
+
+**Date:** 2026-10-02
+
+**Decision:** A run publishes exactly one GitHub review, posted with `event: COMMENT` — never
+`REQUEST_CHANGES` in v1 — subject to the D-009 caps; findings that cannot attach to a line land
+in the summary. Implementation lands in phase-2 slice 4.
+
+**Why:** the bot should not block merges; `REQUEST_CHANGES` would wherever branch protection
+counts reviews. Recommended in `docs/design.md` and accepted by the user in chat on 2026-10-02.
+
+**Rejected:** `REQUEST_CHANGES` (blocks merges); posting findings as individual comments (loses
+the one-review contract and the caps).
