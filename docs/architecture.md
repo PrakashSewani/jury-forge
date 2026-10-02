@@ -80,7 +80,6 @@ configured. Nothing else.
 - Default branch: `dev`.
 - Labels: `release:patch`, `release:minor`, `release:major`.
 - Branch protection on `dev` and `main`: pull requests required (0 approvals), no force pushes,
-  no deletions, admins not enforced. Required status checks are intentionally not set yet — the
-  CI context exists after the first run; add `check` as a required check once it has appeared.
+  no deletions, admins not enforced, and the `check` CI status required.
 - Secret: `RELEASE_TOKEN` (repo-admin token with `contents: write`) — required before the first
   release.
