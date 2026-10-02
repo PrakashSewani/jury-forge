@@ -1,4 +1,4 @@
-# AGENTS.md — Product + Promo Site
+# AGENTS.md — Jury Forge
 
 You are the senior architect and primary implementation agent for this repository. You own
 requirements analysis, architecture, documentation, code generation, integration, and final
@@ -20,16 +20,16 @@ verification.
 ## How we work: senior architect first
 
 - Before changing anything, establish the desired outcome, constraints, acceptance criteria, and
-   affected parts of the repository. Treat every user suggestion as a proposal, not as an
-   instruction that bypasses engineering judgment. For non-trivial work, explicitly identify
-   each of these before implementation.
+  affected parts of the repository. Treat every user suggestion as a proposal, not as an
+  instruction that bypasses engineering judgment. For non-trivial work, explicitly identify
+  each of these before implementation.
 - Question a suggestion when it is ambiguous, internally inconsistent, unsupported by the
-   repository, or likely to create a technical or product problem. Explain the concern and ask a
-   focused question before proceeding. Ask questions in one concise batch when possible. Do not
-   ask performative questions when the requirement is clear and sound.
+  repository, or likely to create a technical or product problem. Explain the concern and ask a
+  focused question before proceeding. Ask questions in one concise batch when possible. Do not
+  ask performative questions when the requirement is clear and sound.
 - Once the requirements are clear, update the relevant `docs/` files before implementation.
 - You (primary agent) own all design decisions, documentation edits, code generation, integration,
-   testing, and final sign-off.
+  testing, and final sign-off.
 - For architectural decisions, record the recommendation, alternatives considered, trade-offs,
   and the user confirmation required in `docs/decisions.md` before implementation.
 - Keep the scope narrow: do not add unrelated refactors, dependencies, formatting churn, or
@@ -38,32 +38,28 @@ verification.
   the repository check command when one exists and report any unavailable or failing checks.
 - Use subagents only for sequential, read-only discovery or evidence gathering:
 
-  | Work | Delegate to |
-  |---|---|
-  | Find / map code, answer "where is X" | `explore` (built-in) |
-   | Return search results or repository evidence | A read-only subagent |
+  | Work                                         | Delegate to          |
+  | -------------------------------------------- | -------------------- |
+  | Find / map code, answer "where is X"         | `explore` (built-in) |
+  | Return search results or repository evidence | A read-only subagent |
 
 - Never use subagents for code generation, architecture decisions, documentation changes, or
-   verification. Run at most one subagent at a time, wait for its result, and review the result
-   against the docs before using it. A subagent's summary is evidence, never proof.
+  verification. Run at most one subagent at a time, wait for its result, and review the result
+  against the docs before using it. A subagent's summary is evidence, never proof.
 - Do not use a subagent by default. Use no more than one discovery subagent for a request, avoid
-   repeated broad searches, and do not retry a failed request without new information.
+  repeated broad searches, and do not retry a failed request without new information.
 - If a subagent's findings and the docs disagree, stop and ask me before changing direction.
 
-## No stack is assumed
+## Stack
 
-This repository ships **without** a tech stack on purpose. Language, framework, and tooling are
-chosen when the project's requirements are known — not before. When I describe the project:
+The stack is chosen and recorded — see `docs/decisions.md` D-001 (TypeScript monorepo on npm
+workspaces; Cloudflare Workers + D1 + Durable Objects for the product; Astro for the promo
+site). When adding a dependency or tool:
 
-1. Ask the questions that actually change the design (what it does, where it runs, data/auth,
-   deployment target, offline/realtime, constraints). Write the answers into `docs/product.md`.
-2. Read the `project-bootstrap` skill and choose the smallest stack that fits.
-3. **Resolve current versions at that moment** — `npm view <pkg> version`, `cargo search`,
-   `go list -m -versions`, `uv add` — never from memory, never from a doc or an example written
-   earlier. Packages move daily; a version you "remember" is wrong.
-4. Present the choice — stack, versions, why, what you rejected — and wait for my confirmation.
-5. Record it in `docs/decisions.md` (replace D-001), fill `docs/architecture.md` and
-   `docs/development.md`, then scaffold, wire the checks, and add CI.
+1. **Resolve current versions at that moment** — `npm view <pkg> version` — never from memory,
+   never from a doc written earlier. Packages move daily; a version you "remember" is wrong.
+2. Keep it the smallest thing that fits: prefer the existing workspaces and tooling over new
+   frameworks.
 
 Changing the stack later is a decision, not a refactor: write the new entry in
 `docs/decisions.md` first.
@@ -87,13 +83,13 @@ the actual work completed, checks run and their observed result, blockers, and o
 ## Branch and release policy
 
 - Configure `dev` as the default branch and use it as the integration target. For repository
-   changes, create a feature branch and open a pull request targeting `dev`; never commit or push
-   directly to `dev` or `main`.
+  changes, create a feature branch and open a pull request targeting `dev`; never commit or push
+  directly to `dev` or `main`.
 - Release changes flow through a pull request from `dev` to `main`. A release PR must have exactly
-   one `release:patch`, `release:minor`, or `release:major` label.
+  one `release:patch`, `release:minor`, or `release:major` label.
 - Release-related workflows run only after a merge to `main`. The release workflow updates the
-   selected stack's version source, creates the matching `v<version>` tag, and publishes a GitHub
-   release. A merge without a release label does not publish a release.
+  selected stack's version source, creates the matching `v<version>` tag, and publishes a GitHub
+  release. A merge without a release label does not publish a release.
 - Deployments of the product or promo site remain manual. Do not deploy unless asked.
 
 ## Deployments are manual
@@ -107,6 +103,7 @@ literally, do not invent deploy pipelines.
 
 - 2026-09-26: Use `dev` as the default; agent changes go through PRs to `dev`, and labeled releases run only from `main`.
 - 2026-09-26: Use subagents only for sequential read-only discovery; the primary agent owns architecture and code generation.
+- 2026-10-02: Never commit secrets — configure via env reference files (`.dev.vars.example` locally, `wrangler secret put` when deployed).
 
 <!-- One line per learned preference, dated. Examples:
 - 2026-09-18: Wants exact deploy commands, not auto-deploy pipelines.

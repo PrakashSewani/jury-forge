@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.astro/
+.wrangler/
+coverage/
+package-lock.json
+LICENSE
+worker-configuration.d.ts

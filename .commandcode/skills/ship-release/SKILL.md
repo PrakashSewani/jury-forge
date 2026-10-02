@@ -1,38 +1,75 @@
 ---
 name: ship-release
-description: Explain the automated release path and perform manual product/site deployments when asked. The release workflow is filled in at bootstrap time.
+description: Explain the automated release path and perform manual product/site deployments when asked.
 license: MIT
 metadata:
-  template: template-app-plus-site
-  version: "1"
+  template: jury-forge
+  version: '1'
 ---
 
 # Release and deploy
 
 ## Rules (always)
 
-- **Release trigger:** only a pull request merged into `main` can start release-related workflows.
+- **Release trigger:** only a pull request merged into `main` starts release-related workflows.
   Work on `dev` never publishes a release.
-- **Release selection:** a release PR has exactly one `release:patch`, `release:minor`, or
-  `release:major` label. A merge without one of these labels does not publish a release.
-- **Version source of truth:** the chosen stack's manifest. The workflow applies the labeled bump,
-  creates a `v<version>` tag matching the manifest, and publishes a GitHub release.
+- **Release selection:** a release PR carries exactly one `release:patch`, `release:minor`, or
+  `release:major` label. A merge without one publishes nothing.
+- **Version source of truth:** the root `package.json`, kept in sync with `package-lock.json`
+  and `CHANGELOG.md` by `scripts/release.mjs`.
 - **Deployments are manual.** Give the user exact, copy-pasteable commands; never deploy without
   being asked.
-- **Record the real procedure here** when the stack is chosen (see "Procedure" below), including
-  the automated release workflow, artifact handling, and failure path — how to yank a bad release.
 
-## Procedure — NOT YET FILLED IN
+## Automated release (implemented 2026-10-02)
 
-The stack has not been chosen yet (`docs/decisions.md`, D-001). At bootstrap:
+Workflow: `.github/workflows/release.yml`, triggered by pushes to `main`.
 
-1. Replace this section with the exact main-only release workflow for the chosen stack: label
-  validation → version/changelog update → checks/build → tag → GitHub release → artifact
-  verification.
-2. Add manual deploy steps for each target (the product and the promo site separately), with the
-  exact CLI commands.
-3. Add the rollback/yank path.
-4. Only commands that were actually run belong here.
+1. Finds the merged pull request for the pushed commit and collects `release:*` labels — errors
+   on more than one, publishes nothing when there are none.
+2. Fails fast with setup instructions when the `RELEASE_TOKEN` secret is missing (required
+   because `main` is protected and personal repositories cannot grant GitHub Actions a bypass —
+   see D-007).
+3. Runs `node scripts/release.mjs <patch|minor|major>`: bumps the root `package.json` version,
+   syncs `package-lock.json`, and moves `CHANGELOG.md`'s `[Unreleased]` section under
+   `## [<version>] - <date>`.
+4. Commits `chore(release): v<version> [skip ci]`, pushes the commit to `main` and the
+   `v<version>` tag with `RELEASE_TOKEN`, then publishes a GitHub release with generated notes.
 
-Do not add a generic release workflow before the stack and its version manifest are selected.
-The bootstrap skill requires the concrete workflow to run only after merges to `main`.
+Not yet exercised end to end: the first real release is phase 4. The script was verified locally
+on 2026-10-02 (real bump, inspection, restore, and dry run).
+
+### Yank a bad release
+
+```bash
+gh release delete v<version> --cleanup-tag --yes   # removes the release and its tag
+git revert <bump-commit-sha>                       # undo the version bump on main, via a PR
+```
+
+## Manual deploys
+
+Deployments were not exercised on 2026-10-02 — no Cloudflare account was connected from this
+environment. The commands below are the procedure to run when the owner asks; expect to
+authenticate with `npx wrangler login` (or `CLOUDFLARE_API_TOKEN`) first.
+
+### Product (Worker + dashboard)
+
+```bash
+# One time per instance, before the first deploy:
+npx wrangler d1 create jury-forge     # copy the returned database_id into product/wrangler.jsonc
+cd product && npx wrangler d1 migrations apply jury-forge --remote
+
+# Every deploy:
+cd product && npm run deploy          # vite build && wrangler deploy (uses the build output config)
+```
+
+### Promo site (static assets)
+
+```bash
+cd site && npm run build && npx wrangler deploy
+```
+
+### Rollback
+
+- Product: `npx wrangler deployments list`, then `npx wrangler rollback [version-id]`.
+- Site: redeploy the previous commit — static assets are immutable, so deploying an older
+  commit restores the previous site.

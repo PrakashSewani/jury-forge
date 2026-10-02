@@ -1,0 +1,12 @@
+# Instance secrets for local development.
+#
+# Copy this file to .dev.vars (gitignored) and fill in values; deployed instances
+# set the same names with `npx wrangler secret put <NAME>` instead.
+#
+# GitHub App credentials and model provider keys are NOT set here — they are
+# created or entered at runtime (setup wizard / dashboard) and stored encrypted
+# in the instance database.
+
+# AES-256-GCM master key that encrypts credentials at rest in D1.
+# Generate one with: openssl rand -base64 32
+ENCRYPTION_KEY=

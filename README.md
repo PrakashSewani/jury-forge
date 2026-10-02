@@ -1,50 +1,47 @@
-# Product + Promo Site
+# Jury Forge
 
-One repository for a product **and its promo site** — the thing people use, and the site that
-explains it and sends them to it. No tech stack is baked in: the stack is chosen when the
-project's requirements are known.
+Your own AI code-review team for GitHub — self-hosted, on your own Cloudflare account.
 
-## Getting started
+Jury Forge is a GitHub App you deploy yourself. Create specialized reviewers — Security,
+Architecture, Backend, Frontend, Performance, Testing, Documentation, or fully custom — give
+each one its own instructions and its own model (OpenAI-compatible or Anthropic-compatible APIs,
+any base URL, your own keys), and every pull request gets one consolidated review with inline
+comments.
 
-1. **Create the repo** — "Use this template → Create a new repository" on GitHub, or locally:
+Nothing runs on someone else's server: the app, its database, and your credentials all live in
+your Cloudflare account.
 
-   ```powershell
-   .\scripts\new-project.ps1 -Template template-app-plus-site -Name my-product -Title "My Product"
-   ```
+## How it works
 
-   ```bash
-   bash scripts/new-project.sh template-app-plus-site my-product "My Product"
-   ```
+- **One deployable.** A Cloudflare Worker serves the dashboard, receives GitHub webhooks, and
+  runs reviews; D1 stores configuration and history; a Durable Object coordinates each review
+  run (free-tier friendly).
+- **Your own GitHub App.** The setup wizard registers a private GitHub App from a manifest —
+  GitHub prefills permissions, events, and the webhook URL; you click "Create" and install it.
+- **Bring your own keys.** Reviewer model bindings are encrypted at rest (AES-256-GCM) with a
+  master key held as a Worker secret. Requests go straight from your instance to your provider.
 
-2. **Rename** (skip if you used the script above):
+## Repository layout
 
-   ```bash
-   node scripts/init.mjs --name my-product --title "My Product"
-   ```
+- `product/` — the Cloudflare Worker and the React dashboard it serves.
+- `site/` — the static promo site (deploys independently).
+- `shared/` — brand constants and API contract types.
+- `docs/` — product brief, architecture, decisions, development guide, status.
 
-3. **Bootstrap it.** Open an AI session in the repo, describe your product in plain words, then
-   say *"bootstrap this project"*. The agent follows `AGENTS.md` and the `project-bootstrap`
-   skill: it asks the questions that matter, picks the smallest stack that fits, resolves current
-   package versions **live**, records the decision in `docs/`, and scaffolds the repo — product
-   and site side by side.
+## Development
 
-## What's in here
+Requirements: Node 24 (see `.nvmrc`) and npm. Then:
 
-- `AGENTS.md` — the four rules, the PM/subagent model, and the no-stack-assumed workflow.
-- `docs/` — `product.md` (the brief), `architecture.md`, `decisions.md`, `status.md`,
-  `development.md`.
-- `.commandcode/agents/` — `implementer`, `verifier`, `docs-writer`.
-- `.commandcode/skills/` — `project-bootstrap` (choose + scaffold the stack), `ship-release`.
-- `scripts/init.mjs` — renames the template once; delete it after.
-- Branching policy — set `dev` as the GitHub default/integration branch; agent changes arrive
-   through PRs to `dev`, and labeled releases run from `main` only (see `docs/architecture.md`).
+```bash
+npm install
+npm run check   # typecheck + lint + format check + tests + build — the definition of done
+npm run dev     # product dev server (Worker + dashboard in one Vite process)
+```
 
-## Why nothing is pinned
-
-Templates that ship a pinned stack go stale in weeks and force yesterday's tools onto today's
-project. This template ships the **shape** — one repo, product + site, docs-first, PM + subagents
-— and leaves the stack to be decided with you at project start, with versions resolved on that
-day. The version numbers in `examples/` (if present) are reference implementations, not advice.
+Deployment, releases, and repository setup are documented in
+[docs/development.md](./docs/development.md); release procedure details live in the
+`ship-release` skill. Releases flow through labeled pull requests from `dev` to `main` (see
+[docs/architecture.md](./docs/architecture.md)).
 
 ## License
 

@@ -1,29 +1,25 @@
 ---
 name: project-bootstrap
-description: Choose the tech stack for this repository and scaffold it. Use when the repo is fresh (docs/product.md is unfilled, docs/decisions.md D-001 is pending) or when the user asks to set up, scaffold, bootstrap, initialize, or "start" the project.
+description: Record of how this repository was bootstrapped (completed 2026-10-02). Use when the user asks to re-bootstrap, scaffold a new project from this template, or wants the steps that were followed.
 license: MIT
 metadata:
-  template: template-app-plus-site
-  version: "1"
+  template: jury-forge
+  version: '1'
 ---
 
 # Bootstrap the project
 
+> **Completed 2026-10-02.** The stack is chosen and recorded (`docs/decisions.md`, D-001), and
+> the repository is scaffolded. The steps below are kept as the record of how this repository
+> was bootstrapped — useful when scaffolding a new project from this template.
+
 The repository ships without a stack on purpose. Your job: turn the user's idea into a chosen
 stack, recorded in the docs, scaffolded and verified. Do not write product code before step 5.
 
-## Step 0 — Rename the template (once)
+## Step 0 — Rename the template (done)
 
-If the repo still says `template-app-plus-site` / "Product + Promo Site" anywhere (README,
-AGENTS.md, docs, skills), fix that before anything else. The slug is the repository name; the
-title is the human name for it.
-
-```bash
-node scripts/init.mjs --name <repo-slug> --title "<Product Title>"
-```
-
-If the user hasn't named the product yet, ask — do not invent one. After the rename, re-read
-`README.md` and `AGENTS.md` (they now say the real name), delete `scripts/init.mjs`, and continue.
+This repository was initialized as **Jury Forge** (`jury-forge`): the rename already ran and
+`scripts/init.mjs` no longer exists. Skip to Step 1.
 
 ## Step 1 — Get the brief (ask, do not assume)
 
@@ -55,18 +51,17 @@ Write the answers into `docs/product.md` **before** choosing anything (rule 2). 
 
 ## Step 3 — Resolve versions live (mandatory)
 
-**Never write a version from memory, from this skill, from `docs/`, or from anything in
-`examples/`.** Packages ship daily; anything you "remember" is wrong.
+**Never write a version from memory, from this skill, or from `docs/`.** Packages ship daily; anything you "remember" is wrong.
 
 Resolve the current stable version at the moment of scaffolding:
 
-| Ecosystem | Resolve with |
-|---|---|
-| npm | `npm view <pkg> version` (and `npm view <pkg> dist-tags` when latest is a prerelease) |
-| Rust | `cargo search <crate> --limit 1`, or `cargo add <crate>` and read Cargo.toml |
-| Python | `uv add <pkg>` (or `python -m pip index versions <pkg>`) |
-| Go | `go list -m -versions <module>@latest` |
-| Other | the ecosystem's `add` command, or the registry's API |
+| Ecosystem | Resolve with                                                                          |
+| --------- | ------------------------------------------------------------------------------------- |
+| npm       | `npm view <pkg> version` (and `npm view <pkg> dist-tags` when latest is a prerelease) |
+| Rust      | `cargo search <crate> --limit 1`, or `cargo add <crate>` and read Cargo.toml          |
+| Python    | `uv add <pkg>` (or `python -m pip index versions <pkg>`)                              |
+| Go        | `go list -m -versions <module>@latest`                                                |
+| Other     | the ecosystem's `add` command, or the registry's API                                  |
 
 Pin exact versions in the lockfile; keep ranges in the manifest. Record the resolved set in the
 decision entry (step 6). If a package's latest release is an RC/beta, prefer the previous stable
