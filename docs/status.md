@@ -15,8 +15,8 @@ rule 4. Keep exactly one phase `in progress`.
 
 ## Current handoff
 
-**Phase:** 1 — scaffold landed and independently verified; bootstrap PR open to `dev` (merge
-pending).
+**Phase:** 1 complete — the bootstrap scaffold is merged to `dev`; phase 2 (the product core) is
+not started, awaiting the owner's go.
 
 **Done this session:** renamed the template to **Jury Forge**; captured the brief and the
 confirmed v1 contract in `docs/product.md`; recorded D-001 (full stack, versions resolved live)
@@ -41,9 +41,18 @@ verifier subagent re-ran the checks and its findings (this tracker, residual tem
 secret — a repo-admin token with `contents: write` (D-007). Until it exists, the release
 workflow fails with instructions rather than publishing.
 
-**Next action:** merge the bootstrap PR into `dev` (CI runs on the PR); then start phase 2 —
-design the reviewer model, setup wizard, and run engine (docs first), then implement the
-end-to-end review loop.
+**Next action:** on the owner's go, start phase 2 docs-first — reviewer model and storage, the
+setup wizard (first-run claim protection; GitHub App manifest flow), and the Durable Object run
+engine — then implement the end-to-end review loop.
+
+## Backlog (owner-owned, deferred)
+
+- **Before the first release (phase 4):** create a repo-admin token with `contents: write` and
+  add it as the `RELEASE_TOKEN` repository secret — the release workflow fails, with
+  instructions, until it exists (D-007; steps in `docs/development.md`). Deferred by the owner.
+- **Before the first instance deploy (manual):** generate an `ENCRYPTION_KEY`
+  (`openssl rand -base64 32`) and set it as a Worker secret alongside the D1 create step — see
+  the `ship-release` skill.
 
 ---
 
