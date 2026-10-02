@@ -6,3 +6,5 @@ export interface HealthResponse {
   ok: boolean;
   name: string;
 }
+
+export * from './contracts';

@@ -1,0 +1,66 @@
+export interface SessionUser {
+  login: string;
+  avatarUrl: string | null;
+}
+
+export interface SetupState {
+  claimed: boolean;
+  appCreated: boolean;
+  installed: boolean;
+}
+
+export type ProviderFlavor = 'openai' | 'anthropic';
+
+export type FindingSeverity = 'info' | 'warning' | 'error';
+
+export interface Finding {
+  file: string;
+  line?: number;
+  severity: FindingSeverity;
+  title: string;
+  body: string;
+}
+
+export interface Reviewer {
+  id: string;
+  name: string;
+  instructions: string;
+  rules: string;
+  flavor: ProviderFlavor;
+  baseUrl: string;
+  model: string;
+  params: Record<string, unknown>;
+  enabled: boolean;
+  hasApiKey: boolean;
+}
+
+export interface Repository {
+  repoId: number;
+  fullName: string;
+  private: boolean;
+  enabled: boolean;
+}
+
+export type RunStatus = 'running' | 'completed' | 'failed' | 'skipped';
+
+export interface RunSummary {
+  id: string;
+  repoId: number;
+  prNumber: number;
+  headSha: string;
+  event: string;
+  status: RunStatus;
+  error: string | null;
+  reviewUrl: string | null;
+  createdAt: number;
+  finishedAt: number | null;
+}
+
+export type RunReviewerStatus = 'pending' | 'completed' | 'failed';
+
+export interface RunReviewerOutcome {
+  reviewerId: string;
+  status: RunReviewerStatus;
+  findings: Finding[] | null;
+  error: string | null;
+}
