@@ -276,3 +276,19 @@ choice. Revisit when the full dashboard (slice 5) needs nested routes.
 
 **Rejected:** composing the install URL from manifest data (not available client-side);
 React Router now (deferred, not ruled out).
+
+## D-016: Run activation — repository and reviewer selection
+
+**Date:** 2026-10-07
+
+**Decision:** A webhook-triggered run proceeds only when the repository is present and enabled in
+`repositories`; otherwise it finishes `skipped`. Reviewer selection is opt-out: every enabled
+reviewer applies to every enabled repository unless a `reviewer_repositories` row for that pair
+sets `enabled = 0`. Runs with no applicable reviewers finish `skipped`.
+
+**Why:** the dashboard's per-repo reviewer toggles (slice 5) default to on, and `repositories` is
+the opt-in surface for which repositories Jury Forge reviews at all; the engine never reviews a
+repository nobody enabled.
+
+**Rejected:** double opt-in (each reviewer explicitly enabled per repo — noisy for the common
+case); auto-registering repositories on webhook activity (reviews without consent).
