@@ -64,6 +64,17 @@ export interface Repository {
   enabled: boolean;
 }
 
+export interface RepositoryReviewer {
+  reviewerId: string;
+  name: string;
+  enabled: boolean;
+}
+
+export interface RepositoryReviewerUpdate {
+  reviewerId: string;
+  enabled: boolean;
+}
+
 export type RunStatus = 'running' | 'completed' | 'failed' | 'skipped';
 
 export interface RunSummary {
