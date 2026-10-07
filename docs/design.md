@@ -162,10 +162,13 @@ body (≤4 KB), file list, and the budgeted patches. Output contract — strict 
 }
 ```
 
-`severity` is `info` | `warning` | `error`; `title` ≤ 120 chars, `body` ≤ 2,000. Parsing is
-tolerant (extract the JSON value), but a response that cannot be parsed fails that reviewer only.
-`params_json` merges extra body parameters (for example temperature). API keys are decrypted only
-for the call.
+`severity` is `info` | `warning` | `error`; `title` ≤ 120 chars, `body` ≤ 2,000 — oversized
+titles and bodies are truncated, a missing or invalid `severity` falls back to `info`, and
+invalid `line` values are dropped. Parsing is tolerant (extract the JSON value), but a response
+that cannot be parsed fails that reviewer only. `params_json` merges extra body parameters (for
+example temperature); the `anthropic` flavor defaults `max_tokens` to 4096 unless `params_json`
+sets it. API keys are decrypted only for the call, and a stored key is write-only: responses
+expose only whether one is set, and `PATCH` with `apiKey: null` clears it.
 
 ## Dashboard
 
