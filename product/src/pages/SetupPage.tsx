@@ -1,7 +1,7 @@
 import type { SetupState } from '@jury-forge/shared';
-import type { FormEvent, ReactNode } from 'react';
+import type { FormEvent } from 'react';
 import { useCallback, useEffect, useState } from 'react';
-import { buttonClass, Card, inputClass, Notice, secondaryButtonClass } from '../components';
+import { buttonClass, Card, Field, inputClass, Notice, secondaryButtonClass } from '../components';
 import { ApiError, fetchSetupState, submitSetupCode, verifyInstallation } from '../lib/api';
 import { submitManifestForm } from '../lib/manifest';
 import type { WizardStepView } from '../lib/wizard';
@@ -245,16 +245,6 @@ function StepIndicator({ steps }: { steps: WizardStepView[] }) {
         </li>
       ))}
     </ol>
-  );
-}
-
-function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
-  return (
-    <label className="block space-y-1.5">
-      <span className="block text-sm font-medium">{label}</span>
-      {children}
-      {hint ? <span className="block text-xs text-neutral-500">{hint}</span> : null}
-    </label>
   );
 }
 

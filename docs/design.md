@@ -185,9 +185,11 @@ The wizard UI derives its current step from setup state: **code** (enter the set
 manifest form is auto-submitted to GitHub's app-creation page), **install** (link to
 `https://github.com/apps/{appSlug}/installations/new`, then verify), **claim** (GitHub sign-in),
 then done. Errors redirected back from the claim callback (`?error=installation_required`,
-`?error=access_denied`) render as messages on `/setup`. In slice 2b, routing is a dependency-free
-path switch with full-page navigation; the signed-in shell and deeper routes arrive with their
-screens.
+`?error=access_denied`) render as messages on `/setup`. Routing is a dependency-free path switch
+with full-page navigation; the shell shows the nav, the instance state, and the signed-in user,
+and gates the dashboard screens behind sign-in. A repositories refresh imports the installation's
+repositories; newly discovered ones arrive disabled — enabling one is an explicit dashboard
+action (D-016).
 
 ## API surface
 
@@ -204,7 +206,7 @@ screens.
 | POST             | `/api/auth/logout`                    | session   | delete session                               |
 | GET/POST         | `/api/reviewers`                      | session   | list / create                                |
 | GET/PATCH/DELETE | `/api/reviewers/:id`                  | session   | read / update / delete                       |
-| GET              | `/api/repositories`                   | session   | list (optionally refreshed from GitHub)      |
+| GET              | `/api/repositories`                   | session   | list; `?refresh=1` syncs from GitHub         |
 | PATCH            | `/api/repositories/:repoId`           | session   | enable/disable                               |
 | GET/PUT          | `/api/repositories/:repoId/reviewers` | session   | per-repo reviewer enablement                 |
 | GET              | `/api/runs`                           | session   | history `{ runs, nextCursor }` (keyset)      |
