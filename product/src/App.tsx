@@ -1,43 +1,29 @@
-import { PRODUCT_NAME, type HealthResponse } from '@jury-forge/shared';
-import { useEffect, useState } from 'react';
+import { PRODUCT_NAME } from '@jury-forge/shared';
+import { routeFromPath } from './lib/router';
+import HomePage from './pages/HomePage';
+import SetupPage from './pages/SetupPage';
 
 export default function App() {
-  const [health, setHealth] = useState<HealthResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch('/api/health')
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error(`API returned ${response.status}`);
-        }
-        return response.json() as Promise<HealthResponse>;
-      })
-      .then((body) => {
-        if (!cancelled) setHealth(body);
-      })
-      .catch((reason: unknown) => {
-        if (!cancelled) setError(reason instanceof Error ? reason.message : String(reason));
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const route = routeFromPath(window.location.pathname);
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-2xl flex-col items-center justify-center gap-8 p-8 text-center">
-      <div className="space-y-3">
-        <h1 className="text-4xl font-semibold tracking-tight">{PRODUCT_NAME}</h1>
-        <p className="text-neutral-500">
-          Self-hosted AI code review — your reviewers, your models, your keys.
-        </p>
-      </div>
-      <section className="w-full rounded-lg border border-neutral-200 p-4 font-mono text-sm">
-        {health ? <p>api: ok ({health.name})</p> : null}
-        {error ? <p>api: {error}</p> : null}
-        {!health && !error ? <p>api: checking…</p> : null}
-      </section>
-    </main>
+    <div className="flex min-h-screen flex-col bg-neutral-50 text-neutral-900">
+      <header className="border-b border-neutral-200 bg-white">
+        <div className="mx-auto flex w-full max-w-2xl items-center justify-between px-6 py-4">
+          <a className="text-sm font-semibold tracking-tight" href="/">
+            {PRODUCT_NAME}
+          </a>
+          <a className="text-xs text-neutral-400 transition hover:text-neutral-700" href="/setup">
+            Setup
+          </a>
+        </div>
+      </header>
+      <main className="mx-auto w-full max-w-2xl flex-1 px-6 py-12">
+        {route === '/setup' ? <SetupPage /> : <HomePage />}
+      </main>
+      <footer className="mx-auto w-full max-w-2xl px-6 pb-8 text-xs text-neutral-400">
+        Self-hosted on your own Cloudflare account.
+      </footer>
+    </div>
   );
 }
