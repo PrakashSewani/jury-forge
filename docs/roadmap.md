@@ -6,15 +6,15 @@ phase 4 (launch) follow the improvement slices that precede launch.
 
 ## Sequencing
 
-| Slice | Items   | Scope                                                                                 | Status  |
-| ----- | ------- | ------------------------------------------------------------------------------------- | ------- |
-| 6     | 1, 2, 4 | Run hygiene: superseded-run skip, review minimization, priority file order            | planned |
-| 7     | 3, 6    | Resolution tracking + output contract (per-reviewer summary, `startLine`, usage)      | planned |
-| 8     | 5, 11   | Instance settings (tunable caps/budgets) + optional blocking mode (default off)       | planned |
-| 9     | 10      | Repo instructions (`AGENTS.md`/`CONTRIBUTING.md`) in prompts                          | planned |
-| 10    | 7, 12   | Credential key rotation + audit trail                                                 | planned |
-| 11    | 9, 13   | Distribution: guided deploy + reviewer import/export (with phase 3/4 launch polish)   | planned |
-| —     | 8       | Access re-checks — parked; needs a deliberate decision (user-token storage trade-off) | open    |
+| Slice | Items   | Scope                                                                                 | Status          |
+| ----- | ------- | ------------------------------------------------------------------------------------- | --------------- |
+| 6     | 1, 2, 4 | Run hygiene: superseded-run skip, review minimization, priority file order            | in review (#14) |
+| 7     | 3, 6    | Resolution tracking + output contract (per-reviewer summary, `startLine`, usage)      | planned         |
+| 8     | 5, 11   | Instance settings (tunable caps/budgets) + optional blocking mode (default off)       | planned         |
+| 9     | 10      | Repo instructions (`AGENTS.md`/`CONTRIBUTING.md`) in prompts                          | planned         |
+| 10    | 7, 12   | Credential key rotation + audit trail                                                 | planned         |
+| 11    | 9, 13   | Distribution: guided deploy + reviewer import/export (with phase 3/4 launch polish)   | planned         |
+| —     | 8       | Access re-checks — parked; needs a deliberate decision (user-token storage trade-off) | open            |
 
 ## Items
 

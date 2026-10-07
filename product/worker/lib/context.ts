@@ -87,6 +87,31 @@ export function buildReviewContext(files: PullFile[], previous?: ReviewContext):
   return context;
 }
 
+/**
+ * D-018: order changed files so the D-010 budget truncates the least valuable diffs first —
+ * added/changed source leads, docs and renames trail. Stable within a weight.
+ */
+export interface FilePriorityEntry {
+  filename: string;
+  status: string;
+}
+
+const STATUS_WEIGHT: Record<string, number> = { added: 0, modified: 1, changed: 1 };
+const DEFAULT_STATUS_WEIGHT = 2;
+const DOC_PATTERN =
+  /(^|\/)(readme|license|notice|changelog|contributing|code_of_conduct)(\..*)?$|\.(md|mdx|txt|rst)$/i;
+
+export function prioritizedOrder(entries: FilePriorityEntry[]): number[] {
+  return entries
+    .map((entry, index) => ({
+      index,
+      weight: STATUS_WEIGHT[entry.status] ?? DEFAULT_STATUS_WEIGHT,
+      doc: DOC_PATTERN.test(entry.filename) ? 1 : 0,
+    }))
+    .sort((a, b) => a.weight - b.weight || a.doc - b.doc || a.index - b.index)
+    .map((item) => item.index);
+}
+
 export const OUTPUT_CONTRACT = [
   'Respond with a single JSON object and nothing else:',
   '{"findings": [{"file": "src/x.ts", "line": 42, "severity": "warning", "title": "…", "body": "…"}]}',
