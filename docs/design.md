@@ -137,8 +137,9 @@ Phases, one alarm segment at a time:
 
 Retries: each phase gets ≤3 attempts with backoff alarms (10 s, 60 s, 300 s); 4xx errors that
 cannot succeed on retry fail the run. A repository with no enabled reviewers (or disabled in
-`repositories`) finishes `skipped`. Free-plan subrequest limits (50 per invocation) are respected
-by the file cap and reviewer count.
+`repositories`) finishes `skipped`. Reviewer selection is opt-out: every enabled reviewer applies
+to an enabled repository unless a `reviewer_repositories` row disables the pair (D-016). Free-plan
+subrequest limits (50 per invocation) are respected by the file cap and reviewer count.
 
 Summary requirements: one review per run; per-reviewer attribution; counts; `file:line`
 references for findings not posted inline; explicit notes for truncation (D-010), cap overflow
@@ -206,8 +207,8 @@ screens.
 | GET              | `/api/repositories`                   | session   | list (optionally refreshed from GitHub)      |
 | PATCH            | `/api/repositories/:repoId`           | session   | enable/disable                               |
 | GET/PUT          | `/api/repositories/:repoId/reviewers` | session   | per-repo reviewer enablement                 |
-| GET              | `/api/runs`                           | session   | history (keyset pagination)                  |
-| GET              | `/api/runs/:id`                       | session   | run detail with per-reviewer outcomes        |
+| GET              | `/api/runs`                           | session   | history `{ runs, nextCursor }` (keyset)      |
+| GET              | `/api/runs/:id`                       | session   | run detail `{ run, reviewers }`              |
 | POST             | `/api/webhooks/github`                | signature | GitHub deliveries                            |
 
 ## Security

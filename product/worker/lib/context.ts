@@ -49,14 +49,22 @@ function isSkippedName(filename: string): boolean {
   );
 }
 
-export function buildReviewContext(files: PullFile[]): ReviewContext {
-  const context: ReviewContext = {
-    files: [],
-    totalBytes: 0,
-    skipped: [],
-    truncated: [],
-    omitted: [],
-  };
+export function buildReviewContext(files: PullFile[], previous?: ReviewContext): ReviewContext {
+  const context: ReviewContext = previous
+    ? {
+        files: [...previous.files],
+        totalBytes: previous.totalBytes,
+        skipped: [...previous.skipped],
+        truncated: [...previous.truncated],
+        omitted: [...previous.omitted],
+      }
+    : {
+        files: [],
+        totalBytes: 0,
+        skipped: [],
+        truncated: [],
+        omitted: [],
+      };
   for (const file of files) {
     const patch = file.patch ?? null;
     if (patch === null || isSkippedName(file.filename)) {

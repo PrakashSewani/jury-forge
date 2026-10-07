@@ -7,6 +7,10 @@
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*"],
   },
+  "durable_objects": {
+    "bindings": [{ "name": "RUNS", "class_name": "RunEngine" }],
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["RunEngine"] }],
   "d1_databases": [
     {
       "binding": "DB",

@@ -87,3 +87,13 @@ export interface RunReviewerOutcome {
   findings: Finding[] | null;
   error: string | null;
 }
+
+export interface RunsPage {
+  runs: RunSummary[];
+  nextCursor: string | null;
+}
+
+export interface RunDetail {
+  run: RunSummary;
+  reviewers: RunReviewerOutcome[];
+}
