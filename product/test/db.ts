@@ -6,5 +6,7 @@ export async function resetInstanceState(): Promise<void> {
     env.DB.prepare('DELETE FROM github_app'),
     env.DB.prepare('DELETE FROM oauth_states'),
     env.DB.prepare('DELETE FROM sessions'),
+    env.DB.prepare('DELETE FROM reviewer_repositories'),
+    env.DB.prepare('DELETE FROM reviewers'),
   ]);
 }
