@@ -292,3 +292,23 @@ repository nobody enabled.
 
 **Rejected:** double opt-in (each reviewer explicitly enabled per repo — noisy for the common
 case); auto-registering repositories on webhook activity (reviews without consent).
+
+## D-017: Accepted improvement slate (post-phase-2)
+
+**Date:** 2026-10-07
+
+**Decision:** The owner accepted the post-phase-2 improvement slate below, recorded after the
+decisions/architecture deep dive. Sequencing and per-item detail live in `docs/roadmap.md`; each
+item's full decision entry lands with its implementation commit. The slate: superseded-run skip
+(1); review minimization (2); resolution tracking (3); priority file order (4); instance settings
+for caps/budgets (5); output-contract v2 with summary, `startLine`, and usage capture (6);
+credential key rotation (7); guided deploy (9); repo instructions in prompts (10); optional
+blocking mode (11); audit trail (12); reviewer import/export (13). Item 8 (access re-checks)
+stays open pending a deliberate decision about user-token storage.
+
+**Why:** the deep dive surfaced upgrades that compound the product's core promises — spend less
+on stale runs, keep threads on the latest verdict, make reviewers feel stateful, and smooth the
+path from deploy to first review.
+
+**Rejected:** making every item a heavyweight standalone decision now (each gets its entry at
+implementation); bundling the slate into phase 3/4 (it is product work, not launch work).
