@@ -193,9 +193,45 @@ VPS against a clean clone of the branch. Screen copy is unchanged: `product/src/
 longer holds a map of its own, and the shared table carries exactly the sentences those screens
 rendered before (checked code by code), with `lib/wizard.ts` keeping its setup-specific wording.
 
+**Round 1 of the review debate (PR #20, sentry, merge confidence 45%) — answered in `635e74b` plus
+this tracker commit: 7 findings, 6 resolved / 1 rejected**, one reply per comment thread on the PR. (1)
+The editor's unsaved-changes guard was dead for in-app navigation — `beforeunload` never fires for a
+`pushState` route change — so `router.ts` gained `registerNavigationBlocker()`: `navigate()` consults
+every blocker before it writes the entry (and returns `false` when vetoed) and the router's own
+`popstate` handler asks first too, putting the entry back and notifying nobody when refused; the
+editor registers one while its form is dirty (its `beforeunload` handler stays for a real unload). (2)
+`POST /api/reviewers` and `PATCH /api/reviewers/:id` were validating their response as
+`ReviewerSchema.nullable()` while the dashboard parses a non-null reviewer: both now answer
+`errorResponse('internal_error', 500)` when the row does not read back and validate `ReviewerSchema`.
+(3) The new `test-ui/router.test.tsx` rendered the shell without stubbing `localStorage`, so all six of
+its tests died on Node ≥26 — it now takes `memoryStorage()` like `shell.test.tsx` and
+`theme.test.tsx`. (4) The runs list's 5s tick replaced the whole list with page 1 and refetched
+repositories; it now refreshes the first page in place, leaving the "Load more" tail, the cursor and
+the repository map alone (repositories are fetched at mount and on an explicit retry only). (5) The
+one finding **rejected**: parsing is deliberately off in a production build (D-029, `architecture.md`)
+— the dashboard still validates every response, the parse is on in dev and test where drift must fail
+a test, and flipping it on the hot path is a plan-level cost decision, not a review fix. (6) `focus`
+and `visibilitychange` both fire when the tab comes back; the revalidate path now skips a load that is
+already in flight (the effect's own load is never skipped, so a new fetcher still fetches). (7) The
+setup screen's install link points at an absolute GitHub URL, which `handleAppLink` can never
+intercept, so the dead handler is gone.
+
+Numbers after the round: workerd **292/292** (23 files, +3 in the new `test/reviewers-missing-row.test.ts`
+— a create and an update whose row does not read back, driven through a D1 wrapper that stops
+answering that read, plus the 201 body parsing as the dashboard's `ReviewerSchema`) and UI
+**141/141** (12 files, +5: three in `router.test.tsx` for the veto itself, the declined-then-accepted
+in-app click and the vetoed back button, one in `use-resource.test.tsx` for the double-event
+revalidate, one in `polling.test.tsx` for the tick that keeps the loaded page and the cursor). Each of
+the five new cases was mutation-checked: reverting the fix it covers makes exactly that case fail.
+
+**Verified at `635e74b` on this VPS (Node 26.7.0, `npm run check` **exit 0**):** prettier clean ·
+ESLint clean · typecheck (three `tsc` programs + `astro check`, 0 errors) · workerd **292/292** (23
+files) · UI **141/141** (12 files) · worker + client + site builds, nothing skipped. That is the CI
+Node's suite plus the Node ≥26 storage bug the round found, which the pinned Node 24 cannot see.
+
 **Blocked by:** nothing.
 
-**Next action:** slice D's pull request is open for review against `dev` (then Prakash merges); the
+**Next action:** sentry re-reviews the answered head (round 2); Prakash merges on its verdict; the
 rework plan in `docs/roadmap.md` is then complete, and phase 3 (the promo site) starts after it.
 
 ## Backlog (owner-owned, deferred)
