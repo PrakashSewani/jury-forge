@@ -616,7 +616,7 @@ becomes a re-export shim keeping the nine names the existing screens import (`Ba
 `LoadFailed`) — no screen changes in this slice.
 
 (3) **UI test harness.** A second vitest project, `product/vitest.ui.config.ts`, runs `happy-dom`
-with `@testing-library/react` over `product/test-ui/**/*.test.tsx` (59 tests). It exists because
+with `@testing-library/react` over `product/test-ui/**/*.test.tsx` (60 tests). It exists because
 the workerd pool cannot render React — there were zero UI tests before this — and the workerd
 project's glob is narrowed to `./test/**/*.test.ts` so the two projects can never collect each
 other's tests. `npm run test` chains `test:worker` then `test:ui`.
@@ -649,7 +649,7 @@ the design-system rewrite would land with no test that a component renders, and 
 has no DOM. Three dev-only test dependencies are the smallest thing that fits.
 
 **No-op verification:** `npm run check` is exit 0 with the workerd suite at 170/170 and the UI
-suite at 59/59 (green on Node 24 and on Node 26), and no page, worker, `shared/`, or `site/` source
+suite at 60/60 (green on Node 24 and on Node 26), and no page, worker, `shared/`, or `site/` source
 file changed in this slice. The token table in `docs/design.md` is the reviewable proof — each row
 pairs a token with the utility it equals.
 

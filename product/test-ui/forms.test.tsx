@@ -46,6 +46,22 @@ describe('Field', () => {
     ).toEqual(['Lowercase only', 'This field is required']);
     expect(control.getAttribute('aria-invalid')).toBe('true');
   });
+
+  it("keeps the caller's own aria-describedby and aria-invalid", () => {
+    render(
+      <Field error="This field is required" hint="Lowercase only" label="Slug">
+        <Input aria-describedby="slug-format" aria-invalid={false} />
+      </Field>,
+    );
+    const control = screen.getByRole('textbox');
+    const describedBy = (control.getAttribute('aria-describedby') ?? '').split(' ');
+    expect(describedBy[0]).toBe('slug-format');
+    expect(describedBy.slice(1).map((id) => document.getElementById(id)?.textContent)).toEqual([
+      'Lowercase only',
+      'This field is required',
+    ]);
+    expect(control.getAttribute('aria-invalid')).toBe('false');
+  });
 });
 
 describe('Input', () => {

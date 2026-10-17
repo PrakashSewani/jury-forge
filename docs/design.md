@@ -547,7 +547,7 @@ records via the Workers Vitest plugin with stubbed `fetch`. No test performs rea
 
 Slice A adds a **second vitest project** for UI components. The workerd pool cannot render a
 component — there were zero UI tests before this — so `product/vitest.ui.config.ts` runs
-`happy-dom` with `@testing-library/react`, collecting `product/test-ui/**/*.test.tsx` (59 tests
+`happy-dom` with `@testing-library/react`, collecting `product/test-ui/**/*.test.tsx` (60 tests
 across the theme helper, the primitives, the form controls, and structure). The workerd project's
 test glob is now restricted to `./test/**/*.test.ts`, so the two projects can never collect each
 other's tests; `npm run test` runs `test:worker` then `test:ui`. Tests that need a `Storage` build

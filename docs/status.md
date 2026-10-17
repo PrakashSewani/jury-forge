@@ -53,25 +53,26 @@ change deploys anything.
 pushed and open against `dev` as **#17** on `feat/rework-a-design-system-20261017` (`6201eda` docs,
 `0d379c3` implementation), in review; slice B's branch is `feat/rework-b-shell-screens-20261017`.
 
-| Slice | Branch                                 | Status                  |
-| ----- | -------------------------------------- | ----------------------- |
-| A     | `feat/rework-a-design-system-20261017` | in review (#17)         |
-| B     | `feat/rework-b-shell-screens-20261017` | in progress, on A's tip |
-| C     | —                                      | not started             |
-| D     | —                                      | not started             |
+| Slice | Branch                                 | Status              |
+| ----- | -------------------------------------- | ------------------- |
+| A     | `feat/rework-a-design-system-20261017` | in review (#17)     |
+| B     | `feat/rework-b-shell-screens-20261017` | in progress, from A |
+| C     | —                                      | not started         |
+| D     | —                                      | not started         |
 
 Slice A is the design-system vocabulary and UI harness (D-026): a token layer in
 `product/src/styles.css`, the `product/src/ui/` primitives re-exported through
 `product/src/components.tsx`, a dependency-free `product/src/lib/theme.ts` (no runtime caller yet —
-the toggle is slice B), and a second happy-dom vitest project with 59 UI tests. Strict visual
+the toggle is slice B), and a second happy-dom vitest project with 60 UI tests. Strict visual
 no-op: no page, worker, shared, or site source changed. Scopes for B/C/D are in
 `docs/roadmap.md`; the rework is product work, not a phase, so phase 3 stays `not started`.
 
-**Verified:** `npm run check` exit 0 — workerd 170/170 · UI 54/54.
+**Verified:** `npm run check` exit 0 — workerd 170/170 · UI 60/60.
 
 **Blocked by:** nothing.
 
-**Next action:** open slice A's PR against `dev` (`feat/rework-a-design-system-20261017`).
+**Next action:** review and merge slice A's PR (#17); slice B continues on
+`feat/rework-b-shell-screens-20261017`.
 
 ## Backlog (owner-owned, deferred)
 
