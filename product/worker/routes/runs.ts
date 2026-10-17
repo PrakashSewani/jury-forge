@@ -1,13 +1,16 @@
-import type {
-  Finding,
-  ProviderUsage,
-  RunDetail,
-  RunMode,
-  RunReviewerOutcome,
-  RunStatus,
-  RunSummary,
-  RunsPage,
-  TryRunResponse,
+import {
+  RunDetailSchema,
+  RunsPageSchema,
+  TryRunResponseSchema,
+  type Finding,
+  type ProviderUsage,
+  type RunDetail,
+  type RunMode,
+  type RunReviewerOutcome,
+  type RunStatus,
+  type RunSummary,
+  type RunsPage,
+  type TryRunResponse,
 } from '@jury-forge/shared';
 import { Hono } from 'hono';
 import { z } from 'zod';
@@ -21,6 +24,7 @@ import {
 import { loadGitHubApp } from '../lib/github-app';
 import { getMeta } from '../lib/instance';
 import { getRepository } from '../lib/repositories';
+import { errorResponse, respond } from '../lib/respond';
 import { requireSession, sameOrigin, type AppEnv } from '../middleware';
 import type { RunPayload } from '../run-engine';
 
@@ -73,7 +77,7 @@ runRoutes.get('/', async (c) => {
     const createdAt = Number(cursor.slice(0, separator));
     const id = separator === -1 ? '' : cursor.slice(separator + 1);
     if (separator === -1 || id === '' || !Number.isFinite(createdAt)) {
-      return c.json({ error: 'invalid_request' }, 400);
+      return errorResponse('invalid_request', 400);
     }
     rows = await c.env.DB.prepare(
       `SELECT ${RUN_COLUMNS} FROM runs WHERE created_at < ? OR (created_at = ? AND id < ?) ORDER BY created_at DESC, id DESC LIMIT ?`,
@@ -94,7 +98,7 @@ runRoutes.get('/', async (c) => {
     runs,
     nextCursor: runs.length === limit && last ? `${last.createdAt}:${last.id}` : null,
   };
-  return c.json(body);
+  return respond(RunsPageSchema, body);
 });
 
 const tryBody = z.object({
@@ -107,7 +111,7 @@ const tryBody = z.object({
 runRoutes.post('/try', async (c) => {
   const parsed = tryBody.safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) {
-    return c.json({ error: 'invalid_request' }, 400);
+    return errorResponse('invalid_request', 400);
   }
   const { repoId, prNumber } = parsed.data;
   const reviewerIds = [...new Set(parsed.data.reviewerIds)];
@@ -118,22 +122,22 @@ runRoutes.post('/try', async (c) => {
     .bind(...reviewerIds)
     .all<{ id: string }>();
   if (available.results.length !== reviewerIds.length) {
-    return c.json({ error: 'reviewer_unavailable' }, 400);
+    return errorResponse('reviewer_unavailable', 400);
   }
 
   const repository = await getRepository(c.env.DB, repoId);
   if (!repository) {
-    return c.json({ error: 'not_found' }, 404);
+    return errorResponse('not_found', 404);
   }
 
   const values = keyRingValues(c.env);
   if (!values) {
-    return c.json({ error: 'encryption_key_unset' }, 500);
+    return errorResponse('encryption_key_unset', 500);
   }
   const installationIdValue = await getMeta(c.env.DB, 'installation_id');
   const app = await loadGitHubApp(c.env.DB, await loadKeyRing(values));
   if (!app || !installationIdValue) {
-    return c.json({ error: 'setup_required' }, 409);
+    return errorResponse('setup_required', 409);
   }
 
   const token = await createInstallationToken(
@@ -152,7 +156,7 @@ runRoutes.post('/try', async (c) => {
     },
   );
   if (pullRequest === null) {
-    return c.json({ error: 'not_found' }, 404);
+    return errorResponse('not_found', 404);
   }
 
   const deliveryId = `try-${crypto.randomUUID()}`;
@@ -172,7 +176,7 @@ runRoutes.post('/try', async (c) => {
     await c.env.RUNS.getByName(runKey).start(payload);
   } catch (error) {
     console.error(error);
-    return c.json({ error: 'kick_failed' }, 500);
+    return errorResponse('kick_failed', 500);
   }
   await recordActivity(c.env.DB, {
     actor: c.get('user').login,
@@ -180,7 +184,7 @@ runRoutes.post('/try', async (c) => {
     target: runKey,
     detail: `${repository.fullName} #${prNumber} (manual)`,
   });
-  return c.json({ runId: runKey } satisfies TryRunResponse, 202);
+  return respond(TryRunResponseSchema, { runId: runKey } satisfies TryRunResponse, 202);
 });
 
 runRoutes.get('/:id', async (c) => {
@@ -188,7 +192,7 @@ runRoutes.get('/:id', async (c) => {
     .bind(c.req.param('id'))
     .first<RunRow>();
   if (!row) {
-    return c.json({ error: 'not_found' }, 404);
+    return errorResponse('not_found', 404);
   }
   const reviewerRows = await c.env.DB.prepare(
     'SELECT reviewer_id, status, findings_json, summary, usage_json, error FROM run_reviewers WHERE run_id = ? ORDER BY reviewer_id',
@@ -211,5 +215,5 @@ runRoutes.get('/:id', async (c) => {
     error: reviewer.error,
   }));
   const body: RunDetail = { run: summaryFromRow(row), reviewers };
-  return c.json(body);
+  return respond(RunDetailSchema, body);
 });

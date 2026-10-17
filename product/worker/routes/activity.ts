@@ -1,5 +1,7 @@
+import { ActivityPageSchema } from '@jury-forge/shared';
 import { Hono } from 'hono';
 import { listActivity, parseActivityCursor } from '../lib/activity';
+import { errorResponse, respond } from '../lib/respond';
 import { requireSession, sameOrigin, type AppEnv } from '../middleware';
 
 export const activityRoutes = new Hono<AppEnv>();
@@ -11,7 +13,7 @@ activityRoutes.get('/', async (c) => {
   const limit = Number.isFinite(rawLimit) ? Math.min(Math.max(Math.trunc(rawLimit), 1), 100) : 50;
   const cursor = c.req.query('cursor');
   if (cursor !== undefined && parseActivityCursor(cursor) === null) {
-    return c.json({ error: 'invalid_request' }, 400);
+    return errorResponse('invalid_request', 400);
   }
-  return c.json(await listActivity(c.env.DB, { limit, cursor }));
+  return respond(ActivityPageSchema, await listActivity(c.env.DB, { limit, cursor }));
 });

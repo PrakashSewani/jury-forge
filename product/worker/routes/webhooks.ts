@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { recordActivity } from '../lib/activity';
 import { keyRingValues, loadKeyRing } from '../lib/crypto';
 import { loadGitHubApp } from '../lib/github-app';
+import { errorResponse } from '../lib/respond';
 import type { AppEnv } from '../middleware';
 import type { RunPayload } from '../run-engine';
 
@@ -26,27 +27,27 @@ export const webhookRoutes = new Hono<AppEnv>();
 webhookRoutes.post('/github', async (c) => {
   const values = keyRingValues(c.env);
   if (!values) {
-    return c.json({ error: 'encryption_key_unset' }, 500);
+    return errorResponse('encryption_key_unset', 500);
   }
   const app = await loadGitHubApp(c.env.DB, await loadKeyRing(values));
   if (!app) {
-    return c.json({ error: 'setup_required' }, 503);
+    return errorResponse('setup_required', 503);
   }
 
   // Verify before parsing: HMAC-SHA256 over the exact raw body (timing-safe inside verify).
   const signature = c.req.header('x-hub-signature-256');
   if (!signature) {
-    return c.json({ error: 'missing_signature' }, 401);
+    return errorResponse('missing_signature', 401);
   }
   const body = await c.req.text();
   const valid = await new Webhooks({ secret: app.webhookSecret }).verify(body, signature);
   if (!valid) {
-    return c.json({ error: 'invalid_signature' }, 401);
+    return errorResponse('invalid_signature', 401);
   }
 
   const deliveryId = c.req.header('x-github-delivery');
   if (!deliveryId) {
-    return c.json({ error: 'invalid_request' }, 400);
+    return errorResponse('invalid_request', 400);
   }
   const event = c.req.header('x-github-event');
   if (event !== 'pull_request') {
@@ -55,11 +56,11 @@ webhookRoutes.post('/github', async (c) => {
 
   const bodyJson = parseJson(body);
   if (bodyJson === undefined) {
-    return c.json({ error: 'invalid_request' }, 400);
+    return errorResponse('invalid_request', 400);
   }
   const parsed = pullRequestPayload.safeParse(bodyJson);
   if (!parsed.success) {
-    return c.json({ error: 'invalid_request' }, 400);
+    return errorResponse('invalid_request', 400);
   }
   const { action, repository, pull_request: pullRequest, installation } = parsed.data;
   if (!RUN_ACTIONS.has(action) || pullRequest.draft === true) {
@@ -98,7 +99,7 @@ webhookRoutes.post('/github', async (c) => {
     await c.env.DB.prepare('DELETE FROM webhook_deliveries WHERE delivery_id = ?')
       .bind(deliveryId)
       .run();
-    return c.json({ error: 'kick_failed' }, 500);
+    return errorResponse('kick_failed', 500);
   }
   await recordActivity(c.env.DB, {
     actor: 'webhook',

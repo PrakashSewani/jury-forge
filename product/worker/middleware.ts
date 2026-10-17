@@ -1,5 +1,6 @@
 import type { SessionUser } from '@jury-forge/shared';
 import type { MiddlewareHandler } from 'hono';
+import { errorResponse } from './lib/respond';
 import { readSession, sessionIdFromCookie } from './lib/sessions';
 
 export type AppEnv = {
@@ -14,7 +15,7 @@ export function requireSession(): MiddlewareHandler<AppEnv> {
     const sessionId = sessionIdFromCookie(c.req.raw);
     const user = sessionId ? await readSession(c.env.DB, sessionId) : null;
     if (!user) {
-      return c.json({ error: 'unauthorized' }, 401);
+      return errorResponse('unauthorized', 401);
     }
     c.set('user', user);
     await next();
@@ -28,7 +29,7 @@ export function sameOrigin(): MiddlewareHandler {
       const site = c.req.header('Sec-Fetch-Site');
       const origin = c.req.header('Origin');
       if (site !== 'same-origin' && origin !== new URL(c.req.url).origin) {
-        return c.json({ error: 'cross_origin' }, 403);
+        return errorResponse('cross_origin', 403);
       }
     }
     await next();

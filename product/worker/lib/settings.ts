@@ -60,7 +60,8 @@ export const DEFAULT_SETTINGS: InstanceSettings = {
 };
 
 export type SettingsPatchResult =
-  { ok: true; patch: Partial<InstanceSettings> } | { ok: false; error: string };
+  | { ok: true; patch: Partial<InstanceSettings> }
+  | { ok: false; error: 'invalid_request' | 'unknown_key' | 'invalid_value' };
 
 export function validateSettingsPatch(input: unknown): SettingsPatchResult {
   if (input === null || typeof input !== 'object' || Array.isArray(input)) {
