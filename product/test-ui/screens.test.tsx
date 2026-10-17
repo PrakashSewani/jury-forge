@@ -1,5 +1,6 @@
 import type {
   ActivityEntry,
+  InstanceReadiness,
   Repository,
   Reviewer,
   RunDetail,
@@ -10,6 +11,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  getReadiness,
   getRepositoryReviewers,
   getReviewer,
   getRun,
@@ -41,6 +43,9 @@ vi.mock('../src/lib/api', () => ({
   saveRepositoryReviewers: vi.fn(),
   setRepositoryEnabled: vi.fn(),
   getRun: vi.fn(),
+  getReadiness: vi.fn(),
+  listOpenPullRequests: vi.fn(),
+  startTryRun: vi.fn(),
   getSettings: vi.fn(),
   updateSettings: vi.fn(),
   listActivity: vi.fn(),
@@ -55,13 +60,59 @@ const listReviewersMock = vi.mocked(listReviewers);
 const getRepositoryReviewersMock = vi.mocked(getRepositoryReviewers);
 const getReviewerMock = vi.mocked(getReviewer);
 const getRunMock = vi.mocked(getRun);
+const getReadinessMock = vi.mocked(getReadiness);
 const getSettingsMock = vi.mocked(getSettings);
 const updateSettingsMock = vi.mocked(updateSettings);
 const listActivityMock = vi.mocked(listActivity);
 
 const pending = () => new Promise<never>(() => {});
 
-const SETUP_READY = { claimed: true, appCreated: true, installed: true, appSlug: 'jury-forge' };
+const READINESS: InstanceReadiness = {
+  claimed: true,
+  appInstalled: true,
+  reposEnabled: 0,
+  reviewersWithKey: 0,
+  repoReviewerPairs: 0,
+  firstRunAt: null,
+  completed: 2,
+  total: 5,
+  steps: [
+    { key: 'claim', label: 'Claim the instance', href: '/setup', done: true },
+    { key: 'install-app', label: 'Install the GitHub App', href: '/setup', done: true },
+    { key: 'enable-repo', label: 'Enable a repository', href: '/repositories', done: false },
+    {
+      key: 'add-reviewer',
+      label: 'Add a reviewer with a model key',
+      href: '/reviewers/new',
+      done: false,
+    },
+    { key: 'first-run', label: 'See the first run', href: '/runs', done: false },
+  ],
+  nextStep: {
+    key: 'enable-repo',
+    title: 'Turn on a repository',
+    body: 'Pick a repository for the first review.',
+    href: '/repositories',
+    label: 'Choose a repository',
+  },
+};
+
+const READINESS_DONE: InstanceReadiness = {
+  ...READINESS,
+  reposEnabled: 3,
+  reviewersWithKey: 1,
+  repoReviewerPairs: 1,
+  firstRunAt: 1_700_000_000,
+  completed: 5,
+  steps: READINESS.steps.map((step) => ({ ...step, done: true })),
+  nextStep: {
+    key: 'done',
+    title: 'Your jury is running',
+    body: 'Every enabled repository is reviewed.',
+    href: '/runs',
+    label: 'View all runs',
+  },
+};
 
 const COMPLETED_RUN: RunSummary = {
   id: '101:12:sha:delivery',
@@ -155,6 +206,11 @@ const RUN_DETAIL: RunDetail = {
   ],
 };
 
+const MANUAL_RUN_DETAIL: RunDetail = {
+  ...RUN_DETAIL,
+  run: { ...COMPLETED_RUN, mode: 'manual', reviewUrl: null },
+};
+
 const ACTIVITY_ONE: ActivityEntry = {
   id: 1,
   at: 1_700_000_000,
@@ -178,29 +234,78 @@ beforeEach(() => {
 });
 
 describe('HomePage', () => {
-  it('shows a loading state while the runs load', () => {
+  it('shows a loading state while readiness loads', () => {
+    getReadinessMock.mockReturnValue(pending());
     listRunsMock.mockReturnValue(pending());
     listRepositoriesMock.mockReturnValue(pending());
-    render(<HomePage setup={SETUP_READY} user={{ login: 'prakashsewani', avatarUrl: null }} />);
+    render(<HomePage user={{ login: 'prakashsewani', avatarUrl: null }} />);
     expect(screen.getByText('Loading…')).toBeTruthy();
   });
 
-  it('shows a human error sentence with a retry, never the code', async () => {
-    listRunsMock.mockRejectedValue(Object.assign(new Error('nope'), { code: 'request_failed' }));
-    listRepositoriesMock.mockResolvedValue([]);
-    render(<HomePage setup={SETUP_READY} user={{ login: 'prakashsewani', avatarUrl: null }} />);
-    expect(await screen.findByRole('button', { name: 'Try again' })).toBeTruthy();
-    expect(screen.getByText(/run history could not be loaded/i)).toBeTruthy();
-    expect(screen.queryByText('request_failed')).toBeNull();
-  });
-
-  it('shows the instance state and recent runs', async () => {
+  it('leads with the computed readiness and its next step', async () => {
+    getReadinessMock.mockResolvedValue(READINESS);
     listRunsMock.mockResolvedValue({ runs: [COMPLETED_RUN], nextCursor: null });
     listRepositoriesMock.mockResolvedValue([REPO]);
-    render(<HomePage setup={SETUP_READY} user={{ login: 'prakashsewani', avatarUrl: null }} />);
-    expect(await screen.findByText('App installed')).toBeTruthy();
+    render(<HomePage user={{ login: 'prakashsewani', avatarUrl: null }} />);
+    expect(await screen.findByText('2 of 5 done')).toBeTruthy();
+    expect(screen.getByText('Turn on a repository')).toBeTruthy();
+    expect(screen.getByText('Pick a repository for the first review.')).toBeTruthy();
+    const action = screen.getByRole('link', { name: 'Choose a repository' });
+    expect(action.getAttribute('href')).toBe('/repositories');
     expect(await screen.findByRole('link', { name: 'prakashsewani/jury-forge' })).toBeTruthy();
     expect(screen.getByText('completed')).toBeTruthy();
+  });
+
+  it('renders every step with done and not-done markers from the API', async () => {
+    getReadinessMock.mockResolvedValue(READINESS);
+    listRunsMock.mockResolvedValue({ runs: [], nextCursor: null });
+    listRepositoriesMock.mockResolvedValue([]);
+    render(<HomePage user={{ login: 'prakashsewani', avatarUrl: null }} />);
+    expect(await screen.findByText('Claim the instance')).toBeTruthy();
+    for (const step of READINESS.steps) {
+      expect(screen.getByText(step.label)).toBeTruthy();
+    }
+    expect(screen.getAllByText('Done')).toHaveLength(2);
+    expect(screen.getAllByText('To do')).toHaveLength(3);
+  });
+
+  it('shows the closing next step when every step is done', async () => {
+    getReadinessMock.mockResolvedValue(READINESS_DONE);
+    listRunsMock.mockResolvedValue({ runs: [], nextCursor: null });
+    listRepositoriesMock.mockResolvedValue([]);
+    render(<HomePage user={{ login: 'prakashsewani', avatarUrl: null }} />);
+    expect(await screen.findByText('5 of 5 done')).toBeTruthy();
+    expect(screen.getByText('Your jury is running')).toBeTruthy();
+    expect(screen.getByText('Every enabled repository is reviewed.')).toBeTruthy();
+    const action = screen.getByRole('link', { name: 'View all runs' });
+    expect(action.getAttribute('href')).toBe('/runs');
+    expect(screen.getAllByText('Done')).toHaveLength(5);
+  });
+
+  it('shows the page error and refetches when readiness fails', async () => {
+    const user = userEvent.setup();
+    getReadinessMock.mockRejectedValueOnce(
+      Object.assign(new Error('nope'), { code: 'request_failed' }),
+    );
+    getReadinessMock.mockResolvedValue(READINESS);
+    listRunsMock.mockResolvedValue({ runs: [], nextCursor: null });
+    listRepositoriesMock.mockResolvedValue([]);
+    render(<HomePage user={{ login: 'prakashsewani', avatarUrl: null }} />);
+    expect(await screen.findByRole('button', { name: 'Try again' })).toBeTruthy();
+    expect(screen.getByText(/overview could not be loaded/i)).toBeTruthy();
+    expect(screen.queryByText('request_failed')).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(await screen.findByText('2 of 5 done')).toBeTruthy();
+    expect(getReadinessMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('invites the user to create a reviewer when there are no runs', async () => {
+    getReadinessMock.mockResolvedValue(READINESS);
+    listRunsMock.mockResolvedValue({ runs: [], nextCursor: null });
+    listRepositoriesMock.mockResolvedValue([]);
+    render(<HomePage user={{ login: 'prakashsewani', avatarUrl: null }} />);
+    expect(await screen.findByText('No runs yet')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Create a reviewer' })).toBeTruthy();
   });
 });
 
@@ -220,18 +325,44 @@ describe('ReviewersPage', () => {
     expect(screen.getAllByRole('link', { name: 'New reviewer' }).length).toBeGreaterThan(0);
   });
 
-  it('lists a reviewer with its model, key, repositories, and state', async () => {
+  it('lists a reviewer with its model, key, and state', async () => {
     listReviewersMock.mockResolvedValue([REVIEWER]);
     listRepositoriesMock.mockResolvedValue([REPO]);
-    getRepositoryReviewersMock.mockResolvedValue([
-      { reviewerId: 'rev-security', name: 'Security', enabled: true },
-    ]);
     render(<ReviewersPage />);
     expect(await screen.findByRole('link', { name: 'Security' })).toBeTruthy();
     expect(screen.getByText('gpt-5')).toBeTruthy();
     expect(screen.getByText('set')).toBeTruthy();
-    expect(screen.getByText('prakashsewani/jury-forge')).toBeTruthy();
     expect(screen.getByRole('switch', { name: 'Enabled' })).toBeTruthy();
+    expect(getRepositoryReviewersMock).not.toHaveBeenCalled();
+  });
+
+  it('renders All N enabled repositories when the reviewer covers every enabled repo', async () => {
+    const secondRepo: Repository = { ...REPO, repoId: 102, fullName: 'prakashsewani/site' };
+    listReviewersMock.mockResolvedValue([
+      { ...REVIEWER, repositories: ['prakashsewani/jury-forge', 'prakashsewani/site'] },
+    ]);
+    listRepositoriesMock.mockResolvedValue([REPO, secondRepo]);
+    render(<ReviewersPage />);
+    expect(await screen.findByText('All 2 enabled repositories')).toBeTruthy();
+    expect(getRepositoryReviewersMock).not.toHaveBeenCalled();
+  });
+
+  it('renders the repository names when the reviewer covers a subset', async () => {
+    const secondRepo: Repository = { ...REPO, repoId: 102, fullName: 'prakashsewani/site' };
+    listReviewersMock.mockResolvedValue([REVIEWER]);
+    listRepositoriesMock.mockResolvedValue([REPO, secondRepo]);
+    render(<ReviewersPage />);
+    expect(await screen.findByText('prakashsewani/jury-forge')).toBeTruthy();
+    expect(screen.queryByText('prakashsewani/site')).toBeNull();
+    expect(getRepositoryReviewersMock).not.toHaveBeenCalled();
+  });
+
+  it('renders None when the reviewer covers no repositories', async () => {
+    listReviewersMock.mockResolvedValue([{ ...REVIEWER, repositories: [] }]);
+    listRepositoriesMock.mockResolvedValue([REPO]);
+    render(<ReviewersPage />);
+    expect(await screen.findByText('None')).toBeTruthy();
+    expect(getRepositoryReviewersMock).not.toHaveBeenCalled();
   });
 });
 
@@ -352,6 +483,21 @@ describe('RunDetailPage', () => {
     await user.click(screen.getByRole('tab', { name: 'Errors' }));
     expect(screen.getByText('Leaked secret')).toBeTruthy();
     expect(screen.queryByText('Wrong layer')).toBeNull();
+  });
+
+  it('says a manual run was not posted to GitHub', async () => {
+    getRunMock.mockResolvedValue(MANUAL_RUN_DETAIL);
+    listReviewersMock.mockResolvedValue([REVIEWER]);
+    render(<RunDetailPage id="run-1" />);
+    expect(await screen.findByText(/not posted to GitHub/i)).toBeTruthy();
+  });
+
+  it('does not add the manual notice to an automatic run', async () => {
+    getRunMock.mockResolvedValue(RUN_DETAIL);
+    listReviewersMock.mockResolvedValue([REVIEWER]);
+    render(<RunDetailPage id="run-1" />);
+    expect(await screen.findByRole('heading', { name: 'Security' })).toBeTruthy();
+    expect(screen.queryByText(/not posted to GitHub/i)).toBeNull();
   });
 });
 

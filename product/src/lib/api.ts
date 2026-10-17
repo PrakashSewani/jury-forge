@@ -1,9 +1,11 @@
 import type {
   ActivityPage,
   InstallationInfo,
+  InstanceReadiness,
   InstanceSettings,
   ProviderFlavor,
   Repository,
+  RepositoryPullRequest,
   RepositoryReviewer,
   RepositoryReviewerUpdate,
   Reviewer,
@@ -15,6 +17,8 @@ import type {
   SettingsResponse,
   SetupCodeResponse,
   SetupState,
+  TryRunRequest,
+  TryRunResponse,
 } from '@jury-forge/shared';
 
 export class ApiError extends Error {
@@ -209,6 +213,10 @@ export function saveRepositoryReviewers(
   });
 }
 
+export function listOpenPullRequests(repoId: number): Promise<RepositoryPullRequest[]> {
+  return request(`/api/repositories/${repoId}/pulls`);
+}
+
 export function listRuns(cursor?: string): Promise<RunsPage> {
   const query = cursor === undefined ? '' : `?cursor=${encodeURIComponent(cursor)}`;
   return request(`/api/runs${query}`);
@@ -216,6 +224,18 @@ export function listRuns(cursor?: string): Promise<RunsPage> {
 
 export function getRun(id: string): Promise<RunDetail> {
   return request(`/api/runs/${encodeURIComponent(id)}`);
+}
+
+export function startTryRun(input: TryRunRequest): Promise<TryRunResponse> {
+  return request('/api/runs/try', {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify(input),
+  });
+}
+
+export function getReadiness(): Promise<InstanceReadiness> {
+  return request('/api/instance/readiness');
 }
 
 export function getSettings(): Promise<SettingsResponse> {
