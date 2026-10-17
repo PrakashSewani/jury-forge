@@ -114,7 +114,7 @@ describe('Card and Panel', () => {
 });
 
 describe('Badge', () => {
-  it('renders the neutral tone', () => {
+  it('renders the neutral tone as a light chip with dark text', () => {
     render(<Badge>neutral</Badge>);
     const badge = screen.getByText('neutral');
     expect(badge.className).toContain('bg-surface-muted');

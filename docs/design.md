@@ -16,6 +16,8 @@ the decision it implements.
 | Run engine    | `product/worker/run-engine.ts` | the `RunEngine` Durable Object (binding `RUNS`)                                              |
 | Contracts     | `shared/src/`                  | API request/response types shared by the Worker and the dashboard                            |
 | Dashboard     | `product/src/`                 | React screens: setup wizard, reviewers, repositories, runs                                   |
+| Shell         | `product/src/shell/`           | `Shell`, `Nav`, `ThemeToggle`, `UserMenu`, `RouteGuard` — the chrome around the screens      |
+| UI primitives | `product/src/ui/`              | the D-026 design-system primitives, re-exported through `product/src/components.tsx`         |
 
 ## Data model (D1)
 
@@ -299,31 +301,46 @@ as runs — a reading surface, not an audit export.
 
 Routes: `/setup` (wizard steps), `/reviewers`, `/reviewers/new`, `/reviewers/:id`,
 `/repositories`, `/runs`, `/runs/:id`, `/settings` (Advanced — the D-021 numbers), `/activity`
-(the D-023 trail), `/` (overview
-with instance state and recent runs). An
-auth-aware shell redirects to sign-in on 401. Screens: the reviewer editor (instructions, rules,
-flavor, base URL, model, params; the API key is write-only, shown as "set" with a replace
-action), repositories (enable/disable, per-repo reviewer toggles), runs (status, per-reviewer
-findings, link to the GitHub review), and the wizard. Copy and visuals come from the design system
-in `product/src/ui/` — see [Design system (D-026)](#design-system-d-026).
+(the D-023 trail), `/` (overview with instance state and recent runs). Routing is a
+dependency-free path switch with full-page navigation.
+
+The chrome lives in `product/src/shell/` (D-027). `Shell({ user, setup, route, children })`
+renders a **sidebar at `lg` and above** and a **top bar plus a slide-over panel below `lg`**;
+exactly one nav is visible at every width (`hidden lg:flex` sidebar, `lg:hidden` panel). Content
+sits in a `max-w-7xl` grid with `min-w-0` on the flex children, and the header, main and footer
+share that width. The sidebar and panel carry the instance status chip (a `Badge` from
+`setup.claimed` / `setup.installed` / `setup.appSlug`) and the route list — Overview, Reviewers,
+Repositories, Runs, Settings, Activity — with the active section driven by `routeFromPath`; a
+sub-route keeps its section active. `ThemeToggle` cycles light → dark → system and calls
+`applyTheme` from `product/src/lib/theme.ts`, persisting under `jf:theme`; `main.tsx` resolves
+`readStoredTheme()` → `resolveTheme(pref, systemPrefersDark())` and calls `applyTheme` before the
+first render, so `data-theme` is set from the start. `UserMenu` shows the avatar, login and a
+≥44 px log-out control. The mobile toggle is a real `<button>` with `aria-expanded`/
+`aria-controls`; Escape and a link click both close the panel. `RouteGuard` renders the sign-in,
+not-set-up and API-failure gates as a centred panel with a title, one line of explanation and
+**one** primary action (plus a retry on failure) instead of a bare `Card`. Screens: the reviewer
+editor (instructions, rules, flavor, base URL, model, params; the API key is write-only, shown as
+"set" with a replace action), repositories (enable/disable, per-repo reviewer toggles), runs
+(status, per-reviewer findings, link to the GitHub review), and the wizard. Copy and visuals come
+from the design system in `product/src/ui/` — see [Design system (D-026)](#design-system-d-026).
 
 The wizard UI derives its current step from setup state: **code** (enter the setup code; the
 manifest form is auto-submitted to GitHub's app-creation page), **install** (link to
 `https://github.com/apps/{appSlug}/installations/new`, then verify), **claim** (GitHub sign-in),
 then done. Errors redirected back from the claim callback (`?error=installation_required`,
-`?error=access_denied`) render as messages on `/setup`. Routing is a dependency-free path switch
-with full-page navigation; the shell shows the nav, the instance state, and the signed-in user,
-and gates the dashboard screens behind sign-in. A repositories refresh imports the installation's
-repositories; newly discovered ones arrive disabled — enabling one is an explicit dashboard
-action (D-016).
+`?error=access_denied`) render as messages on `/setup`. A repositories refresh imports the
+installation's repositories; newly discovered ones arrive disabled — enabling one is an explicit
+dashboard action (D-016).
 
 ## Design system (D-026)
 
 Slice A gives the dashboard a named vocabulary of design tokens and a reusable primitive layer. It
-is a strict visual no-op: every token equals the exact Tailwind default utility it replaces (so
+was a strict visual no-op: every token equals the exact Tailwind default utility it replaces (so
 later slices can swap classes for the names below without changing a pixel), and no page, worker,
-shared, or site source changed. The token layer lives in `product/src/styles.css`'s `@theme`
-block; the primitives live in `product/src/ui/`.
+shared, or site source changed. Slice B (D-027) then retuned the three text tokens for contrast,
+shipped dark mode and added the primitives' focus and 44 px target behaviour; the tables below
+carry the current values. The token layer lives in `product/src/styles.css`'s `@theme` block; the
+primitives live in `product/src/ui/`.
 
 ### Design tokens
 
@@ -356,9 +373,9 @@ is what makes the swap a no-op.
 | Token                  | Value                        | Tailwind default   |
 | ---------------------- | ---------------------------- | ------------------ |
 | `--color-text`         | `oklch(20.5% 0 none)`        | `text-neutral-900` |
-| `--color-text-body`    | `oklch(43.9% 0 none)`        | `text-neutral-600` |
-| `--color-text-muted`   | `oklch(55.6% 0 none)`        | `text-neutral-500` |
-| `--color-text-subtle`  | `oklch(70.8% 0 none)`        | `text-neutral-400` |
+| `--color-text-body`    | `oklch(37.1% 0 none)`        | `text-neutral-700` |
+| `--color-text-muted`   | `oklch(43.9% 0 none)`        | `text-neutral-600` |
+| `--color-text-subtle`  | `oklch(55.6% 0 none)`        | `text-neutral-500` |
 | `--color-text-inverse` | `#fff`                       | `text-white`       |
 | `--color-text-error`   | `oklch(44.4% 0.177 26.899)`  | `text-red-800`     |
 | `--color-text-info`    | `oklch(42.4% 0.199 265.638)` | `text-blue-800`    |
@@ -410,7 +427,7 @@ is what makes the swap a no-op.
 
 ### Dark mode
 
-Dark mode is **prepared, not shipped**. `styles.css` declares an explicit `dark` custom variant,
+Dark mode **ships** (D-027). `styles.css` declares an explicit `dark` custom variant,
 `@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *))`, and a
 `:root[data-theme='dark']` block that overrides every token that has a dark value — surfaces,
 borders, text, accent, and the verdict and status palettes. The palettes are included because their
@@ -419,10 +436,9 @@ their `*-800` text stayed at its light value, which lands near 2:1 on the dark s
 value is again one Tailwind default, in the same hue family at the ramp that clears it (`red-950`
 surface under `red-300` text, and so on). The system preference is resolved in
 `product/src/lib/theme.ts` (`readStoredTheme`, `resolveTheme`, `systemPrefersDark`, `applyTheme`),
-which persists the choice under `jf:theme`. Nothing calls `applyTheme` yet and there is
-deliberately no `prefers-color-scheme` media rule: no element carries `data-theme`, so the
-stylesheet resolves to exactly the light values above and the default render is unchanged. Slice B
-wires the toggle and becomes the helper's first caller.
+which persists the choice under `jf:theme`. `main.tsx` now calls `applyTheme` before the first
+render and the shell's `ThemeToggle` is its interactive caller, so `data-theme` is set from boot
+and a dark-OS machine gets dark mode.
 
 **Dark overrides** — the complete `:root[data-theme='dark']` block, again one Tailwind default
 each:
@@ -436,8 +452,9 @@ each:
 | `--color-border`                   | `oklch(26.9% 0 none)`        | `neutral-800`    |
 | `--color-border-strong`            | `oklch(37.1% 0 none)`        | `neutral-700`    |
 | `--color-text`                     | `oklch(97% 0 none)`          | `neutral-100`    |
-| `--color-text-muted`               | `oklch(70.8% 0 none)`        | `neutral-400`    |
-| `--color-text-subtle`              | `oklch(55.6% 0 none)`        | `neutral-500`    |
+| `--color-text-body`                | `oklch(92.2% 0 none)`        | `neutral-200`    |
+| `--color-text-muted`               | `oklch(87% 0 none)`          | `neutral-300`    |
+| `--color-text-subtle`              | `oklch(70.8% 0 none)`        | `neutral-400`    |
 | `--color-text-inverse`             | `oklch(20.5% 0 none)`        | `neutral-900`    |
 | `--color-accent`                   | `oklch(97% 0 none)`          | `neutral-100`    |
 | `--color-accent-hover`             | `oklch(87% 0 none)`          | `neutral-300`    |
@@ -445,7 +462,6 @@ each:
 | `--color-surface-info`             | `oklch(28.2% 0.091 267.935)` | `blue-950`       |
 | `--color-border-error`             | `oklch(39.6% 0.141 25.723)`  | `red-900`        |
 | `--color-border-info`              | `oklch(37.9% 0.146 265.522)` | `blue-900`       |
-| `--color-text-body`                | `oklch(70.8% 0 none)`        | `neutral-400`    |
 | `--color-text-error`               | `oklch(80.8% 0.114 19.571)`  | `red-300`        |
 | `--color-text-info`                | `oklch(80.9% 0.105 251.813)` | `blue-300`       |
 | `--color-verdict-error-surface`    | `oklch(25.8% 0.092 26.042)`  | `red-950`        |
@@ -471,8 +487,15 @@ each:
 `Dialog` · `EmptyState` · `Field` · `Input` (plus `inputClass`) · `Notice` · `Select` · `Skeleton` ·
 `Switch` · `Table` (plus `Row`) · `Tabs` · `Textarea` · `Toolbar`.
 
-Two support modules sit alongside them: `class-names.ts` exports `cx` (a tiny class-name joiner),
-and `index.ts` is the barrel that re-exports the public surface. `product/src/components.tsx` is a
+Two support modules sit alongside them: `class-names.ts` exports `cx` (a tiny class-name joiner)
+plus the shared `focusRing` and `tapTarget` class strings, and `index.ts` is the barrel that
+re-exports the public surface. Every interactive primitive (`Button`, `Input`, `Select`,
+`Textarea`, `Switch`, `Tabs` triggers) and every nav/menu link carries
+`focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent` and a
+`min-h-11 min-w-11` (44 px) target — 44 px controls are the intended look, not a mobile-only
+rule (D-027). `Badge`'s neutral tone is `bg-verdict-info-surface text-verdict-info-text`, a light
+chip with dark text in both themes, not `bg-surface-muted`, which flips dark while its text does
+not. `product/src/components.tsx` is a
 re-export shim only — it keeps the nine names the existing screens import (`Badge`, `buttonClass`,
 `Card`, `Field`, `inputClass`, `Notice`, `secondaryButtonClass`, `Loading`, `LoadFailed`) working
 while every screen is migrated to `product/src/ui/` in Slice B. Nothing else lives there, and the
@@ -547,8 +570,8 @@ records via the Workers Vitest plugin with stubbed `fetch`. No test performs rea
 
 Slice A adds a **second vitest project** for UI components. The workerd pool cannot render a
 component — there were zero UI tests before this — so `product/vitest.ui.config.ts` runs
-`happy-dom` with `@testing-library/react`, collecting `product/test-ui/**/*.test.tsx` (60 tests
-across the theme helper, the primitives, the form controls, and structure). The workerd project's
+`happy-dom` with `@testing-library/react`, collecting `product/test-ui/**/*.test.tsx` (65 tests
+across the theme helper, the primitives, the form controls, structure, and the shell). The workerd project's
 test glob is now restricted to `./test/**/*.test.ts`, so the two projects can never collect each
 other's tests; `npm run test` runs `test:worker` then `test:ui`. Tests that need a `Storage` build
 one (`product/test-ui/memory-storage.ts`) instead of reading the ambient `window.localStorage`,

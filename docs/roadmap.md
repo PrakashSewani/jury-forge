@@ -58,16 +58,16 @@ one-slice-per-PR flow. Each slice still landed as its own docs commit and implem
 ## Post-phase-2 rework (2026-10-17)
 
 The owner's rework item lands as four stacked pull requests against `dev` (D-011's flow), after the
-improvement slate; slice A's is open as **#17**, and B, C and D open behind it:
+improvement slate; slice A's merged as **#17**, and B, C and D open behind it:
 
-| Slice | Scope                                                                                   | Status          |
-| ----- | --------------------------------------------------------------------------------------- | --------------- |
-| A     | Design system: token layer + `product/src/ui/` primitives + the UI test harness (D-026) | in review (#17) |
-| B     | Shell and the 8 screens rewritten on the primitives; dark-mode toggle wired             | in progress     |
-| C     | Product shape: readiness, templates, reviewer↔repo visibility, try-a-reviewer           | not started     |
-| D     | Architecture: validated contracts, error taxonomy, client routing, run polling          | not started     |
+| Slice | Scope                                                                                   | Status                       |
+| ----- | --------------------------------------------------------------------------------------- | ---------------------------- |
+| A     | Design system: token layer + `product/src/ui/` primitives + the UI test harness (D-026) | merged to `dev` (`77541fbb`) |
+| B     | Shell + dark mode landed (run 2, D-027); the 8 screens on the primitives remain         | in progress                  |
+| C     | Product shape: readiness, templates, reviewer↔repo visibility, try-a-reviewer           | not started                  |
+| D     | Architecture: validated contracts, error taxonomy, client routing, run polling          | not started                  |
 
-Slice A is in review as **#17** on `feat/rework-a-design-system-20261017`; slice B is in progress
-on `feat/rework-b-shell-screens-20261017`, and C and D stack behind both. The
-rework is product work, not a phase — phase 3 (promo site) still starts after it. **Nothing
-deploys: the hold stands.**
+Slice A merged to `dev` as **#17** (`77541fbb`); slice B run 2 (the shell, wired dark mode, the
+token retune and the primitives) is on `feat/rework-b-shell-screens-20261017` and the eight
+dashboard screens are its remaining work; C and D stack behind it. The rework is product work, not a
+phase — phase 3 (promo site) still starts after it. **Nothing deploys: the hold stands.**

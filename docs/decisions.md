@@ -666,3 +666,82 @@ loaded the dashboard, breaking the no-op baseline the rest of the stack depends 
 preference is resolved in JS only and `data-theme` stays unset until Slice B; shipping the theme
 toggle inside this slice — it changes every screen's render and belongs with the shell rewrite,
 not the vocabulary.
+
+## D-027: Rework slice B — the shell, wired dark mode, and the measured accessibility retune
+
+**Date:** 2026-10-17 (second slice of the post-phase-2 rework; run 2)
+
+**Decision:** (1) **Shell extraction.** The chrome moves out of `App.tsx` into
+`product/src/shell/`, a barrel `index.ts` over `Shell`, `Nav`, `ThemeToggle`, `UserMenu` and
+`RouteGuard`. `Shell({ user, setup, route, children })` renders a sidebar at `lg` and above and a
+top bar plus a slide-over panel below it (`hidden lg:flex` / `lg:hidden`, so exactly one nav is
+visible at every width). Content sits in a `max-w-7xl` grid with `min-w-0` on the flex children;
+header, main and footer share that width. The sidebar and panel show the instance status chip (a
+`Badge` from `setup.claimed` / `setup.installed` / `setup.appSlug`) and the route list with the
+active section driven by `routeFromPath` (a sub-route keeps its section active, unchanged). The
+mobile toggle is a real `<button>` with `aria-expanded` and `aria-controls`; Escape and a link
+click both close the panel. `RouteGuard` turns the sign-in, not-set-up and API-failure gates into a
+centred panel with one primary action (plus a retry). `App.tsx` keeps its behaviour — session and
+setup loading, `jf:unauthorized`, logout, and the route switch — and only the markup moved.
+
+(2) **Dark mode ships.** `main.tsx` resolves `readStoredTheme()` → `resolveTheme(pref,
+systemPrefersDark())` and calls `applyTheme` before the first render, and `ThemeToggle` is
+`applyTheme`'s interactive caller: it cycles light → dark → system and persists under `jf:theme`.
+`data-theme` is now set from boot, so the `:root[data-theme='dark']` overrides actually take
+effect and a dark-OS machine gets dark mode. This intentionally changes the render for the eight
+screens that have not been rewritten yet; that half-dark interim state is expected and is the next
+run's work.
+
+(3) **Text-token retune, measured.** The re-captured baseline named exactly one failing colour
+pair, `text-neutral-400` (the footer and the log-out control): 112 failing cells and 224 violating
+elements, worst ratios **2.49:1** (`#a1a1a1` on `#fafbfb`) and **2.58:1** (`#a1a1a1` on
+`#fefffe`). Every other contrast pair passed. The fix is to make the three text levels comfortably
+AA-safe rather than marginal: in the light theme `--color-text-muted` moves from neutral-500 to
+`oklch(37.1% 0 none)` (neutral-700, ~9.7:1 on white) and `--color-text-subtle` from neutral-400 to
+`oklch(43.9% 0 none)` (neutral-600, ~7.3:1); in the dark theme `--color-text-muted` moves to
+`oklch(87% 0 none)` (neutral-300, ~12:1 on neutral-950) and `--color-text-subtle` to
+`oklch(70.8% 0 none)` (neutral-400, ~7.9:1). Three distinct, monotonically ordered, AA-safe levels
+in both themes. The verdict and status palettes are untouched — they are light chips with dark
+text and already readable in both themes.
+
+(4) **44 px controls.** `Button`, `Input`, `Select`, `Textarea`, `Switch` and `Tabs` triggers get
+`min-h-11 min-w-11` (44 px), on every viewport; 44 px controls are the intended look, not a
+mobile-only rule.
+
+(5) **Two harness rule fixes.** `scripts/measure-layout.mjs` now (a) moves focus with a real Tab
+keypress instead of scripted `.focus()`, because `.focus()` cannot match `:focus-visible` and so
+could not distinguish "no focus styling" from "correctly focus-visible styling" — it only passed a
+`:focus` outline, the wrong UX bar — and passes only when the element is `:focus-visible` **and**
+shows an outline ≥ 1 px or a non-none box-shadow, recording the path as `focusMethod`; and
+(b) exempts `a[href]` whose computed `display` is `inline` from the 44 px tap-target rule, per
+WCAG 2.5.5 (a target in a sentence or block of text cannot be 44 px tall without destroying the
+paragraph), recording the excluded count as `tapTargetsInlineExempt`. These are methodological
+fixes, not threshold tuning: neither changes the numeric bar (still 44 px, still a visible focus
+indicator). The baseline was **re-captured** with the amended harness on the unmodified Slice A
+tree, so the before/after deltas use one rule.
+
+**Why:** the shell was the thing forcing 650 px of horizontal scroll at every width below 768 px
+(six unwrapped nav links plus the logout cluster) and hiding the only nav behind that same header.
+Extracting it into `product/src/shell/` with `min-w-0` on the flex children and a real mobile
+slide-over is the smallest change that fixes overflow and navigation together. Dark mode was
+prepared in Slice A and had no caller; wiring it is why every screen now has to be finished. The
+contrast retune is deliberately a step past the floor: a 4.5:1 pass with no margin breaks on any
+slightly different surface. The two harness fixes exist so the numbers mean what they claim — a
+focus check that passes only `:focus` outlines measures the wrong thing, and a 44 px rule applied
+to prose links is a rule WCAG itself exempts.
+
+**Measured:** re-captured baseline (amended harness, unmodified tree): 112/112 cells failing —
+overflow 64, tapTargets 64 (740 violations, 32 inline exempt), contrast 112 (224 elements),
+focus 0, mobileNav 16. Shell run (items 1–3, screens still raw): 88 failing cells — overflow 4
+(the `/reviewers` toolbar at 320–360 px, screens' work), tapTargets 64 (176 violations),
+contrast 56 (dark cells only; the light theme passes), focus 0, mobileNav 0. The numbers live in
+`docs/rework/baseline.json` / `shell.json` and the sheets beside them.
+
+**Rejected:** keeping `--color-text-muted` at neutral-500 (4.5:1 is the floor, not a target — a
+marginal pass breaks on any slightly different surface); a `:focus` outline instead of
+`:focus-visible` (it lights up on every mouse click); reusing `bg-surface-muted` for the neutral
+badge (it flips dark in the dark theme while the text colour does not, so the chip becomes
+unreadable); responsive-only 44 px targets (the controls look and behave better at 44 px on every
+viewport, and scoping the rule to mobile makes the desktop tap area a second, untested bar);
+`.focus()`-based focus measurement and a blanket 44 px rule for inline links (the two wrong bars
+above).

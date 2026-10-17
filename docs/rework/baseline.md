@@ -1,7 +1,7 @@
 # Layout baseline: baseline
 
-- Generated: 2026-10-17T08:12:59.010Z
-- Branch: `feat/rework-b-shell-screens-20261017` @ `0d379c3`
+- Generated: 2026-10-17T08:22:34.742Z
+- Branch: `feat/rework-b-shell-screens-20261017` @ `f1d7fd0`
 - Browser: `/Applications/Brave Browser.app/Contents/MacOS/Brave Browser`
 - Browser string: Chrome/155.0.8059.40
 - Base URL: http://127.0.0.1:5173
@@ -16,14 +16,14 @@ Each cell is the number of failing checks in that cell: **light on the first lin
 
 | Route                                                                              |    320 |    360 |    390 |    414 |    768 |   1024 |   1440 |
 | ---------------------------------------------------------------------------------- | -----: | -----: | -----: | -----: | -----: | -----: | -----: |
-| `/`                                                                                | 4<br>4 | 4<br>4 | 5<br>5 | 4<br>4 | 2<br>2 | 2<br>2 | 2<br>2 |
-| `/reviewers`                                                                       | 4<br>4 | 4<br>4 | 5<br>5 | 4<br>4 | 2<br>2 | 2<br>2 | 2<br>2 |
-| `/reviewers/new`                                                                   | 4<br>4 | 4<br>4 | 5<br>5 | 4<br>4 | 2<br>2 | 2<br>2 | 2<br>2 |
-| `/repositories`                                                                    | 4<br>4 | 4<br>4 | 5<br>5 | 4<br>4 | 2<br>2 | 2<br>2 | 2<br>2 |
-| `/runs`                                                                            | 4<br>4 | 4<br>4 | 5<br>5 | 4<br>4 | 2<br>2 | 2<br>2 | 2<br>2 |
-| `/runs/101%3A12%3A9f2c1a7e4b8d0f3a6c5e2b1d4a7f0c3e8b6d9a2f%3Adev-seed-delivery-12` | 4<br>4 | 4<br>4 | 5<br>5 | 4<br>4 | 2<br>2 | 2<br>2 | 2<br>2 |
-| `/settings`                                                                        | 4<br>4 | 4<br>4 | 5<br>5 | 4<br>4 | 2<br>2 | 2<br>2 | 2<br>2 |
-| `/activity`                                                                        | 4<br>4 | 4<br>4 | 5<br>5 | 4<br>4 | 2<br>2 | 2<br>2 | 2<br>2 |
+| `/`                                                                                | 3<br>3 | 3<br>3 | 4<br>4 | 3<br>3 | 1<br>1 | 1<br>1 | 1<br>1 |
+| `/reviewers`                                                                       | 3<br>3 | 3<br>3 | 4<br>4 | 3<br>3 | 1<br>1 | 1<br>1 | 1<br>1 |
+| `/reviewers/new`                                                                   | 3<br>3 | 3<br>3 | 4<br>4 | 3<br>3 | 1<br>1 | 1<br>1 | 1<br>1 |
+| `/repositories`                                                                    | 3<br>3 | 3<br>3 | 4<br>4 | 3<br>3 | 1<br>1 | 1<br>1 | 1<br>1 |
+| `/runs`                                                                            | 3<br>3 | 3<br>3 | 4<br>4 | 3<br>3 | 1<br>1 | 1<br>1 | 1<br>1 |
+| `/runs/101%3A12%3A9f2c1a7e4b8d0f3a6c5e2b1d4a7f0c3e8b6d9a2f%3Adev-seed-delivery-12` | 3<br>3 | 3<br>3 | 4<br>4 | 3<br>3 | 1<br>1 | 1<br>1 | 1<br>1 |
+| `/settings`                                                                        | 3<br>3 | 3<br>3 | 4<br>4 | 3<br>3 | 1<br>1 | 1<br>1 | 1<br>1 |
+| `/activity`                                                                        | 3<br>3 | 3<br>3 | 4<br>4 | 3<br>3 | 1<br>1 | 1<br>1 | 1<br>1 |
 
 ## Totals
 
@@ -32,7 +32,7 @@ Each cell is the number of failing checks in that cell: **light on the first lin
 - overflow: 64 failing cells
 - tapTargets: 64 failing cells
 - contrast: 112 failing cells
-- focus: 112 failing cells
+- focus: 0 failing cells
 - mobileNav: 16 failing cells
 
 ## Horizontal overflow
@@ -173,7 +173,8 @@ Each cell is the number of failing checks in that cell: **light on the first lin
 
 ## Tap targets (< 44px, mobile widths)
 
-Total violations: 772
+Total violations: 740
+Inline links exempt under WCAG 2.5.5: 32
 
 - 13px — `input` "" (/reviewers/new @ 320 light)
 - 13px — `input` "" (/reviewers/new @ 360 light)
@@ -215,24 +216,20 @@ Total violations: 772
 - 13px — `input` "" (/settings @ 390 dark)
 - 13px — `input` "" (/settings @ 414 dark)
 - 13px — `input` "" (/settings @ 414 dark)
-- … 732 more
+- … 700 more
 
 ## Contrast
 
 Total violating text elements: 224
 
-- 2.51:1 (needs 4.5:1) #a1a0a0 on #fbfafb — 112 occurrence(s), e.g. "Self-hosted on your own Cloudflare account."
-- 2.61:1 (needs 4.5:1) #a1a0a0 on #ffffff — 112 occurrence(s), e.g. "Log out"
+- 2.49:1 (needs 4.5:1) #a1a1a1 on #fafbfb — 112 occurrence(s), e.g. "Self-hosted on your own Cloudflare account."
+- 2.58:1 (needs 4.5:1) #a1a1a1 on #fefffe — 112 occurrence(s), e.g. "Log out"
 
 ## Focus indicators (first three interactive elements)
 
-Checks run: 336; failures: 336
-
-- `a.text-sm.font-semibold.tracking-tight` "Jury Forge" — 112 cell(s), e.g. / @ 320 light; outline none 3px, boxShadow none
-- `a.font-medium.text-neutral-900` "Overview" — 14 cell(s), e.g. / @ 320 light; outline none 3px, boxShadow none
-- `a.text-neutral-500.transition.hover:text-neutral-900` "Reviewers" — 84 cell(s), e.g. / @ 320 light; outline none 3px, boxShadow none
-- `a.text-neutral-500.transition.hover:text-neutral-900` "Overview" — 98 cell(s), e.g. /reviewers @ 320 light; outline none 3px, boxShadow none
-- `a.font-medium.text-neutral-900` "Reviewers" — 28 cell(s), e.g. /reviewers @ 320 light; outline none 3px, boxShadow none
+Checks run: 336; failures: 0
+Focus method: Tab
+None.
 
 ## Mobile nav (390px)
 

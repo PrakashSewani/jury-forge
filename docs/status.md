@@ -68,8 +68,8 @@ no-op: no page, worker, shared, or site source changed. Scopes for B/C/D are in
 `docs/roadmap.md`; the rework is product work, not a phase, so phase 3 stays `not started`.
 
 **Slice A:** open for review as PR #17 (`6201eda` docs, `0d379c3` implementation; CI `check`
-success). **Slice B run 1 (2026-10-17):** landed `scripts/measure-layout.mjs`, a dependency-free Chrome
-DevTools Protocol layout harness, and captured the pre-change baseline under `docs/rework/`
+success). **Slice B run 1 (2026-10-17):** landed `scripts/measure-layout.mjs`, a dependency-free
+Chrome DevTools Protocol layout harness, and captured the pre-change baseline under `docs/rework/`
 (`README.md`, `baseline.json`, `baseline.md`; the 32 baseline PNGs are regenerable and gitignored). The harness measures
 the eight dashboard screens at seven widths (320–1440) in light and dark for horizontal overflow,
 mobile tap targets, contrast, focus indicators and the 390 px nav. The baseline measures the
@@ -77,14 +77,30 @@ app exactly as slice A left it — no page, worker, `shared/`, `site/` or slice 
 It fails as expected: no mobile nav, all mobile widths overflow, tap targets under 44 px, and the
 `text-neutral-400` footer/log-out text is ~2.5:1. The numbers are in `docs/rework/baseline.md`.
 
-**Verified:** `npm run check` exit 0 — workerd 170/170 · UI 54/54 · harness run exit 0 with the
-browser and dev server both reaped.
+**Slice B run 2 (2026-10-17):** landed the shell and the measured accessibility retune. New
+`product/src/shell/` (`Shell`, `Nav`, `ThemeToggle`, `UserMenu`, `RouteGuard`, barrel `index.ts`) —
+sidebar at `lg`, top bar plus slide-over below, `max-w-7xl` grid with `min-w-0`, the instance
+status chip and active-route state. Dark mode is actually wired: `main.tsx` applies the resolved
+preference at boot and `ThemeToggle` cycles light → dark → system under `jf:theme`. The text
+tokens were retuned to three AA-safe levels in both themes (light muted neutral-700 / subtle
+neutral-600; dark muted neutral-300 / subtle neutral-400), the primitives gained
+`focus-visible` outlines and 44 px targets, the neutral `Badge` became a light chip with dark text,
+and `Loading`/`LoadFailed` moved to theme-flipping tokens. `scripts/measure-layout.mjs` got two
+methodological fixes — keyboard (`Tab`) focus instead of scripted `.focus()`, and the WCAG 2.5.5
+inline-link tap-target exemption — and the baseline was **re-captured** with the amended harness so
+before/after use one rule. `docs/rework/shell.json` is the after-shell run. The eight screens are
+**not** rewritten yet: they still use raw palette utilities, so overflow remains only on the
+`/reviewers` toolbar at 320–360 px and contrast still fails on the dark theme, both deliberately
+deferred to the next run. `App.tsx` still renders every screen exactly as before, inside the shell.
+
+**Verified:** `npm run check` exit 0 — workerd 170/170 · UI 65/65 · harness runs (baseline and
+shell) exit 0 with the browser and dev server both reaped.
 
 **Blocked by:** nothing.
 
-**Next action:** slice B's actual styling work — rewrite the shell and the eight screens on the
-`product/src/ui/` primitives with the dark-mode toggle, then re-run the harness as a delta against
-`docs/rework/baseline.json`.
+**Next action:** slice B run 3 — rewrite the eight dashboard screens on the `product/src/ui/`
+primitives so they follow the theme, clear the remaining dark-theme contrast failures and the
+`/reviewers` toolbar overflow, then re-run the harness as a delta against `docs/rework/shell.json`.
 
 ## Backlog (owner-owned, deferred)
 
