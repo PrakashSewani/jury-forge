@@ -1,8 +1,7 @@
 import type { ComponentPropsWithoutRef } from 'react';
-import { cx } from './class-names';
+import { cx, focusRing, tapTarget } from './class-names';
 
-const BASE =
-  'inline-flex items-center justify-center rounded-control font-medium transition disabled:cursor-not-allowed disabled:opacity-50';
+const BASE = `inline-flex items-center justify-center rounded-control font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${tapTarget} ${focusRing}`;
 
 const SIZES = {
   sm: 'px-3 py-1.5 text-xs',

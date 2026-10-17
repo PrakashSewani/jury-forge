@@ -1,4 +1,4 @@
-import { cx } from './class-names';
+import { cx, focusRing, tapTarget } from './class-names';
 
 export interface SwitchProps {
   checked: boolean;
@@ -12,7 +12,7 @@ export function Switch({ checked, onCheckedChange, label, className }: SwitchPro
     <button
       aria-checked={checked}
       className={cx(
-        'inline-flex items-center gap-2 rounded-control text-sm',
+        `inline-flex items-center gap-2 rounded-control text-sm ${tapTarget} ${focusRing}`,
         checked ? 'text-text' : 'text-text-muted',
         className,
       )}

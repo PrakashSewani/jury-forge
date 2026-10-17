@@ -12,3 +12,13 @@ export function cx(...classes: (string | false | null | undefined)[]): string | 
     .join(' ');
   return joined === '' ? undefined : joined;
 }
+
+// A visible keyboard focus indicator. Tailwind v4's outline-* utilities emit a real
+// `outline-style: solid`, which is what the layout harness reads. It is scoped to
+// :focus-visible on purpose — keyboard users are the audience, and it must not light up on
+// every mouse click.
+export const focusRing =
+  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent';
+
+// 44px minimum on both axes for interactive controls, on every viewport — not just mobile.
+export const tapTarget = 'min-h-11 min-w-11';

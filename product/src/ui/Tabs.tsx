@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import type { KeyboardEvent } from 'react';
-import { cx } from './class-names';
+import { cx, focusRing, tapTarget } from './class-names';
 
 export interface TabItem {
   id: string;
@@ -55,7 +55,7 @@ export function Tabs({
           aria-controls={item.panelId}
           aria-selected={item.id === value}
           className={cx(
-            'rounded-control px-3 py-2 text-sm font-medium transition',
+            `rounded-control px-3 py-2 text-sm font-medium transition ${tapTarget} ${focusRing}`,
             item.id === value ? 'text-text' : 'text-text-muted hover:text-text',
           )}
           key={item.id}
