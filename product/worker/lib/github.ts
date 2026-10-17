@@ -203,12 +203,17 @@ export interface PullReviewRequest {
   comments: { path: string; line: number; body: string }[];
 }
 
+export interface CreatedPullReview {
+  htmlUrl: string;
+  reviewId: number;
+}
+
 export async function createPullReview(
   token: string,
   fullName: string,
   prNumber: number,
   review: PullReviewRequest,
-): Promise<string> {
+): Promise<CreatedPullReview> {
   const response = await fetch(`${API_BASE}/repos/${fullName}/pulls/${prNumber}/reviews`, {
     method: 'POST',
     headers: { ...bearerHeaders(token), 'Content-Type': 'application/json' },
@@ -219,8 +224,49 @@ export async function createPullReview(
       comments: review.comments,
     }),
   });
-  const payload = await readJsonStrict<{ html_url: string }>(response);
-  return payload.html_url;
+  const payload = await readJsonStrict<{ id: number; html_url: string }>(response);
+  return { htmlUrl: payload.html_url, reviewId: payload.id };
+}
+
+export interface PullReviewEntry {
+  id: number;
+  nodeId: string;
+  authorLogin: string | null;
+}
+
+/** D-018: the PR's reviews, for minimizing the app's previous ones after a new post. */
+export async function listPullReviews(
+  token: string,
+  fullName: string,
+  prNumber: number,
+): Promise<PullReviewEntry[]> {
+  const response = await fetch(
+    `${API_BASE}/repos/${fullName}/pulls/${prNumber}/reviews?per_page=100`,
+    { headers: bearerHeaders(token) },
+  );
+  const payload =
+    await readJsonStrict<{ id: number; node_id: string; user: { login?: string } | null }[]>(
+      response,
+    );
+  return payload.map((review) => ({
+    id: review.id,
+    nodeId: review.node_id,
+    authorLogin: review.user?.login ?? null,
+  }));
+}
+
+/** GraphQL minimize with the `OUTDATED` classifier (D-018). */
+export async function minimizeComment(token: string, nodeId: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/graphql`, {
+    method: 'POST',
+    headers: { ...bearerHeaders(token), 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      query:
+        'mutation ($id: ID!) { minimizeComment(input: { subjectId: $id, classifier: OUTDATED }) { minimizedComment { isMinimized } } }',
+      variables: { id: nodeId },
+    }),
+  });
+  await readJsonStrict<unknown>(response);
 }
 
 async function readJsonStrict<T>(response: Response): Promise<T> {

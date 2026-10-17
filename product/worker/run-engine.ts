@@ -11,6 +11,7 @@ import {
   buildReviewPrompt,
   buildSystemPrompt,
   contextNotes,
+  prioritizedOrder,
   type PullFile,
   type ReviewContext,
 } from './lib/context';
@@ -21,6 +22,8 @@ import {
   createPullReview,
   fetchPullFiles,
   fetchPullRequest,
+  listPullReviews,
+  minimizeComment,
   type PullFileEntry,
   type PullRequestInfo,
 } from './lib/github';
@@ -189,6 +192,29 @@ export class RunEngine extends DurableObject<Env> {
       return 'finished';
     }
 
+    // D-018: newest run wins — a run that begins after a newer run exists for the same PR skips
+    // (covers supersession on rapid pushes and duplicate deliveries of the same revision).
+    const runId = runIdFor(payload);
+    const started = await db
+      .prepare('SELECT created_at FROM runs WHERE id = ?')
+      .bind(runId)
+      .first<{ created_at: number }>();
+    if (started) {
+      const newer = await db
+        .prepare(
+          `SELECT 1 FROM runs
+           WHERE repo_id = ? AND pr_number = ?
+             AND (created_at > ? OR (created_at = ? AND id > ?))
+           LIMIT 1`,
+        )
+        .bind(payload.repoId, payload.prNumber, started.created_at, started.created_at, runId)
+        .first();
+      if (newer) {
+        await this.finishRun(payload, 'skipped', null, null);
+        return 'finished';
+      }
+    }
+
     const rows = await db
       .prepare(
         `SELECT r.id, r.name, r.instructions, r.rules, r.flavor, r.base_url, r.api_key_enc, r.model, r.params_json
@@ -227,6 +253,7 @@ export class RunEngine extends DurableObject<Env> {
     if (!app) {
       throw new Error('setup_required');
     }
+    await this.ctx.storage.put('botLogin', `${app.slug}[bot]`);
     const token = await createInstallationToken(app.appId, app.privateKey, payload.installationId);
     await this.ctx.storage.put('token', token);
     const pullRequest = await fetchPullRequest(token, payload.repoFullName, payload.prNumber);
@@ -264,11 +291,13 @@ export class RunEngine extends DurableObject<Env> {
 
   private async stepContext(): Promise<Step | 'finished'> {
     const fileCount = await this.require<number>('fileCount');
-    const cursor = (await this.ctx.storage.get<number>('cursor')) ?? 0;
-    const keys: string[] = [];
-    for (let index = cursor; index < Math.min(cursor + CONTEXT_BATCH_SIZE, fileCount); index += 1) {
-      keys.push(`file:${index}`);
+    let order = await this.ctx.storage.get<number[]>('fileOrder');
+    if (!order) {
+      order = await this.computeFileOrder(fileCount);
+      await this.ctx.storage.put('fileOrder', order);
     }
+    const cursor = (await this.ctx.storage.get<number>('cursor')) ?? 0;
+    const keys = order.slice(cursor, cursor + CONTEXT_BATCH_SIZE).map((index) => `file:${index}`);
     const entries =
       keys.length > 0
         ? await this.ctx.storage.get<PullFileEntry>(keys)
@@ -284,12 +313,29 @@ export class RunEngine extends DurableObject<Env> {
     await this.ctx.storage.put('context', buildReviewContext(batch, previous));
 
     const next = cursor + keys.length;
-    if (next < fileCount) {
+    if (next < order.length) {
       await this.ctx.storage.put('cursor', next);
       return 'context';
     }
     await this.ctx.storage.put('cursor', 0);
     return 'prepare';
+  }
+
+  /** D-018: added/changed source first; docs and renames trail the D-010 budget. */
+  private async computeFileOrder(fileCount: number): Promise<number[]> {
+    const allKeys = Array.from({ length: fileCount }, (_, index) => `file:${index}`);
+    const allEntries = await this.ctx.storage.get<PullFileEntry>(allKeys);
+    const present: { index: number; filename: string; status: string }[] = [];
+    allKeys.forEach((key, index) => {
+      const entry = allEntries.get(key);
+      if (entry) {
+        present.push({ index, filename: entry.filename, status: entry.status });
+      }
+    });
+    return prioritizedOrder(present).map((local) => {
+      const entry = present[local];
+      return entry ? entry.index : local;
+    });
   }
 
   private async stepPrepare(): Promise<Step | 'finished'> {
@@ -466,13 +512,36 @@ export class RunEngine extends DurableObject<Env> {
   private async stepPost(payload: RunPayload): Promise<Step | 'finished'> {
     const token = await this.require<string>('token');
     const plan = await this.require<ReviewPlan>('plan');
-    const reviewUrl = await createPullReview(token, payload.repoFullName, payload.prNumber, {
+    const review = await createPullReview(token, payload.repoFullName, payload.prNumber, {
       commitId: payload.headSha,
       body: plan.body,
       comments: plan.comments,
     });
-    await this.finishRun(payload, 'completed', null, reviewUrl);
+    await this.minimizePreviousReviews(token, payload, review.reviewId);
+    await this.finishRun(payload, 'completed', null, review.htmlUrl);
     return 'finished';
+  }
+
+  /** D-018: keep the PR resting on the latest verdict — best-effort, never fails the run. */
+  private async minimizePreviousReviews(
+    token: string,
+    payload: RunPayload,
+    currentReviewId: number,
+  ): Promise<void> {
+    const botLogin = await this.ctx.storage.get<string>('botLogin');
+    if (!botLogin) {
+      return;
+    }
+    try {
+      const reviews = await listPullReviews(token, payload.repoFullName, payload.prNumber);
+      for (const review of reviews) {
+        if (review.id !== currentReviewId && review.authorLogin === botLogin) {
+          await minimizeComment(token, review.nodeId);
+        }
+      }
+    } catch (error) {
+      console.error(`run ${runIdFor(payload)} review minimization failed:`, error);
+    }
   }
 
   private async finishRun(

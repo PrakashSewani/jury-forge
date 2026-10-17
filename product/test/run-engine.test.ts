@@ -63,13 +63,18 @@ interface CapturedReview {
 interface RunMocks {
   reviewCalls: () => number;
   lastReview: () => CapturedReview | null;
+  minimizedNodeIds: () => string[];
 }
 
 function mockGitHubRun(
-  options: { review?: (call: number) => Response | Promise<Response> } = {},
+  options: {
+    review?: (call: number) => Response | Promise<Response>;
+    reviews?: () => Response | Promise<Response>;
+  } = {},
 ): RunMocks {
   let reviewCalls = 0;
   let lastReview: CapturedReview | null = null;
+  const minimizedNodeIds: string[] = [];
   network.use(
     http.post('https://api.github.com/app/installations/4242/access_tokens', () =>
       HttpResponse.json({ token: 'ghs_test', expires_at: '2099-01-01T00:00:00Z' }),
@@ -87,6 +92,18 @@ function mockGitHubRun(
         { filename: 'package-lock.json', status: 'modified', patch: '@@ -1 +1 @@\n-a\n+b' },
       ]),
     ),
+    http.get('https://api.github.com/repos/octocat/hello/pulls/1/reviews', () =>
+      options.reviews ? options.reviews() : HttpResponse.json([]),
+    ),
+    http.post('https://api.github.com/graphql', async ({ request }) => {
+      const raw = (await request.json()) as { variables?: { id?: string } };
+      if (raw.variables?.id) {
+        minimizedNodeIds.push(raw.variables.id);
+      }
+      return HttpResponse.json({
+        data: { minimizeComment: { minimizedComment: { isMinimized: true } } },
+      });
+    }),
     http.post('https://api.github.com/repos/octocat/hello/pulls/1/reviews', async ({ request }) => {
       reviewCalls += 1;
       const raw = (await request.json()) as {
@@ -105,11 +122,16 @@ function mockGitHubRun(
         return options.review(reviewCalls);
       }
       return HttpResponse.json({
+        id: 701,
         html_url: 'https://github.com/octocat/hello/pull/1#pullrequestreview-7',
       });
     }),
   );
-  return { reviewCalls: () => reviewCalls, lastReview: () => lastReview };
+  return {
+    reviewCalls: () => reviewCalls,
+    lastReview: () => lastReview,
+    minimizedNodeIds: () => minimizedNodeIds,
+  };
 }
 
 function mockOpenAiReview(content: string): void {
@@ -298,6 +320,7 @@ describe('run engine', () => {
         call <= 2
           ? new HttpResponse(null, { status: 503 })
           : HttpResponse.json({
+              id: 701,
               html_url: 'https://github.com/octocat/hello/pull/1#pullrequestreview-7',
             }),
     });
@@ -328,6 +351,68 @@ describe('run engine', () => {
       .first<{ status: string; error: string | null }>();
     expect(finished?.status).toBe('failed');
     expect(finished?.error).toContain('422');
+  });
+
+  it('skips as superseded when a newer run exists for the same PR', async () => {
+    await seedGitHubApp();
+    await seedRepositoryAndReviewers(['openai']);
+    const mocks = mockGitHubRun();
+    mockOpenAiReview('{"findings":[]}');
+    await env.DB.prepare(
+      "INSERT INTO runs (id, delivery_id, repo_id, pr_number, head_sha, event, status, created_at) VALUES ('101:1:freshsha999:delivery-9', 'delivery-9', 101, 1, 'freshsha999', 'synchronize', 'running', unixepoch() + 60)",
+    ).run();
+
+    const response = await postWebhook(pullRequestEvent(), { deliveryId: 'delivery-1' });
+    expect(response.status).toBe(202);
+    await driveRun(RUN_ID);
+
+    const finished = await env.DB.prepare('SELECT status, error FROM runs WHERE id = ?')
+      .bind(RUN_ID)
+      .first<{ status: string; error: string | null }>();
+    expect(finished).toEqual({ status: 'skipped', error: null });
+    expect(mocks.reviewCalls()).toBe(0);
+  });
+
+  it('skips a duplicate when a newer run for the same SHA exists', async () => {
+    await seedGitHubApp();
+    await seedRepositoryAndReviewers(['openai']);
+    const mocks = mockGitHubRun();
+    mockOpenAiReview('{"findings":[]}');
+    await env.DB.prepare(
+      "INSERT INTO runs (id, delivery_id, repo_id, pr_number, head_sha, event, status, created_at) VALUES ('101:1:abc123def456:delivery-2', 'delivery-2', 101, 1, 'abc123def456', 'synchronize', 'running', unixepoch() + 60)",
+    ).run();
+
+    await postWebhook(pullRequestEvent(), { deliveryId: 'delivery-1' });
+    await driveRun(RUN_ID);
+
+    const finished = await env.DB.prepare('SELECT status, error FROM runs WHERE id = ?')
+      .bind(RUN_ID)
+      .first<{ status: string; error: string | null }>();
+    expect(finished).toEqual({ status: 'skipped', error: null });
+    expect(mocks.reviewCalls()).toBe(0);
+  });
+
+  it('minimizes the previous reviews after posting', async () => {
+    await seedGitHubApp();
+    await seedRepositoryAndReviewers(['openai']);
+    const mocks = mockGitHubRun({
+      reviews: () =>
+        HttpResponse.json([
+          { id: 700, node_id: 'PRR_old', user: { login: 'jury-forge-test[bot]' } },
+          { id: 12, node_id: 'PRR_human', user: { login: 'octocat' } },
+          { id: 701, node_id: 'PRR_new', user: { login: 'jury-forge-test[bot]' } },
+        ]),
+    });
+    mockOpenAiReview('{"findings":[]}');
+
+    await postWebhook(pullRequestEvent(), { deliveryId: 'delivery-1' });
+    await driveRun(RUN_ID);
+
+    const finished = await env.DB.prepare('SELECT status FROM runs WHERE id = ?')
+      .bind(RUN_ID)
+      .first<{ status: string }>();
+    expect(finished?.status).toBe('completed');
+    expect(mocks.minimizedNodeIds()).toEqual(['PRR_old']);
   });
 });
 

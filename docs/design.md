@@ -119,8 +119,9 @@ Phases, one alarm segment at a time:
 - `context` — installation token (`@octokit/auth-app`), PR metadata, and changed files
   (`pulls.listFiles`, capped at 300 files). Builds the review context within D-010: 200 KB total,
   32 KB per file, lockfiles/generated/binary skipped, truncation recorded. Files are processed in
-  batches (~25 per segment) with a persisted cursor, so a segment stays inside the free plan's CPU
-  budget (I/O wait does not count as CPU).
+  batches (~25 per segment), in priority order — added/changed source first, docs and renames
+  trail (D-018) — with a persisted cursor, so a segment stays inside the free plan's CPU budget
+  (I/O wait does not count as CPU).
 - `review` — for each enabled reviewer of the repository: prompts are prepared in their own
   segment; a single segment then fires all provider calls in parallel (the product requires
   parallel reviewers; waiting is I/O). Per-call timeout 120 s. One reviewer failing does not
@@ -131,13 +132,17 @@ Phases, one alarm segment at a time:
   valid line — becomes summary content with `file:line` references.
 - `post` — one `pulls.createReview` with `event: COMMENT` (see Confirm below),
   `commit_id: head_sha`, the summary body, and the inline comments. A failed post is retried; if
-  any reviewers failed, the summary notes them.
+  any reviewers failed, the summary notes them. After posting, the app's previous reviews on the
+  PR are minimized best-effort (`minimizeComment`, `OUTDATED` — D-018), so the thread rests on the
+  latest verdict.
 - Finish — `runs.status` `completed` (or `failed` when nothing could be posted or every reviewer
   failed), `run_reviewers` rows written, alarms stop.
 
 Retries: each phase gets ≤3 attempts with backoff alarms (10 s, 60 s, 300 s); 4xx errors that
 cannot succeed on retry fail the run. A repository with no enabled reviewers (or disabled in
-`repositories`) finishes `skipped`. Reviewer selection is opt-out: every enabled reviewer applies
+`repositories`) finishes `skipped`; a run that begins after a newer run exists for the same PR
+also finishes `skipped` — newest run wins, so rapid pushes never stack runs (D-018). Reviewer
+selection is opt-out: every enabled reviewer applies
 to an enabled repository unless a `reviewer_repositories` row disables the pair (D-016). Free-plan
 subrequest limits (50 per invocation) are respected by the file cap and reviewer count.
 

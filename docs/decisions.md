@@ -312,3 +312,22 @@ path from deploy to first review.
 
 **Rejected:** making every item a heavyweight standalone decision now (each gets its entry at
 implementation); bundling the slate into phase 3/4 (it is product work, not launch work).
+
+## D-018: Run hygiene — superseded-run skip, review minimization, priority file order
+
+**Date:** 2026-10-07 (implements roadmap items 1, 2, 4 from D-017)
+
+**Decision:** (1) At its config step, a run finishes `skipped` when a newer run exists for the
+same repository and PR (`created_at`, then id, ordering) — covering supersession on rapid pushes
+and duplicate deliveries of the same head SHA; the newest run wins. In-flight runs are not
+cancelled. (2) After posting, the app's previous reviews on the PR are minimized best-effort via
+GraphQL `minimizeComment` (`OUTDATED` classifier); minimization failures never affect the run.
+(3) Under the D-010 budget, files are sent in priority order — added/changed source first, docs
+and renames trail — so truncation drops the least valuable diffs.
+
+**Why:** rapid pushes otherwise burn provider spend N times and stack N reviews on the PR, and
+the context budget should truncate the least valuable diffs, not the first ones the API returned.
+
+**Rejected:** cancelling in-flight runs (by the time a newer push arrives the old work is mostly
+spent; the newest queued run wins instead); deleting previous reviews (destructive, loses
+history); raw API order for files (drops high-signal diffs first).

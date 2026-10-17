@@ -6,6 +6,7 @@ import {
   buildSystemPrompt,
   CONTEXT_LIMITS,
   contextNotes,
+  prioritizedOrder,
   type PullFile,
 } from '../worker/lib/context';
 
@@ -73,6 +74,27 @@ describe('review context', () => {
     ]);
     const notes = contextNotes(context);
     expect(notes.some((note) => note.includes('yarn.lock'))).toBe(true);
+  });
+});
+
+describe('file priority order', () => {
+  it('leads with added source and trails docs within a weight', () => {
+    const order = prioritizedOrder([
+      { filename: 'README.md', status: 'modified' },
+      { filename: 'src/app.ts', status: 'added' },
+      { filename: 'src/old.ts', status: 'renamed' },
+      { filename: 'src/util.ts', status: 'modified' },
+      { filename: 'docs/guide.md', status: 'added' },
+    ]);
+    expect(order).toEqual([1, 4, 3, 0, 2]);
+  });
+
+  it('is stable for entries with equal weight', () => {
+    const order = prioritizedOrder([
+      { filename: 'a.ts', status: 'modified' },
+      { filename: 'b.ts', status: 'modified' },
+    ]);
+    expect(order).toEqual([0, 1]);
   });
 });
 
