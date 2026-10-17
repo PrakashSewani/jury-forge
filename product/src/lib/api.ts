@@ -1,4 +1,5 @@
 import type {
+  ActivityPage,
   InstallationInfo,
   InstanceSettings,
   ProviderFlavor,
@@ -190,6 +191,11 @@ export function getRun(id: string): Promise<RunDetail> {
 
 export function getSettings(): Promise<SettingsResponse> {
   return request('/api/settings');
+}
+
+export function listActivity(cursor?: string): Promise<ActivityPage> {
+  const query = cursor === undefined ? '' : `?cursor=${encodeURIComponent(cursor)}`;
+  return request(`/api/activity${query}`);
 }
 
 export function updateSettings(patch: Partial<InstanceSettings>): Promise<SettingsResponse> {

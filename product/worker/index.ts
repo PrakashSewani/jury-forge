@@ -1,6 +1,7 @@
 import { PRODUCT_NAME, type HealthResponse } from '@jury-forge/shared';
 import { Hono } from 'hono';
 import type { AppEnv } from './middleware';
+import { activityRoutes } from './routes/activity';
 import { authRoutes } from './routes/auth';
 import { repositoryRoutes } from './routes/repositories';
 import { reviewerRoutes } from './routes/reviewers';
@@ -22,6 +23,7 @@ app.route('/api/reviewers', reviewerRoutes);
 app.route('/api/repositories', repositoryRoutes);
 app.route('/api/runs', runRoutes);
 app.route('/api/settings', settingsRoutes);
+app.route('/api/activity', activityRoutes);
 app.route('/api/webhooks', webhookRoutes);
 
 app.notFound((c) => c.json({ error: 'not_found' }, 404));

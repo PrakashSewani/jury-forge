@@ -1,7 +1,8 @@
 import { Webhooks } from '@octokit/webhooks';
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { importEncryptionKey } from '../lib/crypto';
+import { recordActivity } from '../lib/activity';
+import { keyRingValues, loadKeyRing } from '../lib/crypto';
 import { loadGitHubApp } from '../lib/github-app';
 import type { AppEnv } from '../middleware';
 import type { RunPayload } from '../run-engine';
@@ -23,11 +24,11 @@ const pullRequestPayload = z.object({
 export const webhookRoutes = new Hono<AppEnv>();
 
 webhookRoutes.post('/github', async (c) => {
-  const encryptionKeyValue = c.env.ENCRYPTION_KEY;
-  if (!encryptionKeyValue) {
+  const values = keyRingValues(c.env);
+  if (!values) {
     return c.json({ error: 'encryption_key_unset' }, 500);
   }
-  const app = await loadGitHubApp(c.env.DB, await importEncryptionKey(encryptionKeyValue));
+  const app = await loadGitHubApp(c.env.DB, await loadKeyRing(values));
   if (!app) {
     return c.json({ error: 'setup_required' }, 503);
   }
@@ -98,6 +99,12 @@ webhookRoutes.post('/github', async (c) => {
       .run();
     return c.json({ error: 'kick_failed' }, 500);
   }
+  await recordActivity(c.env.DB, {
+    actor: 'webhook',
+    action: 'run_started',
+    target: runKey,
+    detail: `${repository.full_name} #${pullRequest.number}`,
+  });
   return c.body(null, 202);
 });
 

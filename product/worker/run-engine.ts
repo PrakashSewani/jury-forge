@@ -13,7 +13,7 @@ import {
   type RepoInstructionFile,
   type ReviewContext,
 } from './lib/context';
-import { decryptSecret, importEncryptionKey } from './lib/crypto';
+import { decryptSecret, keyRingValues, loadKeyRing } from './lib/crypto';
 import {
   GitHubApiError,
   createInstallationToken,
@@ -303,11 +303,11 @@ export class RunEngine extends DurableObject<Env> {
     await this.ctx.storage.put('previousByReviewer', previousByReviewer);
     await this.ctx.storage.put('previousFindings', previousFindings);
 
-    const encryptionKeyValue = this.env.ENCRYPTION_KEY;
-    if (!encryptionKeyValue) {
+    const keyValues = keyRingValues(this.env);
+    if (!keyValues) {
       throw new Error('encryption_key_unset');
     }
-    const app = await loadGitHubApp(db, await importEncryptionKey(encryptionKeyValue));
+    const app = await loadGitHubApp(db, await loadKeyRing(keyValues));
     if (!app) {
       throw new Error('setup_required');
     }
@@ -460,11 +460,11 @@ export class RunEngine extends DurableObject<Env> {
 
   private async stepReview(): Promise<Step | 'finished'> {
     const reviewers = await this.require<StoredReviewer[]>('reviewers');
-    const encryptionKeyValue = this.env.ENCRYPTION_KEY;
-    if (!encryptionKeyValue) {
+    const keyValues = keyRingValues(this.env);
+    if (!keyValues) {
       throw new Error('encryption_key_unset');
     }
-    const encryptionKey = await importEncryptionKey(encryptionKeyValue);
+    const ring = await loadKeyRing(keyValues);
     const prompts = await this.ctx.storage.get<{ system: string; user: string }>(
       reviewers.map((reviewer) => `prompt:${reviewer.id}`),
     );
@@ -476,7 +476,7 @@ export class RunEngine extends DurableObject<Env> {
           throw new Error('prompt missing');
         }
         const apiKey =
-          reviewer.apiKeyEnc === '' ? '' : await decryptSecret(encryptionKey, reviewer.apiKeyEnc);
+          reviewer.apiKeyEnc === '' ? '' : await decryptSecret(ring, reviewer.apiKeyEnc);
         const value = await callProvider({
           flavor: reviewer.flavor,
           baseUrl: reviewer.baseUrl,

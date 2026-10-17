@@ -134,3 +134,17 @@ export interface SettingsResponse {
   settings: InstanceSettings;
   defaults: InstanceSettings;
 }
+
+export interface ActivityEntry {
+  id: number;
+  at: number;
+  actor: string;
+  action: string;
+  target: string | null;
+  detail: string | null;
+}
+
+export interface ActivityPage {
+  activity: ActivityEntry[];
+  nextCursor: string | null;
+}

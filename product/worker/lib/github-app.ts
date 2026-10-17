@@ -1,4 +1,4 @@
-import { decryptSecret, encryptSecret } from './crypto';
+import { decryptSecret, encryptSecret, type EncryptionKeyRing } from './crypto';
 import { normalizePrivateKeyPem } from './private-key';
 
 export interface GitHubApp {
@@ -21,7 +21,7 @@ interface GitHubAppRow {
 
 export async function loadGitHubApp(
   db: D1Database,
-  encryptionKey: CryptoKey,
+  ring: EncryptionKeyRing,
 ): Promise<GitHubApp | null> {
   const row = await db
     .prepare(
@@ -35,15 +35,15 @@ export async function loadGitHubApp(
     appId: row.app_id,
     slug: row.slug,
     clientId: row.client_id,
-    privateKey: await decryptSecret(encryptionKey, row.private_key_enc),
-    webhookSecret: await decryptSecret(encryptionKey, row.webhook_secret_enc),
-    clientSecret: await decryptSecret(encryptionKey, row.client_secret_enc),
+    privateKey: await decryptSecret(ring, row.private_key_enc),
+    webhookSecret: await decryptSecret(ring, row.webhook_secret_enc),
+    clientSecret: await decryptSecret(ring, row.client_secret_enc),
   };
 }
 
 export async function storeGitHubApp(
   db: D1Database,
-  encryptionKey: CryptoKey,
+  ring: EncryptionKeyRing,
   app: GitHubApp,
 ): Promise<void> {
   await db.prepare('DELETE FROM github_app').run();
@@ -55,9 +55,9 @@ export async function storeGitHubApp(
       app.appId,
       app.slug,
       app.clientId,
-      await encryptSecret(encryptionKey, normalizePrivateKeyPem(app.privateKey)),
-      await encryptSecret(encryptionKey, app.webhookSecret),
-      await encryptSecret(encryptionKey, app.clientSecret),
+      await encryptSecret(ring, normalizePrivateKeyPem(app.privateKey)),
+      await encryptSecret(ring, app.webhookSecret),
+      await encryptSecret(ring, app.clientSecret),
     )
     .run();
 }

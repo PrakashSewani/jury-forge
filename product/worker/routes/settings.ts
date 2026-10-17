@@ -1,5 +1,6 @@
-import type { SettingsResponse } from '@jury-forge/shared';
+import type { InstanceSettings, SettingsResponse } from '@jury-forge/shared';
 import { Hono } from 'hono';
+import { recordActivity } from '../lib/activity';
 import {
   DEFAULT_SETTINGS,
   loadSettings,
@@ -31,8 +32,20 @@ settingsRoutes.patch('/', async (c) => {
   if (!result.ok) {
     return c.json({ error: result.error }, 400);
   }
+  const before = await loadSettings(c.env.DB);
+  const settings = await updateSettings(c.env.DB, result.patch);
+  for (const key of Object.keys(result.patch) as (keyof InstanceSettings)[]) {
+    if (JSON.stringify(before[key]) !== JSON.stringify(settings[key])) {
+      await recordActivity(c.env.DB, {
+        actor: c.get('user').login,
+        action: 'setting_change',
+        target: key,
+        detail: JSON.stringify(settings[key]),
+      });
+    }
+  }
   const response: SettingsResponse = {
-    settings: await updateSettings(c.env.DB, result.patch),
+    settings,
     defaults: DEFAULT_SETTINGS,
   };
   return c.json(response);

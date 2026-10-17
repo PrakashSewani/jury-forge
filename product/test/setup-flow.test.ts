@@ -145,7 +145,7 @@ describe('setup flow', () => {
     ).first<{ slug: string; client_id: string; private_key_enc: string }>();
     expect(row?.slug).toBe('jury-forge-test');
     expect(row?.client_id).toBe('client-id-test');
-    expect(row?.private_key_enc).toMatch(/^v1\./);
+    expect(row?.private_key_enc).toMatch(/^v2\./);
     expect(row?.private_key_enc).not.toContain('PRIVATE KEY');
 
     const state = await app.request(`${ORIGIN}/api/setup/state`, {}, env);

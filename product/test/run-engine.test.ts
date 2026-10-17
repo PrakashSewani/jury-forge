@@ -4,7 +4,7 @@ import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
 import app from '../worker';
 import type { RunEngine } from '../worker/run-engine';
-import { encryptSecret, importEncryptionKey } from '../worker/lib/crypto';
+import { encryptSecret, keyRingValues, loadKeyRing } from '../worker/lib/crypto';
 import { createSession } from '../worker/lib/sessions';
 import { resetInstanceState } from './db';
 import { network } from './network';
@@ -29,11 +29,11 @@ async function seedRepositoryAndReviewers(flavors: ('openai' | 'anthropic')[]): 
   await env.DB.prepare(
     "INSERT INTO repositories (repo_id, full_name, private, enabled) VALUES (101, 'octocat/hello', 0, 1)",
   ).run();
-  const encryptionKeyValue = env.ENCRYPTION_KEY;
-  if (!encryptionKeyValue) {
+  const values = keyRingValues(env);
+  if (!values) {
     throw new Error('ENCRYPTION_KEY missing');
   }
-  const key = await importEncryptionKey(encryptionKeyValue);
+  const ring = await loadKeyRing(values);
   for (const [index, flavor] of flavors.entries()) {
     await env.DB.prepare(
       'INSERT INTO reviewers (id, name, instructions, rules, flavor, base_url, api_key_enc, model, params_json, enabled) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)',
@@ -45,7 +45,7 @@ async function seedRepositoryAndReviewers(flavors: ('openai' | 'anthropic')[]): 
         'Be precise.',
         flavor,
         flavor === 'openai' ? 'https://providers.test/v1' : 'https://providers.test',
-        await encryptSecret(key, 'sk-test'),
+        await encryptSecret(ring, 'sk-test'),
         'model-x',
         '{}',
       )

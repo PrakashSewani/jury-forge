@@ -12,6 +12,7 @@ export default defineConfig(async () => {
           bindings: {
             TEST_MIGRATIONS: testMigrations,
             ENCRYPTION_KEY: Buffer.from(new Uint8Array(32).fill(7)).toString('base64'),
+            ENCRYPTION_KEY_PREVIOUS: Buffer.from(new Uint8Array(32).fill(9)).toString('base64'),
             SETUP_CODE: 'test-setup-code',
           },
         },

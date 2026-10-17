@@ -13,5 +13,6 @@ export async function resetInstanceState(): Promise<void> {
     env.DB.prepare('DELETE FROM run_reviewers'),
     env.DB.prepare('DELETE FROM runs'),
     env.DB.prepare('DELETE FROM webhook_deliveries'),
+    env.DB.prepare('DELETE FROM activity_log'),
   ]);
 }

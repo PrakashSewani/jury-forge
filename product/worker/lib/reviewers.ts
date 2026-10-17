@@ -1,6 +1,11 @@
 import type { ProviderFlavor, Reviewer } from '@jury-forge/shared';
 import { z } from 'zod';
-import { encryptSecret } from './crypto';
+import {
+  encryptSecret,
+  isCurrentCiphertext,
+  reencryptSecret,
+  type EncryptionKeyRing,
+} from './crypto';
 
 const baseUrl = z
   .string()
@@ -91,11 +96,10 @@ export async function getReviewer(db: D1Database, id: string): Promise<Reviewer 
 export async function insertReviewer(
   db: D1Database,
   id: string,
-  encryptionKey: CryptoKey | null,
+  ring: EncryptionKeyRing | null,
   input: ReviewerCreate,
 ): Promise<void> {
-  const apiKeyEnc =
-    input.apiKey === undefined ? '' : await encryptKeyValue(encryptionKey, input.apiKey);
+  const apiKeyEnc = input.apiKey === undefined ? '' : await encryptKeyValue(ring, input.apiKey);
   await db
     .prepare(
       'INSERT INTO reviewers (id, name, instructions, rules, flavor, base_url, api_key_enc, model, params_json, enabled) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
@@ -118,11 +122,12 @@ export async function insertReviewer(
 export async function updateReviewerRow(
   db: D1Database,
   id: string,
-  encryptionKey: CryptoKey | null,
+  ring: EncryptionKeyRing | null,
   patch: ReviewerUpdate,
-): Promise<void> {
+): Promise<{ apiKeyReencrypted: boolean }> {
   const assignments: string[] = [];
   const values: (string | number)[] = [];
+  let apiKeyReencrypted = false;
   if (patch.name !== undefined) {
     assignments.push('name = ?');
     values.push(patch.name);
@@ -157,16 +162,32 @@ export async function updateReviewerRow(
   }
   if (patch.apiKey !== undefined) {
     assignments.push('api_key_enc = ?');
-    values.push(patch.apiKey === null ? '' : await encryptKeyValue(encryptionKey, patch.apiKey));
+    values.push(patch.apiKey === null ? '' : await encryptKeyValue(ring, patch.apiKey));
+  } else if (ring !== null) {
+    // D-023 lazy rotation: re-wrap a stored key held under an older version on write.
+    const row = await db
+      .prepare('SELECT api_key_enc FROM reviewers WHERE id = ?')
+      .bind(id)
+      .first<{ api_key_enc: string }>();
+    const stored = row?.api_key_enc ?? '';
+    if (stored !== '' && !isCurrentCiphertext(ring, stored)) {
+      const reencrypted = await reencryptSecret(ring, stored);
+      if (reencrypted !== null) {
+        assignments.push('api_key_enc = ?');
+        values.push(reencrypted);
+        apiKeyReencrypted = true;
+      }
+    }
   }
   if (assignments.length === 0) {
-    return;
+    return { apiKeyReencrypted: false };
   }
   assignments.push('updated_at = unixepoch()');
   await db
     .prepare(`UPDATE reviewers SET ${assignments.join(', ')} WHERE id = ?`)
     .bind(...values, id)
     .run();
+  return { apiKeyReencrypted };
 }
 
 export async function deleteReviewerRow(db: D1Database, id: string): Promise<boolean> {
@@ -174,9 +195,9 @@ export async function deleteReviewerRow(db: D1Database, id: string): Promise<boo
   return (result.meta.changes ?? 0) > 0;
 }
 
-async function encryptKeyValue(encryptionKey: CryptoKey | null, value: string): Promise<string> {
-  if (encryptionKey === null) {
+async function encryptKeyValue(ring: EncryptionKeyRing | null, value: string): Promise<string> {
+  if (ring === null) {
     throw new Error('an encryption key is required to store provider API keys');
   }
-  return encryptSecret(encryptionKey, value);
+  return encryptSecret(ring, value);
 }
