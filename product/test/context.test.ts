@@ -75,6 +75,30 @@ describe('review context', () => {
     const notes = contextNotes(context);
     expect(notes.some((note) => note.includes('yarn.lock'))).toBe(true);
   });
+
+  it('honors custom limits for truncation and quotes them in the notes', () => {
+    const limits = { totalBytes: 25_000, fileBytes: 20_000 };
+    const bigPatch = `@@ -1 +1 @@\n+${'c'.repeat(20_500)}`;
+    const fillerPatch = `@@ -1 +1 @@\n+${'d'.repeat(6_000)}`;
+    const context = buildReviewContext(
+      [
+        { filename: 'big.ts', patch: bigPatch },
+        { filename: 'extra.ts', patch: fillerPatch },
+      ],
+      undefined,
+      limits,
+    );
+    expect(context.truncated).toEqual(['big.ts']);
+    expect(context.omitted).toEqual(['extra.ts']);
+    expect(new TextEncoder().encode(context.files[0]?.patch ?? '').length).toBeLessThanOrEqual(
+      limits.fileBytes,
+    );
+    expect(context.totalBytes).toBeLessThanOrEqual(limits.totalBytes);
+
+    const notes = contextNotes(context, limits);
+    expect(notes.join(' ')).toContain('Truncated to 20 KB');
+    expect(notes.join(' ')).toContain('25 KB total budget');
+  });
 });
 
 describe('file priority order', () => {

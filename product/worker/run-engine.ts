@@ -1,11 +1,6 @@
-import type { Finding, ProviderFlavor, ProviderUsage } from '@jury-forge/shared';
+import type { Finding, InstanceSettings, ProviderFlavor, ProviderUsage } from '@jury-forge/shared';
 import { DurableObject } from 'cloudflare:workers';
-import {
-  FINDING_CAPS,
-  consolidateReview,
-  parseReviewerOutput,
-  type ReviewerFindings,
-} from './lib/consolidate';
+import { consolidateReview, parseReviewerOutput, type ReviewerFindings } from './lib/consolidate';
 import {
   buildReviewContext,
   buildReviewPrompt,
@@ -30,6 +25,7 @@ import {
 import { loadGitHubApp } from './lib/github-app';
 import { callProvider } from './lib/providers';
 import { compareFindings, findingKey } from './lib/resolution';
+import { DEFAULT_SETTINGS, loadSettings } from './lib/settings';
 
 const FILES_CAP = 300;
 const CONTEXT_BATCH_SIZE = 25;
@@ -73,6 +69,7 @@ interface ReviewerOutcome {
 interface ReviewPlan {
   body: string;
   comments: { path: string; line: number; startLine?: number; body: string }[];
+  event: 'COMMENT' | 'REQUEST_CHANGES';
 }
 
 interface ReviewerRow {
@@ -264,6 +261,8 @@ export class RunEngine extends DurableObject<Env> {
       apiKeyEnc: row.api_key_enc,
     }));
     await this.ctx.storage.put('reviewers', reviewers);
+    const settings = await loadSettings(db);
+    await this.ctx.storage.put('settings', settings);
 
     // D-020: the newest earlier run for this repository + pull request that recorded findings
     // supplies each reviewer's previous findings, and their de-duplicated union.
@@ -345,6 +344,7 @@ export class RunEngine extends DurableObject<Env> {
   }
 
   private async stepContext(): Promise<Step | 'finished'> {
+    const settings = (await this.ctx.storage.get<InstanceSettings>('settings')) ?? DEFAULT_SETTINGS;
     const fileCount = await this.require<number>('fileCount');
     let order = await this.ctx.storage.get<number[]>('fileOrder');
     if (!order) {
@@ -365,7 +365,13 @@ export class RunEngine extends DurableObject<Env> {
       }
     }
     const previous = await this.ctx.storage.get<ReviewContext>('context');
-    await this.ctx.storage.put('context', buildReviewContext(batch, previous));
+    await this.ctx.storage.put(
+      'context',
+      buildReviewContext(batch, previous, {
+        totalBytes: settings.contextTotalBytes,
+        fileBytes: settings.contextFileBytes,
+      }),
+    );
 
     const next = cursor + keys.length;
     if (next < order.length) {
@@ -405,10 +411,12 @@ export class RunEngine extends DurableObject<Env> {
     }
     const previousByReviewer =
       (await this.ctx.storage.get<Record<string, Finding[]>>('previousByReviewer')) ?? {};
+    const settings = (await this.ctx.storage.get<InstanceSettings>('settings')) ?? DEFAULT_SETTINGS;
     await this.ctx.storage.put(`prompt:${reviewer.id}`, {
       system: buildSystemPrompt(reviewer),
       user: buildReviewPrompt(pullRequest, context, {
         previousFindings: previousByReviewer[reviewer.id] ?? [],
+        descriptionLimit: settings.descriptionLimit,
       }),
     });
 
@@ -482,6 +490,7 @@ export class RunEngine extends DurableObject<Env> {
     const outcomes = await this.ctx.storage.get<ReviewerOutcome>(
       reviewers.map((reviewer) => `outcome:${reviewer.id}`),
     );
+    const settings = (await this.ctx.storage.get<InstanceSettings>('settings')) ?? DEFAULT_SETTINGS;
 
     const allFailed = reviewers.every(
       (reviewer) => outcomes.get(`outcome:${reviewer.id}`)?.status === 'failed',
@@ -499,7 +508,10 @@ export class RunEngine extends DurableObject<Env> {
       }
     }
     const patches = new Map(context.files.map((file) => [file.filename, file.patch]));
-    const consolidated = consolidateReview(withFindings, patches);
+    const consolidated = consolidateReview(withFindings, patches, {
+      perReviewer: settings.inlineCommentsPerReviewer,
+      perRun: settings.inlineCommentsPerRun,
+    });
     const overflowByReviewer = new Map(
       consolidated.overflow.map((group) => [group.reviewerId, group.findings]),
     );
@@ -512,6 +524,11 @@ export class RunEngine extends DurableObject<Env> {
     }
 
     const totalFindings = withFindings.reduce((sum, group) => sum + group.findings.length, 0);
+    const errorFindings = withFindings.reduce(
+      (sum, group) => sum + group.findings.filter((finding) => finding.severity === 'error').length,
+      0,
+    );
+    const blocking = settings.blockingMode && errorFindings >= settings.blockingErrorThreshold;
     const overflowCount = consolidated.overflow.reduce(
       (sum, group) => sum + group.findings.length,
       0,
@@ -571,13 +588,27 @@ export class RunEngine extends DurableObject<Env> {
       );
     }
 
-    const notes: string[] = [...contextNotes(context)];
+    const notes: string[] = [
+      ...contextNotes(context, {
+        totalBytes: settings.contextTotalBytes,
+        fileBytes: settings.contextFileBytes,
+      }),
+    ];
     const capHit =
-      consolidated.inline.length >= FINDING_CAPS.inlinePerRun ||
-      [...inlineByReviewer.values()].some((count) => count >= FINDING_CAPS.inlinePerReviewer);
+      consolidated.inline.length >= settings.inlineCommentsPerRun ||
+      [...inlineByReviewer.values()].some((count) => count >= settings.inlineCommentsPerReviewer);
     if (capHit) {
       notes.push(
-        'Inline comments are capped at 10 per reviewer and 25 per run (D-009); the remaining findings are listed above.',
+        `Inline comments are capped at ${settings.inlineCommentsPerReviewer} per reviewer and ${settings.inlineCommentsPerRun} per run (D-009); the remaining findings are listed above.`,
+      );
+    }
+    if (blocking) {
+      notes.push(
+        `Blocking mode is on and this run found ${errorFindings} error finding(s), meeting the threshold of ${settings.blockingErrorThreshold} — the review requests changes.`,
+      );
+    } else if (settings.blockingMode) {
+      notes.push(
+        `Blocking mode is on, but this run's ${errorFindings} error finding(s) stayed under the threshold of ${settings.blockingErrorThreshold} — the review comments.`,
       );
     }
     if (failedNames.length > 0) {
@@ -599,7 +630,11 @@ export class RunEngine extends DurableObject<Env> {
       }
       return comment;
     });
-    const plan: ReviewPlan = { body: sections.join('\n'), comments };
+    const plan: ReviewPlan = {
+      body: sections.join('\n'),
+      comments,
+      event: blocking ? 'REQUEST_CHANGES' : 'COMMENT',
+    };
     await this.ctx.storage.put('plan', plan);
     return 'post';
   }
@@ -611,6 +646,7 @@ export class RunEngine extends DurableObject<Env> {
       commitId: payload.headSha,
       body: plan.body,
       comments: plan.comments,
+      event: plan.event,
     });
     await this.minimizePreviousReviews(token, payload, review.reviewId);
     await this.finishRun(payload, 'completed', null, review.htmlUrl);

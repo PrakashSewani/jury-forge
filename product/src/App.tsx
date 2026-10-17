@@ -11,6 +11,7 @@ import ReviewerEditorPage from './pages/ReviewerEditorPage';
 import ReviewersPage from './pages/ReviewersPage';
 import RunDetailPage from './pages/RunDetailPage';
 import RunsPage from './pages/RunsPage';
+import SettingsPage from './pages/SettingsPage';
 import SetupPage from './pages/SetupPage';
 
 interface Shell {
@@ -23,6 +24,7 @@ const NAV_ITEMS = [
   { href: '/reviewers', label: 'Reviewers' },
   { href: '/repositories', label: 'Repositories' },
   { href: '/runs', label: 'Runs' },
+  { href: '/settings', label: 'Settings' },
 ];
 
 export default function App() {
@@ -134,6 +136,8 @@ function isActive(route: Route, href: string): boolean {
       return route.name === 'repositories';
     case '/runs':
       return route.name === 'runs' || route.name === 'run-detail';
+    case '/settings':
+      return route.name === 'settings';
     default:
       return false;
   }
@@ -205,6 +209,8 @@ function Content({
       return <RunsPage />;
     case 'run-detail':
       return <RunDetailPage id={route.id} />;
+    case 'settings':
+      return <SettingsPage />;
     default:
       return null;
   }

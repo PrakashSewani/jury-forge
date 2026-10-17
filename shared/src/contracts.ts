@@ -117,3 +117,18 @@ export interface RunDetail {
   run: RunSummary;
   reviewers: RunReviewerOutcome[];
 }
+
+export interface InstanceSettings {
+  inlineCommentsPerReviewer: number;
+  inlineCommentsPerRun: number;
+  contextTotalBytes: number;
+  contextFileBytes: number;
+  descriptionLimit: number;
+  blockingMode: boolean;
+  blockingErrorThreshold: number;
+}
+
+export interface SettingsResponse {
+  settings: InstanceSettings;
+  defaults: InstanceSettings;
+}

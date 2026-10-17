@@ -1,5 +1,6 @@
 import type {
   InstallationInfo,
+  InstanceSettings,
   ProviderFlavor,
   Repository,
   RepositoryReviewer,
@@ -8,6 +9,7 @@ import type {
   RunDetail,
   RunsPage,
   SessionUser,
+  SettingsResponse,
   SetupCodeResponse,
   SetupState,
 } from '@jury-forge/shared';
@@ -184,4 +186,16 @@ export function listRuns(cursor?: string): Promise<RunsPage> {
 
 export function getRun(id: string): Promise<RunDetail> {
   return request(`/api/runs/${encodeURIComponent(id)}`);
+}
+
+export function getSettings(): Promise<SettingsResponse> {
+  return request('/api/settings');
+}
+
+export function updateSettings(patch: Partial<InstanceSettings>): Promise<SettingsResponse> {
+  return request('/api/settings', {
+    method: 'PATCH',
+    headers: jsonHeaders,
+    body: JSON.stringify(patch),
+  });
 }

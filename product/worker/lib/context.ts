@@ -4,6 +4,11 @@ import type { Finding, Reviewer } from '@jury-forge/shared';
 export const CONTEXT_LIMITS = { totalBytes: 200_000, fileBytes: 32_000 };
 export const DESCRIPTION_LIMIT = 4_096;
 
+export interface ContextLimits {
+  totalBytes: number;
+  fileBytes: number;
+}
+
 export interface PullFile {
   filename: string;
   patch?: string | null;
@@ -49,7 +54,11 @@ function isSkippedName(filename: string): boolean {
   );
 }
 
-export function buildReviewContext(files: PullFile[], previous?: ReviewContext): ReviewContext {
+export function buildReviewContext(
+  files: PullFile[],
+  previous?: ReviewContext,
+  limits: ContextLimits = CONTEXT_LIMITS,
+): ReviewContext {
   const context: ReviewContext = previous
     ? {
         files: [...previous.files],
@@ -72,12 +81,12 @@ export function buildReviewContext(files: PullFile[], previous?: ReviewContext):
       continue;
     }
     let content = patch;
-    if (byteLength(content) > CONTEXT_LIMITS.fileBytes) {
-      content = truncateToBytes(content, CONTEXT_LIMITS.fileBytes);
+    if (byteLength(content) > limits.fileBytes) {
+      content = truncateToBytes(content, limits.fileBytes);
       context.truncated.push(file.filename);
     }
     const size = byteLength(content);
-    if (context.totalBytes + size > CONTEXT_LIMITS.totalBytes) {
+    if (context.totalBytes + size > limits.totalBytes) {
       context.omitted.push(file.filename);
       continue;
     }
@@ -140,10 +149,13 @@ export interface PullRequestInfo {
 export function buildReviewPrompt(
   pullRequest: PullRequestInfo,
   context: ReviewContext,
-  options: { previousFindings?: Finding[] } = {},
+  options: { previousFindings?: Finding[]; descriptionLimit?: number } = {},
 ): string {
   const body = pullRequest.body?.trim() ?? '';
-  const description = body === '' ? '(no description)' : truncateToBytes(body, DESCRIPTION_LIMIT);
+  const description =
+    body === ''
+      ? '(no description)'
+      : truncateToBytes(body, options.descriptionLimit ?? DESCRIPTION_LIMIT);
   const lines: string[] = [
     `Pull request: ${pullRequest.title}`,
     '',
@@ -184,7 +196,10 @@ export function buildReviewPrompt(
   return lines.join('\n');
 }
 
-export function contextNotes(context: ReviewContext): string[] {
+export function contextNotes(
+  context: ReviewContext,
+  limits: ContextLimits = CONTEXT_LIMITS,
+): string[] {
   const notes: string[] = [];
   if (context.skipped.length > 0) {
     notes.push(
@@ -192,13 +207,11 @@ export function contextNotes(context: ReviewContext): string[] {
     );
   }
   if (context.truncated.length > 0) {
-    notes.push(
-      `Truncated to ${CONTEXT_LIMITS.fileBytes / 1_000} KB: ${summarize(context.truncated)}.`,
-    );
+    notes.push(`Truncated to ${limits.fileBytes / 1_000} KB: ${summarize(context.truncated)}.`);
   }
   if (context.omitted.length > 0) {
     notes.push(
-      `Omitted for the ${CONTEXT_LIMITS.totalBytes / 1_000} KB total budget: ${summarize(context.omitted)}.`,
+      `Omitted for the ${limits.totalBytes / 1_000} KB total budget: ${summarize(context.omitted)}.`,
     );
   }
   return notes;

@@ -516,6 +516,63 @@ describe('run engine', () => {
     expect(finished?.status).toBe('completed');
     expect(mocks.minimizedNodeIds()).toEqual(['PRR_old']);
   });
+
+  it('requests changes when blocking mode is on and the error threshold is met', async () => {
+    await seedGitHubApp();
+    await seedRepositoryAndReviewers(['openai']);
+    await env.DB.prepare(
+      "INSERT INTO instance_settings (key, value) VALUES ('blockingMode', 'true'), ('blockingErrorThreshold', '1')",
+    ).run();
+    const mocks = mockGitHubRun();
+    mockOpenAiReview(
+      JSON.stringify({
+        findings: [
+          {
+            file: 'src/app.ts',
+            line: 2,
+            severity: 'error',
+            title: 'Broken boundary',
+            body: 'This must be fixed.',
+          },
+        ],
+      }),
+    );
+
+    await postWebhook(pullRequestEvent(), { deliveryId: 'delivery-1' });
+    await driveRun(RUN_ID);
+
+    const review = mocks.lastReview();
+    expect(review?.event).toBe('REQUEST_CHANGES');
+    expect(review?.body).toContain(
+      'Blocking mode is on and this run found 1 error finding(s), meeting the threshold of 1',
+    );
+  });
+
+  it('posts a COMMENT review by default', async () => {
+    await seedGitHubApp();
+    await seedRepositoryAndReviewers(['openai']);
+    const mocks = mockGitHubRun();
+    mockOpenAiReview(
+      JSON.stringify({
+        findings: [
+          {
+            file: 'src/app.ts',
+            line: 2,
+            severity: 'error',
+            title: 'Broken boundary',
+            body: 'This must be fixed.',
+          },
+        ],
+      }),
+    );
+
+    await postWebhook(pullRequestEvent(), { deliveryId: 'delivery-1' });
+    await driveRun(RUN_ID);
+
+    const review = mocks.lastReview();
+    expect(review?.event).toBe('COMMENT');
+    expect(review?.body).not.toContain('Blocking mode');
+  });
 });
 
 describe('runs api', () => {

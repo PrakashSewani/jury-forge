@@ -197,10 +197,13 @@ export async function fetchPullFiles(
   };
 }
 
+export type PullReviewEvent = 'COMMENT' | 'REQUEST_CHANGES';
+
 export interface PullReviewRequest {
   commitId: string;
   body: string;
   comments: { path: string; line: number; startLine?: number; body: string }[];
+  event?: PullReviewEvent;
 }
 
 export interface CreatedPullReview {
@@ -220,7 +223,7 @@ export async function createPullReview(
     body: JSON.stringify({
       commit_id: review.commitId,
       body: review.body,
-      event: 'COMMENT',
+      event: review.event ?? 'COMMENT',
       comments: review.comments.map((comment) =>
         comment.startLine !== undefined
           ? {
