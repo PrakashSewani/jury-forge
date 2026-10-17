@@ -42,11 +42,41 @@ skips dev dependencies — run `npm install --include=dev` in that case.
 - Instance secrets (phase 2): `product/.dev.vars.example` is the reference — `ENCRYPTION_KEY`
   encrypts credentials at rest, and `SETUP_CODE` gates the one-time instance claim (D-008). For
   local runs, copy it to `product/.dev.vars` (gitignored); deployed instances set the same names
-  with `npx wrangler secret put <NAME>`. Nothing secret is ever committed — see the boundaries
+  with `npx wrangler secret put <NAME>`. D-023 adds three optional rotation secrets
+  (`ENCRYPTION_KEY_VERSION`, `ENCRYPTION_KEY_PREVIOUS`,
+  `ENCRYPTION_KEY_PREVIOUS_VERSION`) — an instance that never rotates leaves them unset; see
+  "Rotating the encryption key" below. Nothing secret is ever committed — see the boundaries
   in `docs/architecture.md`.
 - Releases need the repository secret `RELEASE_TOKEN` (a repo-admin token with
   `contents: write`) before the first release — `main` is protected and the release workflow
   pushes with this token (D-007). Without it, the release job fails with instructions.
+
+## Rotating the encryption key
+
+`ENCRYPTION_KEY` encrypts every credential at rest (D-005, D-023). Ciphertexts are versioned
+(`v2.<keyVersion>.<iv>.<ciphertext>`), so a rotation needs no re-entry of credentials:
+
+```bash
+# 1. Generate the next key and label it (labels are arbitrary strings; this example moves the
+#    previous key's label into the new "previous" slot).
+openssl rand -base64 32                      # the new ENCRYPTION_KEY
+
+# 2. Configure the ring — current key, current label, previous key, previous label:
+npx wrangler secret put ENCRYPTION_KEY                    # the new key
+npx wrangler secret put ENCRYPTION_KEY_VERSION            # e.g. 2
+npx wrangler secret put ENCRYPTION_KEY_PREVIOUS           # the old key, kept for reads
+npx wrangler secret put ENCRYPTION_KEY_PREVIOUS_VERSION   # e.g. 1
+
+# 3. Deploy (or reload) the Worker so the new secrets are live. New writes — reviewer API keys,
+#    reviewer updates, registrations — use the new key immediately; old ciphertexts keep
+#    decrypting with ENCRYPTION_KEY_PREVIOUS.
+```
+
+A reviewer's API key is re-wrapped with the current key the next time that reviewer is updated
+(the operation is recorded in the activity trail). GitHub App credentials are only rewritten when
+the app is registered, so re-run the setup wizard's app registration before removing
+`ENCRYPTION_KEY_PREVIOUS` if you want the app's secrets on the new key. Once nothing decrypts with
+the previous key, delete the two `*_PREVIOUS*` secrets.
 
 ## Releases and deploys
 

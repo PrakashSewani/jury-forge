@@ -29,7 +29,8 @@ pull request on `feat/jury-forge-roadmap-20261017`, branched from `dev` at `8221
 commit plus implementation commit(s) per slice (D-019).
 
 **Landed so far (this branch):** slice 7 — docs `a8f3ba2`, implementation `6ce1fc3` (D-020);
-slice 8 — docs `9e0cf01`, implementation `e616c31` (D-021).
+slice 8 — docs `9e0cf01`, implementation `e616c31` (D-021); slice 9 — docs `75be673`,
+implementation `cde7fd7` (D-022).
 
 **Done this session:** merged the outstanding stack —
 

@@ -35,18 +35,39 @@ Migrations continue in `product/migrations/` (`0002_*` onward). Timestamps are u
 | `oauth_states`          | single-use OAuth/manifest states     | `state`, `kind` (`login`/`claim`/`manifest`), `created_at`, `expires_at`                                                                                                  |
 | `webhook_deliveries`    | delivery de-duplication              | `delivery_id`, `received_at`                                                                                                                                              |
 | `instance_settings`     | tunable instance numbers (D-021)     | `key`, `value` (TEXT, validated per key), `updated_at` — see "Instance settings"                                                                                          |
+| `activity_log`          | the dashboard activity trail (D-023) | `id`, `at`, `actor`, `action`, `target`, `detail`                                                                                                                         |
 
 Notes: index `runs(repo_id, created_at desc)` and `sessions(expires_at)`; expired sessions and
 states are pruned on access; `webhook_deliveries` older than 7 days are pruned opportunistically.
 
 ## Encryption (AES-256-GCM)
 
-`worker/lib/crypto.ts` wraps WebCrypto. Keys come from the deploy-time `ENCRYPTION_KEY` secret
-(base64, 32 bytes, validated on first use). Ciphertext format: `v1.<iv>.<ciphertext>`
-(base64url). Encrypted at rest: the GitHub App private key, webhook secret, and client secret;
+`worker/lib/crypto.ts` wraps WebCrypto. Ciphertext format: `v2.<keyVersion>.<iv>.<ciphertext>`
+(base64url) for everything written now; the legacy `v1.<iv>.<ciphertext>` form stays readable.
+Keys come from deploy-time secrets, validated on first use (base64, 32 bytes):
+
+| Secret                            | Meaning                                         |
+| --------------------------------- | ----------------------------------------------- |
+| `ENCRYPTION_KEY`                  | the current key (required)                      |
+| `ENCRYPTION_KEY_VERSION`          | the current key's label (default `1`)           |
+| `ENCRYPTION_KEY_PREVIOUS`         | the previous key, optional — set while rotating |
+| `ENCRYPTION_KEY_PREVIOUS_VERSION` | the previous key's label (default `0`)          |
+
+`loadKeyRing(env)` builds the ring; `encryptSecret(ring, value)` always writes with the current key
+and stamps its version; `decryptSecret(ring, value)` picks the key by version — a `v2` value with an
+unknown version is an error, and a legacy `v1` value is tried with the current key, then the
+previous one. Encrypted at rest: the GitHub App private key, webhook secret and client secret;
 reviewer API keys. Decryption happens in memory only, immediately before use; secrets are never
 logged and never returned by the API — an API key is write-only, and responses expose only
-whether one is set. Key rotation is out of scope for v1; rotating means re-entering credentials.
+whether one is set.
+
+**Rotation (D-023, slice 10):** point `ENCRYPTION_KEY` at the new key, move the old one into
+`ENCRYPTION_KEY_PREVIOUS`, and bump the two version labels — nothing has to be re-entered. Every
+write stamps the current version; a reviewer API key is lazily re-encrypted the next time that
+reviewer is updated (the same plaintext, re-wrapped with the current key, recorded in the activity
+trail). The previous key can be dropped once nothing decrypts with it; GitHub App credentials have
+no partial-update path (they are rewritten only when the app is registered), so drop the previous
+key only after re-registering the app. The operator procedure is in `docs/development.md`.
 
 ## Instance settings and blocking mode (D-021)
 
@@ -257,10 +278,25 @@ is not an error. `params_json` merges extra body parameters (for example tempera
 decrypted only for the call, and a stored key is write-only: responses expose only whether one is
 set, and `PATCH` with `apiKey: *** clears it.
 
+## Audit trail (D-023)
+
+Every state change worth explaining later is recorded in `activity_log` (`at`, `actor`, `action`,
+`target`, `detail`) through `worker/lib/activity.ts`'s `recordActivity()`, which is best-effort: a
+failed write is logged and swallowed so it can never fail the request that triggered it. Recorded
+actions: `sign_in` and `sign_out`; `setting_change` (one row per changed key); `reviewer_create`,
+`reviewer_update` (naming the changed fields, and saying whether the API key was set, cleared, or
+re-wrapped by rotation) and `reviewer_delete`; `repository_toggle` and `repository_reviewers`;
+`run_started` for the webhook kick (actor `webhook`); and `credential_rotation`. `GET
+/api/activity` returns the newest first with a keyset cursor (`at`, then `id`, like runs), limit
+1–100 default 50, and prunes entries older than 90 days opportunistically on read. The dashboard's
+`/activity` screen lists time, actor, action, target and detail with the same "load more" pattern
+as runs — a reading surface, not an audit export.
+
 ## Dashboard
 
 Routes: `/setup` (wizard steps), `/reviewers`, `/reviewers/new`, `/reviewers/:id`,
-`/repositories`, `/runs`, `/runs/:id`, `/settings` (Advanced — the D-021 numbers), `/` (overview
+`/repositories`, `/runs`, `/runs/:id`, `/settings` (Advanced — the D-021 numbers), `/activity`
+(the D-023 trail), `/` (overview
 with instance state and recent runs). An
 auth-aware shell redirects to sign-in on 401. Screens: the reviewer editor (instructions, rules,
 flavor, base URL, model, params; the API key is write-only, shown as "set" with a replace
@@ -280,26 +316,27 @@ action (D-016).
 
 ## API surface
 
-| Method           | Path                                  | Auth      | Purpose                                      |
-| ---------------- | ------------------------------------- | --------- | -------------------------------------------- |
-| GET              | `/api/health`                         | —         | exists                                       |
-| GET              | `/api/setup/state`                    | —         | wizard step status                           |
-| POST             | `/api/setup/code`                     | code      | validate `SETUP_CODE`; returns manifest form |
-| GET              | `/api/setup/manifest/callback`        | state     | exchange manifest code; store the app        |
-| POST             | `/api/setup/verify-installation`      | setup     | find and store the installation              |
-| GET              | `/api/auth/github/start`              | —         | OAuth redirect (login or claim)              |
-| GET              | `/api/auth/github/callback`           | state     | token exchange, access gate, session/claim   |
-| GET              | `/api/auth/session`                   | session   | current user                                 |
-| POST             | `/api/auth/logout`                    | session   | delete session                               |
-| GET/POST         | `/api/reviewers`                      | session   | list / create                                |
-| GET/PATCH/DELETE | `/api/reviewers/:id`                  | session   | read / update / delete                       |
-| GET              | `/api/repositories`                   | session   | list; `?refresh=1` syncs from GitHub         |
-| PATCH            | `/api/repositories/:repoId`           | session   | enable/disable                               |
-| GET/PUT          | `/api/repositories/:repoId/reviewers` | session   | per-repo reviewer enablement                 |
-| GET              | `/api/runs`                           | session   | history `{ runs, nextCursor }` (keyset)      |
-| GET              | `/api/runs/:id`                       | session   | run detail `{ run, reviewers }`              |
-| GET/PATCH        | `/api/settings`                       | session   | `{ settings, defaults }` (D-021)             |
-| POST             | `/api/webhooks/github`                | signature | GitHub deliveries                            |
+| Method           | Path                                  | Auth      | Purpose                                           |
+| ---------------- | ------------------------------------- | --------- | ------------------------------------------------- |
+| GET              | `/api/health`                         | —         | exists                                            |
+| GET              | `/api/setup/state`                    | —         | wizard step status                                |
+| POST             | `/api/setup/code`                     | code      | validate `SETUP_CODE`; returns manifest form      |
+| GET              | `/api/setup/manifest/callback`        | state     | exchange manifest code; store the app             |
+| POST             | `/api/setup/verify-installation`      | setup     | find and store the installation                   |
+| GET              | `/api/auth/github/start`              | —         | OAuth redirect (login or claim)                   |
+| GET              | `/api/auth/github/callback`           | state     | token exchange, access gate, session/claim        |
+| GET              | `/api/auth/session`                   | session   | current user                                      |
+| POST             | `/api/auth/logout`                    | session   | delete session                                    |
+| GET/POST         | `/api/reviewers`                      | session   | list / create                                     |
+| GET/PATCH/DELETE | `/api/reviewers/:id`                  | session   | read / update / delete                            |
+| GET              | `/api/repositories`                   | session   | list; `?refresh=1` syncs from GitHub              |
+| PATCH            | `/api/repositories/:repoId`           | session   | enable/disable                                    |
+| GET/PUT          | `/api/repositories/:repoId/reviewers` | session   | per-repo reviewer enablement                      |
+| GET              | `/api/runs`                           | session   | history `{ runs, nextCursor }` (keyset)           |
+| GET              | `/api/runs/:id`                       | session   | run detail `{ run, reviewers }`                   |
+| GET/PATCH        | `/api/settings`                       | session   | `{ settings, defaults }` (D-021)                  |
+| GET              | `/api/activity`                       | session   | activity trail `{ activity, nextCursor }` (D-023) |
+| POST             | `/api/webhooks/github`                | signature | GitHub deliveries                                 |
 
 ## Security
 
@@ -315,7 +352,9 @@ middleware and the access gate; context budget, skip rules, and truncation notes
 caps and inline selection (pure functions); multi-line `startLine` acceptance and rejection and
 the resolution comparison (D-020, pure functions); settings validation, defaults, and the
 blocking-event selection (D-021, pure functions); the repository-instruction excerpt formatter and
-its budget (D-022, pure functions); provider adapters against mocked `fetch` (both
+its budget (D-022, pure functions); the key ring's formats, rotation detection, and legacy
+decryption (D-023, pure functions); the activity trail's best-effort writes and its keyset page
+(D-023); provider adapters against mocked `fetch` (both
 flavors, timeouts, malformed output, usage envelopes); webhook verification and de-duplication;
 the setup state machine with mocked GitHub endpoints; Durable Object phases, retries, and run
 records via the Workers Vitest plugin with stubbed `fetch`. No test performs real network calls.

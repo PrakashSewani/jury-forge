@@ -467,3 +467,48 @@ reviewer's identity — and the system prompt carries the output contract); a da
 per-repository instruction text (the repository already carries this; per-repo overrides stay a
 later decision); caching the excerpts in D1 (runs are rare, the files are small, and a cache is
 state to invalidate for no measured win).
+
+## D-023: Slice 10 — credential key rotation and the audit trail
+
+**Date:** 2026-10-17 (implements roadmap items 7 and 12 from D-017)
+
+**Decision:** (1) **Key rotation** (item 7). Ciphertexts become versioned —
+`v2.<keyVersion>.<iv>.<ciphertext>` — and the legacy `v1.<iv>.<ciphertext>` form stays readable.
+`worker/lib/crypto.ts` exposes a key ring built from the environment: `ENCRYPTION_KEY` plus
+`ENCRYPTION_KEY_VERSION` (default `1`), and optionally `ENCRYPTION_KEY_PREVIOUS` plus
+`ENCRYPTION_KEY_PREVIOUS_VERSION` (default `0`). Writes always use the current key and stamp its
+version; reads pick the key by version (`v2` with an unknown version fails; a legacy `v1` value is
+tried with the current key, then the previous one). Rotation needs no re-entry: a reviewer's API
+key is **lazily re-encrypted on its next write** — the same plaintext re-wrapped with the current
+key, in the same `PATCH` — and every credential write (app registration, reviewer create/update)
+stamps the current version. GitHub App credentials have no partial-update path, so they are
+re-encrypted only by re-running the app registration; the previous key stays configured until then.
+The operator procedure lives in `docs/development.md`.
+
+(2) **Audit trail** (item 12). A new `activity_log` table (`at`, `actor`, `action`, `target`,
+`detail`) records **sign-ins and sign-outs, setting changes, reviewer create/update/delete
+(including whether the API key was set, cleared, or re-encrypted by rotation), repository and
+per-repo reviewer toggles, run kicks, and credential rotations**. Writes go through
+`worker/lib/activity.ts`'s `recordActivity()`, which is best-effort — a failed insert is logged and
+swallowed so it can never fail the request — and `GET /api/activity` returns the newest first with
+a keyset cursor (`at`, then `id`) and prunes entries older than 90 days opportunistically. The
+dashboard gains an `/activity` screen listing time, actor, action, target and detail with the same
+"load more" pattern as runs.
+
+**Why:** D-005's "rotate by re-entering every credential" was acceptable only while there were no
+instances; a versioned ring makes rotation an environment change with no credential re-entry, and
+it keeps the AES-256-GCM secrets write-only from the API's perspective. And once a self-hosted
+instance has settings, credentials and toggles, "who changed this, when" should be answerable from
+the dashboard rather than by reading D1 — a single-instance tool's owner is the whole audience for
+an audit trail, and 90 days of it is enough.
+
+**Rejected:** a full key-derivation/labelled-keys vault in D1 (the instance's keys live in Worker
+secrets by design — D-005 — and a second store of key material would be a new blast radius);
+eager re-encryption of every row on rotation (a migration-shaped background job for a single
+instance; lazy re-wrapping plus the previous key reaches the same end state with no window where
+the Worker cannot read); versioning without a previous key (it would make every rotation a
+credential re-entry, i.e. no rotation); dropping support for `v1` ciphertexts (existing instances
+would need a manual migration); an activity export/download endpoint (a reading surface is what was
+asked for; the table is one `SELECT` away for anyone who wants more); recording request-level noise
+like every page view or failed login (the trail is for state changes, not traffic); an unbounded
+trail (a single instance accumulates rows forever for no benefit — 90 days, pruned on read).
