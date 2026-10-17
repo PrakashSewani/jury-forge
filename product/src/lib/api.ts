@@ -1,13 +1,18 @@
 import type {
+  ActivityPage,
   InstallationInfo,
+  InstanceSettings,
   ProviderFlavor,
   Repository,
   RepositoryReviewer,
   RepositoryReviewerUpdate,
   Reviewer,
+  ReviewersExportDocument,
+  ReviewersImportResult,
   RunDetail,
   RunsPage,
   SessionUser,
+  SettingsResponse,
   SetupCodeResponse,
   SetupState,
 } from '@jury-forge/shared';
@@ -119,6 +124,33 @@ export function listReviewers(): Promise<Reviewer[]> {
   return request('/api/reviewers');
 }
 
+export function exportReviewers(): Promise<ReviewersExportDocument> {
+  return request('/api/reviewers/export');
+}
+
+export function importReviewers(input: unknown): Promise<ReviewersImportResult> {
+  return request('/api/reviewers/import', {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify(input),
+  });
+}
+
+/** Turns an exported document into a downloaded JSON file. */
+export function downloadReviewersExport(exportDocument: ReviewersExportDocument): void {
+  const blob = new Blob([JSON.stringify(exportDocument, null, 2)], {
+    type: 'application/json',
+  });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = 'jury-forge-reviewers.json';
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
 export function getReviewer(id: string): Promise<Reviewer> {
   return request(`/api/reviewers/${encodeURIComponent(id)}`);
 }
@@ -184,4 +216,21 @@ export function listRuns(cursor?: string): Promise<RunsPage> {
 
 export function getRun(id: string): Promise<RunDetail> {
   return request(`/api/runs/${encodeURIComponent(id)}`);
+}
+
+export function getSettings(): Promise<SettingsResponse> {
+  return request('/api/settings');
+}
+
+export function listActivity(cursor?: string): Promise<ActivityPage> {
+  const query = cursor === undefined ? '' : `?cursor=${encodeURIComponent(cursor)}`;
+  return request(`/api/activity${query}`);
+}
+
+export function updateSettings(patch: Partial<InstanceSettings>): Promise<SettingsResponse> {
+  return request('/api/settings', {
+    method: 'PATCH',
+    headers: jsonHeaders,
+    body: JSON.stringify(patch),
+  });
 }

@@ -6,6 +6,7 @@ import {
   createSession,
   deleteSession,
   readSession,
+  SESSION_TTL_SECONDS,
   sessionCookie,
   sessionIdFromCookie,
 } from '../worker/lib/sessions';
@@ -26,6 +27,17 @@ describe('sessions', () => {
     await expect(readSession(env.DB, 'missing')).resolves.toBeNull();
     await insertSession('expired-token', 1);
     await expect(readSession(env.DB, 'expired-token')).resolves.toBeNull();
+  });
+
+  it('sets a fresh session expiry to the TTL from its creation time', async () => {
+    const id = await createSession(env.DB, { login: 'octocat', avatarUrl: null });
+    const row = await env.DB.prepare(
+      'SELECT created_at, expires_at FROM sessions WHERE token_hash = ?',
+    )
+      .bind(await sha256Hex(id))
+      .first<{ created_at: number; expires_at: number }>();
+    expect(row).not.toBeNull();
+    expect(row?.expires_at).toBe((row?.created_at ?? 0) + SESSION_TTL_SECONDS);
   });
 
   it('prunes expired sessions when a session is created', async () => {
@@ -50,6 +62,8 @@ describe('sessions', () => {
     expect(cookie).toContain('HttpOnly');
     expect(cookie).toContain('Secure');
     expect(cookie).toContain('SameSite=Lax');
+    expect(cookie).toContain(`Max-Age=${SESSION_TTL_SECONDS}`);
+    expect(cookie).toContain('Max-Age=604800');
     const header = cookie.split(';')[0];
     const request = new Request('https://jury-forge.test/', {
       headers: { Cookie: `other=1; ${header}` },

@@ -1,7 +1,8 @@
 import type { SessionUser } from '@jury-forge/shared';
 import { Hono } from 'hono';
 import { hasInstallationAccess } from '../lib/access';
-import { importEncryptionKey, randomToken } from '../lib/crypto';
+import { recordActivity } from '../lib/activity';
+import { keyRingValues, loadKeyRing, randomToken } from '../lib/crypto';
 import { exchangeOAuthCode, fetchUser } from '../lib/github';
 import { loadGitHubApp } from '../lib/github-app';
 import { deleteMeta, getMeta, isClaimed, setMeta } from '../lib/instance';
@@ -22,11 +23,11 @@ export const authRoutes = new Hono<AppEnv>();
 authRoutes.use('*', sameOrigin());
 
 authRoutes.get('/github/start', async (c) => {
-  const encryptionKeyValue = c.env.ENCRYPTION_KEY;
-  if (!encryptionKeyValue) {
+  const values = keyRingValues(c.env);
+  if (!values) {
     return c.json({ error: 'encryption_key_unset' }, 500);
   }
-  const app = await loadGitHubApp(c.env.DB, await importEncryptionKey(encryptionKeyValue));
+  const app = await loadGitHubApp(c.env.DB, await loadKeyRing(values));
   if (!app) {
     return c.json({ error: 'setup_required' }, 409);
   }
@@ -56,8 +57,8 @@ authRoutes.get('/github/callback', async (c) => {
   if (!code || !state) {
     return c.json({ error: 'invalid_request' }, 400);
   }
-  const encryptionKeyValue = c.env.ENCRYPTION_KEY;
-  if (!encryptionKeyValue) {
+  const encryptionKeyValues = keyRingValues(c.env);
+  if (!encryptionKeyValues) {
     return c.json({ error: 'encryption_key_unset' }, 500);
   }
 
@@ -74,7 +75,7 @@ authRoutes.get('/github/callback', async (c) => {
     return c.json({ error: 'invalid_state' }, 400);
   }
 
-  const app = await loadGitHubApp(db, await importEncryptionKey(encryptionKeyValue));
+  const app = await loadGitHubApp(db, await loadKeyRing(encryptionKeyValues));
   if (!app) {
     return c.json({ error: 'setup_required' }, 409);
   }
@@ -103,6 +104,11 @@ authRoutes.get('/github/callback', async (c) => {
   }
 
   const sessionId = await createSession(db, { login: user.login, avatarUrl: user.avatarUrl });
+  await recordActivity(db, {
+    actor: user.login,
+    action: 'sign_in',
+    detail: claimed ? 'login' : 'claim',
+  });
   c.header('Set-Cookie', sessionCookie(sessionId));
   return c.redirect(`${origin}/`);
 });
@@ -117,6 +123,7 @@ authRoutes.post('/logout', requireSession(), async (c) => {
   if (sessionId) {
     await deleteSession(c.env.DB, sessionId);
   }
+  await recordActivity(c.env.DB, { actor: c.get('user').login, action: 'sign_out' });
   c.header('Set-Cookie', clearSessionCookie());
   return c.body(null, 204);
 });

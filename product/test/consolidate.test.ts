@@ -5,6 +5,7 @@ import {
   FINDING_CAPS,
   newFileLines,
   parseFindings,
+  parseReviewerOutput,
 } from '../worker/lib/consolidate';
 
 function finding(overrides: Partial<Finding> = {}): Finding {
@@ -49,6 +50,36 @@ describe('parseFindings', () => {
     expect(parsed.length).toBe(FINDING_CAPS.stored);
     expect(parsed[0]?.title.length).toBe(120);
     expect(parsed[0]?.body.length).toBe(2_000);
+  });
+});
+
+describe('parseReviewerOutput', () => {
+  it('parses a trimmed summary alongside the findings', () => {
+    expect(parseReviewerOutput({ summary: '  Looks good.  ', findings: [finding()] })).toEqual({
+      summary: 'Looks good.',
+      findings: [finding()],
+    });
+  });
+
+  it('truncates an oversized summary to 500 characters', () => {
+    const output = parseReviewerOutput({ summary: 'x'.repeat(700), findings: [] });
+    expect(output.summary?.length).toBe(500);
+  });
+
+  it('treats a missing, blank, or non-string summary as null and still parses findings', () => {
+    expect(parseReviewerOutput({ findings: [finding()] })).toEqual({
+      summary: null,
+      findings: [finding()],
+    });
+    expect(parseReviewerOutput({ summary: '   ', findings: [finding()] })).toEqual({
+      summary: null,
+      findings: [finding()],
+    });
+    expect(parseReviewerOutput({ summary: 42, findings: [finding()] })).toEqual({
+      summary: null,
+      findings: [finding()],
+    });
+    expect(parseReviewerOutput([finding()])).toEqual({ summary: null, findings: [finding()] });
   });
 });
 
@@ -100,6 +131,30 @@ describe('consolidateReview', () => {
     expect(result.inline).toHaveLength(1);
     expect(result.inline[0]?.finding.line).toBe(5);
     expect(result.overflow[0]?.findings).toHaveLength(3);
+  });
+
+  it('keeps a startLine only when it precedes line and both are commentable', () => {
+    const patches = new Map([['src/a.ts', patch]]);
+    const result = consolidateReview(
+      [
+        {
+          reviewerId: 'r1',
+          findings: [
+            finding({ line: 5, startLine: 3 }),
+            finding({ line: 6, startLine: 7 }),
+            finding({ line: 7, startLine: 999 }),
+            finding({ line: 8, startLine: 4 }),
+          ],
+        },
+      ],
+      patches,
+    );
+    expect(result.inline.map((selection) => selection.finding.startLine)).toEqual([
+      3,
+      undefined,
+      undefined,
+      4,
+    ]);
   });
 
   it('applies the per-reviewer and per-run caps', () => {

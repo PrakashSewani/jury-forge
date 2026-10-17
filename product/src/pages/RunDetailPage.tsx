@@ -10,6 +10,10 @@ interface DetailData {
   names: Map<string, string>;
 }
 
+function formatTokens(value: number | null): string {
+  return value === null ? '—' : value.toLocaleString();
+}
+
 export default function RunDetailPage({ id }: { id: string }) {
   const load = useCallback(async (): Promise<DetailData> => {
     const [detail, reviewers] = await Promise.all([getRun(id), listReviewers()]);
@@ -83,6 +87,16 @@ export default function RunDetailPage({ id }: { id: string }) {
               {outcome.status === 'failed' && outcome.error ? (
                 <Notice tone="error">{outcome.error}</Notice>
               ) : null}
+              {outcome.summary ? (
+                <p className="whitespace-pre-wrap text-sm text-neutral-600">{outcome.summary}</p>
+              ) : null}
+              {outcome.usage ? (
+                <p className="text-xs text-neutral-500">
+                  usage: {formatTokens(outcome.usage.promptTokens)} prompt /{' '}
+                  {formatTokens(outcome.usage.completionTokens)} completion /{' '}
+                  {formatTokens(outcome.usage.totalTokens)} total tokens
+                </p>
+              ) : null}
               {outcome.findings && outcome.findings.length > 0 ? (
                 <ul className="space-y-3">
                   {outcome.findings.map((finding, index) => (
@@ -95,7 +109,11 @@ export default function RunDetailPage({ id }: { id: string }) {
                         <span className="font-medium">{finding.title}</span>
                         <code className="text-xs text-neutral-500">
                           {finding.file}
-                          {finding.line === undefined ? '' : `:${finding.line}`}
+                          {finding.line === undefined
+                            ? ''
+                            : finding.startLine !== undefined
+                              ? `:${finding.startLine}-${finding.line}`
+                              : `:${finding.line}`}
                         </code>
                       </div>
                       <p className="whitespace-pre-wrap text-sm text-neutral-600">{finding.body}</p>

@@ -39,9 +39,16 @@ export type FindingSeverity = 'info' | 'warning' | 'error';
 export interface Finding {
   file: string;
   line?: number;
+  startLine?: number;
   severity: FindingSeverity;
   title: string;
   body: string;
+}
+
+export interface ProviderUsage {
+  promptTokens: number | null;
+  completionTokens: number | null;
+  totalTokens: number | null;
 }
 
 export interface Reviewer {
@@ -55,6 +62,30 @@ export interface Reviewer {
   params: Record<string, unknown>;
   enabled: boolean;
   hasApiKey: boolean;
+}
+
+export interface ReviewerExport {
+  name: string;
+  instructions: string;
+  rules: string;
+  flavor: ProviderFlavor;
+  baseUrl: string;
+  model: string;
+  params: Record<string, unknown>;
+  enabled: boolean;
+}
+
+export interface ReviewersExportDocument {
+  version: number; // 1
+  exportedAt: number;
+  reviewers: ReviewerExport[];
+}
+
+export interface ReviewersImportResult {
+  created: number;
+  updated: number;
+  unchanged: number;
+  skipped: number;
 }
 
 export interface Repository {
@@ -96,6 +127,8 @@ export interface RunReviewerOutcome {
   reviewerId: string;
   status: RunReviewerStatus;
   findings: Finding[] | null;
+  summary: string | null;
+  usage: ProviderUsage | null;
   error: string | null;
 }
 
@@ -107,4 +140,35 @@ export interface RunsPage {
 export interface RunDetail {
   run: RunSummary;
   reviewers: RunReviewerOutcome[];
+}
+
+export interface InstanceSettings {
+  inlineCommentsPerReviewer: number;
+  inlineCommentsPerRun: number;
+  contextTotalBytes: number;
+  contextFileBytes: number;
+  descriptionLimit: number;
+  blockingMode: boolean;
+  blockingErrorThreshold: number;
+  repoInstructions: boolean;
+  repoInstructionsMaxBytes: number;
+}
+
+export interface SettingsResponse {
+  settings: InstanceSettings;
+  defaults: InstanceSettings;
+}
+
+export interface ActivityEntry {
+  id: number;
+  at: number;
+  actor: string;
+  action: string;
+  target: string | null;
+  detail: string | null;
+}
+
+export interface ActivityPage {
+  activity: ActivityEntry[];
+  nextCursor: string | null;
 }

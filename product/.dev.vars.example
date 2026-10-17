@@ -11,6 +11,13 @@
 # Generate one with: openssl rand -base64 32
 ENCRYPTION_KEY=
 
+# Optional key-rotation labels and the previous key (D-023). Leave them unset on a
+# fresh instance; during a rotation set the new key above plus these three, then
+# drop ENCRYPTION_KEY_PREVIOUS* once nothing decrypts with it any more.
+# ENCRYPTION_KEY_VERSION=2
+# ENCRYPTION_KEY_PREVIOUS=
+# ENCRYPTION_KEY_PREVIOUS_VERSION=1
+
 # One-time code required to claim a fresh instance from the setup wizard.
 # Generate one with: openssl rand -base64 24
 SETUP_CODE=

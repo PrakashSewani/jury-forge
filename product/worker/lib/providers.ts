@@ -1,4 +1,4 @@
-import type { ProviderFlavor } from '@jury-forge/shared';
+import type { ProviderFlavor, ProviderUsage } from '@jury-forge/shared';
 
 const PROVIDER_TIMEOUT_MS = 120_000;
 const ANTHROPIC_DEFAULT_MAX_TOKENS = 4_096;
@@ -15,12 +15,17 @@ export interface ProviderCall {
   timeoutMs?: number;
 }
 
+export interface ProviderResult {
+  value: unknown;
+  usage: ProviderUsage | null;
+}
+
 /**
- * Calls the reviewer's provider and returns the parsed JSON value of its response; the caller
- * validates the findings shape (see `consolidate.parseFindings`). A failure here fails only
- * this reviewer's call.
+ * Calls the reviewer's provider and returns the parsed JSON value of its response plus the
+ * normalized token usage from the envelope (D-020); the caller validates the findings shape (see
+ * `consolidate.parseReviewerOutput`). A failure here fails only this reviewer's call.
  */
-export async function callProvider(call: ProviderCall): Promise<unknown> {
+export async function callProvider(call: ProviderCall): Promise<ProviderResult> {
   const built = call.flavor === 'anthropic' ? anthropicRequest(call) : openAiRequest(call);
   const response = await fetch(built.url, {
     method: 'POST',
@@ -33,7 +38,34 @@ export async function callProvider(call: ProviderCall): Promise<unknown> {
   }
   const body: unknown = await response.json();
   const text = call.flavor === 'anthropic' ? anthropicText(body) : openAiText(body);
-  return extractJsonValue(text);
+  return { value: extractJsonValue(text), usage: normalizeUsage(call.flavor, body) };
+}
+
+function numberField(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+/** D-020: OpenAI and Anthropic report usage differently; normalize or report none. */
+function normalizeUsage(flavor: ProviderFlavor, body: unknown): ProviderUsage | null {
+  if (body === null || typeof body !== 'object') {
+    return null;
+  }
+  const usage = (body as { usage?: unknown }).usage;
+  if (usage === null || typeof usage !== 'object') {
+    return null;
+  }
+  if (flavor === 'anthropic') {
+    const promptTokens = numberField((usage as { input_tokens?: unknown }).input_tokens);
+    const completionTokens = numberField((usage as { output_tokens?: unknown }).output_tokens);
+    const totalTokens =
+      promptTokens !== null && completionTokens !== null ? promptTokens + completionTokens : null;
+    return { promptTokens, completionTokens, totalTokens };
+  }
+  return {
+    promptTokens: numberField((usage as { prompt_tokens?: unknown }).prompt_tokens),
+    completionTokens: numberField((usage as { completion_tokens?: unknown }).completion_tokens),
+    totalTokens: numberField((usage as { total_tokens?: unknown }).total_tokens),
+  };
 }
 
 interface ProviderRequest {

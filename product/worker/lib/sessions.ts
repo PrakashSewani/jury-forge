@@ -2,7 +2,8 @@ import type { SessionUser } from '@jury-forge/shared';
 import { randomToken, sha256Hex } from './crypto';
 
 export const SESSION_COOKIE = 'jf_session';
-const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30;
+// 7 days, per D-024: a shorter window bounds stale access without storing user tokens.
+export const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
 
 export async function createSession(db: D1Database, user: SessionUser): Promise<string> {
   const id = randomToken(32);

@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { importEncryptionKey } from '../lib/crypto';
+import { recordActivity } from '../lib/activity';
+import { keyRingValues, loadKeyRing } from '../lib/crypto';
 import { createInstallationToken, fetchInstallationRepositories } from '../lib/github';
 import { loadGitHubApp } from '../lib/github-app';
 import { getMeta } from '../lib/instance';
@@ -31,12 +32,12 @@ repositoryRoutes.use('*', requireSession(), sameOrigin());
 repositoryRoutes.get('/', async (c) => {
   const refresh = c.req.query('refresh');
   if (refresh === '1' || refresh === 'true') {
-    const encryptionKeyValue = c.env.ENCRYPTION_KEY;
-    if (!encryptionKeyValue) {
+    const values = keyRingValues(c.env);
+    if (!values) {
       return c.json({ error: 'encryption_key_unset' }, 500);
     }
     const installationIdValue = await getMeta(c.env.DB, 'installation_id');
-    const app = await loadGitHubApp(c.env.DB, await importEncryptionKey(encryptionKeyValue));
+    const app = await loadGitHubApp(c.env.DB, await loadKeyRing(values));
     if (!app || !installationIdValue) {
       return c.json({ error: 'setup_required' }, 409);
     }
@@ -75,6 +76,12 @@ repositoryRoutes.patch('/:repoId', async (c) => {
   if (!updated) {
     return c.json({ error: 'not_found' }, 404);
   }
+  await recordActivity(c.env.DB, {
+    actor: c.get('user').login,
+    action: 'repository_toggle',
+    target: updated.fullName,
+    detail: parsed.data.enabled ? 'enabled' : 'disabled',
+  });
   return c.json(updated);
 });
 
@@ -98,13 +105,28 @@ repositoryRoutes.put('/:repoId/reviewers', async (c) => {
   if (!Number.isInteger(repoId)) {
     return c.json({ error: 'invalid_request' }, 400);
   }
-  if (!(await getRepository(c.env.DB, repoId))) {
+  const repository = await getRepository(c.env.DB, repoId);
+  if (!repository) {
     return c.json({ error: 'not_found' }, 404);
   }
-  const known = new Set((await listReviewers(c.env.DB)).map((reviewer) => reviewer.id));
-  if (parsed.data.reviewers.some((update) => !known.has(update.reviewerId))) {
+  const reviewerNames = new Map(
+    (await listReviewers(c.env.DB)).map((reviewer) => [reviewer.id, reviewer.name]),
+  );
+  if (parsed.data.reviewers.some((update) => !reviewerNames.has(update.reviewerId))) {
     return c.json({ error: 'invalid_request' }, 400);
   }
   await setRepositoryReviewers(c.env.DB, repoId, parsed.data.reviewers);
+  const summary = parsed.data.reviewers
+    .map(
+      (update) =>
+        `${reviewerNames.get(update.reviewerId) ?? update.reviewerId}: ${update.enabled ? 'on' : 'off'}`,
+    )
+    .join(', ');
+  await recordActivity(c.env.DB, {
+    actor: c.get('user').login,
+    action: 'repository_reviewers',
+    target: repository.fullName,
+    detail: summary === '' ? null : summary,
+  });
   return c.json(await listRepositoryReviewers(c.env.DB, repoId));
 });

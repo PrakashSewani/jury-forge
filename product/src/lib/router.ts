@@ -6,7 +6,9 @@ export type Route =
   | { name: 'reviewer-edit'; id: string }
   | { name: 'repositories' }
   | { name: 'runs' }
-  | { name: 'run-detail'; id: string };
+  | { name: 'run-detail'; id: string }
+  | { name: 'settings' }
+  | { name: 'activity' };
 
 export function routeFromPath(pathname: string): Route {
   const [first = '', second = ''] = pathname.split('/').filter((part) => part !== '');
@@ -23,6 +25,10 @@ export function routeFromPath(pathname: string): Route {
       return { name: 'reviewer-edit', id: decodeURIComponent(second) };
     case 'repositories':
       return { name: 'repositories' };
+    case 'settings':
+      return { name: 'settings' };
+    case 'activity':
+      return { name: 'activity' };
     case 'runs':
       if (second === '') {
         return { name: 'runs' };

@@ -1,10 +1,14 @@
 import { env } from 'cloudflare:workers';
+import type { ReviewersExportDocument } from '@jury-forge/shared';
 import { beforeEach, describe, expect, it } from 'vitest';
 import app from '../worker';
+import { decryptSecret, encryptSecret, loadKeyRing } from '../worker/lib/crypto';
 import { createSession } from '../worker/lib/sessions';
 import { resetInstanceState } from './db';
 
 const ORIGIN = 'https://jury-forge.test';
+const CURRENT_KEY = btoa(String.fromCharCode(7).repeat(32));
+const PREVIOUS_KEY = btoa(String.fromCharCode(9).repeat(32));
 
 beforeEach(resetInstanceState);
 
@@ -23,6 +27,20 @@ const INPUT = {
   apiKey: 'sk-test-secret',
   params: { temperature: 0.2 },
 };
+
+/** Seeds a reviewer whose stored API key was wrapped under the previous key version. */
+async function seedReviewerWithStoredKey(
+  id: string,
+  name: string,
+  plaintext: string,
+): Promise<void> {
+  const previousRing = await loadKeyRing({ key: PREVIOUS_KEY, version: '0' });
+  await env.DB.prepare(
+    "INSERT INTO reviewers (id, name, instructions, rules, flavor, base_url, api_key_enc, model, params_json, enabled) VALUES (?, ?, '', '', 'openai', 'https://api.example.com/v1', ?, 'model-x', '{}', 1)",
+  )
+    .bind(id, name, await encryptSecret(previousRing, plaintext))
+    .run();
+}
 
 async function post(cookie: string, body: unknown): Promise<Response> {
   return app.request(
@@ -43,6 +61,39 @@ async function create(
   const response = await post(cookie, body);
   expect(response.status).toBe(201);
   return (await response.json()) as { id: string } & Record<string, unknown>;
+}
+
+interface ReviewerRowFields {
+  name: string;
+  instructions: string;
+  rules: string;
+  flavor: string;
+  base_url: string;
+  model: string;
+  params_json: string;
+  enabled: number;
+  api_key_enc: string;
+}
+
+async function requestJson(
+  cookie: string,
+  method: string,
+  path: string,
+  body?: unknown,
+): Promise<Response> {
+  return app.request(
+    `${ORIGIN}/api/reviewers${path}`,
+    {
+      method,
+      headers: {
+        ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+        Origin: ORIGIN,
+        Cookie: cookie,
+      },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    },
+    env,
+  );
 }
 
 describe('reviewers api', () => {
@@ -67,7 +118,7 @@ describe('reviewers api', () => {
     const row = await env.DB.prepare('SELECT api_key_enc FROM reviewers WHERE id = ?')
       .bind(reviewer.id)
       .first<{ api_key_enc: string }>();
-    expect(row?.api_key_enc).toMatch(/^v1\./);
+    expect(row?.api_key_enc).toMatch(/^v2\.1\./);
     expect(row?.api_key_enc).not.toContain('sk-test-secret');
   });
 
@@ -191,5 +242,319 @@ describe('reviewers api', () => {
       env,
     );
     expect(gone.status).toBe(404);
+  });
+
+  it('re-wraps a key held under the previous version on PATCH and records the rotation', async () => {
+    const cookie = await session();
+    await seedReviewerWithStoredKey('rev-rotate', 'Rotating', 'sk-rotate-me');
+
+    const before = await env.DB.prepare('SELECT api_key_enc FROM reviewers WHERE id = ?')
+      .bind('rev-rotate')
+      .first<{ api_key_enc: string }>();
+    expect(before?.api_key_enc).toMatch(/^v2\.0\./);
+
+    const response = await app.request(
+      `${ORIGIN}/api/reviewers/rev-rotate`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Origin: ORIGIN, Cookie: cookie },
+        body: JSON.stringify({ name: 'Rotated' }),
+      },
+      env,
+    );
+    expect(response.status).toBe(200);
+
+    const after = await env.DB.prepare('SELECT name, api_key_enc FROM reviewers WHERE id = ?')
+      .bind('rev-rotate')
+      .first<{ name: string; api_key_enc: string }>();
+    expect(after?.name).toBe('Rotated');
+    expect(after?.api_key_enc).toMatch(/^v2\.1\./);
+    const ring = await loadKeyRing({ key: CURRENT_KEY });
+    await expect(decryptSecret(ring, after?.api_key_enc ?? '')).resolves.toBe('sk-rotate-me');
+
+    const rotations = await env.DB.prepare(
+      "SELECT target, detail FROM activity_log WHERE action = 'credential_rotation'",
+    ).all<{ target: string; detail: string }>();
+    expect(rotations.results).toHaveLength(1);
+    expect(rotations.results[0]?.target).toBe('Rotated');
+    expect(rotations.results[0]?.detail).toBe('api_key re-wrapped for key version 1');
+
+    const update = await env.DB.prepare(
+      "SELECT detail FROM activity_log WHERE action = 'reviewer_update'",
+    ).first<{ detail: string }>();
+    expect(update?.detail).toContain('api_key: re-wrapped');
+  });
+
+  it('does not rotate when the PATCH sets an API key', async () => {
+    const cookie = await session();
+    await seedReviewerWithStoredKey('rev-set', 'Setting', 'sk-old');
+
+    const response = await app.request(
+      `${ORIGIN}/api/reviewers/rev-set`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Origin: ORIGIN, Cookie: cookie },
+        body: JSON.stringify({ apiKey: 'sk-new' }),
+      },
+      env,
+    );
+    expect(response.status).toBe(200);
+
+    const rotations = await env.DB.prepare(
+      "SELECT COUNT(*) AS count FROM activity_log WHERE action = 'credential_rotation'",
+    ).first<{ count: number }>();
+    expect(rotations?.count).toBe(0);
+
+    const row = await env.DB.prepare('SELECT api_key_enc FROM reviewers WHERE id = ?')
+      .bind('rev-set')
+      .first<{ api_key_enc: string }>();
+    const ring = await loadKeyRing({ key: CURRENT_KEY });
+    await expect(decryptSecret(ring, row?.api_key_enc ?? '')).resolves.toBe('sk-new');
+  });
+});
+
+describe('reviewer import/export', () => {
+  it('exports definitions without keys or ciphertext and round-trips into an import', async () => {
+    const cookie = await session();
+    await create(cookie);
+
+    const response = await requestJson(cookie, 'GET', '/export');
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Disposition')).toBe(
+      'attachment; filename="jury-forge-reviewers.json"',
+    );
+    const document = (await response.json()) as ReviewersExportDocument;
+    expect(document.version).toBe(1);
+    expect(typeof document.exportedAt).toBe('number');
+    expect(document.reviewers).toHaveLength(1);
+    const entry = document.reviewers[0] as unknown as Record<string, unknown>;
+    expect(Object.keys(entry).sort()).toEqual([
+      'baseUrl',
+      'enabled',
+      'flavor',
+      'instructions',
+      'model',
+      'name',
+      'params',
+      'rules',
+    ]);
+    expect(entry).not.toHaveProperty('apiKey');
+    expect(entry).not.toHaveProperty('hasApiKey');
+    expect(JSON.stringify(document)).not.toContain('sk-test-secret');
+
+    const imported = await requestJson(cookie, 'POST', '/import', document);
+    expect(imported.status).toBe(200);
+    await expect(imported.json()).resolves.toEqual({
+      created: 0,
+      updated: 0,
+      unchanged: 1,
+      skipped: 0,
+    });
+  });
+
+  it('creates a new reviewer from an import with no API key', async () => {
+    const cookie = await session();
+    const response = await requestJson(cookie, 'POST', '/import', {
+      version: 1,
+      reviewers: [
+        {
+          name: 'Imported',
+          instructions: 'Check things.',
+          rules: '',
+          flavor: 'anthropic',
+          baseUrl: 'https://api.anthropic.example/v1',
+          model: 'claude-x',
+          params: { temperature: 0.5 },
+          enabled: false,
+        },
+      ],
+    });
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      created: 1,
+      updated: 0,
+      unchanged: 0,
+      skipped: 0,
+    });
+
+    const row = await env.DB.prepare(
+      'SELECT instructions, flavor, enabled, api_key_enc FROM reviewers WHERE name = ?',
+    )
+      .bind('Imported')
+      .first<Pick<ReviewerRowFields, 'instructions' | 'flavor' | 'enabled' | 'api_key_enc'>>();
+    expect(row?.instructions).toBe('Check things.');
+    expect(row?.flavor).toBe('anthropic');
+    expect(row?.enabled).toBe(0);
+    expect(row?.api_key_enc).toBe('');
+  });
+
+  it('updates an existing reviewer field by field and keeps its stored key', async () => {
+    const cookie = await session();
+    const reviewer = await create(cookie);
+    const before = await env.DB.prepare('SELECT api_key_enc FROM reviewers WHERE id = ?')
+      .bind(reviewer.id)
+      .first<{ api_key_enc: string }>();
+
+    const response = await requestJson(cookie, 'POST', '/import', {
+      version: 1,
+      reviewers: [
+        {
+          name: 'security', // case-insensitive merge with the stored "Security"
+          instructions: 'Updated instructions.',
+          rules: 'Updated rules.',
+          flavor: 'anthropic',
+          baseUrl: 'https://api.anthropic.example/v1',
+          model: 'claude-y',
+          params: { temperature: 0.9 },
+          enabled: false,
+        },
+      ],
+    });
+    await expect(response.json()).resolves.toEqual({
+      created: 0,
+      updated: 1,
+      unchanged: 0,
+      skipped: 0,
+    });
+
+    const after = await env.DB.prepare(
+      'SELECT name, instructions, rules, flavor, base_url, model, params_json, enabled, api_key_enc FROM reviewers WHERE id = ?',
+    )
+      .bind(reviewer.id)
+      .first<ReviewerRowFields>();
+    expect(after?.name).toBe('security');
+    expect(after?.instructions).toBe('Updated instructions.');
+    expect(after?.rules).toBe('Updated rules.');
+    expect(after?.flavor).toBe('anthropic');
+    expect(after?.base_url).toBe('https://api.anthropic.example/v1');
+    expect(after?.model).toBe('claude-y');
+    expect(JSON.parse(after?.params_json ?? '{}')).toEqual({ temperature: 0.9 });
+    expect(after?.enabled).toBe(0);
+    expect(after?.api_key_enc).toBe(before?.api_key_enc);
+    expect(after?.api_key_enc).toMatch(/^v2\.1\./);
+
+    const fetched = await app.request(
+      `${ORIGIN}/api/reviewers/${reviewer.id}`,
+      { headers: { Cookie: cookie } },
+      env,
+    );
+    const body = (await fetched.json()) as { hasApiKey: boolean };
+    expect(body.hasApiKey).toBe(true);
+  });
+
+  it('counts an identical document as unchanged', async () => {
+    const cookie = await session();
+    await create(cookie, { ...INPUT, name: 'One' });
+    await create(cookie, { ...INPUT, name: 'Two' });
+    const document = (await (
+      await requestJson(cookie, 'GET', '/export')
+    ).json()) as ReviewersExportDocument;
+
+    const response = await requestJson(cookie, 'POST', '/import', document);
+    await expect(response.json()).resolves.toEqual({
+      created: 0,
+      updated: 0,
+      unchanged: 2,
+      skipped: 0,
+    });
+  });
+
+  it('skips a blank name and writes nothing for it', async () => {
+    const cookie = await session();
+    const response = await requestJson(cookie, 'POST', '/import', {
+      version: 1,
+      reviewers: [
+        { name: '   ', flavor: 'openai', baseUrl: 'https://api.example.com/v1', model: 'gpt-5' },
+        { name: 'Kept', flavor: 'openai', baseUrl: 'https://api.example.com/v1', model: 'gpt-5' },
+      ],
+    });
+    await expect(response.json()).resolves.toEqual({
+      created: 1,
+      updated: 0,
+      unchanged: 0,
+      skipped: 1,
+    });
+    const count = await env.DB.prepare('SELECT COUNT(*) AS count FROM reviewers').first<{
+      count: number;
+    }>();
+    expect(count?.count).toBe(1);
+  });
+
+  it('rejects a bad version or out-of-bounds fields with 400', async () => {
+    const cookie = await session();
+    const base = {
+      name: 'X',
+      flavor: 'openai',
+      baseUrl: 'https://api.example.com/v1',
+      model: 'gpt-5',
+    };
+    const documents = [
+      { version: 2, reviewers: [base] },
+      { version: 1, reviewers: [{ ...base, instructions: 'x'.repeat(20_001) }] },
+      { version: 1, reviewers: [{ ...base, name: 'x'.repeat(121) }] },
+      { version: 1, reviewers: [{ ...base, model: 'x'.repeat(201) }] },
+    ];
+    for (const document of documents) {
+      const response = await requestJson(cookie, 'POST', '/import', document);
+      expect(response.status).toBe(400);
+      await expect(response.json()).resolves.toEqual({ error: 'invalid_request' });
+    }
+  });
+
+  it('rejects more than 100 reviewers with 400', async () => {
+    const cookie = await session();
+    const reviewers = Array.from({ length: 101 }, (_value, index) => ({
+      name: `R${index}`,
+      flavor: 'openai',
+      baseUrl: 'https://api.example.com/v1',
+      model: 'gpt-5',
+    }));
+    const response = await requestJson(cookie, 'POST', '/import', { version: 1, reviewers });
+    expect(response.status).toBe(400);
+  });
+
+  it('ignores an apiKey field carried by an imported entry', async () => {
+    const cookie = await session();
+    const response = await requestJson(cookie, 'POST', '/import', {
+      version: 1,
+      reviewers: [
+        {
+          name: 'Keyless',
+          flavor: 'openai',
+          baseUrl: 'https://api.example.com/v1',
+          model: 'gpt-5',
+          apiKey: 'sk-should-not-be-stored',
+        },
+      ],
+    });
+    expect(response.status).toBe(200);
+    const row = await env.DB.prepare('SELECT api_key_enc FROM reviewers WHERE name = ?')
+      .bind('Keyless')
+      .first<{ api_key_enc: string }>();
+    expect(row?.api_key_enc).toBe('');
+  });
+
+  it('records a reviewer_import activity row', async () => {
+    const cookie = await session();
+    await requestJson(cookie, 'POST', '/import', {
+      version: 1,
+      reviewers: [
+        {
+          name: 'Logged',
+          flavor: 'openai',
+          baseUrl: 'https://api.example.com/v1',
+          model: 'gpt-5',
+        },
+      ],
+    });
+    const row = await env.DB.prepare(
+      "SELECT actor, action, target, detail FROM activity_log WHERE action = 'reviewer_import'",
+    ).first<{ actor: string; action: string; target: string | null; detail: string | null }>();
+    expect(row).toEqual({
+      actor: 'octocat',
+      action: 'reviewer_import',
+      target: null,
+      detail: 'created 1, updated 0, unchanged 0, skipped 0',
+    });
   });
 });

@@ -7,7 +7,13 @@ import {
 } from '@jury-forge/shared';
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { constantTimeEqual, importEncryptionKey, randomToken, sha256Hex } from '../lib/crypto';
+import {
+  constantTimeEqual,
+  keyRingValues,
+  loadKeyRing,
+  randomToken,
+  sha256Hex,
+} from '../lib/crypto';
 import { convertManifest, listAppInstallations } from '../lib/github';
 import { loadGitHubApp, storeGitHubApp } from '../lib/github-app';
 import { deleteMeta, getMeta, isClaimed, setMeta } from '../lib/instance';
@@ -93,11 +99,11 @@ setupRoutes.get('/manifest/callback', async (c) => {
     return c.json({ error: 'invalid_request' }, 400);
   }
   const db = c.env.DB;
-  const encryptionKeyValue = c.env.ENCRYPTION_KEY;
+  const values = keyRingValues(c.env);
   if (await isClaimed(db)) {
     return c.json({ error: 'already_claimed' }, 409);
   }
-  if (!encryptionKeyValue) {
+  if (!values) {
     return c.json({ error: 'encryption_key_unset' }, 500);
   }
 
@@ -114,8 +120,7 @@ setupRoutes.get('/manifest/callback', async (c) => {
   }
 
   const conversion = await convertManifest(code);
-  const encryptionKey = await importEncryptionKey(encryptionKeyValue);
-  await storeGitHubApp(db, encryptionKey, conversion);
+  await storeGitHubApp(db, await loadKeyRing(values), conversion);
   await deleteMeta(db, 'installation_id');
   await deleteMeta(db, 'installation_account_login');
   await deleteMeta(db, 'installation_account_type');
@@ -125,11 +130,11 @@ setupRoutes.get('/manifest/callback', async (c) => {
 
 setupRoutes.post('/verify-installation', async (c) => {
   const db = c.env.DB;
-  const encryptionKeyValue = c.env.ENCRYPTION_KEY;
+  const values = keyRingValues(c.env);
   if (await isClaimed(db)) {
     return c.json({ error: 'already_claimed' }, 409);
   }
-  if (!encryptionKeyValue) {
+  if (!values) {
     return c.json({ error: 'encryption_key_unset' }, 500);
   }
 
@@ -146,7 +151,7 @@ setupRoutes.post('/verify-installation', async (c) => {
     return c.json({ error: 'setup_session_required' }, 401);
   }
 
-  const app = await loadGitHubApp(db, await importEncryptionKey(encryptionKeyValue));
+  const app = await loadGitHubApp(db, await loadKeyRing(values));
   if (!app) {
     return c.json({ error: 'app_missing' }, 409);
   }

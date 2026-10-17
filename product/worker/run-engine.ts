@@ -1,27 +1,26 @@
-import type { Finding, ProviderFlavor } from '@jury-forge/shared';
+import type { Finding, InstanceSettings, ProviderFlavor, ProviderUsage } from '@jury-forge/shared';
 import { DurableObject } from 'cloudflare:workers';
+import { consolidateReview, parseReviewerOutput, type ReviewerFindings } from './lib/consolidate';
 import {
-  FINDING_CAPS,
-  consolidateReview,
-  parseFindings,
-  type ReviewerFindings,
-} from './lib/consolidate';
-import {
+  buildRepoInstructionsBlock,
   buildReviewContext,
   buildReviewPrompt,
   buildSystemPrompt,
   contextNotes,
   prioritizedOrder,
+  REPO_INSTRUCTION_FILES,
   type PullFile,
+  type RepoInstructionFile,
   type ReviewContext,
 } from './lib/context';
-import { decryptSecret, importEncryptionKey } from './lib/crypto';
+import { decryptSecret, keyRingValues, loadKeyRing } from './lib/crypto';
 import {
   GitHubApiError,
   createInstallationToken,
   createPullReview,
   fetchPullFiles,
   fetchPullRequest,
+  fetchRepoFileText,
   listPullReviews,
   minimizeComment,
   type PullFileEntry,
@@ -29,6 +28,8 @@ import {
 } from './lib/github';
 import { loadGitHubApp } from './lib/github-app';
 import { callProvider } from './lib/providers';
+import { compareFindings, findingKey } from './lib/resolution';
+import { DEFAULT_SETTINGS, loadSettings } from './lib/settings';
 
 const FILES_CAP = 300;
 const CONTEXT_BATCH_SIZE = 25;
@@ -64,12 +65,15 @@ interface StoredReviewer {
 interface ReviewerOutcome {
   status: 'completed' | 'failed';
   findings: Finding[] | null;
+  summary: string | null;
+  usage: ProviderUsage | null;
   error: string | null;
 }
 
 interface ReviewPlan {
   body: string;
-  comments: { path: string; line: number; body: string }[];
+  comments: { path: string; line: number; startLine?: number; body: string }[];
+  event: 'COMMENT' | 'REQUEST_CHANGES';
 }
 
 interface ReviewerRow {
@@ -86,6 +90,23 @@ interface ReviewerRow {
 
 function runIdFor(payload: RunPayload): string {
   return `${payload.repoId}:${payload.prNumber}:${payload.headSha}:${payload.deliveryId}`;
+}
+
+function findingLocation(finding: Finding): string {
+  return finding.line !== undefined ? `${finding.file}:${finding.line}` : finding.file;
+}
+
+function bucketLine(label: string, findings: Finding[]): string {
+  if (findings.length === 0) {
+    return `- **${label}** (0): none`;
+  }
+  const shown = findings
+    .slice(0, 20)
+    .map((finding) => `\`${findingLocation(finding)}\` — ${finding.title}`);
+  if (findings.length > 20) {
+    shown.push(`… and ${findings.length - 20} more`);
+  }
+  return `- **${label}** (${findings.length}): ${shown.join('; ')}`;
 }
 
 function errorMessage(error: unknown): string {
@@ -244,18 +265,79 @@ export class RunEngine extends DurableObject<Env> {
       apiKeyEnc: row.api_key_enc,
     }));
     await this.ctx.storage.put('reviewers', reviewers);
+    const settings = await loadSettings(db);
+    await this.ctx.storage.put('settings', settings);
 
-    const encryptionKeyValue = this.env.ENCRYPTION_KEY;
-    if (!encryptionKeyValue) {
+    // D-020: the newest earlier run for this repository + pull request that recorded findings
+    // supplies each reviewer's previous findings, and their de-duplicated union.
+    const previousRows = await db
+      .prepare(
+        `SELECT rr.reviewer_id, rr.findings_json
+         FROM run_reviewers rr
+         JOIN runs r ON r.id = rr.run_id
+         WHERE r.repo_id = ? AND r.pr_number = ?
+           AND r.id != ?
+           AND r.status IN ('completed', 'failed')
+           AND rr.findings_json IS NOT NULL AND rr.findings_json != '[]'
+         ORDER BY r.created_at DESC, r.id DESC, rr.reviewer_id`,
+      )
+      .bind(payload.repoId, payload.prNumber, runId)
+      .all<{ reviewer_id: string; findings_json: string }>();
+    const previousByReviewer: Record<string, Finding[]> = {};
+    const previousFindings: Finding[] = [];
+    const seenKeys = new Set<string>();
+    for (const row of previousRows.results) {
+      if (previousByReviewer[row.reviewer_id] !== undefined) {
+        continue;
+      }
+      const findings = JSON.parse(row.findings_json) as Finding[];
+      previousByReviewer[row.reviewer_id] = findings;
+      for (const finding of findings) {
+        const key = findingKey(finding);
+        if (!seenKeys.has(key)) {
+          seenKeys.add(key);
+          previousFindings.push(finding);
+        }
+      }
+    }
+    await this.ctx.storage.put('previousByReviewer', previousByReviewer);
+    await this.ctx.storage.put('previousFindings', previousFindings);
+
+    const keyValues = keyRingValues(this.env);
+    if (!keyValues) {
       throw new Error('encryption_key_unset');
     }
-    const app = await loadGitHubApp(db, await importEncryptionKey(encryptionKeyValue));
+    const app = await loadGitHubApp(db, await loadKeyRing(keyValues));
     if (!app) {
       throw new Error('setup_required');
     }
     await this.ctx.storage.put('botLogin', `${app.slug}[bot]`);
     const token = await createInstallationToken(app.appId, app.privateKey, payload.installationId);
     await this.ctx.storage.put('token', token);
+
+    // D-022: opt-in repository instructions, read at the PR's head SHA. A failed or missing
+    // file is skipped so it never fails the run; the key is absent when the setting is off.
+    if (settings.repoInstructions) {
+      const sections: RepoInstructionFile[] = [];
+      for (const path of REPO_INSTRUCTION_FILES) {
+        try {
+          const text = await fetchRepoFileText(token, payload.repoFullName, path, payload.headSha);
+          if (text !== null) {
+            sections.push({ path, text });
+          }
+        } catch (error) {
+          console.error(
+            `run ${runIdFor(payload)} repository instruction fetch failed (${path}):`,
+            error,
+          );
+        }
+      }
+      await this.ctx.storage.put(
+        'repoInstructions',
+        buildRepoInstructionsBlock(sections, settings.repoInstructionsMaxBytes),
+      );
+    }
+
     const pullRequest = await fetchPullRequest(token, payload.repoFullName, payload.prNumber);
     await this.ctx.storage.put('pr', pullRequest);
 
@@ -290,6 +372,7 @@ export class RunEngine extends DurableObject<Env> {
   }
 
   private async stepContext(): Promise<Step | 'finished'> {
+    const settings = (await this.ctx.storage.get<InstanceSettings>('settings')) ?? DEFAULT_SETTINGS;
     const fileCount = await this.require<number>('fileCount');
     let order = await this.ctx.storage.get<number[]>('fileOrder');
     if (!order) {
@@ -310,7 +393,13 @@ export class RunEngine extends DurableObject<Env> {
       }
     }
     const previous = await this.ctx.storage.get<ReviewContext>('context');
-    await this.ctx.storage.put('context', buildReviewContext(batch, previous));
+    await this.ctx.storage.put(
+      'context',
+      buildReviewContext(batch, previous, {
+        totalBytes: settings.contextTotalBytes,
+        fileBytes: settings.contextFileBytes,
+      }),
+    );
 
     const next = cursor + keys.length;
     if (next < order.length) {
@@ -348,9 +437,17 @@ export class RunEngine extends DurableObject<Env> {
     if (!reviewer) {
       throw new Error('reviewer cursor out of range');
     }
+    const previousByReviewer =
+      (await this.ctx.storage.get<Record<string, Finding[]>>('previousByReviewer')) ?? {};
+    const settings = (await this.ctx.storage.get<InstanceSettings>('settings')) ?? DEFAULT_SETTINGS;
+    const repoInstructions = await this.ctx.storage.get<string | null>('repoInstructions');
     await this.ctx.storage.put(`prompt:${reviewer.id}`, {
       system: buildSystemPrompt(reviewer),
-      user: buildReviewPrompt(pullRequest, context),
+      user: buildReviewPrompt(pullRequest, context, {
+        previousFindings: previousByReviewer[reviewer.id] ?? [],
+        descriptionLimit: settings.descriptionLimit,
+        repoInstructions,
+      }),
     });
 
     if (cursor + 1 < reviewers.length) {
@@ -363,11 +460,11 @@ export class RunEngine extends DurableObject<Env> {
 
   private async stepReview(): Promise<Step | 'finished'> {
     const reviewers = await this.require<StoredReviewer[]>('reviewers');
-    const encryptionKeyValue = this.env.ENCRYPTION_KEY;
-    if (!encryptionKeyValue) {
+    const keyValues = keyRingValues(this.env);
+    if (!keyValues) {
       throw new Error('encryption_key_unset');
     }
-    const encryptionKey = await importEncryptionKey(encryptionKeyValue);
+    const ring = await loadKeyRing(keyValues);
     const prompts = await this.ctx.storage.get<{ system: string; user: string }>(
       reviewers.map((reviewer) => `prompt:${reviewer.id}`),
     );
@@ -379,7 +476,7 @@ export class RunEngine extends DurableObject<Env> {
           throw new Error('prompt missing');
         }
         const apiKey =
-          reviewer.apiKeyEnc === '' ? '' : await decryptSecret(encryptionKey, reviewer.apiKeyEnc);
+          reviewer.apiKeyEnc === '' ? '' : await decryptSecret(ring, reviewer.apiKeyEnc);
         const value = await callProvider({
           flavor: reviewer.flavor,
           baseUrl: reviewer.baseUrl,
@@ -389,7 +486,7 @@ export class RunEngine extends DurableObject<Env> {
           system: prompt.system,
           user: prompt.user,
         });
-        return parseFindings(value);
+        return { output: parseReviewerOutput(value.value), usage: value.usage };
       }),
     );
 
@@ -398,8 +495,20 @@ export class RunEngine extends DurableObject<Env> {
       const result = settled[index];
       entries[`outcome:${reviewer.id}`] =
         result.status === 'fulfilled'
-          ? { status: 'completed', findings: result.value, error: null }
-          : { status: 'failed', findings: null, error: errorMessage(result.reason) };
+          ? {
+              status: 'completed',
+              findings: result.value.output.findings,
+              summary: result.value.output.summary,
+              usage: result.value.usage,
+              error: null,
+            }
+          : {
+              status: 'failed',
+              findings: null,
+              summary: null,
+              usage: null,
+              error: errorMessage(result.reason),
+            };
     });
     await this.ctx.storage.put(entries);
     return 'consolidate';
@@ -411,6 +520,7 @@ export class RunEngine extends DurableObject<Env> {
     const outcomes = await this.ctx.storage.get<ReviewerOutcome>(
       reviewers.map((reviewer) => `outcome:${reviewer.id}`),
     );
+    const settings = (await this.ctx.storage.get<InstanceSettings>('settings')) ?? DEFAULT_SETTINGS;
 
     const allFailed = reviewers.every(
       (reviewer) => outcomes.get(`outcome:${reviewer.id}`)?.status === 'failed',
@@ -428,7 +538,10 @@ export class RunEngine extends DurableObject<Env> {
       }
     }
     const patches = new Map(context.files.map((file) => [file.filename, file.patch]));
-    const consolidated = consolidateReview(withFindings, patches);
+    const consolidated = consolidateReview(withFindings, patches, {
+      perReviewer: settings.inlineCommentsPerReviewer,
+      perRun: settings.inlineCommentsPerRun,
+    });
     const overflowByReviewer = new Map(
       consolidated.overflow.map((group) => [group.reviewerId, group.findings]),
     );
@@ -441,6 +554,11 @@ export class RunEngine extends DurableObject<Env> {
     }
 
     const totalFindings = withFindings.reduce((sum, group) => sum + group.findings.length, 0);
+    const errorFindings = withFindings.reduce(
+      (sum, group) => sum + group.findings.filter((finding) => finding.severity === 'error').length,
+      0,
+    );
+    const blocking = settings.blockingMode && errorFindings >= settings.blockingErrorThreshold;
     const overflowCount = consolidated.overflow.reduce(
       (sum, group) => sum + group.findings.length,
       0,
@@ -464,6 +582,9 @@ export class RunEngine extends DurableObject<Env> {
         sections.push(`_Failed: ${outcome.error ?? 'unknown error'}_`);
         continue;
       }
+      if (outcome.summary) {
+        sections.push('', outcome.summary, '');
+      }
       const findings = outcome.findings ?? [];
       const overflow = overflowByReviewer.get(reviewer.id) ?? [];
       const inlineCount = inlineByReviewer.get(reviewer.id) ?? 0;
@@ -482,13 +603,42 @@ export class RunEngine extends DurableObject<Env> {
       }
     }
 
-    const notes: string[] = [...contextNotes(context)];
+    const previousFindings = (await this.ctx.storage.get<Finding[]>('previousFindings')) ?? [];
+    if (previousFindings.length > 0) {
+      const currentFindings = withFindings.flatMap((group) => group.findings);
+      const buckets = compareFindings(previousFindings, currentFindings);
+      sections.push(
+        '',
+        '### Previous findings',
+        '_Compared with the last run on this pull request. "Resolved" means this run did not report the item again — not that a fix was verified._',
+        '',
+        bucketLine('Resolved', buckets.resolved),
+        bucketLine('Still present', buckets.stillPresent),
+        bucketLine('New', buckets.new),
+      );
+    }
+
+    const notes: string[] = [
+      ...contextNotes(context, {
+        totalBytes: settings.contextTotalBytes,
+        fileBytes: settings.contextFileBytes,
+      }),
+    ];
     const capHit =
-      consolidated.inline.length >= FINDING_CAPS.inlinePerRun ||
-      [...inlineByReviewer.values()].some((count) => count >= FINDING_CAPS.inlinePerReviewer);
+      consolidated.inline.length >= settings.inlineCommentsPerRun ||
+      [...inlineByReviewer.values()].some((count) => count >= settings.inlineCommentsPerReviewer);
     if (capHit) {
       notes.push(
-        'Inline comments are capped at 10 per reviewer and 25 per run (D-009); the remaining findings are listed above.',
+        `Inline comments are capped at ${settings.inlineCommentsPerReviewer} per reviewer and ${settings.inlineCommentsPerRun} per run (D-009); the remaining findings are listed above.`,
+      );
+    }
+    if (blocking) {
+      notes.push(
+        `Blocking mode is on and this run found ${errorFindings} error finding(s), meeting the threshold of ${settings.blockingErrorThreshold} — the review requests changes.`,
+      );
+    } else if (settings.blockingMode) {
+      notes.push(
+        `Blocking mode is on, but this run's ${errorFindings} error finding(s) stayed under the threshold of ${settings.blockingErrorThreshold} — the review comments.`,
       );
     }
     if (failedNames.length > 0) {
@@ -499,12 +649,22 @@ export class RunEngine extends DurableObject<Env> {
     }
 
     const nameOf = new Map(reviewers.map((reviewer) => [reviewer.id, reviewer.name]));
-    const comments = consolidated.inline.map((selection) => ({
-      path: selection.finding.file,
-      line: selection.finding.line,
-      body: `**${nameOf.get(selection.reviewerId) ?? 'Reviewer'}** — ${selection.finding.severity}: ${selection.finding.title}\n\n${selection.finding.body}`,
-    }));
-    const plan: ReviewPlan = { body: sections.join('\n'), comments };
+    const comments = consolidated.inline.map((selection) => {
+      const comment: { path: string; line: number; startLine?: number; body: string } = {
+        path: selection.finding.file,
+        line: selection.finding.line,
+        body: `**${nameOf.get(selection.reviewerId) ?? 'Reviewer'}** — ${selection.finding.severity}: ${selection.finding.title}\n\n${selection.finding.body}`,
+      };
+      if (selection.finding.startLine !== undefined) {
+        comment.startLine = selection.finding.startLine;
+      }
+      return comment;
+    });
+    const plan: ReviewPlan = {
+      body: sections.join('\n'),
+      comments,
+      event: blocking ? 'REQUEST_CHANGES' : 'COMMENT',
+    };
     await this.ctx.storage.put('plan', plan);
     return 'post';
   }
@@ -516,6 +676,7 @@ export class RunEngine extends DurableObject<Env> {
       commitId: payload.headSha,
       body: plan.body,
       comments: plan.comments,
+      event: plan.event,
     });
     await this.minimizePreviousReviews(token, payload, review.reviewId);
     await this.finishRun(payload, 'completed', null, review.htmlUrl);
@@ -573,12 +734,14 @@ export class RunEngine extends DurableObject<Env> {
         const outcome = outcomes.get(`outcome:${reviewer.id}`);
         statements.push(
           this.env.DB.prepare(
-            'INSERT OR REPLACE INTO run_reviewers (run_id, reviewer_id, status, findings_json, error) VALUES (?, ?, ?, ?, ?)',
+            'INSERT OR REPLACE INTO run_reviewers (run_id, reviewer_id, status, findings_json, summary, usage_json, error) VALUES (?, ?, ?, ?, ?, ?, ?)',
           ).bind(
             runIdFor(payload),
             reviewer.id,
             outcome?.status ?? 'failed',
             outcome?.findings ? JSON.stringify(outcome.findings) : null,
+            outcome?.summary ?? null,
+            outcome?.usage ? JSON.stringify(outcome.usage) : null,
             outcome?.error ?? (outcome ? null : (error ?? 'run failed before this reviewer ran')),
           ),
         );

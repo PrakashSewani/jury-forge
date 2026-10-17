@@ -5,12 +5,14 @@ import { buttonClass, Card } from './components';
 import { fetchSession, fetchSetupState, logOut } from './lib/api';
 import type { Route } from './lib/router';
 import { routeFromPath } from './lib/router';
+import ActivityPage from './pages/ActivityPage';
 import HomePage from './pages/HomePage';
 import RepositoriesPage from './pages/RepositoriesPage';
 import ReviewerEditorPage from './pages/ReviewerEditorPage';
 import ReviewersPage from './pages/ReviewersPage';
 import RunDetailPage from './pages/RunDetailPage';
 import RunsPage from './pages/RunsPage';
+import SettingsPage from './pages/SettingsPage';
 import SetupPage from './pages/SetupPage';
 
 interface Shell {
@@ -23,6 +25,8 @@ const NAV_ITEMS = [
   { href: '/reviewers', label: 'Reviewers' },
   { href: '/repositories', label: 'Repositories' },
   { href: '/runs', label: 'Runs' },
+  { href: '/settings', label: 'Settings' },
+  { href: '/activity', label: 'Activity' },
 ];
 
 export default function App() {
@@ -134,6 +138,10 @@ function isActive(route: Route, href: string): boolean {
       return route.name === 'repositories';
     case '/runs':
       return route.name === 'runs' || route.name === 'run-detail';
+    case '/settings':
+      return route.name === 'settings';
+    case '/activity':
+      return route.name === 'activity';
     default:
       return false;
   }
@@ -205,6 +213,10 @@ function Content({
       return <RunsPage />;
     case 'run-detail':
       return <RunDetailPage id={route.id} />;
+    case 'settings':
+      return <SettingsPage />;
+    case 'activity':
+      return <ActivityPage />;
     default:
       return null;
   }

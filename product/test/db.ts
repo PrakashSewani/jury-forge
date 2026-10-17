@@ -3,6 +3,7 @@ import { env } from 'cloudflare:workers';
 export async function resetInstanceState(): Promise<void> {
   await env.DB.batch([
     env.DB.prepare('DELETE FROM instance_meta'),
+    env.DB.prepare('DELETE FROM instance_settings'),
     env.DB.prepare('DELETE FROM github_app'),
     env.DB.prepare('DELETE FROM oauth_states'),
     env.DB.prepare('DELETE FROM sessions'),
@@ -12,5 +13,6 @@ export async function resetInstanceState(): Promise<void> {
     env.DB.prepare('DELETE FROM run_reviewers'),
     env.DB.prepare('DELETE FROM runs'),
     env.DB.prepare('DELETE FROM webhook_deliveries'),
+    env.DB.prepare('DELETE FROM activity_log'),
   ]);
 }

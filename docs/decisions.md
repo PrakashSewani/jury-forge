@@ -331,3 +331,267 @@ the context budget should truncate the least valuable diffs, not the first ones 
 **Rejected:** cancelling in-flight runs (by the time a newer push arrives the old work is mostly
 spent; the newest queued run wins instead); deleting previous reviews (destructive, loses
 history); raw API order for files (drops high-signal diffs first).
+
+## D-019: The remaining improvement slices land as one pull request
+
+**Date:** 2026-10-17
+
+**Decision:** The remaining post-phase-2 improvement slices — 7 (resolution tracking + output
+contract v2), 8 (instance settings + optional blocking mode), 9 (repo instructions), 10 (key
+rotation + audit trail), 11 (guided deploy + reviewer import/export), and roadmap item 8 (access
+re-checks) — land together in **one** pull request at the owner's instruction, instead of the
+stacked one-slice-per-PR flow D-011 established. Each slice still lands as its own docs commit
+plus implementation commit(s) with `npm run check` green, so the slices stay separately
+reviewable in the diff and in history. D-011's CI rule (the check runs on every pull request,
+whatever the base) is untouched; only the stacked-base mechanism is unused by this PR, which
+targets `dev` directly.
+
+**Why:** the owner instructed it in the work thread on 2026-10-17 ("Complete the items all items
+in the next pr then post this in ideas for a rework only after merge"). Five stacked layers
+would serialize the slate through five review-and-merge round trips for slices the owner has
+already accepted as one slate (D-017).
+
+**Rejected:** five stacked PRs (D-011's flow — the owner's instruction supersedes it for this
+slate, and this entry records the deviation); one squashed commit for the whole slate (the slices
+carry distinct decisions and must stay separately reviewable); retargeting an existing open PR
+base chain (more moving parts than a single `dev`-targeted PR).
+
+## D-020: Slice 7 — resolution tracking and output contract v2
+
+**Date:** 2026-10-17 (implements roadmap items 3 and 6 from D-017)
+
+**Decision:** (1) **Resolution tracking.** When a run starts, the newest earlier run for the same
+repository and pull request that recorded findings supplies those findings to the new run: each
+reviewer's prompt gains a "previously reported findings" section carrying that reviewer's own
+earlier findings, and the review summary gains **Resolved / Still present / New** buckets. The
+buckets are computed deterministically by comparing the earlier run's findings with the current
+run's — a finding is keyed by `file`, `line` (or `file` alone when the finding is file-level),
+and case-folded `title`; the model is never asked to grade its own previous output. Reported
+earlier and absent now → `resolved`; present in both → `still present`; absent earlier → `new`.
+"Resolved" means only _this run did not report it again_, and the summary says so. The buckets
+appear when an earlier run with findings exists for the PR.
+
+(2) **Output contract v2.** The prompt's JSON contract gains an optional per-reviewer `summary`
+(≤500 characters; stored with the reviewer's outcome and shown in run detail) and a per-finding
+`startLine` for multi-line comments. `startLine` is used only when it precedes `line` and both
+lines are commentable in the diff's right side — then the inline comment carries GitHub's
+`start_line` with `start_side: RIGHT`; otherwise `startLine` is dropped and the finding posts as
+a single-line comment. Oversized summaries are truncated like titles and bodies. Provider token
+`usage` is read from both flavors' response envelopes, normalized to
+`{ promptTokens, completionTokens, totalTokens }`, and stored per reviewer in run detail
+(`run_reviewers.usage_json`); a provider that reports no usage stores nothing and never fails the
+reviewer for it.
+
+**Why:** a reviewer that never sees what it flagged last time repeats itself or contradicts
+itself, and the reviewer — not the model — is the right place to decide what stopped being
+reported; the contract changes are the two pieces the phase-2 design flagged as deferred v1
+cutbacks (`summary`, multi-line findings) plus the usage numbers needed before anyone tunes a
+provider budget.
+
+**Rejected:** asking the reviewer model to classify its own previous findings (unverifiable,
+provider-dependent, and it would make the buckets a self-assessment rather than a diff); a
+resolution table keyed by stable finding ids (the contract has no ids, and a deterministic key is
+sufficient for a single-instance tool); keeping the previous-run context out of the prompt and
+computing buckets only in the summary (the prompt section is what stops the redundant re-report;
+the buckets are the receipt for it); treating a missing `usage` envelope as a reviewer failure
+(the envelope is optional and provider-specific); `REQUEST_CHANGES`-style pressure from resolved
+counts (blocking is item 11's explicit opt-in, D-013 otherwise stands).
+
+## D-021: Slice 8 — instance settings and optional blocking mode
+
+**Date:** 2026-10-17 (implements roadmap items 5 and 11 from D-017)
+
+**Decision:** (1) **Instance settings.** A new `instance_settings` key/value table (`key`,
+`value`, `updated_at`) holds the numbers phase 2 fixed in code, with the current values as
+defaults: `inlineCommentsPerReviewer` (1–50, default 10), `inlineCommentsPerRun` (1–100, default
+25), `contextTotalBytes` (20,000–1,000,000, default 200,000), `contextFileBytes` (4,000–200,000,
+default 32,000), `descriptionLimit` (500–20,000, default 4,096), plus the blocking pair below.
+`worker/lib/settings.ts` owns the spec (parser, bounds, default per key); `loadSettings()` returns
+effective settings and falls back to a key's default whenever the stored value is missing or
+invalid, so a hand-edited row can never break a run. `GET /api/settings` returns
+`{ settings, defaults }`; `PATCH /api/settings` accepts a partial object, rejects unknown keys and
+out-of-range values with 400, and returns the same shape. The dashboard gains a Settings screen
+(the "Advanced" section) with the current values as defaults, per-field reset, and save. The run
+engine reads the settings in its `config` step and uses them for the context budget, the
+description cap, the inline comment caps, and the review event.
+
+(2) **Optional blocking mode** (item 11). `blockingMode` (boolean, default **false**) and
+`blockingErrorThreshold` (1–50, default 1) select the review event: with blocking off — the
+default, and D-013's posture — every run posts `event: COMMENT`. With it on, a run whose findings
+include at least `blockingErrorThreshold` findings of severity `error` posts
+`event: REQUEST_CHANGES`; any other run still posts `COMMENT`. The review body's notes state which
+event was used, and when blocking was on without reaching the threshold.
+
+**Why:** D-009/D-010's numbers were v1 defaults, not laws — a large diff or a chatty reviewer
+should be tunable from the dashboard instead of by editing the Worker and redeploying; and
+blocking is the one behavior an owner plausibly wants from a review bot on their own repository,
+so it ships as a switch that is off until the owner flips it, keeping the documented D-013
+posture for every instance that never touches it.
+
+**Rejected:** env-var or `wrangler.jsonc` configuration for the numbers (a redeploy per tweak,
+and it puts product behavior in deploy config); per-repository settings in this slice (the demand
+is per-instance; per-repo tuning can be a later decision with its own table); turning blocking on
+by default or inferring it from severity counts (it would silently change merge behavior for
+existing instances — D-013 stands as the default); blocking on _any_ error finding regardless of
+threshold (noisy for reviewers that flag errors liberally — the threshold is the escape hatch);
+a separate `blocking` column on `runs` (the posted `review_url` and the summary's note already
+record what happened).
+
+## D-022: Slice 9 — repository instructions in prompts, opt-in
+
+**Date:** 2026-10-17 (implements roadmap item 10 from D-017)
+
+**Decision:** With `repoInstructions` (boolean, default **false**) on, a run reads the
+repository's `AGENTS.md` and `CONTRIBUTING.md` at the pull request's head SHA — through the
+installation token, raw media type, in that order — and includes bounded excerpts in the user
+prompt of every reviewer that run. The excerpt budget `repoInstructionsMaxBytes` (int
+1,000–50,000, default 8,000) applies across both files: the first file that fits is included in
+full, the file that crosses the budget is truncated there, and any file past the budget is
+omitted; the block names what was truncated or skipped. The block is introduced as repository
+conventions that inform the review, and the prompt states that the reviewer's own instructions
+and rules take precedence over it. A 404 (no such file) or any fetch failure skips that file and
+never fails the run — the setting adds at most two subrequests per run, and the excerpts are
+re-read for every run rather than cached.
+
+**Why:** a repository's own conventions live in these files, and a reviewer that never sees them
+flags style the project has already settled; grounding the reviewer in the PR's own revision of
+those files is the smallest change that makes the reviews fit the repository — and keeping it
+opt-in respects that it changes what the model sees on every run.
+
+**Rejected:** on by default (an unasked-for file read plus up to 8 KB of prompt per reviewer on
+every run); reading the files from the default branch instead of the PR's head SHA (the revision
+under review is the one whose conventions apply, and a PR that rewrites `AGENTS.md` should be
+reviewed against its own text); sending whole files unbounded (one large `AGENTS.md` would
+consume the context budget); putting the block in the system prompt (it is context, not the
+reviewer's identity — and the system prompt carries the output contract); a dashboard field for
+per-repository instruction text (the repository already carries this; per-repo overrides stay a
+later decision); caching the excerpts in D1 (runs are rare, the files are small, and a cache is
+state to invalidate for no measured win).
+
+## D-023: Slice 10 — credential key rotation and the audit trail
+
+**Date:** 2026-10-17 (implements roadmap items 7 and 12 from D-017)
+
+**Decision:** (1) **Key rotation** (item 7). Ciphertexts become versioned —
+`v2.<keyVersion>.<iv>.<ciphertext>` — and the legacy `v1.<iv>.<ciphertext>` form stays readable.
+`worker/lib/crypto.ts` exposes a key ring built from the environment: `ENCRYPTION_KEY` plus
+`ENCRYPTION_KEY_VERSION` (default `1`), and optionally `ENCRYPTION_KEY_PREVIOUS` plus
+`ENCRYPTION_KEY_PREVIOUS_VERSION` (default `0`). Writes always use the current key and stamp its
+version; reads pick the key by version (`v2` with an unknown version fails; a legacy `v1` value is
+tried with the current key, then the previous one). Rotation needs no re-entry: a reviewer's API
+key is **lazily re-encrypted on its next write** — the same plaintext re-wrapped with the current
+key, in the same `PATCH` — and every credential write (app registration, reviewer create/update)
+stamps the current version. GitHub App credentials have no partial-update path, so they are
+re-encrypted only by re-running the app registration; the previous key stays configured until then.
+The operator procedure lives in `docs/development.md`.
+
+(2) **Audit trail** (item 12). A new `activity_log` table (`at`, `actor`, `action`, `target`,
+`detail`) records **sign-ins and sign-outs, setting changes, reviewer create/update/delete
+(including whether the API key was set, cleared, or re-encrypted by rotation), repository and
+per-repo reviewer toggles, run kicks, and credential rotations**. Writes go through
+`worker/lib/activity.ts`'s `recordActivity()`, which is best-effort — a failed insert is logged and
+swallowed so it can never fail the request — and `GET /api/activity` returns the newest first with
+a keyset cursor (`at`, then `id`) and prunes entries older than 90 days opportunistically. The
+dashboard gains an `/activity` screen listing time, actor, action, target and detail with the same
+"load more" pattern as runs.
+
+**Why:** D-005's "rotate by re-entering every credential" was acceptable only while there were no
+instances; a versioned ring makes rotation an environment change with no credential re-entry, and
+it keeps the AES-256-GCM secrets write-only from the API's perspective. And once a self-hosted
+instance has settings, credentials and toggles, "who changed this, when" should be answerable from
+the dashboard rather than by reading D1 — a single-instance tool's owner is the whole audience for
+an audit trail, and 90 days of it is enough.
+
+**Rejected:** a full key-derivation/labelled-keys vault in D1 (the instance's keys live in Worker
+secrets by design — D-005 — and a second store of key material would be a new blast radius);
+eager re-encryption of every row on rotation (a migration-shaped background job for a single
+instance; lazy re-wrapping plus the previous key reaches the same end state with no window where
+the Worker cannot read); versioning without a previous key (it would make every rotation a
+credential re-entry, i.e. no rotation); dropping support for `v1` ciphertexts (existing instances
+would need a manual migration); an activity export/download endpoint (a reading surface is what was
+asked for; the table is one `SELECT` away for anyone who wants more); recording request-level noise
+like every page view or failed login (the trail is for state changes, not traffic); an unbounded
+trail (a single instance accumulates rows forever for no benefit — 90 days, pruned on read).
+
+## D-024: Roadmap item 8 — access re-checks: shorter session TTL, no stored user tokens
+
+**Date:** 2026-10-17 (resolves item 8 from D-017)
+
+**Decision:** The dashboard session TTL drops from 30 days to **7 days** (`sessions.expires_at`
+and the cookie's `Max-Age` both follow), and nothing else changes: access is still decided once, at
+sign-in, by the D-012 installation-access gate, and the instance still stores no GitHub user token
+or refresh token of any kind. A user who loses GitHub access therefore keeps a working dashboard
+for at most seven days instead of thirty, and every other attribute of the gate — who may
+authorize the app, what the token must see, single-use OAuth state — is untouched. The server-side
+session row already expires on its own and expired rows are pruned on the next sign-in; the cookie
+lifetime is the only thing that moved.
+
+**Why:** the two candidate answers to item 8 were a shorter TTL or re-verifying the user's
+installation access on every request by keeping their GitHub token; the owner's instruction for
+this slate was to take the conservative option. Dropping the window to a week meaningfully bounds
+the stale-access period — the actual risk item 8 names — while adding no new credential at rest,
+no new failure mode in the request path, and no dependency on GitHub being reachable to serve a
+dashboard page. It also keeps D-005's posture exactly: the only secrets this instance holds are the
+ones the owner's own GitHub App needs.
+
+**Rejected:** stored-token re-verification — persisting each dashboard user's GitHub token (and,
+for the App user tokens issued by an app with expiring tokens, its refresh token) in D1 so the
+gate can be re-run per request: it puts a live credential for the owner's GitHub account into the
+instance database, needs its own encryption, rotation and revocation story, makes every dashboard
+request depend on GitHub being up, and widens the blast radius of a database leak from "encrypted
+app credentials" to "the owner's GitHub session". This is the alternative the owner can overturn
+in review — the decision is recorded separately, so reversing it is a new entry, not a rewrite;
+a middle option (re-check on each _new_ sign-in only, which is today's behaviour) is already what
+the gate does, and per-request re-checks are rejected above; `SameSite=Strict` — would break the
+app's same-site navigation and does not address stale access; shortening below a week (daily
+re-auth) — friction the risk does not justify for a single-owner instance.
+
+## D-025: Slice 11 — guided deploy and reviewer import/export
+
+**Date:** 2026-10-17 (implements roadmap items 9 and 13 from D-017)
+
+**Decision:** (1) **Guided deploy** (item 9). `npm run deploy:guided` runs
+`scripts/deploy-guided.mjs`: a local first-run helper that (a) verifies wrangler authentication,
+(b) finds the D1 database `jury-forge` and, only when it had to create it, writes the returned id
+into `product/wrangler.jsonc`, (c) generates and sets `ENCRYPTION_KEY` (32 random bytes, base64)
+and `SETUP_CODE` (24 random bytes, base64) as Worker secrets — skipping either one when the
+instance already has it, (d) applies the D1 migrations remotely, (e) deploys the product, and
+(f) prints the deployed origin with the `/setup` wizard URL and the next steps. It is interactive,
+idempotent, and skips every environment-mutating step on `--dry-run` (printing the exact commands
+instead); it never writes a secret to disk, never runs from CI, and never deploys the promo site
+(phase 4's concern). The evaluated **"Deploy to Cloudflare" button is not adopted**: it cannot
+create the instance's D1 database and wire its id into the deploy configuration, cannot generate
+and store `ENCRYPTION_KEY`/`SETUP_CODE`, and ends at Cloudflare's dashboard rather than at the
+instance's own `/setup` URL — the guided local command keeps first-run setup in the operator's
+terminal (D-008's posture), and the button can be revisited at launch.
+
+(2) **Reviewer import/export** (item 13). `GET /api/reviewers/export` returns
+`{ version: 1, exportedAt, reviewers: [...] }` — each reviewer's name, instructions, rules,
+flavor, base URL, model, params and enabled flag, and never an API key or its ciphertext (keys
+stay write-only, D-005). `POST /api/reviewers/import` accepts the same document and merges by
+case-insensitive reviewer name: an existing reviewer is updated field by field but keeps whatever
+API key the instance holds, a new name is created (with no key), and a document that only restates
+the current state changes nothing. The response reports `{ created, updated, unchanged, skipped }`,
+the document is validated as a whole — version, shape, per-field bounds, at most 100 reviewers —
+and rejected with 400 on any failure rather than partially applied. Imports are recorded in the
+activity trail. The Reviewers screen gains Export (downloads the JSON) and Import (file picker)
+actions.
+
+**Why:** the roadmap's last slice is the one that turns "clone it and deploy it" into a single
+guided command for an open-source tool nobody has deployed yet, and reviewer configs are the
+instance state an operator most wants to move between instances (a new deploy, a second
+environment, a friend) — neither is launch content for phase 3/4, both are small, and both were
+accepted in the slate.
+
+**Rejected:** a separate CLI package or `npx` entry point for the guided deploy (a second
+publish surface and a version to keep in sync; a root npm script runs against the checkout the
+operator already has); silently creating the D1 database without reporting the id it wrote (the
+operator must see the change to `product/wrangler.jsonc`); auto-generating secrets non-
+interactively in CI (there is no such flow, and it would put secret generation outside the
+owner's terminal); exporting API keys or their ciphertext in the JSON (keys are write-only by
+design; an imported key that belongs to another instance is a footgun, and ciphertext is only
+readable by the instance that wrote it); import mode "replace everything" (a destructive default
+for a file the operator may have edited by hand — merge-by-name is predictable and reports what it
+did); importing into a per-repo reviewer matrix as well (the export carries reviewer definitions,
+not repository assignments — repository scoping stays a dashboard action, D-016); a full
+configuration export of settings and repositories too (only reviewer configs were asked for).
