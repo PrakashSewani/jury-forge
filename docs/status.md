@@ -9,35 +9,40 @@ rule 4. Keep exactly one phase `in progress`.
 | ----- | ----------------------------------------------------------------------------------------------------- | ----------- |
 | 0     | Requirements + stack selection: fill `docs/product.md`, choose the stack, record D-001                | completed   |
 | 1     | Scaffold: structure, checks, CI, release path — recorded in `docs/architecture.md` / `development.md` | completed   |
-| 2     | Product: the core workflow, end to end                                                                | in progress |
+| 2     | Product: the core workflow, end to end                                                                | completed   |
 | 3     | Promo site: the site that explains it and sends people to it                                          | not started |
 | 4     | Launch: first release tagged, site deployed                                                           | not started |
 
+No phase is `in progress` right now: phase 2 landed in full on 2026-10-17 and phase 3 starts after
+the improvement slices in `docs/roadmap.md` (D-017).
+
 ## Current handoff
 
-**Phase:** 2 — all slices are built. Slice 5 (the dashboard) is in review on
-`phase-2/5-dashboard` (#12), stacked on slice 4 (#11) → slice 3 (#10) → slice 2b (#9) → `dev`;
-slices 1 and 2a are merged to `dev`.
+**Phase:** 2 complete. The whole slice stack is merged to `dev`, in order: #9 → #10 → #11 → #12 →
+#13 → #14, each retargeted to `dev` and merged with a merge commit to match the repository's
+history.
 
-**Done this session:** built slice 5 — the repositories API (list, `?refresh=1` sync from GitHub
-with new repositories arriving disabled, enable/disable, per-repo reviewer toggles) and the
-dashboard: the auth-aware shell (nav, instance state, sign-in gate), overview with recent runs,
-the reviewers list and editor (create/edit/delete; write-only keys with replace and clear), the
-repositories screen (enable toggles and per-repo reviewer checkboxes), the runs list (keyset
-load-more, repo-name resolution), and the run detail (per-reviewer findings, GitHub review link).
-The dependency-free router now serves all eight routes.
+**Done this session:** merged the outstanding stack —
 
-**Verified:** `npm run check` exits 0 — typecheck, lint, Prettier, 100/100 tests across 14 files,
-both builds. End-to-end pass against the dev server in a browser: sign-in gate → home (recent
-runs) → created a reviewer through the UI → enabled a repository → disabled a per-repo reviewer
-toggle → runs list → run detail with findings, all against live local state.
+- #9 slice 2b, the setup wizard UI → `c47f87f2`
+- #10 slice 3, reviewers and providers → `a86514ea`
+- #11 slice 4, webhook intake and the run engine → `7738aa97`
+- #12 slice 5, the dashboard → `7dc66aec`
+- #13 the improvement slate and roadmap (D-017) → `17ab3e40`
+- #14 slice 6, run hygiene (D-018) → `5c8f71ce` — the current `dev` tip
 
-**Blocked by:** nothing. Phase 2 is code-complete; every slice is in review.
+**Verified:** `npm ci` exit 0 and `npm run check` exit 0 on the checkout of record (`fc6d9278`,
+the reviewed tip) — typecheck, lint, Prettier, 105/105 tests across 14 files, both builds (Worker
 
-**Next action:** review and merge the stack in order (#9 → #10 → #11 → #12 → #13 → #14,
-retargeting each in turn). Slice 6 (run hygiene — superseded-run skip, review minimization,
-priority file order; D-018) is in review on `phase-2/6-run-hygiene` (#14); slice 7 (resolution
-tracking + output contract) is next, then phase 3 (the promo site).
+- dashboard, and the Astro site), with a clean tree afterwards. The merged content is the verified
+  content: `dev`'s tip tree is `4c85a7b67ad5895d623f6dd65f0a8914bb13c40f`, byte-identical to
+  `fc6d9278`'s tree. CI `check` was green on every PR head, and both the branch checkouts and the
+  `dev` tip were fast-forwarded on the Mac checkout.
+
+**Blocked by:** nothing.
+
+**Next action:** slice 7 (resolution tracking + the output-contract v2), unless the rework the
+owner has asked for supersedes the roadmap — that direction is not decided yet.
 
 ## Backlog (owner-owned, deferred)
 
