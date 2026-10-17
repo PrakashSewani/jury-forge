@@ -15,27 +15,28 @@ rule 4. Keep exactly one phase `in progress`.
 
 ## Current handoff
 
-**Phase:** 2 in progress — slice 3 (reviewers and providers) is in review on
-`phase-2/3-reviewers-providers` (#10), stacked on slice 2b (`phase-2/2b-wizard-ui`, #9); slice
-2a (#8) is merged to `dev`.
+**Phase:** 2 in progress — slice 4 (webhook intake and the run engine) is in review on
+`phase-2/4-webhooks-run-engine` (#11), stacked on slice 3 (`phase-2/3-reviewers-providers`, #10);
+slice 2b (`phase-2/2b-wizard-ui`, #9) targets `dev`; slice 2a (#8) is merged to `dev`.
 
-**Done this session:** built slice 3 — reviewer CRUD API (`/api/reviewers`, session-gated,
-Zod-validated; API keys write-only, encrypted at rest, `apiKey: null` clears); the two provider
-adapters (OpenAI- and Anthropic-compatible request shapes, default Anthropic `max_tokens` 4096,
-120 s timeout, tolerant JSON extraction); the context builder (D-010 budget of 200 KB / 32 KB
-per file / 4 KB description, lockfile/generated/binary skips, truncation notes, prompt
-assembly); and consolidation (findings validation and normalization, commentable-line selection
-from patch hunks, D-009 caps of 10 per reviewer / 25 per run with overflow routed to the
-summary). New test suites for the API and all three modules.
+**Done this session:** built slice 4 — the webhook receiver (raw-body HMAC verification,
+`pull_request` filtering, delivery de-duplication with pruning, an idempotent run kick) and the
+`RunEngine` Durable Object end to end (config → file pages → 25-file context batches →
+per-reviewer prompts → parallel provider calls → consolidation → one `COMMENT` review), with
+per-step backoff retries, non-retryable 4xx handling, `skipped` runs for disabled repositories
+or no applicable reviewers, and `runs` / `run_reviewers` as the durable history (D-016 records
+the activation semantics); plus the run history API (`GET /api/runs`, `GET /api/runs/:id`) and
+batched context accumulation.
 
-**Verified:** `npm run check` exits 0 — typecheck, lint, Prettier, 77/77 tests across 11 files,
-both builds.
+**Verified:** `npm run check` exits 0 — typecheck, lint, Prettier, 95/95 tests across 13 files,
+both builds. Engine tests drive real Durable Object alarms (including backoff retries) against
+MSW-mocked GitHub and provider endpoints.
 
-**Blocked by:** nothing. Slice 4 (webhook intake and the run engine) stacks on
-`phase-2/3-reviewers-providers` once this merges.
+**Blocked by:** nothing. Slice 5 (the dashboard screens) stacks on `phase-2/4-webhooks-run-engine`
+once this merges.
 
-**Next action:** build slice 4 — the webhook receiver and the `RunEngine` Durable Object end to
-end, then run history records.
+**Next action:** build slice 5 — the reviewers, repositories, and runs dashboard screens
+(repositories API and per-repo toggles included), then the end-to-end pass.
 
 ## Backlog (owner-owned, deferred)
 

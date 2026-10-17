@@ -8,5 +8,9 @@ export async function resetInstanceState(): Promise<void> {
     env.DB.prepare('DELETE FROM sessions'),
     env.DB.prepare('DELETE FROM reviewer_repositories'),
     env.DB.prepare('DELETE FROM reviewers'),
+    env.DB.prepare('DELETE FROM repositories'),
+    env.DB.prepare('DELETE FROM run_reviewers'),
+    env.DB.prepare('DELETE FROM runs'),
+    env.DB.prepare('DELETE FROM webhook_deliveries'),
   ]);
 }

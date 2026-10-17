@@ -124,3 +124,108 @@ async function readJson<T>(response: Response): Promise<T> {
   }
   return response.json() as Promise<T>;
 }
+
+export class GitHubApiError extends Error {
+  readonly status: number;
+
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = 'GitHubApiError';
+    this.status = status;
+  }
+}
+
+export interface PullRequestInfo {
+  title: string;
+  body: string | null;
+}
+
+export interface PullFileEntry {
+  filename: string;
+  status: string;
+  patch: string | null;
+}
+
+export interface PullFilePage {
+  files: PullFileEntry[];
+  done: boolean;
+}
+
+export const PULL_FILES_PAGE_SIZE = 100;
+
+export async function createInstallationToken(
+  appId: number,
+  privateKey: string,
+  installationId: number,
+): Promise<string> {
+  const auth = createAppAuth({ appId, privateKey });
+  const installationAuthentication = await auth({ type: 'installation', installationId });
+  return installationAuthentication.token;
+}
+
+export async function fetchPullRequest(
+  token: string,
+  fullName: string,
+  prNumber: number,
+): Promise<PullRequestInfo> {
+  const response = await fetch(`${API_BASE}/repos/${fullName}/pulls/${prNumber}`, {
+    headers: bearerHeaders(token),
+  });
+  const payload = await readJsonStrict<{ title: string; body: string | null }>(response);
+  return { title: payload.title, body: payload.body };
+}
+
+export async function fetchPullFiles(
+  token: string,
+  fullName: string,
+  prNumber: number,
+  page: number,
+): Promise<PullFilePage> {
+  const response = await fetch(
+    `${API_BASE}/repos/${fullName}/pulls/${prNumber}/files?per_page=${PULL_FILES_PAGE_SIZE}&page=${page}`,
+    { headers: bearerHeaders(token) },
+  );
+  const payload =
+    await readJsonStrict<{ filename: string; status: string; patch?: string }[]>(response);
+  return {
+    files: payload.map((file) => ({
+      filename: file.filename,
+      status: file.status,
+      patch: file.patch ?? null,
+    })),
+    done: payload.length < PULL_FILES_PAGE_SIZE,
+  };
+}
+
+export interface PullReviewRequest {
+  commitId: string;
+  body: string;
+  comments: { path: string; line: number; body: string }[];
+}
+
+export async function createPullReview(
+  token: string,
+  fullName: string,
+  prNumber: number,
+  review: PullReviewRequest,
+): Promise<string> {
+  const response = await fetch(`${API_BASE}/repos/${fullName}/pulls/${prNumber}/reviews`, {
+    method: 'POST',
+    headers: { ...bearerHeaders(token), 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      commit_id: review.commitId,
+      body: review.body,
+      event: 'COMMENT',
+      comments: review.comments,
+    }),
+  });
+  const payload = await readJsonStrict<{ html_url: string }>(response);
+  return payload.html_url;
+}
+
+async function readJsonStrict<T>(response: Response): Promise<T> {
+  if (!response.ok) {
+    throw new GitHubApiError(response.status, `github_request_failed (${response.status})`);
+  }
+  return response.json() as Promise<T>;
+}
