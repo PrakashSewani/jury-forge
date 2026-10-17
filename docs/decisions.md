@@ -910,7 +910,11 @@ and modified clicks (meta/ctrl/shift/alt, middle click) still open a new tab. Th
 session/setup fetch stays a once-per-page-load concern: a navigation is one fetch for the screen's own
 data, where before it was a full page load that re-ran session, setup state and the screen fetch.
 Deep links keep working through the SPA fallback already configured in `product/wrangler.jsonc`; no
-infrastructure change.
+infrastructure change. Because a client-side route change never fires `beforeunload`, `navigate()` and
+`popstate` both pass through `registerNavigationBlocker()`'s veto first (round 1 on #20): a screen
+with unsaved work refuses the move — `false` from `navigate()`, and a vetoed `popstate` puts the
+history entry back without notifying — so the reviewer editor's dirty guard is not dead for in-app
+clicks or the back button.
 
 (5) **The data layer.** `use-loadable.ts` became `product/src/lib/use-resource.ts`
 (`useResource(schema, fetcher)`): the fetcher receives an `AbortSignal`, is aborted on unmount and on

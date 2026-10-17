@@ -28,12 +28,14 @@ export function useResource<T>(
   const mountedRef = useRef(true);
   const schemaRef = useRef(schema);
   const controllerRef = useRef<AbortController | null>(null);
+  const inFlightRef = useRef(false);
   schemaRef.current = schema;
 
   const load = useCallback(async () => {
     controllerRef.current?.abort();
     const controller = new AbortController();
     controllerRef.current = controller;
+    inFlightRef.current = true;
     setFailed(false);
     setError(null);
     try {
@@ -54,6 +56,11 @@ export function useResource<T>(
       }
       setFailed(true);
       setError(caught);
+    } finally {
+      // Only the newest load owns the flag: an older one that a newer load aborted must not clear it.
+      if (controllerRef.current === controller) {
+        inFlightRef.current = false;
+      }
     }
   }, [fetcher]);
 
@@ -61,20 +68,26 @@ export function useResource<T>(
     mountedRef.current = true;
     void load();
 
-    const onFocus = () => {
-      void load();
-    };
-    const onVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
+    // `focus` and `visibilitychange` both fire when the tab becomes visible again, so this path
+    // skips a load that is already in flight: one revalidate, not two where the second aborts the
+    // first. The load above is never skipped — a new fetcher has to fetch even if the old one has
+    // not settled yet.
+    const revalidate = () => {
+      if (!inFlightRef.current) {
         void load();
       }
     };
-    window.addEventListener('focus', onFocus);
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        revalidate();
+      }
+    };
+    window.addEventListener('focus', revalidate);
     document.addEventListener('visibilitychange', onVisibilityChange);
 
     return () => {
       mountedRef.current = false;
-      window.removeEventListener('focus', onFocus);
+      window.removeEventListener('focus', revalidate);
       document.removeEventListener('visibilitychange', onVisibilityChange);
       controllerRef.current?.abort();
     };

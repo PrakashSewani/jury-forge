@@ -95,6 +95,11 @@ contract rather than a TypeScript convenience. These are the invariants the code
   the shell's session/setup fetch happens once per page load rather than once per navigation. Deep
   links are served by the SPA fallback already configured in `product/wrangler.jsonc`
   (`not_found_handling: single-page-application`).
+- **A screen can refuse to be navigated away from.** `registerNavigationBlocker(blocker)` puts a veto
+  in front of `navigate()` and of `popstate`, so an in-app click or the back button asks before it
+  replaces a screen that owns unsaved work — `beforeunload` alone only covers a real document unload
+  and never fires for a client-side route change. A vetoed `popstate` puts the history entry back and
+  notifies nobody. The reviewer editor registers the only blocker today, while its form is dirty.
 - **Live runs.** While a run is `running`, the runs list and the run detail poll on an interval and
   stop at a terminal status (`usePoll`); every data fetch is abortable and revalidates when the
   window regains focus (`useResource`), so a slow response cannot land on an unmounted screen.

@@ -277,8 +277,31 @@ export default function RunsPage() {
   }, [load]);
 
   const hasRunning = data?.runs.some((run) => run.status === 'running') ?? false;
-  const poll = useCallback((signal: AbortSignal) => load(signal), [load]);
-  usePoll(poll, { intervalMs: 5000, active: hasRunning });
+
+  /**
+   * The poll tick. It refreshes the first page in place and leaves everything else alone: the pages
+   * the operator loaded with "Load more", the cursor they are paging through and the repository
+   * names (which do not change during a run, so the tick never refetches them). `load()` — mount and
+   * an explicit retry — stays the only path that replaces the whole list.
+   */
+  const refresh = useCallback(async (signal: AbortSignal) => {
+    try {
+      const page = await listRuns(undefined, signal);
+      if (signal.aborted) {
+        return;
+      }
+      // The rows a page-1 fetch returns are the head of the list; the tail came from later pages.
+      setData((current) =>
+        current === null
+          ? current
+          : { ...current, runs: [...page.runs, ...current.runs.slice(page.runs.length)] },
+      );
+    } catch {
+      // A failed tick changes nothing on screen; `usePoll` skips it and the next tick tries again.
+    }
+  }, []);
+
+  usePoll(refresh, { intervalMs: 5000, active: hasRunning });
 
   async function loadMore() {
     if (data === null || data.nextCursor === null) {

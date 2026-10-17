@@ -32,6 +32,26 @@ describe('useResource', () => {
     expect(fetcher).toHaveBeenCalledTimes(2);
   });
 
+  it('revalidates once when focus and visibilitychange arrive together', async () => {
+    const fetcher = vi
+      .fn<(signal: AbortSignal) => Promise<Value>>()
+      .mockResolvedValueOnce({ value: 1 })
+      .mockResolvedValue({ value: 2 });
+    render(<Harness fetcher={fetcher} />);
+
+    expect(await screen.findByText('1')).toBeTruthy();
+    expect(fetcher).toHaveBeenCalledTimes(1);
+
+    // Returning to the tab fires both; the second must not abort the first and fetch again.
+    await act(async () => {
+      window.dispatchEvent(new Event('focus'));
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+
+    expect(await screen.findByText('2')).toBeTruthy();
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+
   it('aborts the in-flight request when it unmounts', async () => {
     const signals: AbortSignal[] = [];
     const fetcher = vi.fn((signal: AbortSignal): Promise<Value> => {

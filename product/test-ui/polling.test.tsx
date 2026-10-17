@@ -1,5 +1,5 @@
 import type { Repository, Reviewer, RunDetail, RunSummary } from '@jury-forge/shared';
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getRun, listRepositories, listReviewers, listRuns } from '../src/lib/api';
 import RunDetailPage from '../src/pages/RunDetailPage';
@@ -39,6 +39,13 @@ const RUNNING_RUN: RunSummary = {
   prNumber: 11,
   status: 'running',
   finishedAt: null,
+};
+
+/** A run from the second page, so a poll tick can be caught discarding it. */
+const OLDER_RUN: RunSummary = {
+  ...COMPLETED_RUN,
+  id: '101:10:sha:delivery',
+  prNumber: 10,
 };
 
 const REPO: Repository = {
@@ -100,6 +107,41 @@ describe('RunsPage polling', () => {
       await vi.advanceTimersByTimeAsync(15000);
     });
     expect(listRunsMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps the loaded pages and the paging cursor across a poll tick', async () => {
+    listRunsMock
+      .mockResolvedValueOnce({ runs: [RUNNING_RUN, COMPLETED_RUN], nextCursor: 'cursor-2' })
+      .mockResolvedValueOnce({ runs: [OLDER_RUN], nextCursor: 'cursor-3' })
+      .mockResolvedValue({ runs: [COMPLETED_RUN, RUNNING_RUN], nextCursor: 'cursor-2' });
+    listRepositoriesMock.mockResolvedValue([REPO]);
+
+    render(<RunsPage />);
+    await flush();
+    expect(listRepositoriesMock).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Load more' }));
+    });
+    await flush();
+    expect(listRunsMock).toHaveBeenLastCalledWith('cursor-2');
+    expect(screen.getByText('#10')).toBeTruthy();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+
+    // The tick refreshed the first page in place: the page loaded with "Load more" is still there,
+    // the cursor it was paging through is unchanged, and repositories were not fetched again.
+    expect(screen.getByText('#10')).toBeTruthy();
+    expect(listRunsMock).toHaveBeenLastCalledWith(undefined, expect.anything());
+    expect(listRepositoriesMock).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Load more' }));
+    });
+    await flush();
+    expect(listRunsMock).toHaveBeenLastCalledWith('cursor-3');
   });
 
   it('never polls when no run is running', async () => {

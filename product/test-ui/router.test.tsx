@@ -1,17 +1,19 @@
-import type { InstanceReadiness, SetupState } from '@jury-forge/shared';
+import type { InstanceReadiness, Reviewer, SetupState } from '@jury-forge/shared';
 import { act, fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '../src/App';
 import {
   fetchSession,
   fetchSetupState,
   getReadiness,
+  getReviewer,
   listActivity,
   listRepositories,
   listReviewers,
   listRuns,
 } from '../src/lib/api';
-import { navigate } from '../src/lib/router';
+import { navigate, registerNavigationBlocker } from '../src/lib/router';
+import { memoryStorage } from './memory-storage';
 
 vi.mock('../src/lib/api', () => ({
   fetchSession: vi.fn(),
@@ -42,6 +44,7 @@ vi.mock('../src/lib/api', () => ({
 const fetchSessionMock = vi.mocked(fetchSession);
 const fetchSetupStateMock = vi.mocked(fetchSetupState);
 const getReadinessMock = vi.mocked(getReadiness);
+const getReviewerMock = vi.mocked(getReviewer);
 const listRunsMock = vi.mocked(listRuns);
 const listRepositoriesMock = vi.mocked(listRepositories);
 const listReviewersMock = vi.mocked(listReviewers);
@@ -84,8 +87,30 @@ const READINESS: InstanceReadiness = {
   },
 };
 
+const REVIEWER: Reviewer = {
+  id: 'rev-security',
+  name: 'Security',
+  instructions: 'Look for injection.',
+  rules: 'Error on exploitable issues.',
+  flavor: 'openai',
+  baseUrl: 'https://api.openai.com/v1',
+  model: 'gpt-5',
+  params: {},
+  enabled: true,
+  hasApiKey: true,
+  repositories: ['prakashsewani/jury-forge'],
+};
+
+// Never the ambient `window.localStorage`: Node ≥26 defines that accessor as disabled and vitest's
+// happy-dom environment then declines to install its own Storage, which killed all six tests in this
+// file (`Cannot read properties of undefined (reading 'getItem')` in `readStoredTheme`). Every UI
+// test that renders the shell takes this stub — see `test-ui/memory-storage.ts`.
+let store: Storage;
+
 beforeEach(() => {
   vi.resetAllMocks();
+  store = memoryStorage();
+  vi.stubGlobal('localStorage', store);
   window.history.replaceState(null, '', '/');
   fetchSessionMock.mockResolvedValue({ login: 'prakashsewani', avatarUrl: null });
   fetchSetupStateMock.mockResolvedValue(CLAIMED);
@@ -94,6 +119,10 @@ beforeEach(() => {
   listRepositoriesMock.mockResolvedValue([]);
   listReviewersMock.mockResolvedValue([]);
   listActivityMock.mockResolvedValue({ activity: [], nextCursor: null });
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
 });
 
 describe('client-side routing', () => {
@@ -158,5 +187,74 @@ describe('client-side routing', () => {
     window.history.replaceState(null, '', '/definitely-not-a-route');
     render(<App />);
     expect(await screen.findByText('Getting started')).toBeTruthy();
+  });
+});
+
+describe('the navigation guard', () => {
+  it('refuses a route change while a registered blocker vetoes it', async () => {
+    render(<App />);
+    expect(await screen.findByText('Getting started')).toBeTruthy();
+
+    const unregister = registerNavigationBlocker(() => false);
+    try {
+      act(() => {
+        expect(navigate('/reviewers')).toBe(false);
+      });
+      expect(window.location.pathname).toBe('/');
+      expect(screen.getByText('Getting started')).toBeTruthy();
+    } finally {
+      unregister();
+    }
+  });
+
+  it('puts the URL back when the back button is vetoed', async () => {
+    render(<App />);
+    expect(await screen.findByText('Getting started')).toBeTruthy();
+
+    act(() => {
+      navigate('/reviewers');
+    });
+    expect(await screen.findByRole('heading', { name: 'Reviewers' })).toBeTruthy();
+
+    const unregister = registerNavigationBlocker(() => false);
+    try {
+      act(() => {
+        window.history.replaceState(null, '', '/');
+        window.dispatchEvent(new PopStateEvent('popstate'));
+      });
+      expect(window.location.pathname).toBe('/reviewers');
+      expect(screen.getByRole('heading', { name: 'Reviewers' })).toBeTruthy();
+    } finally {
+      unregister();
+    }
+  });
+
+  it('asks before an in-app click discards unsaved edits', async () => {
+    window.history.replaceState(null, '', '/reviewers/rev-security');
+    getReviewerMock.mockResolvedValue(REVIEWER);
+    // happy-dom has no `confirm`, so the stub is the dialog: declined first, accepted second.
+    const confirm = vi.fn(() => false);
+    vi.stubGlobal('confirm', confirm);
+    try {
+      render(<App />);
+      const name = (await screen.findByLabelText('Name')) as HTMLInputElement;
+
+      act(() => {
+        fireEvent.change(name, { target: { value: 'Renamed' } });
+      });
+      fireEvent.click(screen.getByRole('link', { name: /all reviewers/i }));
+
+      // Declined: the editor is still mounted, still on its own path, with the edit in the field.
+      expect(window.location.pathname).toBe('/reviewers/rev-security');
+      expect(name.value).toBe('Renamed');
+
+      confirm.mockReturnValue(true);
+      fireEvent.click(screen.getByRole('link', { name: /all reviewers/i }));
+
+      expect(window.location.pathname).toBe('/reviewers');
+      expect(await screen.findByRole('heading', { name: 'Reviewers' })).toBeTruthy();
+    } finally {
+      confirm.mockRestore();
+    }
   });
 });

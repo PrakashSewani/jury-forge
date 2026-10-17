@@ -43,7 +43,20 @@ export function routeFromPath(pathname: string): Route {
 
 const routeListeners = new Set<() => void>();
 
+/**
+ * A navigation blocker: return `false` to veto a route change and keep the screen the user is on.
+ * The reviewer editor registers one while the form is dirty, so an in-app click cannot silently
+ * discard edits (`beforeunload` only covers a real document unload).
+ */
+export type NavigationBlocker = (next: string) => boolean;
+
+const navigationBlockers = new Set<NavigationBlocker>();
+
+/** The path the current screen was reached with; what a vetoed popstate restores. */
+let acceptedPath: string | null = null;
+
 interface BrowserWindow {
+  location: { pathname: string };
   history: {
     pushState(data: unknown, unused: string, url?: string | null): void;
     replaceState(data: unknown, unused: string, url?: string | null): void;
@@ -63,28 +76,87 @@ function notifyRoute(): void {
   }
 }
 
-/** Push (or replace) a client route and tell every subscriber to re-read the pathname. */
-export function navigate(path: string, { replace = false }: { replace?: boolean } = {}): void {
+/**
+ * Ask every registered blocker before a route change. Any `false` vetoes it, so a screen that owns
+ * unsaved work can refuse to be replaced.
+ */
+function mayNavigate(next: string): boolean {
+  for (const blocker of navigationBlockers) {
+    if (!blocker(next)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Register a blocker and get back the function that removes it. The editor registers one while its
+ * form is dirty, so `navigate()` can ask before it moves the user off the page.
+ */
+export function registerNavigationBlocker(blocker: NavigationBlocker): () => void {
+  navigationBlockers.add(blocker);
+  return () => {
+    navigationBlockers.delete(blocker);
+  };
+}
+
+/**
+ * Push (or replace) a client route and tell every subscriber to re-read the pathname. Returns
+ * `false` — and changes nothing — when a blocker vetoes the move.
+ */
+export function navigate(path: string, { replace = false }: { replace?: boolean } = {}): boolean {
+  if (!mayNavigate(path)) {
+    return false;
+  }
   const win = browserWindow();
   if (replace) {
     win.history.replaceState(null, '', path);
   } else {
     win.history.pushState(null, '', path);
   }
+  acceptedPath = path;
   notifyRoute();
+  return true;
 }
 
 /**
+ * The browser's back/forward button. The URL has already moved by the time `popstate` fires, so a
+ * veto puts the entry back and tells nobody: the screen the user was on stays, with its state.
+ */
+function handlePopState(): void {
+  const win = browserWindow();
+  const next = win.location.pathname;
+  if (!mayNavigate(next)) {
+    win.history.pushState(null, '', acceptedPath ?? next);
+    return;
+  }
+  acceptedPath = next;
+  notifyRoute();
+}
+
+let popStateAttached = false;
+
+/**
  * Subscribe to route changes: a `navigate()` notifies directly, and the browser's back/forward
- * buttons notify through `popstate`. Returns an unsubscribe function.
+ * buttons notify through `popstate` (which is filtered through the blockers first). Returns an
+ * unsubscribe function.
  */
 export function subscribeRoute(listener: () => void): () => void {
   routeListeners.add(listener);
   const win = browserWindow();
-  win.addEventListener('popstate', listener);
+  if (acceptedPath === null) {
+    acceptedPath = win.location.pathname;
+  }
+  if (!popStateAttached) {
+    win.addEventListener('popstate', handlePopState);
+    popStateAttached = true;
+  }
   return () => {
     routeListeners.delete(listener);
-    win.removeEventListener('popstate', listener);
+    if (popStateAttached && routeListeners.size === 0) {
+      win.removeEventListener('popstate', handlePopState);
+      popStateAttached = false;
+    }
   };
 }
 

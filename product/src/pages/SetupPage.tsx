@@ -167,7 +167,9 @@ function InstallStep({ state, onRefresh }: { state: SetupState; onRefresh: () =>
       </p>
       <div className="flex flex-wrap items-center gap-3">
         {state.appSlug ? (
-          <a className={buttonClass} href={installUrl(state.appSlug)} onClick={handleAppLink}>
+          // An absolute GitHub URL: the router's `handleAppLink` only takes same-origin `/` paths, so
+          // there is nothing to intercept here and the browser owns the click.
+          <a className={buttonClass} href={installUrl(state.appSlug)}>
             Install {state.appSlug} on GitHub
           </a>
         ) : (

@@ -72,14 +72,18 @@ reviewerRoutes.post('/', async (c) => {
   const id = crypto.randomUUID();
   await insertReviewer(c.env.DB, id, ring, parsed.data);
   const reviewer = await getReviewer(c.env.DB, id);
-  if (reviewer) {
-    await recordActivity(c.env.DB, {
-      actor: c.get('user').login,
-      action: 'reviewer_create',
-      target: reviewer.name,
-    });
+  if (!reviewer) {
+    // The row that was just written did not read back. Answer with the taxonomy's own code instead
+    // of a `null` body: the dashboard requires a reviewer (`createReviewer` parses the same
+    // non-nullable `ReviewerSchema`), so a 201 + `null` could only surface as `invalid_response`.
+    return errorResponse('internal_error', 500);
   }
-  return respond(ReviewerSchema.nullable(), reviewer, 201);
+  await recordActivity(c.env.DB, {
+    actor: c.get('user').login,
+    action: 'reviewer_create',
+    target: reviewer.name,
+  });
+  return respond(ReviewerSchema, reviewer, 201);
 });
 
 reviewerRoutes.get('/:id', async (c) => {
@@ -106,23 +110,26 @@ reviewerRoutes.patch('/:id', async (c) => {
   const ring = values ? await loadKeyRing(values) : null;
   const { apiKeyReencrypted } = await updateReviewerRow(c.env.DB, id, ring, parsed.data);
   const reviewer = await getReviewer(c.env.DB, id);
-  if (reviewer) {
+  if (!reviewer) {
+    // Same as the create above: the row existed at the check and is gone after the update, so this
+    // is a 500 the dashboard can render, never a `null` body it would call `invalid_response`.
+    return errorResponse('internal_error', 500);
+  }
+  await recordActivity(c.env.DB, {
+    actor: c.get('user').login,
+    action: 'reviewer_update',
+    target: reviewer.name,
+    detail: reviewerUpdateDetail(parsed.data, apiKeyReencrypted),
+  });
+  if (apiKeyReencrypted && ring) {
     await recordActivity(c.env.DB, {
       actor: c.get('user').login,
-      action: 'reviewer_update',
+      action: 'credential_rotation',
       target: reviewer.name,
-      detail: reviewerUpdateDetail(parsed.data, apiKeyReencrypted),
+      detail: `api_key re-wrapped for key version ${ring.current.version}`,
     });
-    if (apiKeyReencrypted && ring) {
-      await recordActivity(c.env.DB, {
-        actor: c.get('user').login,
-        action: 'credential_rotation',
-        target: reviewer.name,
-        detail: `api_key re-wrapped for key version ${ring.current.version}`,
-      });
-    }
   }
-  return respond(ReviewerSchema.nullable(), reviewer);
+  return respond(ReviewerSchema, reviewer);
 });
 
 reviewerRoutes.delete('/:id', async (c) => {
