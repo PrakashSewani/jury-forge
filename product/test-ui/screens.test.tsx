@@ -96,6 +96,7 @@ const REVIEWER: Reviewer = {
   params: { temperature: 0.2 },
   enabled: true,
   hasApiKey: true,
+  repositories: ['prakashsewani/jury-forge'],
 };
 
 const REPO: Repository = {

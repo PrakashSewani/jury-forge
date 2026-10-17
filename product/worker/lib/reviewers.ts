@@ -119,7 +119,7 @@ interface ReviewerRow {
 const REVIEWER_COLUMNS =
   'id, name, instructions, rules, flavor, base_url, api_key_enc, model, params_json, enabled';
 
-function fromRow(row: ReviewerRow): Reviewer {
+function fromRow(row: ReviewerRow, repositories: string[]): Reviewer {
   return {
     id: row.id,
     name: row.name,
@@ -131,22 +131,60 @@ function fromRow(row: ReviewerRow): Reviewer {
     params: JSON.parse(row.params_json) as Record<string, unknown>,
     enabled: row.enabled === 1,
     hasApiKey: row.api_key_enc !== '',
+    repositories,
   };
 }
 
+const REVIEWER_REPOSITORIES_SQL =
+  'SELECT r.id AS reviewer_id, repo.full_name FROM reviewers r JOIN repositories repo ON repo.enabled = 1 LEFT JOIN reviewer_repositories rr ON rr.reviewer_id = r.id AND rr.repo_id = repo.repo_id WHERE COALESCE(rr.enabled, 1) = 1';
+
+interface ReviewerRepositoriesRow {
+  reviewer_id: string;
+  full_name: string;
+}
+
+function groupRepositories(rows: ReviewerRepositoriesRow[]): Map<string, string[]> {
+  const grouped = new Map<string, string[]>();
+  for (const row of rows) {
+    const list = grouped.get(row.reviewer_id);
+    if (list) {
+      list.push(row.full_name);
+    } else {
+      grouped.set(row.reviewer_id, [row.full_name]);
+    }
+  }
+  return grouped;
+}
+
 export async function listReviewers(db: D1Database): Promise<Reviewer[]> {
-  const result = await db
-    .prepare(`SELECT ${REVIEWER_COLUMNS} FROM reviewers ORDER BY name COLLATE NOCASE, id`)
-    .all<ReviewerRow>();
-  return result.results.map(fromRow);
+  const [result, repositories] = await Promise.all([
+    db
+      .prepare(`SELECT ${REVIEWER_COLUMNS} FROM reviewers ORDER BY name COLLATE NOCASE, id`)
+      .all<ReviewerRow>(),
+    db
+      .prepare(`${REVIEWER_REPOSITORIES_SQL} ORDER BY r.id, repo.full_name COLLATE NOCASE`)
+      .all<ReviewerRepositoriesRow>(),
+  ]);
+  const grouped = groupRepositories(repositories.results);
+  return result.results.map((row) => fromRow(row, grouped.get(row.id) ?? []));
 }
 
 export async function getReviewer(db: D1Database, id: string): Promise<Reviewer | null> {
-  const row = await db
-    .prepare(`SELECT ${REVIEWER_COLUMNS} FROM reviewers WHERE id = ?`)
-    .bind(id)
-    .first<ReviewerRow>();
-  return row === null ? null : fromRow(row);
+  const [row, repositories] = await Promise.all([
+    db
+      .prepare(`SELECT ${REVIEWER_COLUMNS} FROM reviewers WHERE id = ?`)
+      .bind(id)
+      .first<ReviewerRow>(),
+    db
+      .prepare(`${REVIEWER_REPOSITORIES_SQL} AND r.id = ? ORDER BY repo.full_name COLLATE NOCASE`)
+      .bind(id)
+      .all<ReviewerRepositoriesRow>(),
+  ]);
+  if (row === null) {
+    return null;
+  }
+  const grouped = groupRepositories(repositories.results);
+  return fromRow(row, grouped.get(id) ?? []);
 }
 
 export async function insertReviewer(

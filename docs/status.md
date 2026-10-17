@@ -53,14 +53,16 @@ change deploys anything.
 **#17** (`77541fbb`; reviewed head `33b0a50`) on `feat/rework-a-design-system-20261017`; slice B
 merged to `dev` as **#18** (`c48e825e1b`), and post-merge canary verification passed on the merged
 tree. Slice C is in progress on `feat/rework-c-product-shape-20261017` — its plan is recorded in
-D-028 and `docs/design.md`, and implementation has not started. Slice D is not started.
+D-028 and `docs/design.md`. The backend of C-1–C-3 (computed readiness, reviewer templates,
+reviewer↔repo visibility) has landed; C-4 (manual try runs, migration `0006_run_mode.sql`) and the
+dashboard work are not started. Slice D is not started.
 
-| Slice | Branch                                 | Status                               |
-| ----- | -------------------------------------- | ------------------------------------ |
-| A     | `feat/rework-a-design-system-20261017` | merged to `dev` (`77541fbb`) (#17)   |
-| B     | `feat/rework-b-shell-screens-20261017` | merged to `dev` (`c48e825e1b`) (#18) |
-| C     | `feat/rework-c-product-shape-20261017` | in progress                          |
-| D     | —                                      | not started                          |
+| Slice | Branch                                 | Status                                                       |
+| ----- | -------------------------------------- | ------------------------------------------------------------ |
+| A     | `feat/rework-a-design-system-20261017` | merged to `dev` (`77541fbb`) (#17)                           |
+| B     | `feat/rework-b-shell-screens-20261017` | merged to `dev` (`c48e825e1b`) (#18)                         |
+| C     | `feat/rework-c-product-shape-20261017` | in progress — backend C-1–C-3 landed; C-4 and dashboard next |
+| D     | —                                      | not started                                                  |
 
 Slice A is the design-system vocabulary and UI harness (D-026): a token layer in
 `product/src/styles.css`, the `product/src/ui/` primitives, a dependency-free
@@ -117,9 +119,10 @@ reaped. Numbers: `docs/rework/final.json` / `final.md`, deltas against `docs/rew
 
 **Blocked by:** nothing.
 
-**Next action:** slice C's pull request (readiness, reviewer templates, reviewer↔repo visibility,
-try-a-reviewer — D-028) is next; then slice D (validated contracts, error taxonomy, client routing,
-run polling) from the rework plan in `docs/roadmap.md`.
+**Next action:** finish slice C — C-4 (manual try runs: `POST /api/runs/try`,
+`GET /api/repositories/:repoId/pulls`, migration `0006_run_mode.sql`) and the dashboard work for
+readiness, templates and reviewer↔repo visibility — then slice D (validated contracts, error
+taxonomy, client routing, run polling) from the rework plan in `docs/roadmap.md`.
 
 ## Backlog (owner-owned, deferred)
 
