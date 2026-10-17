@@ -4,26 +4,25 @@ Accepted improvements beyond the phase-2 scope, recorded 2026-10-07 (D-017). Eve
 as a stacked PR (D-011) with its own decision entries and tests. Phase 3 (promo site) and
 phase 4 (launch) follow the improvement slices that precede launch.
 
-Slices 2b–6 and this slate landed on `dev` on 2026-10-17 (#9 → #14, `c47f87f2` … `5c8f71ce`);
-slice 6 is merged and slice 7 is next.
+Slices 2b–6 and this slate landed on `dev` on 2026-10-17 (#9 → #14, `c47f87f2` … `5c8f71ce`); slice
+6 is merged, and the rest of the slate followed in #16 (`f277f1e4`).
 
-Slices 7–11 and item 8 land **together in one pull request** against `dev` at the owner's
-instruction (D-019, 2026-10-17) — a deliberate departure from D-011's one-slice-per-PR flow. Each
-slice still lands as its own docs commit and implementation commit with `npm run check` green, so
-the slices stay separately reviewable. After that PR merges, the owner has a separate rework work
-item planned.
+Slices 7–11 and item 8 landed **together in one pull request** against `dev` at the owner's
+instruction (D-019, 2026-10-17; #16 merged as `f277f1e4`) — a deliberate departure from D-011's
+one-slice-per-PR flow. Each slice still landed as its own docs commit and implementation commit with
+`npm run check` green, so the slices stayed separately reviewable.
 
 ## Sequencing
 
-| Slice | Items   | Scope                                                                               | Status    |
-| ----- | ------- | ----------------------------------------------------------------------------------- | --------- |
-| 6     | 1, 2, 4 | Run hygiene: superseded-run skip, review minimization, priority file order          | merged    |
-| 7     | 3, 6    | Resolution tracking + output contract (per-reviewer summary, `startLine`, usage)    | in review |
-| 8     | 5, 11   | Instance settings (tunable caps/budgets) + optional blocking mode (default off)     | in review |
-| 9     | 10      | Repo instructions (`AGENTS.md`/`CONTRIBUTING.md`) in prompts                        | in review |
-| 10    | 7, 12   | Credential key rotation + audit trail                                               | in review |
-| 11    | 9, 13   | Distribution: guided deploy + reviewer import/export (with phase 3/4 launch polish) | in review |
-| —     | 8       | Access re-checks — shorter session TTL, no stored user tokens (D-024)               | in review |
+| Slice | Items   | Scope                                                                               | Status |
+| ----- | ------- | ----------------------------------------------------------------------------------- | ------ |
+| 6     | 1, 2, 4 | Run hygiene: superseded-run skip, review minimization, priority file order          | merged |
+| 7     | 3, 6    | Resolution tracking + output contract (per-reviewer summary, `startLine`, usage)    | merged |
+| 8     | 5, 11   | Instance settings (tunable caps/budgets) + optional blocking mode (default off)     | merged |
+| 9     | 10      | Repo instructions (`AGENTS.md`/`CONTRIBUTING.md`) in prompts                        | merged |
+| 10    | 7, 12   | Credential key rotation + audit trail                                               | merged |
+| 11    | 9, 13   | Distribution: guided deploy + reviewer import/export (with phase 3/4 launch polish) | merged |
+| —     | 8       | Access re-checks — shorter session TTL, no stored user tokens (D-024)               | merged |
 
 ## Items
 
@@ -55,3 +54,19 @@ item planned.
 12. **Audit trail** — activity table + dashboard view (sign-ins, key changes, toggles, kicks)
     (D-023, slice 10).
 13. **Reviewer import/export** — JSON export/import of reviewer configs (D-025, slice 11).
+
+## Post-phase-2 rework (2026-10-17)
+
+The owner's rework item now exists as four stacked pull requests against `dev` (D-011's flow), run
+after the improvement slate:
+
+| Slice | Scope                                                                                   | Status      |
+| ----- | --------------------------------------------------------------------------------------- | ----------- |
+| A     | Design system: token layer + `product/src/ui/` primitives + the UI test harness (D-026) | in progress |
+| B     | Shell and the 8 screens rewritten on the primitives; dark-mode toggle wired             | not started |
+| C     | Product shape: readiness, templates, reviewer↔repo visibility, try-a-reviewer           | not started |
+| D     | Architecture: validated contracts, error taxonomy, client routing, run polling          | not started |
+
+Slice A is in progress on `feat/rework-a-design-system-20261017`; B, C and D stack behind it. The
+rework is product work, not a phase — phase 3 (promo site) still starts after it. **Nothing
+deploys: the hold stands.**
