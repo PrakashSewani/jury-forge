@@ -42,4 +42,4 @@ coverage/
 Thumbs.db
 
 # Regenerable measurement artefacts — the numbers are committed in docs/rework/*.json|*.md
-docs/rework/screens-*/
+docs/rework/screens*/
