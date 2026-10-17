@@ -331,3 +331,68 @@ the context budget should truncate the least valuable diffs, not the first ones 
 **Rejected:** cancelling in-flight runs (by the time a newer push arrives the old work is mostly
 spent; the newest queued run wins instead); deleting previous reviews (destructive, loses
 history); raw API order for files (drops high-signal diffs first).
+
+## D-019: The remaining improvement slices land as one pull request
+
+**Date:** 2026-10-17
+
+**Decision:** The remaining post-phase-2 improvement slices — 7 (resolution tracking + output
+contract v2), 8 (instance settings + optional blocking mode), 9 (repo instructions), 10 (key
+rotation + audit trail), 11 (guided deploy + reviewer import/export), and roadmap item 8 (access
+re-checks) — land together in **one** pull request at the owner's instruction, instead of the
+stacked one-slice-per-PR flow D-011 established. Each slice still lands as its own docs commit
+plus implementation commit(s) with `npm run check` green, so the slices stay separately
+reviewable in the diff and in history. D-011's CI rule (the check runs on every pull request,
+whatever the base) is untouched; only the stacked-base mechanism is unused by this PR, which
+targets `dev` directly.
+
+**Why:** the owner instructed it in the work thread on 2026-10-17 ("Complete the items all items
+in the next pr then post this in ideas for a rework only after merge"). Five stacked layers
+would serialize the slate through five review-and-merge round trips for slices the owner has
+already accepted as one slate (D-017).
+
+**Rejected:** five stacked PRs (D-011's flow — the owner's instruction supersedes it for this
+slate, and this entry records the deviation); one squashed commit for the whole slate (the slices
+carry distinct decisions and must stay separately reviewable); retargeting an existing open PR
+base chain (more moving parts than a single `dev`-targeted PR).
+
+## D-020: Slice 7 — resolution tracking and output contract v2
+
+**Date:** 2026-10-17 (implements roadmap items 3 and 6 from D-017)
+
+**Decision:** (1) **Resolution tracking.** When a run starts, the newest earlier run for the same
+repository and pull request that recorded findings supplies those findings to the new run: each
+reviewer's prompt gains a "previously reported findings" section carrying that reviewer's own
+earlier findings, and the review summary gains **Resolved / Still present / New** buckets. The
+buckets are computed deterministically by comparing the earlier run's findings with the current
+run's — a finding is keyed by `file`, `line` (or `file` alone when the finding is file-level),
+and case-folded `title`; the model is never asked to grade its own previous output. Reported
+earlier and absent now → `resolved`; present in both → `still present`; absent earlier → `new`.
+"Resolved" means only _this run did not report it again_, and the summary says so. The buckets
+appear when an earlier run with findings exists for the PR.
+
+(2) **Output contract v2.** The prompt's JSON contract gains an optional per-reviewer `summary`
+(≤500 characters; stored with the reviewer's outcome and shown in run detail) and a per-finding
+`startLine` for multi-line comments. `startLine` is used only when it precedes `line` and both
+lines are commentable in the diff's right side — then the inline comment carries GitHub's
+`start_line` with `start_side: RIGHT`; otherwise `startLine` is dropped and the finding posts as
+a single-line comment. Oversized summaries are truncated like titles and bodies. Provider token
+`usage` is read from both flavors' response envelopes, normalized to
+`{ promptTokens, completionTokens, totalTokens }`, and stored per reviewer in run detail
+(`run_reviewers.usage_json`); a provider that reports no usage stores nothing and never fails the
+reviewer for it.
+
+**Why:** a reviewer that never sees what it flagged last time repeats itself or contradicts
+itself, and the reviewer — not the model — is the right place to decide what stopped being
+reported; the contract changes are the two pieces the phase-2 design flagged as deferred v1
+cutbacks (`summary`, multi-line findings) plus the usage numbers needed before anyone tunes a
+provider budget.
+
+**Rejected:** asking the reviewer model to classify its own previous findings (unverifiable,
+provider-dependent, and it would make the buckets a self-assessment rather than a diff); a
+resolution table keyed by stable finding ids (the contract has no ids, and a deterministic key is
+sufficient for a single-instance tool); keeping the previous-run context out of the prompt and
+computing buckets only in the summary (the prompt section is what stops the redundant re-report;
+the buckets are the receipt for it); treating a missing `usage` envelope as a reviewer failure
+(the envelope is optional and provider-specific); `REQUEST_CHANGES`-style pressure from resolved
+counts (blocking is item 11's explicit opt-in, D-013 otherwise stands).

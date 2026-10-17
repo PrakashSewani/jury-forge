@@ -3,17 +3,19 @@
 This is the implementation design for phase 2 (the product core, end to end). It expands the v1
 behavior in `docs/product.md` under the shape and boundaries in `docs/architecture.md`; the
 decisions it implements are D-005–D-010 in `docs/decisions.md`. It is the document of record
-while phase 2 is built — implementation follows it, and it is kept current as slices land.
+while phase 2 is built — implementation follows it, and it is kept current as slices land. The
+post-phase-2 improvement slices (D-018 onward) extend this document in place; each section names
+the decision it implements.
 
 ## Modules
 
-| Piece         | Where                          | What it holds                                                                    |
-| ------------- | ------------------------------ | -------------------------------------------------------------------------------- |
-| Worker routes | `product/worker/routes/`       | Hono sub-apps: setup, auth, reviewers, repositories, runs, webhooks              |
-| Worker lib    | `product/worker/lib/`          | crypto, sessions, access gate, context builder, consolidation, provider adapters |
-| Run engine    | `product/worker/run-engine.ts` | the `RunEngine` Durable Object (binding `RUNS`)                                  |
-| Contracts     | `shared/src/`                  | API request/response types shared by the Worker and the dashboard                |
-| Dashboard     | `product/src/`                 | React screens: setup wizard, reviewers, repositories, runs                       |
+| Piece         | Where                          | What it holds                                                                                |
+| ------------- | ------------------------------ | -------------------------------------------------------------------------------------------- |
+| Worker routes | `product/worker/routes/`       | Hono sub-apps: setup, auth, reviewers, repositories, runs, webhooks                          |
+| Worker lib    | `product/worker/lib/`          | crypto, sessions, access gate, context builder, consolidation, resolution, provider adapters |
+| Run engine    | `product/worker/run-engine.ts` | the `RunEngine` Durable Object (binding `RUNS`)                                              |
+| Contracts     | `shared/src/`                  | API request/response types shared by the Worker and the dashboard                            |
+| Dashboard     | `product/src/`                 | React screens: setup wizard, reviewers, repositories, runs                                   |
 
 ## Data model (D1)
 
@@ -28,7 +30,7 @@ Migrations continue in `product/migrations/` (`0002_*` onward). Timestamps are u
 | `repositories`          | installed repositories               | `repo_id` (GitHub numeric id), `full_name`, `private`, `enabled`                                                                                                          |
 | `reviewer_repositories` | per-repo reviewer enablement         | `reviewer_id`, `repo_id`, `enabled`                                                                                                                                       |
 | `runs`                  | one row per review run               | `id`, `delivery_id`, `repo_id`, `pr_number`, `head_sha`, `event`, `status` (`running`/`completed`/`failed`/`skipped`), `error`, `review_url`, `created_at`, `finished_at` |
-| `run_reviewers`         | per-reviewer outcome                 | `run_id`, `reviewer_id`, `status`, `findings_json`, `error`                                                                                                               |
+| `run_reviewers`         | per-reviewer outcome                 | `run_id`, `reviewer_id`, `status`, `findings_json`, `summary` (D-020), `usage_json` (D-020), `error`                                                                      |
 | `sessions`              | dashboard sessions                   | `token_hash`, `login`, `avatar_url`, `created_at`, `expires_at`                                                                                                           |
 | `oauth_states`          | single-use OAuth/manifest states     | `state`, `kind` (`login`/`claim`/`manifest`), `created_at`, `expires_at`                                                                                                  |
 | `webhook_deliveries`    | delivery de-duplication              | `delivery_id`, `received_at`                                                                                                                                              |
@@ -121,15 +123,21 @@ Phases, one alarm segment at a time:
   32 KB per file, lockfiles/generated/binary skipped, truncation recorded. Files are processed in
   batches (~25 per segment), in priority order — added/changed source first, docs and renames
   trail (D-018) — with a persisted cursor, so a segment stays inside the free plan's CPU budget
-  (I/O wait does not count as CPU).
+  (I/O wait does not count as CPU). Before the files are read, the newest earlier run for the
+  same repository and pull request that recorded findings is loaded and kept as the run's
+  previous findings, per reviewer (D-020).
 - `review` — for each enabled reviewer of the repository: prompts are prepared in their own
   segment; a single segment then fires all provider calls in parallel (the product requires
   parallel reviewers; waiting is I/O). Per-call timeout 120 s. One reviewer failing does not
-  cancel the others.
+  cancel the others. Each call's parsed output carries the reviewer's optional `summary`, its
+  findings, and the provider's token `usage` when the response envelope reports it (D-020).
 - `consolidate` — validate findings (schema below; stored cap 50 per reviewer), choose inline
-  comments (only lines present in the diff's right side, from patch hunk ranges), apply the D-009
-  caps (10 inline per reviewer, 25 per run); everything else — overflow and findings without a
-  valid line — becomes summary content with `file:line` references.
+  comments (only lines present in the diff's right side, from patch hunk ranges; a finding whose
+  `startLine` precedes its `line` and both are commentable becomes a multi-line comment — D-020),
+  apply the D-009 caps (10 inline per reviewer, 25 per run); everything else — overflow and
+  findings without a valid line — becomes summary content with `file:line` references. The
+  summary also gains the Resolved / Still present / New buckets when the run has previous
+  findings, computed against this run's findings (D-020).
 - `post` — one `pulls.createReview` with `event: COMMENT` (see Confirm below),
   `commit_id: head_sha`, the summary body, and the inline comments. A failed post is retried; if
   any reviewers failed, the summary notes them. After posting, the app's previous reviews on the
@@ -146,9 +154,10 @@ selection is opt-out: every enabled reviewer applies
 to an enabled repository unless a `reviewer_repositories` row disables the pair (D-016). Free-plan
 subrequest limits (50 per invocation) are respected by the file cap and reviewer count.
 
-Summary requirements: one review per run; per-reviewer attribution; counts; `file:line`
-references for findings not posted inline; explicit notes for truncation (D-010), cap overflow
-(D-009), and failed reviewers.
+Summary requirements: one review per run; per-reviewer attribution; each reviewer's own `summary`
+when it sent one (D-020); counts; `file:line` references for findings not posted inline; explicit
+notes for truncation (D-010), cap overflow (D-009), and failed reviewers; and the Resolved / Still
+present / New buckets when previous findings exist (D-020).
 
 ## Providers
 
@@ -160,21 +169,36 @@ Two adapters behind one interface, selected by the reviewer's `flavor`:
 | `anthropic` | `POST {base_url}/v1/messages`, `x-api-key`, `anthropic-version: 2023-06-01`, `system` + `messages` |
 
 Prompts: system = the reviewer's instructions + rules + the output contract; user = PR title,
-body (≤4 KB), file list, and the budgeted patches. Output contract — strict JSON:
+body (≤4 KB), file list, and the budgeted patches. Output contract v2 (D-020) — strict JSON:
 
 ```json
 {
-  "findings": [{ "file": "src/x.ts", "line": 42, "severity": "warning", "title": "…", "body": "…" }]
+  "summary": "one or two sentences on the change as a whole",
+  "findings": [
+    {
+      "file": "src/x.ts",
+      "line": 60,
+      "startLine": 55,
+      "severity": "warning",
+      "title": "…",
+      "body": "…"
+    }
+  ]
 }
 ```
 
-`severity` is `info` | `warning` | `error`; `title` ≤ 120 chars, `body` ≤ 2,000 — oversized
-titles and bodies are truncated, a missing or invalid `severity` falls back to `info`, and
-invalid `line` values are dropped. Parsing is tolerant (extract the JSON value), but a response
-that cannot be parsed fails that reviewer only. `params_json` merges extra body parameters (for
-example temperature); the `anthropic` flavor defaults `max_tokens` to 4096 unless `params_json`
-sets it. API keys are decrypted only for the call, and a stored key is write-only: responses
-expose only whether one is set, and `PATCH` with `apiKey: null` clears it.
+`severity` is `info` | `warning` | `error`; `title` ≤ 120 chars, `body` ≤ 2,000, `summary` ≤ 500 —
+oversized values are truncated, a missing or invalid `severity` falls back to `info`, and invalid
+`line` values are dropped. `startLine` (optional) marks a multi-line finding and is kept only when
+it precedes `line` and both lines are commentable in the diff. `summary` is optional. Parsing is
+tolerant (extract the JSON value), but a response that cannot be parsed fails that reviewer only.
+Token `usage` is captured from the response envelope when present — OpenAI's
+`usage.prompt_tokens` / `completion_tokens` / `total_tokens`, Anthropic's `usage.input_tokens` /
+`output_tokens` (total summed) — normalized and stored per reviewer; a provider that reports none
+is not an error. `params_json` merges extra body parameters (for example temperature); the
+`anthropic` flavor defaults `max_tokens` to 4096 unless `params_json` sets it. API keys are
+decrypted only for the call, and a stored key is write-only: responses expose only whether one is
+set, and `PATCH` with `apiKey: *** clears it.
 
 ## Dashboard
 
@@ -229,10 +253,11 @@ first-run without it).
 
 Vitest inside the Workers runtime (the existing setup): crypto round-trip and format; session
 middleware and the access gate; context budget, skip rules, and truncation notes; consolidation
-caps and inline selection (pure functions); provider adapters against mocked `fetch` (both
-flavors, timeouts, malformed output); webhook verification and de-duplication; the setup state
-machine with mocked GitHub endpoints; Durable Object phases, retries, and run records via the
-Workers Vitest plugin with stubbed `fetch`. No test performs real network calls.
+caps and inline selection (pure functions); multi-line `startLine` acceptance and rejection and
+the resolution comparison (D-020, pure functions); provider adapters against mocked `fetch` (both
+flavors, timeouts, malformed output, usage envelopes); webhook verification and de-duplication;
+the setup state machine with mocked GitHub endpoints; Durable Object phases, retries, and run
+records via the Workers Vitest plugin with stubbed `fetch`. No test performs real network calls.
 
 ## Build order
 

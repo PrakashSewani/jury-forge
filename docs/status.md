@@ -14,13 +14,19 @@ rule 4. Keep exactly one phase `in progress`.
 | 4     | Launch: first release tagged, site deployed                                                           | not started |
 
 No phase is `in progress` right now: phase 2 landed in full on 2026-10-17 and phase 3 starts after
-the improvement slices in `docs/roadmap.md` (D-017).
+the improvement slices in `docs/roadmap.md` (D-017). The remaining improvement slices 7–11 plus
+roadmap item 8 are in progress in one pull request against `dev` (D-019); they are product work,
+not a phase.
 
 ## Current handoff
 
 **Phase:** 2 complete. The whole slice stack is merged to `dev`, in order: #9 → #10 → #11 → #12 →
 #13 → #14, each retargeted to `dev` and merged with a merge commit to match the repository's
-history.
+history. The tracker refresh (#15) merged to `dev` on 2026-10-17 (`8221de5`).
+
+**In progress:** the improvement slate's remaining slices — 7, 8, 9, 10, 11 and item 8 — in one
+pull request on `feat/jury-forge-roadmap-20261017`, branched from `dev` at `8221de5`, one docs
+commit plus implementation commit(s) per slice (D-019).
 
 **Done this session:** merged the outstanding stack —
 
