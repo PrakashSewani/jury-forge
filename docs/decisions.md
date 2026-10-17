@@ -436,3 +436,34 @@ existing instances — D-013 stands as the default); blocking on _any_ error fin
 threshold (noisy for reviewers that flag errors liberally — the threshold is the escape hatch);
 a separate `blocking` column on `runs` (the posted `review_url` and the summary's note already
 record what happened).
+
+## D-022: Slice 9 — repository instructions in prompts, opt-in
+
+**Date:** 2026-10-17 (implements roadmap item 10 from D-017)
+
+**Decision:** With `repoInstructions` (boolean, default **false**) on, a run reads the
+repository's `AGENTS.md` and `CONTRIBUTING.md` at the pull request's head SHA — through the
+installation token, raw media type, in that order — and includes bounded excerpts in the user
+prompt of every reviewer that run. The excerpt budget `repoInstructionsMaxBytes` (int
+1,000–50,000, default 8,000) applies across both files: the first file that fits is included in
+full, the file that crosses the budget is truncated there, and any file past the budget is
+omitted; the block names what was truncated or skipped. The block is introduced as repository
+conventions that inform the review, and the prompt states that the reviewer's own instructions
+and rules take precedence over it. A 404 (no such file) or any fetch failure skips that file and
+never fails the run — the setting adds at most two subrequests per run, and the excerpts are
+re-read for every run rather than cached.
+
+**Why:** a repository's own conventions live in these files, and a reviewer that never sees them
+flags style the project has already settled; grounding the reviewer in the PR's own revision of
+those files is the smallest change that makes the reviews fit the repository — and keeping it
+opt-in respects that it changes what the model sees on every run.
+
+**Rejected:** on by default (an unasked-for file read plus up to 8 KB of prompt per reviewer on
+every run); reading the files from the default branch instead of the PR's head SHA (the revision
+under review is the one whose conventions apply, and a PR that rewrites `AGENTS.md` should be
+reviewed against its own text); sending whole files unbounded (one large `AGENTS.md` would
+consume the context budget); putting the block in the system prompt (it is context, not the
+reviewer's identity — and the system prompt carries the output contract); a dashboard field for
+per-repository instruction text (the repository already carries this; per-repo overrides stay a
+later decision); caching the excerpts in D1 (runs are rare, the files are small, and a cache is
+state to invalidate for no measured win).

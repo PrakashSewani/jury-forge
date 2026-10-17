@@ -64,6 +64,8 @@ stored value is missing or fails validation (a hand-edited row must never break 
 | `descriptionLimit`          | 500–20,000       | 4,096   | PR description excerpt in the prompt            |
 | `blockingMode`              | boolean          | `false` | review event selection (item 11, D-013 default) |
 | `blockingErrorThreshold`    | 1–50             | 1       | error findings needed for `REQUEST_CHANGES`     |
+| `repoInstructions`          | boolean          | `false` | repository instructions in prompts (D-022)      |
+| `repoInstructionsMaxBytes`  | 1,000–50,000     | 8,000   | excerpt budget for those instructions (D-022)   |
 
 `GET /api/settings` returns `{ settings, defaults }` — the effective values and the spec's
 defaults, so the dashboard can render "reset to defaults" without hard-coding them. `PATCH
@@ -84,6 +86,16 @@ run posts `event: COMMENT`. With it on, a run whose findings contain at least
 else still posts `COMMENT`, and a run with no error findings never blocks. The review body's notes
 state which event was used and, when blocking was on but the threshold was not reached, that it
 was considered.
+
+**Repository instructions** (D-022, item 10): with `repoInstructions` on, a run reads the
+repository's `AGENTS.md` and `CONTRIBUTING.md` at the pull request's head SHA (raw media type,
+through the installation token, in that order) and includes bounded excerpts in each reviewer's
+user prompt, capped across both files by `repoInstructionsMaxBytes`. A missing file (404) or a
+failed fetch is skipped without failing the run; a file cut off at the budget is marked as
+truncated in the block. The block is presented as repository conventions that inform the review,
+and the prompt states that the reviewer's own instructions and rules take precedence over it. The
+setting is off by default — it costs up to two subrequests and up to the budget in prompt bytes
+per reviewer on every run.
 
 ## Sessions and access
 
@@ -164,7 +176,9 @@ Phases, one alarm segment at a time:
   trail (D-018) — with a persisted cursor, so a segment stays inside the free plan's CPU budget
   (I/O wait does not count as CPU). Before the files are read, the newest earlier run for the
   same repository and pull request that recorded findings is loaded and kept as the run's
-  previous findings, per reviewer (D-020).
+  previous findings, per reviewer (D-020). When repository instructions are enabled, the
+  repository's `AGENTS.md` and `CONTRIBUTING.md` are read at the PR's head SHA here, bounded by
+  the configured budget, and kept for the prompts (D-022).
 - `review` — for each enabled reviewer of the repository: prompts are prepared in their own
   segment; a single segment then fires all provider calls in parallel (the product requires
   parallel reviewers; waiting is I/O). Per-call timeout 120 s. One reviewer failing does not
@@ -210,8 +224,9 @@ Two adapters behind one interface, selected by the reviewer's `flavor`:
 | `anthropic` | `POST {base_url}/v1/messages`, `x-api-key`, `anthropic-version: 2023-06-01`, `system` + `messages` |
 
 Prompts: system = the reviewer's instructions + rules + the output contract; user = PR title,
-body (≤ the configured description limit — 4 KB by default, D-021), file list, and the budgeted
-patches. Output contract v2 (D-020) — strict JSON:
+body (≤ the configured description limit — 4 KB by default, D-021), file list, the budgeted
+patches, and — when the setting is on — the bounded repository-instructions block (D-022). Output
+contract v2 (D-020) — strict JSON:
 
 ```json
 {
@@ -299,7 +314,8 @@ Vitest inside the Workers runtime (the existing setup): crypto round-trip and fo
 middleware and the access gate; context budget, skip rules, and truncation notes; consolidation
 caps and inline selection (pure functions); multi-line `startLine` acceptance and rejection and
 the resolution comparison (D-020, pure functions); settings validation, defaults, and the
-blocking-event selection (D-021, pure functions); provider adapters against mocked `fetch` (both
+blocking-event selection (D-021, pure functions); the repository-instruction excerpt formatter and
+its budget (D-022, pure functions); provider adapters against mocked `fetch` (both
 flavors, timeouts, malformed output, usage envelopes); webhook verification and de-duplication;
 the setup state machine with mocked GitHub endpoints; Durable Object phases, retries, and run
 records via the Workers Vitest plugin with stubbed `fetch`. No test performs real network calls.
