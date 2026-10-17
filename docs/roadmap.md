@@ -4,17 +4,20 @@ Accepted improvements beyond the phase-2 scope, recorded 2026-10-07 (D-017). Eve
 as a stacked PR (D-011) with its own decision entries and tests. Phase 3 (promo site) and
 phase 4 (launch) follow the improvement slices that precede launch.
 
+Slices 2b–6 and this slate landed on `dev` on 2026-10-17 (#9 → #14, `c47f87f2` … `5c8f71ce`);
+slice 6 is merged and slice 7 is next.
+
 ## Sequencing
 
-| Slice | Items   | Scope                                                                                 | Status          |
-| ----- | ------- | ------------------------------------------------------------------------------------- | --------------- |
-| 6     | 1, 2, 4 | Run hygiene: superseded-run skip, review minimization, priority file order            | in review (#14) |
-| 7     | 3, 6    | Resolution tracking + output contract (per-reviewer summary, `startLine`, usage)      | planned         |
-| 8     | 5, 11   | Instance settings (tunable caps/budgets) + optional blocking mode (default off)       | planned         |
-| 9     | 10      | Repo instructions (`AGENTS.md`/`CONTRIBUTING.md`) in prompts                          | planned         |
-| 10    | 7, 12   | Credential key rotation + audit trail                                                 | planned         |
-| 11    | 9, 13   | Distribution: guided deploy + reviewer import/export (with phase 3/4 launch polish)   | planned         |
-| —     | 8       | Access re-checks — parked; needs a deliberate decision (user-token storage trade-off) | open            |
+| Slice | Items   | Scope                                                                                 | Status  |
+| ----- | ------- | ------------------------------------------------------------------------------------- | ------- |
+| 6     | 1, 2, 4 | Run hygiene: superseded-run skip, review minimization, priority file order            | merged  |
+| 7     | 3, 6    | Resolution tracking + output contract (per-reviewer summary, `startLine`, usage)      | planned |
+| 8     | 5, 11   | Instance settings (tunable caps/budgets) + optional blocking mode (default off)       | planned |
+| 9     | 10      | Repo instructions (`AGENTS.md`/`CONTRIBUTING.md`) in prompts                          | planned |
+| 10    | 7, 12   | Credential key rotation + audit trail                                                 | planned |
+| 11    | 9, 13   | Distribution: guided deploy + reviewer import/export (with phase 3/4 launch polish)   | planned |
+| —     | 8       | Access re-checks — parked; needs a deliberate decision (user-token storage trade-off) | open    |
 
 ## Items
 
