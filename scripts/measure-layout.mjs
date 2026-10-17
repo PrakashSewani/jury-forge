@@ -477,8 +477,11 @@ async function collectMetrics(width) {
     }
   }
 
-  // 2. Tap targets, mobile only.
+  // 2. Tap targets, mobile only. Inline links inside running prose are exempt per WCAG
+  // 2.5.5 (a link in a sentence cannot be 44px tall without destroying the paragraph), so
+  // they are counted and skipped rather than reported; block-level links stay in scope.
   const tapTargets = [];
+  let tapTargetsInlineExempt = 0;
   if (width < 768) {
     const selector =
       'a[href], button, input, select, textarea, [role="button"], [role="switch"], [role="tab"]';
@@ -486,6 +489,14 @@ async function collectMetrics(width) {
     for (const element of document.querySelectorAll(selector)) {
       if (element.disabled) continue;
       if (!isVisible(element)) continue;
+      if (
+        element.tagName.toLowerCase() === 'a' &&
+        element.hasAttribute('href') &&
+        getComputedStyle(element).display === 'inline'
+      ) {
+        tapTargetsInlineExempt += 1;
+        continue;
+      }
       const rect = element.getBoundingClientRect();
       const minSide = Math.min(rect.width, rect.height);
       if (minSide >= 44) continue;
@@ -581,88 +592,263 @@ async function collectMetrics(width) {
   }
   contrastFailures.sort((a, b) => a.ratio - b.ratio);
 
-  // 4. Visible focus indicator on the first three interactive elements.
-  const focusChecks = [];
-  const focusable = [];
-  const seenFocus = new Set();
-  const interactiveSelector =
-    'a[href], button, input, select, textarea, [role="button"], [role="switch"], [role="tab"], [tabindex]';
-  for (const element of document.querySelectorAll(interactiveSelector)) {
-    if (element.disabled) continue;
-    if (!isVisible(element)) continue;
-    if (seenFocus.has(element)) continue;
-    seenFocus.add(element);
-    focusable.push(element);
-    if (focusable.length >= 3) break;
-  }
-  for (const element of focusable) {
-    element.focus();
-    const style = getComputedStyle(element);
-    const outlineStyle = style.outlineStyle;
-    const outlineWidth = style.outlineWidth;
-    const boxShadow = style.boxShadow;
-    const borderColor = style.borderColor;
-    const passes =
-      (outlineStyle !== 'none' && Number.parseFloat(outlineWidth) >= 1) || boxShadow !== 'none';
-    focusChecks.push({
-      element: describe(element),
-      label: shortLabel(element),
-      outlineStyle,
-      outlineWidth,
-      boxShadow,
-      borderColor,
-      passes,
-    });
-  }
-  if (document.activeElement && typeof document.activeElement.blur === 'function') {
-    document.activeElement.blur();
-  }
-  document.body.focus();
-
-  // 5. Mobile nav toggle, measured at 390 only.
-  let navToggle = 'not-applicable';
-  if (width === 390) {
-    let toggle = null;
-    for (const element of document.querySelectorAll(
-      'button, [role="button"], [aria-expanded], [aria-controls]',
-    )) {
-      const name = (element.getAttribute('aria-label') || element.textContent || '').trim();
-      if (
-        /menu|nav/i.test(name) ||
-        element.hasAttribute('aria-expanded') ||
-        element.hasAttribute('aria-controls')
-      ) {
-        toggle = element;
-        break;
-      }
-    }
-    if (!toggle) {
-      navToggle = 'absent';
-    } else {
-      toggle.click();
-      await new Promise((resolvePromise) => setTimeout(resolvePromise, 300));
-      const nav = document.querySelector('nav');
-      const navRect = nav ? nav.getBoundingClientRect() : null;
-      const opened =
-        nav !== null &&
-        getComputedStyle(nav).display !== 'none' &&
-        navRect !== null &&
-        navRect.width > 0 &&
-        navRect.height > 0;
-      navToggle = { opened, label: shortLabel(toggle) };
-    }
-  }
-
   return JSON.stringify({
     width,
     scrollWidth,
     clientWidth,
     overflow,
     tapTargets,
+    tapTargetsInlineExempt,
     contrastFailures,
-    focusChecks,
-    navToggle,
   });
+}
+
+// ---------------------------------------------------------------------------
+// Mobile nav pass, measured at 390 only. Run after the focus pass so opening the
+// slide-over cannot change which elements were sampled for focus.
+// ---------------------------------------------------------------------------
+
+async function collectNavToggle(send, width) {
+  const response = await send('Runtime.evaluate', {
+    expression: `(async () => {
+      const describe = (element) => {
+        const tag = element.tagName.toLowerCase();
+        const id = element.id ? '#' + element.id : '';
+        let classes = '';
+        if (typeof element.className === 'string' && element.className.trim() !== '') {
+          classes = '.' + element.className.trim().split(/\\s+/).slice(0, 3).join('.');
+        }
+        return tag + id + classes;
+      };
+      const shortLabel = (element) => {
+        const aria = (element.getAttribute('aria-label') || '').trim();
+        const text = (element.textContent || '').replace(/\\s+/g, ' ').trim();
+        return (aria || text).slice(0, 40);
+      };
+      let navToggle = 'not-applicable';
+      if (${width} === 390) {
+        let toggle = null;
+        for (const element of document.querySelectorAll(
+          'button, [role="button"], [aria-expanded], [aria-controls]',
+        )) {
+          const name = (element.getAttribute('aria-label') || element.textContent || '').trim();
+          if (
+            /menu|nav/i.test(name) ||
+            element.hasAttribute('aria-expanded') ||
+            element.hasAttribute('aria-controls')
+          ) {
+            toggle = element;
+            break;
+          }
+        }
+        if (!toggle) {
+          navToggle = 'absent';
+        } else {
+          toggle.click();
+          await new Promise((resolvePromise) => setTimeout(resolvePromise, 300));
+          const nav = document.querySelector('nav');
+          const navRect = nav ? nav.getBoundingClientRect() : null;
+          const opened =
+            nav !== null &&
+            getComputedStyle(nav).display !== 'none' &&
+            navRect !== null &&
+            navRect.width > 0 &&
+            navRect.height > 0;
+          navToggle = { opened, label: shortLabel(toggle), element: describe(toggle) };
+        }
+      }
+      return JSON.stringify(navToggle);
+    })()`,
+    returnByValue: true,
+    awaitPromise: true,
+  });
+  return JSON.parse(response.result.value);
+}
+
+// ---------------------------------------------------------------------------
+// Focus indicator pass. `element.focus()` called from script does not match
+// `:focus-visible`, so it cannot tell "no focus styling" apart from "correctly
+// focus-visible styling"; it only passes a `:focus` outline, the wrong UX bar.
+// This pass drives a real Tab keypress over CDP and reads the styling while the
+// element is focus-visible. It keeps the first-three-interactive-elements scope
+// and falls back to `.focus()` only when Tab never reaches an interactive
+// element, recording which path it used as `focusMethod`.
+// ---------------------------------------------------------------------------
+
+const FOCUS_TAG = 'data-jf-focus';
+const FOCUS_SELECTOR =
+  'a[href], button, input, select, textarea, [role="button"], [role="switch"], [role="tab"], [tabindex]';
+
+// Shared in-page helpers, injected inside the stringified expressions below. They must be
+// defined in each expression because every Runtime.evaluate is its own scope.
+const FOCUS_HELPERS = `
+  const isVisible = (element) => {
+    const style = getComputedStyle(element);
+    if (style.display === 'none' || style.visibility === 'hidden') return false;
+    const rect = element.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
+  };
+  const describe = (element) => {
+    const tag = element.tagName.toLowerCase();
+    const id = element.id ? '#' + element.id : '';
+    let classes = '';
+    if (typeof element.className === 'string' && element.className.trim() !== '') {
+      classes = '.' + element.className.trim().split(/\\s+/).slice(0, 3).join('.');
+    }
+    return tag + id + classes;
+  };
+  const shortLabel = (element) => {
+    const aria = (element.getAttribute('aria-label') || '').trim();
+    const text = (element.textContent || '').replace(/\\s+/g, ' ').trim();
+    return (aria || text).slice(0, 40);
+  };
+  const clearFocusTags = () => {
+    for (const element of document.querySelectorAll('[data-jf-focus]')) {
+      element.removeAttribute('data-jf-focus');
+    }
+  };
+  const blurActive = () => {
+    if (document.activeElement && typeof document.activeElement.blur === 'function') {
+      document.activeElement.blur();
+    }
+    if (typeof document.body.focus === 'function') document.body.focus();
+  };
+`;
+
+async function collectFocusChecks(send) {
+  const setup = await send('Runtime.evaluate', {
+    expression: `(() => {${FOCUS_HELPERS}
+      clearFocusTags();
+      const targets = [];
+      const seen = new Set();
+      for (const element of document.querySelectorAll(${JSON.stringify(FOCUS_SELECTOR)})) {
+        if (element.disabled) continue;
+        if (!isVisible(element)) continue;
+        if (seen.has(element)) continue;
+        seen.add(element);
+        const index = targets.length;
+        element.setAttribute('data-jf-focus', String(index));
+        targets.push({ index, element: describe(element), label: shortLabel(element) });
+        if (targets.length >= 3) break;
+      }
+      blurActive();
+      return JSON.stringify(targets);
+    })()`,
+    returnByValue: true,
+  });
+  const targets = JSON.parse(setup.result.value);
+  const checks = [];
+  const recorded = new Set();
+
+  const readActive = async () => {
+    const response = await send('Runtime.evaluate', {
+      expression: `(() => {
+        const element = document.activeElement;
+        if (!element || element === document.body) return null;
+        const style = getComputedStyle(element);
+        return JSON.stringify({
+          index: element.hasAttribute('${FOCUS_TAG}')
+            ? Number(element.getAttribute('${FOCUS_TAG}'))
+            : null,
+          focusVisible:
+            typeof element.matches === 'function' ? element.matches(':focus-visible') : false,
+          outlineStyle: style.outlineStyle,
+          outlineWidth: style.outlineWidth,
+          boxShadow: style.boxShadow,
+          borderColor: style.borderColor,
+        });
+      })()`,
+      returnByValue: true,
+    });
+    return response.result.value === null ? null : JSON.parse(response.result.value);
+  };
+
+  const MAX_TABS = 40;
+  let tabs = 0;
+  while (tabs < MAX_TABS && recorded.size < targets.length) {
+    await send('Input.dispatchKeyEvent', {
+      type: 'rawKeyDown',
+      windowsVirtualKeyCode: 9,
+      key: 'Tab',
+      code: 'Tab',
+    });
+    await send('Input.dispatchKeyEvent', {
+      type: 'keyUp',
+      windowsVirtualKeyCode: 9,
+      key: 'Tab',
+      code: 'Tab',
+    });
+    tabs += 1;
+    const active = await readActive();
+    if (active === null || active.index === null) continue;
+    if (recorded.has(active.index)) continue;
+    const target = targets[active.index];
+    if (!target) continue;
+    recorded.add(active.index);
+    const passes =
+      active.focusVisible &&
+      ((active.outlineStyle !== 'none' && Number.parseFloat(active.outlineWidth) >= 1) ||
+        active.boxShadow !== 'none');
+    checks.push({
+      element: target.element,
+      label: target.label,
+      focusVisible: active.focusVisible,
+      outlineStyle: active.outlineStyle,
+      outlineWidth: active.outlineWidth,
+      boxShadow: active.boxShadow,
+      borderColor: active.borderColor,
+      passes,
+    });
+  }
+
+  let method = 'Tab';
+  if (recorded.size === 0) {
+    // Tab never reached an interactive element; fall back to a scripted focus so the JSON
+    // still records the styling, and say so through focusMethod.
+    method = 'focus()';
+    const response = await send('Runtime.evaluate', {
+      expression: `(() => {${FOCUS_HELPERS}
+        const out = [];
+        const seen = new Set();
+        for (const element of document.querySelectorAll(${JSON.stringify(FOCUS_SELECTOR)})) {
+          if (element.disabled) continue;
+          if (!isVisible(element)) continue;
+          if (seen.has(element)) continue;
+          seen.add(element);
+          element.focus();
+          const style = getComputedStyle(element);
+          out.push({
+            element: describe(element),
+            label: shortLabel(element),
+            focusVisible:
+              typeof element.matches === 'function' ? element.matches(':focus-visible') : false,
+            outlineStyle: style.outlineStyle,
+            outlineWidth: style.outlineWidth,
+            boxShadow: style.boxShadow,
+            borderColor: style.borderColor,
+            passes:
+              (style.outlineStyle !== 'none' && Number.parseFloat(style.outlineWidth) >= 1) ||
+              style.boxShadow !== 'none',
+          });
+          if (out.length >= 3) break;
+        }
+        blurActive();
+        return JSON.stringify(out);
+      })()`,
+      returnByValue: true,
+    });
+    checks.push(...JSON.parse(response.result.value));
+  }
+
+  await send('Runtime.evaluate', {
+    expression: `(() => {${FOCUS_HELPERS}
+      clearFocusTags();
+      blurActive();
+    })()`,
+    returnByValue: true,
+  });
+
+  return { checks, method };
 }
 
 // ---------------------------------------------------------------------------
@@ -721,6 +907,10 @@ async function measureCell(context, route, width, theme) {
     );
   }
   const metrics = JSON.parse(response.result.value);
+  const focus = await collectFocusChecks(send);
+  metrics.focusChecks = focus.checks;
+  metrics.focusMethod = focus.method;
+  metrics.navToggle = await collectNavToggle(send, width);
   const failingChecks = failingChecksFor(metrics, width);
   return {
     route: route.slug,
@@ -734,8 +924,10 @@ async function measureCell(context, route, width, theme) {
     clientWidth: metrics.clientWidth,
     overflow: metrics.overflow,
     tapTargets: metrics.tapTargets,
+    tapTargetsInlineExempt: metrics.tapTargetsInlineExempt,
     contrastFailures: metrics.contrastFailures,
     focusChecks: metrics.focusChecks,
+    focusMethod: metrics.focusMethod,
     navToggle: metrics.navToggle,
     failingChecks,
     failingCount: failingChecks.length,
@@ -867,7 +1059,12 @@ function buildSheet(result) {
     for (const target of cell.tapTargets) targets.push({ cell, target });
   }
   targets.sort((a, b) => a.target.minSide - b.target.minSide);
+  const inlineExempt = result.cells.reduce(
+    (total, cell) => total + (cell.tapTargetsInlineExempt ?? 0),
+    0,
+  );
   lines.push(`Total violations: ${targets.length}`);
+  lines.push(`Inline links exempt under WCAG 2.5.5: ${inlineExempt}`);
   if (targets.length === 0) {
     lines.push('None.');
   } else {
@@ -909,6 +1106,8 @@ function buildSheet(result) {
     }
   }
   lines.push(`Checks run: ${focusTotal}; failures: ${focusFailures.length}`);
+  const methods = [...new Set(result.cells.map((cell) => cell.focusMethod).filter(Boolean))];
+  lines.push(`Focus method: ${methods.join(', ') || 'unknown'}`);
   if (focusFailures.length === 0) {
     lines.push('None.');
   } else {
