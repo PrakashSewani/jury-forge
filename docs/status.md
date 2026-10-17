@@ -50,15 +50,17 @@ that script is deliberately not exercised against a real Cloudflare account here
 change deploys anything.
 
 **Rework (2026-10-17):** the post-phase-2 rework is four stacked slices. Slice A merged to `dev` as
-**#17** (`77541fbb`; reviewed head `33b0a50`) on `feat/rework-a-design-system-20261017`; slice B is
-in progress on `feat/rework-b-shell-screens-20261017`, rebased onto that merge.
+**#17** (`77541fbb`; reviewed head `33b0a50`) on `feat/rework-a-design-system-20261017`; slice B
+merged to `dev` as **#18** (`c48e825e1b`), and post-merge canary verification passed on the merged
+tree. Slice C is in progress on `feat/rework-c-product-shape-20261017` — its plan is recorded in
+D-028 and `docs/design.md`, and implementation has not started. Slice D is not started.
 
-| Slice | Branch                                 | Status                       |
-| ----- | -------------------------------------- | ---------------------------- |
-| A     | `feat/rework-a-design-system-20261017` | merged to `dev` (`77541fbb`) |
-| B     | `feat/rework-b-shell-screens-20261017` | in progress (runs 2–3)       |
-| C     | —                                      | not started                  |
-| D     | —                                      | not started                  |
+| Slice | Branch                                 | Status                               |
+| ----- | -------------------------------------- | ------------------------------------ |
+| A     | `feat/rework-a-design-system-20261017` | merged to `dev` (`77541fbb`) (#17)   |
+| B     | `feat/rework-b-shell-screens-20261017` | merged to `dev` (`c48e825e1b`) (#18) |
+| C     | `feat/rework-c-product-shape-20261017` | in progress                          |
+| D     | —                                      | not started                          |
 
 Slice A is the design-system vocabulary and UI harness (D-026): a token layer in
 `product/src/styles.css`, the `product/src/ui/` primitives, a dependency-free
@@ -115,9 +117,9 @@ reaped. Numbers: `docs/rework/final.json` / `final.md`, deltas against `docs/rew
 
 **Blocked by:** nothing.
 
-**Next action:** slice B is open for review against `dev`; then slice C (readiness, reviewer
-templates, reviewer↔repo visibility, try-a-reviewer) and slice D (validated contracts, error
-taxonomy, client routing, run polling) from the rework plan in `docs/roadmap.md`.
+**Next action:** slice C's pull request (readiness, reviewer templates, reviewer↔repo visibility,
+try-a-reviewer — D-028) is next; then slice D (validated contracts, error taxonomy, client routing,
+run polling) from the rework plan in `docs/roadmap.md`.
 
 ## Backlog (owner-owned, deferred)
 

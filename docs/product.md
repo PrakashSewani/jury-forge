@@ -49,7 +49,8 @@ results that land in the GitHub workflow where the code already lives.
 - Not a model host, reseller, or proxy — users bring keys; requests go to their providers.
 - GitHub only in v1 — no GitLab, Bitbucket, or Gitea.
 - No automatic code fixes or auto-merge in v1 — the output is review feedback.
-- No preset reviewer marketplace in v1 — reviewers are user-defined.
+- No preset reviewer marketplace in v1 — reviewers are user-defined. The seven built-in starter
+  definitions ship with the product and are not a marketplace.
 - No metering or reselling of AI calls — users pay their providers directly.
 
 ## Success looks like
@@ -66,6 +67,15 @@ headroom; credentials are encrypted at rest in the owner's own database, never l
 sent anywhere but the configured provider; review runs are durable and resumable; the dashboard
 manages reviewers, credentials, setup, and run history.
 
+## The first five minutes
+
+Deploy the Worker → the setup guide (claim the instance, create the private GitHub App, install
+it) → end up with a jury: the built-in reviewer templates are the seven starter roles, and
+creating a reviewer from one prefills its name, instructions and rules (the model, endpoint and
+key always come from you) → enable a repository → the first review lands on a pull request. The
+dashboard derives what is still undone from the instance's own database, so its checklist matches
+what the instance actually has.
+
 ## Core concepts
 
 - **Instance** — one self-hosted deployment: a Cloudflare Worker, a database, and its own
@@ -74,6 +84,8 @@ manages reviewers, credentials, setup, and run history.
   GitHub login plus an optional allowlist.
 - **Reviewer** — a configurable agent: name, instructions, review rules, provider binding, and
   enabled/disabled state. Not a hard-coded review type.
+- **Reviewer template** — a built-in starter definition (name, instructions, rules) that prefills
+  a new reviewer; the model, endpoint and key always come from the operator.
 - **Provider binding** — a reviewer's model config: API flavor (OpenAI-compatible or
   Anthropic-compatible), base URL, API key (encrypted at rest), model name, and parameters.
 - **Review run** — one execution of the team against one PR revision, coordinated by a per-run
@@ -101,6 +113,10 @@ manages reviewers, credentials, setup, and run history.
   files, and binaries are skipped; truncation is noted in the review (D-010).
 - Reviewers run in parallel within a run; one reviewer failing does not cancel the others.
 - Reviewers are defined once per instance and enabled per repository.
+- A reviewer's enabled repositories are part of the reviewer's record in the dashboard, shown
+  without opening each repository in turn.
+- An operator can run one reviewer against a real open pull request as a trial from the dashboard;
+  a trial run posts nothing to GitHub and is recorded as a manual run.
 - Cost posture: designed to run within Cloudflare's free plan for typical personal use;
   documentation names the paid plan ($5/month, optional, the owner's own account) as the
   headroom path for very large PRs.

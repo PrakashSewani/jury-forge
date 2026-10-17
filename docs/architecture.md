@@ -62,6 +62,11 @@ configured. Nothing else.
   diff text over large JSON payloads, cap diff size (D-010), and split work across alarm segments.
 - **Deployments are manual**, always to the owner's own account, and only when asked.
 
+Derived product state is computed, not stored: readiness (D-028) is read from D1 by the Worker and
+rendered by the dashboard, which keeps no checklist of its own and so cannot contradict the
+database. A manual try run is the same engine and the same step machine as an automatic run,
+differing only in the skipped `post` step and the recorded `mode`.
+
 ## Branch and release flow
 
 - `dev` is the default branch and the integration target. Agent work happens on feature branches

@@ -778,3 +778,76 @@ dark; responsive-only 44 px targets (the controls look and behave better at 44 p
 viewport, and scoping the rule to mobile makes the desktop tap area a second, untested bar);
 `.focus()`-based focus measurement and a blanket 44 px rule for inline links (the two wrong bars
 above).
+
+## D-028: Rework slice C — computed readiness, reviewer templates, reviewer↔repo visibility, and manual try runs
+
+**Date:** 2026-10-17 (third slice of the post-phase-2 rework; C-1 through C-4)
+
+**Decision:** (1) **Readiness, computed not written.** A new `product/worker/lib/readiness.ts` and
+a new `product/worker/routes/instance.ts` mounted at `/api/instance` expose
+`GET /api/instance/readiness` (session required) returning a new shared contract
+`InstanceReadiness`: `claimed`, `appInstalled`, `reposEnabled`, `reviewersWithKey`,
+`repoReviewerPairs`, `firstRunAt`, plus `completed`, `total` (5), a `steps` array and a single
+`nextStep`. Every value is derived from D1 at request time: `claimed` from
+`instance_meta.claimed_at`; `appInstalled` from `instance_meta.installation_id`; `reposEnabled`
+as the count of `repositories` with `enabled = 1`; `reviewersWithKey` as the count of `reviewers`
+with `enabled = 1` and a non-empty `api_key_enc`; `repoReviewerPairs` as the count of
+reviewer/repository pairs the run engine would actually use (reviewer enabled, repository enabled,
+and no `reviewer_repositories` row with `enabled = 0` for the pair); and `firstRunAt` as the
+earliest `runs.created_at` for a run that was not `skipped`, or null. The five steps, in order:
+claim the instance, install the GitHub App, enable a repository, add a reviewer with a model key,
+see the first run. `nextStep` is the first step that is not done (title, one-line body, href and
+button label); once all five are done it is a closing state pointing at the run list. The
+dashboard Overview leads with `completed` of `total` and that next step, and renders the same five
+steps as a checklist — so the screen cannot claim a step is done when the database disagrees.
+There is no client-side checklist and no stored "onboarding" flag.
+
+(2) **Reviewer templates.** A new shared module `shared/src/templates.ts` exports
+`REVIEWER_TEMPLATES`: seven built-in starters — Security, Architecture, Backend, Frontend,
+Performance, Testing, Documentation — each with a name, a one-line summary and real `instructions`
+and `rules` text. The Dashboard's "new reviewer" screen offers a template or a blank reviewer and
+prefills name, instructions and rules from it; the user still supplies the model, base URL and API
+key. This is client-side prefill only — no API, no database table, no migration. The seven names
+are the roles `docs/product.md` already lists, and a built-in starter set is **not** the "preset
+reviewer marketplace" that document lists as a v1 non-goal: nothing is downloaded, published or
+shared between instances.
+
+(3) **Reviewer ↔ repository visibility.** The shared `Reviewer` contract gains
+`repositories: string[]` — the full names of the enabled repositories a reviewer will actually run
+on (repository enabled, and no `reviewer_repositories` row with `enabled = 0`), computed in one
+query by `product/worker/lib/reviewers.ts`. The reviewers list renders that field, so a reviewer's
+reach is visible without opening each repository in turn; the dashboard no longer issues one
+request per repository to work it out.
+
+(4) **"Try a reviewer"** (the one new engine surface). `POST /api/runs/try` runs one or more named
+reviewers against one open pull request, from the dashboard, and posts nothing to GitHub.
+`GET /api/repositories/:repoId/pulls` lists the repository's open pull requests for the picker.
+Migration `0006_run_mode.sql` adds `runs.mode` (`'auto'` | `'manual'`, additive, NOT NULL, default
+`'auto'`) — the only schema change in the slice. The run payload carries the mode; the Durable
+Object's step machine runs the same config → files → context → prepare → review → consolidate path
+and skips the `post` step in manual mode, finishing `completed` with no `review_url`. A manual run
+also ignores the repository-enabled gate and the superseded-run skip, because neither is what the
+operator asked for; and it runs exactly the reviewers named in the request rather than every
+reviewer enabled for the repository. Run detail states plainly that a manual run was not posted to
+GitHub.
+
+**Why:** the first five minutes are where a self-hosted instance is won or lost, and the dashboard
+was guessing at them: a stored checklist or an "onboarding" flag goes stale the moment the
+database changes, while the five facts readiness needs are already in D1 and are cheap to read per
+request. Reviewer reach had the same problem in the other direction — the dashboard fetched every
+repository to work out which reviewers applied — and the Worker can join that once. Templates
+exist because a blank reviewer box is a cold start, and the seven roles were already the product's
+vocabulary; a built-in set needs no API and no table because it is the same for every instance.
+And the try run closes the last gap between configuring a reviewer and trusting it: an operator
+can point one reviewer at a real open PR and see the result without anything landing on GitHub.
+
+**Rejected:** a stored onboarding checklist in the dashboard — it goes stale the moment the
+database changes; a separate templates API or table — an API and a migration for data that never
+changes per instance; computing a reviewer's repositories in the dashboard with one request per
+repository — N+1 fetches for a value the Worker can join in one query; a separate try-run code path
+outside the Durable Object — it would fork the engine, so the manual run rides the existing step
+machine and differs only in the skipped `post` step and the recorded `mode`.
+
+**Not in this slice:** no multi-repository or multi-PR try run; no private or closed pull requests
+in the picker (open pull requests only); no posting to GitHub from a try run; no reviewer
+marketplace; and no deploy — the `dev`-only hold stands.

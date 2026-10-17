@@ -9,35 +9,35 @@ the decision it implements.
 
 ## Modules
 
-| Piece         | Where                          | What it holds                                                                                |
-| ------------- | ------------------------------ | -------------------------------------------------------------------------------------------- |
-| Worker routes | `product/worker/routes/`       | Hono sub-apps: setup, auth, reviewers, repositories, runs, webhooks                          |
-| Worker lib    | `product/worker/lib/`          | crypto, sessions, access gate, context builder, consolidation, resolution, provider adapters |
-| Run engine    | `product/worker/run-engine.ts` | the `RunEngine` Durable Object (binding `RUNS`)                                              |
-| Contracts     | `shared/src/`                  | API request/response types shared by the Worker and the dashboard                            |
-| Dashboard     | `product/src/`                 | React screens: setup wizard, reviewers, repositories, runs                                   |
-| Shell         | `product/src/shell/`           | `Shell`, `Nav`, `ThemeToggle`, `UserMenu`, `RouteGuard` — the chrome around the screens      |
-| UI primitives | `product/src/ui/`              | the D-026 design-system primitives, plus `cx` / `focusRing` / `tapTarget`                    |
+| Piece         | Where                          | What it holds                                                                                                               |
+| ------------- | ------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| Worker routes | `product/worker/routes/`       | Hono sub-apps: setup, auth, reviewers, repositories, runs, webhooks                                                         |
+| Worker lib    | `product/worker/lib/`          | crypto, sessions, access gate, context builder, consolidation, resolution, provider adapters                                |
+| Run engine    | `product/worker/run-engine.ts` | the `RunEngine` Durable Object (binding `RUNS`)                                                                             |
+| Contracts     | `shared/src/`                  | API contracts (`contracts.ts`) and the built-in reviewer templates (`templates.ts`), shared by the Worker and the dashboard |
+| Dashboard     | `product/src/`                 | React screens: setup wizard, reviewers, repositories, runs                                                                  |
+| Shell         | `product/src/shell/`           | `Shell`, `Nav`, `ThemeToggle`, `UserMenu`, `RouteGuard` — the chrome around the screens                                     |
+| UI primitives | `product/src/ui/`              | the D-026 design-system primitives, plus `cx` / `focusRing` / `tapTarget`                                                   |
 
 ## Data model (D1)
 
 Migrations continue in `product/migrations/` (`0002_*` onward). Timestamps are unix seconds
 (`INTEGER`, `unixepoch()`). All SQL uses prepared statements.
 
-| Table                   | Purpose                              | Key columns                                                                                                                                                               |
-| ----------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `instance_meta`         | existing singleton key/value         | `key`, `value` — holds `claimed_at`, `owner_login`, `owner_id`, `owner_type`, `installation_id`, `app_slug`                                                               |
-| `github_app`            | the instance's private app (one row) | `app_id`, `slug`, `client_id`, `private_key_enc`, `webhook_secret_enc`, `client_secret_enc`                                                                               |
-| `reviewers`             | reviewer definitions                 | `id`, `name`, `instructions`, `rules`, `flavor` (`openai`/`anthropic`), `base_url`, `api_key_enc`, `model`, `params_json`, `enabled`                                      |
-| `repositories`          | installed repositories               | `repo_id` (GitHub numeric id), `full_name`, `private`, `enabled`                                                                                                          |
-| `reviewer_repositories` | per-repo reviewer enablement         | `reviewer_id`, `repo_id`, `enabled`                                                                                                                                       |
-| `runs`                  | one row per review run               | `id`, `delivery_id`, `repo_id`, `pr_number`, `head_sha`, `event`, `status` (`running`/`completed`/`failed`/`skipped`), `error`, `review_url`, `created_at`, `finished_at` |
-| `run_reviewers`         | per-reviewer outcome                 | `run_id`, `reviewer_id`, `status`, `findings_json`, `summary` (D-020), `usage_json` (D-020), `error`                                                                      |
-| `sessions`              | dashboard sessions                   | `token_hash`, `login`, `avatar_url`, `created_at`, `expires_at`                                                                                                           |
-| `oauth_states`          | single-use OAuth/manifest states     | `state`, `kind` (`login`/`claim`/`manifest`), `created_at`, `expires_at`                                                                                                  |
-| `webhook_deliveries`    | delivery de-duplication              | `delivery_id`, `received_at`                                                                                                                                              |
-| `instance_settings`     | tunable instance numbers (D-021)     | `key`, `value` (TEXT, validated per key), `updated_at` — see "Instance settings"                                                                                          |
-| `activity_log`          | the dashboard activity trail (D-023) | `id`, `at`, `actor`, `action`, `target`, `detail`                                                                                                                         |
+| Table                   | Purpose                              | Key columns                                                                                                                                                                                                                     |
+| ----------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `instance_meta`         | existing singleton key/value         | `key`, `value` — holds `claimed_at`, `owner_login`, `owner_id`, `owner_type`, `installation_id`, `app_slug`                                                                                                                     |
+| `github_app`            | the instance's private app (one row) | `app_id`, `slug`, `client_id`, `private_key_enc`, `webhook_secret_enc`, `client_secret_enc`                                                                                                                                     |
+| `reviewers`             | reviewer definitions                 | `id`, `name`, `instructions`, `rules`, `flavor` (`openai`/`anthropic`), `base_url`, `api_key_enc`, `model`, `params_json`, `enabled`                                                                                            |
+| `repositories`          | installed repositories               | `repo_id` (GitHub numeric id), `full_name`, `private`, `enabled`                                                                                                                                                                |
+| `reviewer_repositories` | per-repo reviewer enablement         | `reviewer_id`, `repo_id`, `enabled`                                                                                                                                                                                             |
+| `runs`                  | one row per review run               | `id`, `delivery_id`, `repo_id`, `pr_number`, `head_sha`, `event`, `mode` (`auto`/`manual`, `0006_run_mode.sql`, D-028), `status` (`running`/`completed`/`failed`/`skipped`), `error`, `review_url`, `created_at`, `finished_at` |
+| `run_reviewers`         | per-reviewer outcome                 | `run_id`, `reviewer_id`, `status`, `findings_json`, `summary` (D-020), `usage_json` (D-020), `error`                                                                                                                            |
+| `sessions`              | dashboard sessions                   | `token_hash`, `login`, `avatar_url`, `created_at`, `expires_at`                                                                                                                                                                 |
+| `oauth_states`          | single-use OAuth/manifest states     | `state`, `kind` (`login`/`claim`/`manifest`), `created_at`, `expires_at`                                                                                                                                                        |
+| `webhook_deliveries`    | delivery de-duplication              | `delivery_id`, `received_at`                                                                                                                                                                                                    |
+| `instance_settings`     | tunable instance numbers (D-021)     | `key`, `value` (TEXT, validated per key), `updated_at` — see "Instance settings"                                                                                                                                                |
+| `activity_log`          | the dashboard activity trail (D-023) | `id`, `at`, `actor`, `action`, `target`, `detail`                                                                                                                                                                               |
 
 Notes: index `runs(repo_id, created_at desc)` and `sessions(expires_at)`; expired sessions and
 states are pruned on access; `webhook_deliveries` older than 7 days are pruned opportunistically.
@@ -119,6 +119,63 @@ truncated in the block. The block is presented as repository conventions that in
 and the prompt states that the reviewer's own instructions and rules take precedence over it. The
 setting is off by default — it costs up to two subrequests and up to the budget in prompt bytes
 per reviewer on every run.
+
+## Readiness, reviewer templates, and manual try runs (D-028)
+
+### Readiness (C-1)
+
+`GET /api/instance/readiness` (session required) returns the shared `InstanceReadiness` contract,
+computed from D1 on every request by `product/worker/lib/readiness.ts` and mounted at
+`/api/instance` by `product/worker/routes/instance.ts`:
+
+| Field               | Derivation                                                                                                                                                            |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `claimed`           | `instance_meta.claimed_at` is present                                                                                                                                 |
+| `appInstalled`      | `instance_meta.installation_id` is present                                                                                                                            |
+| `reposEnabled`      | count of `repositories` with `enabled = 1`                                                                                                                            |
+| `reviewersWithKey`  | count of `reviewers` with `enabled = 1` and a non-empty `api_key_enc`                                                                                                 |
+| `repoReviewerPairs` | count of reviewer/repository pairs the run engine would use: reviewer enabled, repository enabled, and no `reviewer_repositories` row with `enabled = 0` for the pair |
+| `firstRunAt`        | the earliest `runs.created_at` for a run that was not `skipped`, else null                                                                                            |
+
+The contract also carries `completed`, `total` (5), a `steps` array and a single `nextStep`. The
+five steps, in order: claim the instance, install the GitHub App, enable a repository, add a
+reviewer with a model key, see the first run. `nextStep` is the first step that is not done
+(title, one-line body, href and button label); once all five are done it is a closing state
+pointing at the run list. The dashboard Overview leads with `completed` of `total` and that next
+step, and renders the same five steps as a checklist. Readiness is computed per request from D1 —
+the dashboard holds no onboarding state of its own, so it cannot claim a step is done when the
+database disagrees.
+
+### Reviewer templates (C-2)
+
+`shared/src/templates.ts` exports `REVIEWER_TEMPLATES`: seven built-in starters — Security,
+Architecture, Backend, Frontend, Performance, Testing, Documentation — each with a name, a
+one-line summary and real `instructions` and `rules` text. The Dashboard's "new reviewer" screen
+offers a template or a blank reviewer and prefills name, instructions and rules from it; the
+operator still supplies the model, base URL and API key. This is client-side prefill only: no API,
+no database table, no migration, and nothing downloaded or shared between instances (a built-in
+starter set, not the marketplace `docs/product.md` excludes).
+
+### Reviewer ↔ repository visibility (C-3)
+
+The shared `Reviewer` contract gains `repositories: string[]` — the full names of the enabled
+repositories a reviewer will actually run on (repository enabled, and no `reviewer_repositories`
+row with `enabled = 0`), computed by `product/worker/lib/reviewers.ts` in one query. The reviewers
+list renders that field, so a reviewer's reach is visible without opening each repository in turn,
+and the dashboard no longer issues one request per repository to work it out.
+
+### Manual try runs (C-4)
+
+`POST /api/runs/try` runs one or more named reviewers against one open pull request from the
+dashboard and posts nothing to GitHub; `GET /api/repositories/:repoId/pulls` lists the
+repository's open pull requests for the picker (session-guarded and same-origin, like the rest of
+`/api/*`). Migration `0006_run_mode.sql` adds `runs.mode` (`'auto'` | `'manual'`, additive, NOT
+NULL, default `'auto'`) — the only schema change in the slice. The run payload carries the mode;
+the Durable Object's step machine runs the same config → files → context → prepare → review →
+consolidate path and skips the `post` step in manual mode, finishing `completed` with no
+`review_url`. A manual run ignores the repository-enabled gate and the superseded-run skip, and
+runs exactly the reviewers named in the request rather than every reviewer enabled for the
+repository. Run detail states plainly that a manual run was not posted to GitHub.
 
 ## Sessions and access
 
@@ -327,11 +384,11 @@ empty (`EmptyState` carrying the next action), error (one human sentence plus a 
 `product/src/pages/messages.ts` maps the API codes these screens can receive to sentences, so no
 screen prints a machine code such as `request_failed` at the user — the shared taxonomy is slice D.
 
-- **Overview** — instance state and the derived next action first, then recent runs as a table with
-  relative times.
+- **Overview** — the readiness `completed` of `total` and its single `nextStep` first (D-028),
+  then recent runs as a table with relative times.
 - **Reviewers** — a table (name, model, whether a key is set, repositories, enabled) with inline
-  enable/disable and a per-row edit; the repositories column is derived from each repository's
-  reviewer assignments.
+  enable/disable and a per-row edit; the repositories column comes from each reviewer's
+  `repositories` field (D-028).
 - **Reviewer editor** — a sectioned form (identity, model, key, instructions, rules, parameters)
   with per-field validation, a sticky save bar, a `beforeunload` unsaved-changes guard, and the API
   key shown only as set / replace, never as a value.
@@ -563,6 +620,9 @@ screen offers Export (download) and Import (file picker).
 | GET              | `/api/repositories`                   | session   | list; `?refresh=1` syncs from GitHub              |
 | PATCH            | `/api/repositories/:repoId`           | session   | enable/disable                                    |
 | GET/PUT          | `/api/repositories/:repoId/reviewers` | session   | per-repo reviewer enablement                      |
+| GET              | `/api/instance/readiness`             | session   | readiness, computed from D1 (D-028)               |
+| GET              | `/api/repositories/:repoId/pulls`     | session   | open pull requests for the try picker (D-028)     |
+| POST             | `/api/runs/try`                       | session   | manual try run; posts nothing (D-028)             |
 | GET              | `/api/runs`                           | session   | history `{ runs, nextCursor }` (keyset)           |
 | GET              | `/api/runs/:id`                       | session   | run detail `{ run, reviewers }`                   |
 | GET/PATCH        | `/api/settings`                       | session   | `{ settings, defaults }` (D-021)                  |
