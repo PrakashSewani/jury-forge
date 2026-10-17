@@ -545,3 +545,53 @@ a middle option (re-check on each _new_ sign-in only, which is today's behaviour
 the gate does, and per-request re-checks are rejected above; `SameSite=Strict` — would break the
 app's same-site navigation and does not address stale access; shortening below a week (daily
 re-auth) — friction the risk does not justify for a single-owner instance.
+
+## D-025: Slice 11 — guided deploy and reviewer import/export
+
+**Date:** 2026-10-17 (implements roadmap items 9 and 13 from D-017)
+
+**Decision:** (1) **Guided deploy** (item 9). `npm run deploy:guided` runs
+`scripts/deploy-guided.mjs`: a local first-run helper that (a) verifies wrangler authentication,
+(b) finds the D1 database `jury-forge` and, only when it had to create it, writes the returned id
+into `product/wrangler.jsonc`, (c) generates and sets `ENCRYPTION_KEY` (32 random bytes, base64)
+and `SETUP_CODE` (24 random bytes, base64) as Worker secrets — skipping either one when the
+instance already has it, (d) applies the D1 migrations remotely, (e) deploys the product, and
+(f) prints the deployed origin with the `/setup` wizard URL and the next steps. It is interactive,
+idempotent, and skips every environment-mutating step on `--dry-run` (printing the exact commands
+instead); it never writes a secret to disk, never runs from CI, and never deploys the promo site
+(phase 4's concern). The evaluated **"Deploy to Cloudflare" button is not adopted**: it cannot
+create the instance's D1 database and wire its id into the deploy configuration, cannot generate
+and store `ENCRYPTION_KEY`/`SETUP_CODE`, and ends at Cloudflare's dashboard rather than at the
+instance's own `/setup` URL — the guided local command keeps first-run setup in the operator's
+terminal (D-008's posture), and the button can be revisited at launch.
+
+(2) **Reviewer import/export** (item 13). `GET /api/reviewers/export` returns
+`{ version: 1, exportedAt, reviewers: [...] }` — each reviewer's name, instructions, rules,
+flavor, base URL, model, params and enabled flag, and never an API key or its ciphertext (keys
+stay write-only, D-005). `POST /api/reviewers/import` accepts the same document and merges by
+case-insensitive reviewer name: an existing reviewer is updated field by field but keeps whatever
+API key the instance holds, a new name is created (with no key), and a document that only restates
+the current state changes nothing. The response reports `{ created, updated, unchanged, skipped }`,
+the document is validated as a whole — version, shape, per-field bounds, at most 100 reviewers —
+and rejected with 400 on any failure rather than partially applied. Imports are recorded in the
+activity trail. The Reviewers screen gains Export (downloads the JSON) and Import (file picker)
+actions.
+
+**Why:** the roadmap's last slice is the one that turns "clone it and deploy it" into a single
+guided command for an open-source tool nobody has deployed yet, and reviewer configs are the
+instance state an operator most wants to move between instances (a new deploy, a second
+environment, a friend) — neither is launch content for phase 3/4, both are small, and both were
+accepted in the slate.
+
+**Rejected:** a separate CLI package or `npx` entry point for the guided deploy (a second
+publish surface and a version to keep in sync; a root npm script runs against the checkout the
+operator already has); silently creating the D1 database without reporting the id it wrote (the
+operator must see the change to `product/wrangler.jsonc`); auto-generating secrets non-
+interactively in CI (there is no such flow, and it would put secret generation outside the
+owner's terminal); exporting API keys or their ciphertext in the JSON (keys are write-only by
+design; an imported key that belongs to another instance is a footgun, and ciphertext is only
+readable by the instance that wrote it); import mode "replace everything" (a destructive default
+for a file the operator may have edited by hand — merge-by-name is predictable and reports what it
+did); importing into a per-repo reviewer matrix as well (the export carries reviewer definitions,
+not repository assignments — repository scoping stays a dashboard action, D-016); a full
+configuration export of settings and repositories too (only reviewer configs were asked for).

@@ -22,7 +22,7 @@ item planned.
 | 8     | 5, 11   | Instance settings (tunable caps/budgets) + optional blocking mode (default off)     | in review |
 | 9     | 10      | Repo instructions (`AGENTS.md`/`CONTRIBUTING.md`) in prompts                        | in review |
 | 10    | 7, 12   | Credential key rotation + audit trail                                               | in review |
-| 11    | 9, 13   | Distribution: guided deploy + reviewer import/export (with phase 3/4 launch polish) | planned   |
+| 11    | 9, 13   | Distribution: guided deploy + reviewer import/export (with phase 3/4 launch polish) | in review |
 | —     | 8       | Access re-checks — shorter session TTL, no stored user tokens (D-024)               | in review |
 
 ## Items
@@ -46,11 +46,12 @@ item planned.
 8. **Access re-checks** — shorter session TTL, no stored user tokens (D-024, lands with the
    slate).
 9. **Guided deploy** — `npm run deploy:guided` (D1 create → secrets → deploy → wizard URL);
-   evaluate a "Deploy to Cloudflare" button.
+   evaluate a "Deploy to Cloudflare" button (D-025, slice 11 — the button is evaluated and not
+   adopted for now).
 10. **Repo instructions** — bounded `AGENTS.md`/`CONTRIBUTING.md` excerpts in prompts (opt-in)
     (D-022, slice 9).
 11. **Optional blocking mode** — `REQUEST_CHANGES` above an error-findings threshold; off by
     default, so D-013 stays the default posture (D-021, slice 8).
 12. **Audit trail** — activity table + dashboard view (sign-ins, key changes, toggles, kicks)
     (D-023, slice 10).
-13. **Reviewer import/export** — JSON export/import of reviewer configs.
+13. **Reviewer import/export** — JSON export/import of reviewer configs (D-025, slice 11).

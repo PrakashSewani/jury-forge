@@ -30,7 +30,8 @@ commit plus implementation commit(s) per slice (D-019).
 
 **Landed so far (this branch):** slice 7 — docs `a8f3ba2`, implementation `6ce1fc3` (D-020);
 slice 8 — docs `9e0cf01`, implementation `e616c31` (D-021); slice 9 — docs `75be673`,
-implementation `cde7fd7` (D-022); slice 10 — docs `71ce2c8`, implementation `4587919` (D-023).
+implementation `cde7fd7` (D-022); slice 10 — docs `71ce2c8`, implementation `4587919` (D-023);
+item 8 — docs `3c21484`, implementation `96678ce` (D-024).
 
 **Done this session:** merged the outstanding stack —
 

@@ -91,6 +91,12 @@ Deployments are manual and always target the owner's own Cloudflare account. Ver
 the build-output configuration and lists the D1 binding. The remote deploy steps themselves have
 not been exercised yet — exact commands live in the `ship-release` skill.
 
+For a first deploy, `npm run deploy:guided` (D-025) runs the whole first-run sequence — wrangler
+auth check, D1 create and wiring of its id, the two instance secrets, remote migrations, product
+deploy — and prints the instance's `/setup` URL when it is done. `npm run deploy:guided --
+--dry-run` prints every step it would run and changes nothing. It skips steps that already exist,
+so it is safe to re-run.
+
 ## Troubleshooting
 
 | Symptom                                                 | Fix                                                                                            |

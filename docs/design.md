@@ -288,7 +288,8 @@ failed write is logged and swallowed so it can never fail the request that trigg
 actions: `sign_in` and `sign_out`; `setting_change` (one row per changed key); `reviewer_create`,
 `reviewer_update` (naming the changed fields, and saying whether the API key was set, cleared, or
 re-wrapped by rotation) and `reviewer_delete`; `repository_toggle` and `repository_reviewers`;
-`run_started` for the webhook kick (actor `webhook`); and `credential_rotation`. `GET
+`run_started` for the webhook kick (actor `webhook`); `credential_rotation`; and `reviewer_import`
+(the D-025 merge, with its created/updated/unchanged/skipped counts). `GET
 /api/activity` returns the newest first with a keyset cursor (`at`, then `id`, like runs), limit
 1–100 default 50, and prunes entries older than 90 days opportunistically on read. The dashboard's
 `/activity` screen lists time, actor, action, target and detail with the same "load more" pattern
@@ -316,6 +317,26 @@ and gates the dashboard screens behind sign-in. A repositories refresh imports t
 repositories; newly discovered ones arrive disabled — enabling one is an explicit dashboard
 action (D-016).
 
+## Distribution (D-025)
+
+**Guided deploy.** `npm run deploy:guided` (root script → `scripts/deploy-guided.mjs`) is the
+first-run path for a new instance: it checks wrangler auth, finds or creates the `jury-forge` D1
+database (writing its id into `product/wrangler.jsonc` only when it created it), generates and
+sets `ENCRYPTION_KEY` and `SETUP_CODE` as Worker secrets (skipping whichever the instance already
+has), applies the D1 migrations remotely, deploys the product, and prints the instance origin with
+its `/setup` URL. `--dry-run` prints the plan and mutates nothing; the script never writes a secret
+to disk and never runs from CI. Deployments remain manual and owner-driven (see
+`docs/development.md`); the promo site is not part of it.
+
+**Reviewer import/export.** `GET /api/reviewers/export` produces
+`{ version: 1, exportedAt, reviewers: [...] }` — definitions only (name, instructions, rules,
+flavor, base URL, model, params, enabled), never an API key or ciphertext. `POST
+/api/reviewers/import` takes that document, validates it whole (version, bounds, at most 100
+reviewers) and merges by case-insensitive name: existing reviewers are updated field by field while
+keeping their stored key, new names are created without one, and the response reports
+`{ created, updated, unchanged, skipped }`. Imports land in the activity trail, and the Reviewers
+screen offers Export (download) and Import (file picker).
+
 ## API surface
 
 | Method           | Path                                  | Auth      | Purpose                                           |
@@ -338,6 +359,8 @@ action (D-016).
 | GET              | `/api/runs/:id`                       | session   | run detail `{ run, reviewers }`                   |
 | GET/PATCH        | `/api/settings`                       | session   | `{ settings, defaults }` (D-021)                  |
 | GET              | `/api/activity`                       | session   | activity trail `{ activity, nextCursor }` (D-023) |
+| GET              | `/api/reviewers/export`               | session   | reviewer definitions as JSON (D-025)              |
+| POST             | `/api/reviewers/import`               | session   | merge an exported document (D-025)                |
 | POST             | `/api/webhooks/github`                | signature | GitHub deliveries                                 |
 
 ## Security
