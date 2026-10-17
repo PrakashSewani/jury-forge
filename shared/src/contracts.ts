@@ -62,6 +62,8 @@ export interface Reviewer {
   params: Record<string, unknown>;
   enabled: boolean;
   hasApiKey: boolean;
+  // full names of the enabled repositories this reviewer will actually run on
+  repositories: string[];
 }
 
 export interface ReviewerExport {
@@ -171,4 +173,32 @@ export interface ActivityEntry {
 export interface ActivityPage {
   activity: ActivityEntry[];
   nextCursor: string | null;
+}
+
+export interface InstanceReadinessStep {
+  key: 'claim' | 'install-app' | 'enable-repo' | 'add-reviewer' | 'first-run';
+  label: string;
+  href: string;
+  done: boolean;
+}
+
+export interface InstanceReadinessNextStep {
+  key: InstanceReadinessStep['key'] | 'done';
+  title: string;
+  body: string;
+  href: string;
+  label: string;
+}
+
+export interface InstanceReadiness {
+  claimed: boolean;
+  appInstalled: boolean;
+  reposEnabled: number;
+  reviewersWithKey: number;
+  repoReviewerPairs: number;
+  firstRunAt: number | null;
+  completed: number;
+  total: number;
+  steps: InstanceReadinessStep[];
+  nextStep: InstanceReadinessNextStep;
 }
