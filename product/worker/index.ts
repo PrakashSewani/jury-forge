@@ -2,6 +2,7 @@ import { PRODUCT_NAME, type HealthResponse } from '@jury-forge/shared';
 import { Hono } from 'hono';
 import type { AppEnv } from './middleware';
 import { authRoutes } from './routes/auth';
+import { reviewerRoutes } from './routes/reviewers';
 import { setupRoutes } from './routes/setup';
 
 const app = new Hono<AppEnv>();
@@ -13,6 +14,7 @@ app.get('/api/health', (c) => {
 
 app.route('/api/setup', setupRoutes);
 app.route('/api/auth', authRoutes);
+app.route('/api/reviewers', reviewerRoutes);
 
 app.notFound((c) => c.json({ error: 'not_found' }, 404));
 

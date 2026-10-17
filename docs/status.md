@@ -15,27 +15,27 @@ rule 4. Keep exactly one phase `in progress`.
 
 ## Current handoff
 
-**Phase:** 2 in progress — slice 2b (the wizard UI) is in review on `phase-2/2b-wizard-ui`
-(#9); slice 2a (#8) is merged to `dev`.
+**Phase:** 2 in progress — slice 3 (reviewers and providers) is in review on
+`phase-2/3-reviewers-providers` (#10), stacked on slice 2b (`phase-2/2b-wizard-ui`, #9); slice
+2a (#8) is merged to `dev`.
 
-**Done this session:** built slice 2b — the React setup wizard and shell: `/setup` derives its
-step from setup state (setup code with the auto-submitted manifest form, install link and
-verification, claim via GitHub sign-in, done) with a step indicator and error banners for
-claim-callback redirects; the shell and home show instance state and the signed-in user (sign
-in / log out); `GET /api/setup/state` now includes `appSlug` (public metadata — D-015). Added
-pure-module tests for step derivation, manifest form shaping, the install URL, error copy, and
-route resolution; fixed a pre-existing flaky crypto test (the tampered-input case could be a
-no-op in about 25% of runs).
+**Done this session:** built slice 3 — reviewer CRUD API (`/api/reviewers`, session-gated,
+Zod-validated; API keys write-only, encrypted at rest, `apiKey: null` clears); the two provider
+adapters (OpenAI- and Anthropic-compatible request shapes, default Anthropic `max_tokens` 4096,
+120 s timeout, tolerant JSON extraction); the context builder (D-010 budget of 200 KB / 32 KB
+per file / 4 KB description, lockfile/generated/binary skips, truncation notes, prompt
+assembly); and consolidation (findings validation and normalization, commentable-line selection
+from patch hunks, D-009 caps of 10 per reviewer / 25 per run with overflow routed to the
+summary). New test suites for the API and all three modules.
 
-**Verified:** `npm run check` exits 0 — typecheck, lint, Prettier, 44/44 tests across 7 files,
-both builds. Manually exercised the wizard against the dev server in a browser: all four states
-render from live state, and submitting the setup code auto-posts the manifest form and lands on
-GitHub's manifest page.
+**Verified:** `npm run check` exits 0 — typecheck, lint, Prettier, 77/77 tests across 11 files,
+both builds.
 
-**Blocked by:** nothing. Slice 3 stacks on `phase-2/2b-wizard-ui` once this merges.
+**Blocked by:** nothing. Slice 4 (webhook intake and the run engine) stacks on
+`phase-2/3-reviewers-providers` once this merges.
 
-**Next action:** build slice 3 — reviewers and providers (reviewers CRUD API, provider
-adapters, context builder and consolidation as tested pure modules).
+**Next action:** build slice 4 — the webhook receiver and the `RunEngine` Durable Object end to
+end, then run history records.
 
 ## Backlog (owner-owned, deferred)
 
