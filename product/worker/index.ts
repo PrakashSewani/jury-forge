@@ -3,6 +3,7 @@ import { Hono } from 'hono';
 import type { AppEnv } from './middleware';
 import { activityRoutes } from './routes/activity';
 import { authRoutes } from './routes/auth';
+import { instanceRoutes } from './routes/instance';
 import { repositoryRoutes } from './routes/repositories';
 import { reviewerRoutes } from './routes/reviewers';
 import { runRoutes } from './routes/runs';
@@ -18,6 +19,7 @@ app.get('/api/health', (c) => {
 });
 
 app.route('/api/setup', setupRoutes);
+app.route('/api/instance', instanceRoutes);
 app.route('/api/auth', authRoutes);
 app.route('/api/reviewers', reviewerRoutes);
 app.route('/api/repositories', repositoryRoutes);

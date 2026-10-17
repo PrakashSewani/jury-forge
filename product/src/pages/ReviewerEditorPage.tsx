@@ -1,4 +1,5 @@
-import type { ProviderFlavor } from '@jury-forge/shared';
+import type { ProviderFlavor, ReviewerTemplate } from '@jury-forge/shared';
+import { REVIEWER_TEMPLATES } from '@jury-forge/shared';
 import type { FormEvent } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReviewerCreateInput, ReviewerUpdateInput } from '../lib/api';
@@ -38,6 +39,10 @@ interface FormErrors {
   model?: string;
   baseUrl?: string;
   params?: string;
+}
+
+function findTemplate(key: string): ReviewerTemplate | undefined {
+  return REVIEWER_TEMPLATES.find((template) => template.key === key);
 }
 
 const NEW_REVIEWER: FormState = {
@@ -98,6 +103,8 @@ export default function ReviewerEditorPage({ id }: { id?: string }) {
   const [loadFailed, setLoadFailed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [templateKey, setTemplateKey] = useState('blank');
+  const [appliedTemplate, setAppliedTemplate] = useState<string | null>(null);
 
   // Set once a save or a delete has landed. The navigation that follows is a plain
   // `window.location.href` assignment, so the `beforeunload` handler reads this ref rather than
@@ -167,6 +174,36 @@ export default function ReviewerEditorPage({ id }: { id?: string }) {
       if (key === 'paramsText') delete next.params;
       return next;
     });
+  }
+
+  function handleTemplateChange(key: string) {
+    setTemplateKey(key);
+    const template = findTemplate(key);
+    if (template === undefined) {
+      setAppliedTemplate(null);
+      return;
+    }
+    // One update replaces exactly the three prefilled fields; the model, base URL, params and key
+    // inputs are left to the operator and are never touched here.
+    setForm((current) =>
+      current === null
+        ? current
+        : {
+            ...current,
+            name: template.name,
+            instructions: template.instructions,
+            rules: template.rules,
+          },
+    );
+    setErrors((current) => {
+      if (current.name === undefined) {
+        return current;
+      }
+      const next = { ...current };
+      delete next.name;
+      return next;
+    });
+    setAppliedTemplate(template.name);
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -263,6 +300,32 @@ export default function ReviewerEditorPage({ id }: { id?: string }) {
     <div className="space-y-6">
       <EditorHeader id={id} />
       <form className="space-y-6" onSubmit={(event) => void handleSubmit(event)}>
+        {id === undefined ? (
+          <Card title="Start from a template">
+            <Field
+              hint={findTemplate(templateKey)?.summary ?? 'Start from an empty reviewer.'}
+              label="Template"
+            >
+              <Select
+                onChange={(event) => handleTemplateChange(event.target.value)}
+                value={templateKey}
+              >
+                <option value="blank">Blank reviewer</option>
+                {REVIEWER_TEMPLATES.map((template) => (
+                  <option key={template.key} value={template.key}>
+                    {template.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            {appliedTemplate !== null ? (
+              <Notice tone="info">
+                {`Applied the ${appliedTemplate} template. Name, instructions and rules were replaced — everything can still be edited before saving.`}
+              </Notice>
+            ) : null}
+          </Card>
+        ) : null}
+
         <Card title="Identity">
           <Field error={errors.name} label="Name">
             <Input

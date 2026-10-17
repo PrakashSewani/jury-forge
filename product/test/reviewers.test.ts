@@ -558,3 +558,93 @@ describe('reviewer import/export', () => {
     });
   });
 });
+
+describe('reviewer repository visibility', () => {
+  async function seedRepo(repoId: number, fullName: string, enabled = true): Promise<void> {
+    await env.DB.prepare(
+      'INSERT INTO repositories (repo_id, full_name, private, enabled) VALUES (?, ?, 0, ?)',
+    )
+      .bind(repoId, fullName, enabled ? 1 : 0)
+      .run();
+  }
+
+  async function seedReviewerRow(id: string, name: string): Promise<void> {
+    await env.DB.prepare(
+      "INSERT INTO reviewers (id, name, instructions, rules, flavor, base_url, api_key_enc, model, params_json, enabled) VALUES (?, ?, '', '', 'openai', 'https://api.example.com/v1', '', 'model-x', '{}', 1)",
+    )
+      .bind(id, name)
+      .run();
+  }
+
+  async function list(cookie: string): Promise<{ id: string; repositories: string[] }[]> {
+    const response = await app.request(
+      `${ORIGIN}/api/reviewers`,
+      { headers: { Cookie: cookie } },
+      env,
+    );
+    expect(response.status).toBe(200);
+    return (await response.json()) as { id: string; repositories: string[] }[];
+  }
+
+  it('carries the enabled repositories a reviewer will run on', async () => {
+    const cookie = await session();
+    await seedRepo(101, 'octocat/hello');
+    await seedRepo(202, 'octocat/zeta');
+    await seedRepo(303, 'octocat/hidden', false);
+    await seedReviewerRow('rev-1', 'Security');
+
+    const reviewers = await list(cookie);
+    expect(reviewers.find((reviewer) => reviewer.id === 'rev-1')?.repositories).toEqual([
+      'octocat/hello',
+      'octocat/zeta',
+    ]);
+    expect(JSON.stringify(reviewers)).not.toContain('octocat/hidden');
+  });
+
+  it('removes a disabled pair from that reviewer only', async () => {
+    const cookie = await session();
+    await seedRepo(101, 'octocat/hello');
+    await seedRepo(202, 'octocat/zeta');
+    await seedReviewerRow('rev-1', 'Security');
+    await seedReviewerRow('rev-2', 'Architecture');
+    await env.DB.prepare(
+      'INSERT INTO reviewer_repositories (reviewer_id, repo_id, enabled) VALUES (?, ?, 0)',
+    )
+      .bind('rev-1', 101)
+      .run();
+
+    const reviewers = await list(cookie);
+    expect(reviewers.find((reviewer) => reviewer.id === 'rev-1')?.repositories).toEqual([
+      'octocat/zeta',
+    ]);
+    expect(reviewers.find((reviewer) => reviewer.id === 'rev-2')?.repositories).toEqual([
+      'octocat/hello',
+      'octocat/zeta',
+    ]);
+  });
+
+  it('gives a reviewer with no enabled repository an empty list', async () => {
+    const cookie = await session();
+    await seedRepo(101, 'octocat/hello', false);
+    await seedReviewerRow('rev-alone', 'Alone');
+
+    const reviewers = await list(cookie);
+    expect(reviewers.find((reviewer) => reviewer.id === 'rev-alone')?.repositories).toEqual([]);
+  });
+
+  it('returns the same list when reading one reviewer', async () => {
+    const cookie = await session();
+    await seedRepo(101, 'octocat/hello');
+    await seedRepo(202, 'octocat/zeta');
+    await seedReviewerRow('rev-1', 'Security');
+
+    const response = await app.request(
+      `${ORIGIN}/api/reviewers/rev-1`,
+      { headers: { Cookie: cookie } },
+      env,
+    );
+    expect(response.status).toBe(200);
+    const reviewer = (await response.json()) as { repositories: string[] };
+    expect(reviewer.repositories).toEqual(['octocat/hello', 'octocat/zeta']);
+  });
+});

@@ -62,6 +62,8 @@ export interface Reviewer {
   params: Record<string, unknown>;
   enabled: boolean;
   hasApiKey: boolean;
+  // full names of the enabled repositories this reviewer will actually run on
+  repositories: string[];
 }
 
 export interface ReviewerExport {
@@ -108,6 +110,8 @@ export interface RepositoryReviewerUpdate {
 
 export type RunStatus = 'running' | 'completed' | 'failed' | 'skipped';
 
+export type RunMode = 'auto' | 'manual';
+
 export interface RunSummary {
   id: string;
   repoId: number;
@@ -115,10 +119,29 @@ export interface RunSummary {
   headSha: string;
   event: string;
   status: RunStatus;
+  mode: RunMode;
   error: string | null;
   reviewUrl: string | null;
   createdAt: number;
   finishedAt: number | null;
+}
+
+export interface RepositoryPullRequest {
+  number: number;
+  title: string;
+  headSha: string;
+  authorLogin: string | null;
+  draft: boolean;
+}
+
+export interface TryRunRequest {
+  repoId: number;
+  prNumber: number;
+  reviewerIds: string[];
+}
+
+export interface TryRunResponse {
+  runId: string;
 }
 
 export type RunReviewerStatus = 'pending' | 'completed' | 'failed';
@@ -171,4 +194,32 @@ export interface ActivityEntry {
 export interface ActivityPage {
   activity: ActivityEntry[];
   nextCursor: string | null;
+}
+
+export interface InstanceReadinessStep {
+  key: 'claim' | 'install-app' | 'enable-repo' | 'add-reviewer' | 'first-run';
+  label: string;
+  href: string;
+  done: boolean;
+}
+
+export interface InstanceReadinessNextStep {
+  key: InstanceReadinessStep['key'] | 'done';
+  title: string;
+  body: string;
+  href: string;
+  label: string;
+}
+
+export interface InstanceReadiness {
+  claimed: boolean;
+  appInstalled: boolean;
+  reposEnabled: number;
+  reviewersWithKey: number;
+  repoReviewerPairs: number;
+  firstRunAt: number | null;
+  completed: number;
+  total: number;
+  steps: InstanceReadinessStep[];
+  nextStep: InstanceReadinessNextStep;
 }

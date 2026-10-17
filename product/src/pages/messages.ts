@@ -17,6 +17,8 @@ const CODE_MESSAGES: Record<string, string> = {
   internal_error: 'The Worker hit an unexpected error. Try again.',
   cross_origin: 'That request was blocked as cross-origin. Reload the page and try again.',
   kick_failed: 'The Worker could not start the run. Try again.',
+  reviewer_unavailable:
+    'One of the reviewers you picked is not ready — it must be enabled and hold a model key.',
   provider_request_failed:
     'The model provider returned an error, so the run could not finish. Check the provider URL, model, and key, then run again.',
   already_claimed: 'This instance has already been claimed.',

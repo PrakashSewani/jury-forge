@@ -1,4 +1,10 @@
-import type { Finding, InstanceSettings, ProviderFlavor, ProviderUsage } from '@jury-forge/shared';
+import type {
+  Finding,
+  InstanceSettings,
+  ProviderFlavor,
+  ProviderUsage,
+  RunMode,
+} from '@jury-forge/shared';
 import { DurableObject } from 'cloudflare:workers';
 import { consolidateReview, parseReviewerOutput, type ReviewerFindings } from './lib/consolidate';
 import {
@@ -44,6 +50,9 @@ export interface RunPayload {
   headSha: string;
   action: string;
   installationId: number;
+  mode: RunMode;
+  /** Manual runs only: exactly the reviewers to run. */
+  reviewerIds?: string[];
 }
 
 type Step = 'config' | 'files' | 'context' | 'prepare' | 'review' | 'consolidate' | 'post';
@@ -129,7 +138,7 @@ export class RunEngine extends DurableObject<Env> {
     await this.ctx.storage.put('step', 'config' satisfies Step);
     await this.ctx.storage.put('attempt', 0);
     await this.env.DB.prepare(
-      "INSERT OR REPLACE INTO runs (id, delivery_id, repo_id, pr_number, head_sha, event, status) VALUES (?, ?, ?, ?, ?, ?, 'running')",
+      "INSERT OR REPLACE INTO runs (id, delivery_id, repo_id, pr_number, head_sha, event, mode, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'running')",
     )
       .bind(
         runIdFor(payload),
@@ -138,6 +147,7 @@ export class RunEngine extends DurableObject<Env> {
         payload.prNumber,
         payload.headSha,
         payload.action,
+        payload.mode,
       )
       .run();
     await this.ctx.storage.setAlarm(Date.now());
@@ -204,53 +214,84 @@ export class RunEngine extends DurableObject<Env> {
 
   private async stepConfig(payload: RunPayload): Promise<Step | 'finished'> {
     const db = this.env.DB;
-    const repository = await db
-      .prepare('SELECT enabled FROM repositories WHERE repo_id = ?')
-      .bind(payload.repoId)
-      .first<{ enabled: number }>();
-    if (!repository || repository.enabled !== 1) {
-      await this.finishRun(payload, 'skipped', null, null);
-      return 'finished';
-    }
-
-    // D-018: newest run wins — a run that begins after a newer run exists for the same PR skips
-    // (covers supersession on rapid pushes and duplicate deliveries of the same revision).
+    const manual = payload.mode === 'manual';
     const runId = runIdFor(payload);
-    const started = await db
-      .prepare('SELECT created_at FROM runs WHERE id = ?')
-      .bind(runId)
-      .first<{ created_at: number }>();
-    if (started) {
-      const newer = await db
-        .prepare(
-          `SELECT 1 FROM runs
-           WHERE repo_id = ? AND pr_number = ?
-             AND (created_at > ? OR (created_at = ? AND id > ?))
-           LIMIT 1`,
-        )
-        .bind(payload.repoId, payload.prNumber, started.created_at, started.created_at, runId)
-        .first();
-      if (newer) {
+
+    if (!manual) {
+      const repository = await db
+        .prepare('SELECT enabled FROM repositories WHERE repo_id = ?')
+        .bind(payload.repoId)
+        .first<{ enabled: number }>();
+      if (!repository || repository.enabled !== 1) {
         await this.finishRun(payload, 'skipped', null, null);
         return 'finished';
       }
+
+      // D-018: newest run wins — a run that begins after a newer run exists for the same PR skips
+      // (covers supersession on rapid pushes and duplicate deliveries of the same revision).
+      const started = await db
+        .prepare('SELECT created_at FROM runs WHERE id = ?')
+        .bind(runId)
+        .first<{ created_at: number }>();
+      if (started) {
+        const newer = await db
+          .prepare(
+            `SELECT 1 FROM runs
+             WHERE repo_id = ? AND pr_number = ?
+               AND (created_at > ? OR (created_at = ? AND id > ?))
+             LIMIT 1`,
+          )
+          .bind(payload.repoId, payload.prNumber, started.created_at, started.created_at, runId)
+          .first();
+        if (newer) {
+          await this.finishRun(payload, 'skipped', null, null);
+          return 'finished';
+        }
+      }
     }
 
-    const rows = await db
-      .prepare(
-        `SELECT r.id, r.name, r.instructions, r.rules, r.flavor, r.base_url, r.api_key_enc, r.model, r.params_json
-         FROM reviewers r
-         WHERE r.enabled = 1
-           AND NOT EXISTS (
-             SELECT 1 FROM reviewer_repositories rr
-             WHERE rr.reviewer_id = r.id AND rr.repo_id = ? AND rr.enabled = 0
-           )
-         ORDER BY r.name COLLATE NOCASE, r.id`,
-      )
-      .bind(payload.repoId)
-      .all<ReviewerRow>();
+    let rows: D1Result<ReviewerRow>;
+    if (manual) {
+      // D-028: a manual run ignores the repository-enabled gate and the superseded-run skip, and
+      // runs exactly the named reviewers — no repository filter on this query.
+      const reviewerIds = payload.reviewerIds ?? [];
+      if (reviewerIds.length === 0) {
+        await this.finishRun(payload, 'failed', 'reviewer_unavailable', null);
+        return 'finished';
+      }
+      const placeholders = reviewerIds.map(() => '?').join(', ');
+      rows = await db
+        .prepare(
+          `SELECT r.id, r.name, r.instructions, r.rules, r.flavor, r.base_url, r.api_key_enc, r.model, r.params_json
+           FROM reviewers r
+           WHERE r.id IN (${placeholders})
+             AND r.enabled = 1
+             AND r.api_key_enc != ''
+           ORDER BY r.name COLLATE NOCASE, r.id`,
+        )
+        .bind(...reviewerIds)
+        .all<ReviewerRow>();
+    } else {
+      rows = await db
+        .prepare(
+          `SELECT r.id, r.name, r.instructions, r.rules, r.flavor, r.base_url, r.api_key_enc, r.model, r.params_json
+           FROM reviewers r
+           WHERE r.enabled = 1
+             AND NOT EXISTS (
+               SELECT 1 FROM reviewer_repositories rr
+               WHERE rr.reviewer_id = r.id AND rr.repo_id = ? AND rr.enabled = 0
+             )
+           ORDER BY r.name COLLATE NOCASE, r.id`,
+        )
+        .bind(payload.repoId)
+        .all<ReviewerRow>();
+    }
     if (rows.results.length === 0) {
-      await this.finishRun(payload, 'skipped', null, null);
+      if (manual) {
+        await this.finishRun(payload, 'failed', 'reviewer_unavailable', null);
+      } else {
+        await this.finishRun(payload, 'skipped', null, null);
+      }
       return 'finished';
     }
     const reviewers: StoredReviewer[] = rows.results.map((row) => ({
@@ -270,6 +311,9 @@ export class RunEngine extends DurableObject<Env> {
 
     // D-020: the newest earlier run for this repository + pull request that recorded findings
     // supplies each reviewer's previous findings, and their de-duplicated union.
+    // D-028: only automatic runs qualify. A manual trial posts nothing to GitHub, so its findings
+    // are not "previously reported" on this pull request — counting them would change what an
+    // automatic run asks its reviewers and what it publishes, which slice C promises it does not.
     const previousRows = await db
       .prepare(
         `SELECT rr.reviewer_id, rr.findings_json
@@ -277,6 +321,7 @@ export class RunEngine extends DurableObject<Env> {
          JOIN runs r ON r.id = rr.run_id
          WHERE r.repo_id = ? AND r.pr_number = ?
            AND r.id != ?
+           AND r.mode = 'auto'
            AND r.status IN ('completed', 'failed')
            AND rr.findings_json IS NOT NULL AND rr.findings_json != '[]'
          ORDER BY r.created_at DESC, r.id DESC, rr.reviewer_id`,
@@ -670,6 +715,11 @@ export class RunEngine extends DurableObject<Env> {
   }
 
   private async stepPost(payload: RunPayload): Promise<Step | 'finished'> {
+    if (payload.mode === 'manual') {
+      // D-028: a manual try run posts nothing to GitHub.
+      await this.finishRun(payload, 'completed', null, null);
+      return 'finished';
+    }
     const token = await this.require<string>('token');
     const plan = await this.require<ReviewPlan>('plan');
     const review = await createPullReview(token, payload.repoFullName, payload.prNumber, {

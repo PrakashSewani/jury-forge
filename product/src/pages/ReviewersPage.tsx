@@ -4,7 +4,6 @@ import { useCallback, useRef, useState } from 'react';
 import {
   downloadReviewersExport,
   exportReviewers,
-  getRepositoryReviewers,
   importReviewers,
   listRepositories,
   listReviewers,
@@ -31,7 +30,7 @@ import { PageError, PageLoading } from './screen-state';
 
 interface ReviewersData {
   reviewers: Reviewer[];
-  reposByReviewer: Map<string, string[]>;
+  enabledRepoCount: number;
 }
 
 type NoticeState = { tone: 'error' | 'info'; text: string };
@@ -39,22 +38,10 @@ type NoticeState = { tone: 'error' | 'info'; text: string };
 export default function ReviewersPage() {
   const load = useCallback(async (): Promise<ReviewersData> => {
     const [reviewers, repositories] = await Promise.all([listReviewers(), listRepositories()]);
-    const assignments = await Promise.all(
-      repositories.map(async (repository) => ({
-        repository,
-        entries: await getRepositoryReviewers(repository.repoId),
-      })),
-    );
-    const reposByReviewer = new Map<string, string[]>();
-    for (const { repository, entries } of assignments) {
-      for (const entry of entries) {
-        if (!entry.enabled) continue;
-        const names = reposByReviewer.get(entry.reviewerId) ?? [];
-        names.push(repository.fullName);
-        reposByReviewer.set(entry.reviewerId, names);
-      }
-    }
-    return { reviewers, reposByReviewer };
+    return {
+      reviewers,
+      enabledRepoCount: repositories.filter((repository) => repository.enabled).length,
+    };
   }, []);
   const { data, failed, reload } = useLoadable(load);
   const [notice, setNotice] = useState<NoticeState | null>(null);
@@ -178,7 +165,7 @@ export default function ReviewersPage() {
             </thead>
             <tbody>
               {data.reviewers.map((reviewer) => {
-                const repositories = data.reposByReviewer.get(reviewer.id) ?? [];
+                const repositories = reviewer.repositories;
                 return (
                   <Row className="border-b border-border last:border-0" key={reviewer.id}>
                     <td className="pr-4 font-medium">
@@ -201,6 +188,9 @@ export default function ReviewersPage() {
                     <td className="pr-4 text-text-body">
                       {repositories.length === 0 ? (
                         <span className="text-text-muted">None</span>
+                      ) : repositories.length === data.enabledRepoCount &&
+                        data.enabledRepoCount > 0 ? (
+                        `All ${data.enabledRepoCount} enabled repositories`
                       ) : (
                         repositories.join(', ')
                       )}
