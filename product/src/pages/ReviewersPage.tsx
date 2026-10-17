@@ -1,27 +1,61 @@
+import type { Reviewer } from '@jury-forge/shared';
 import type { ChangeEvent } from 'react';
 import { useCallback, useRef, useState } from 'react';
 import {
-  Badge,
-  buttonClass,
-  Card,
-  LoadFailed,
-  Loading,
-  Notice,
-  secondaryButtonClass,
-} from '../components';
-import {
-  ApiError,
   downloadReviewersExport,
   exportReviewers,
+  getRepositoryReviewers,
   importReviewers,
+  listRepositories,
   listReviewers,
+  updateReviewer,
 } from '../lib/api';
 import { useLoadable } from '../lib/use-loadable';
+import {
+  Badge,
+  Button,
+  buttonClass,
+  Card,
+  EmptyState,
+  focusRing,
+  Notice,
+  Row,
+  secondaryButtonClass,
+  Switch,
+  Table,
+  tapTarget,
+  Toolbar,
+} from '../ui';
+import { errorMessage } from './messages';
+import { PageError, PageLoading } from './screen-state';
+
+interface ReviewersData {
+  reviewers: Reviewer[];
+  reposByReviewer: Map<string, string[]>;
+}
 
 type NoticeState = { tone: 'error' | 'info'; text: string };
 
 export default function ReviewersPage() {
-  const load = useCallback(() => listReviewers(), []);
+  const load = useCallback(async (): Promise<ReviewersData> => {
+    const [reviewers, repositories] = await Promise.all([listReviewers(), listRepositories()]);
+    const assignments = await Promise.all(
+      repositories.map(async (repository) => ({
+        repository,
+        entries: await getRepositoryReviewers(repository.repoId),
+      })),
+    );
+    const reposByReviewer = new Map<string, string[]>();
+    for (const { repository, entries } of assignments) {
+      for (const entry of entries) {
+        if (!entry.enabled) continue;
+        const names = reposByReviewer.get(entry.reviewerId) ?? [];
+        names.push(repository.fullName);
+        reposByReviewer.set(entry.reviewerId, names);
+      }
+    }
+    return { reviewers, reposByReviewer };
+  }, []);
   const { data, failed, reload } = useLoadable(load);
   const [notice, setNotice] = useState<NoticeState | null>(null);
   const [busy, setBusy] = useState(false);
@@ -33,7 +67,10 @@ export default function ReviewersPage() {
     try {
       downloadReviewersExport(await exportReviewers());
     } catch (caught) {
-      setNotice({ tone: 'error', text: errorText(caught) });
+      setNotice({
+        tone: 'error',
+        text: errorMessage(caught, 'Could not export the reviewers. Try again.'),
+      });
     } finally {
       setBusy(false);
     }
@@ -63,33 +100,39 @@ export default function ReviewersPage() {
       });
       await reload();
     } catch (caught) {
-      setNotice({ tone: 'error', text: errorText(caught) });
+      setNotice({
+        tone: 'error',
+        text: errorMessage(caught, 'Could not import that file. Check it and try again.'),
+      });
     } finally {
       setBusy(false);
     }
   }
 
+  async function toggleEnabled(reviewer: Reviewer, enabled: boolean) {
+    setNotice(null);
+    try {
+      await updateReviewer(reviewer.id, { enabled });
+      await reload();
+    } catch (caught) {
+      setNotice({
+        tone: 'error',
+        text: errorMessage(caught, 'Could not update that reviewer. Try again.'),
+      });
+    }
+  }
+
   return (
     <div className="space-y-6">
-      <header className="flex items-center justify-between gap-4">
+      <header className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold tracking-tight">Reviewers</h1>
-        <div className="flex items-center gap-2">
-          <button
-            className={secondaryButtonClass}
-            disabled={busy}
-            onClick={() => void handleExport()}
-            type="button"
-          >
+        <Toolbar className="flex-wrap">
+          <Button disabled={busy} onClick={() => void handleExport()} variant="secondary">
             Export
-          </button>
-          <button
-            className={secondaryButtonClass}
-            disabled={busy}
-            onClick={() => fileInput.current?.click()}
-            type="button"
-          >
+          </Button>
+          <Button disabled={busy} onClick={() => fileInput.current?.click()} variant="secondary">
             Import
-          </button>
+          </Button>
           <input
             accept="application/json,.json"
             className="hidden"
@@ -100,50 +143,90 @@ export default function ReviewersPage() {
           <a className={buttonClass} href="/reviewers/new">
             New reviewer
           </a>
-        </div>
+        </Toolbar>
       </header>
       {notice ? <Notice tone={notice.tone}>{notice.text}</Notice> : null}
-      <Card>
-        {failed ? (
-          <LoadFailed onRetry={reload} />
-        ) : data === null ? (
-          <Loading />
-        ) : data.length === 0 ? (
-          <p className="text-sm text-neutral-500">
-            No reviewers yet — create one to give your jury its first member.
-          </p>
-        ) : (
-          <ul className="divide-y divide-neutral-100">
-            {data.map((reviewer) => (
-              <li key={reviewer.id}>
-                <a
-                  className="flex items-center justify-between gap-4 py-3 transition hover:bg-neutral-50"
-                  href={`/reviewers/${encodeURIComponent(reviewer.id)}`}
-                >
-                  <div>
-                    <p className="text-sm font-medium">{reviewer.name}</p>
-                    <p className="text-xs text-neutral-500">
-                      {reviewer.flavor} · {reviewer.model}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {reviewer.hasApiKey ? null : <Badge tone="amber">no key</Badge>}
-                    {reviewer.enabled ? (
-                      <Badge tone="green">enabled</Badge>
-                    ) : (
-                      <Badge>disabled</Badge>
-                    )}
-                  </div>
-                </a>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
+      {failed ? (
+        <PageError
+          message="The reviewer list could not be loaded. Check the Worker and try again."
+          onRetry={reload}
+        />
+      ) : data === null ? (
+        <PageLoading />
+      ) : data.reviewers.length === 0 ? (
+        <EmptyState
+          action={
+            <a className={buttonClass} href="/reviewers/new">
+              New reviewer
+            </a>
+          }
+          description="A reviewer is an agent with its own instructions, rules, and model. Add your first one to start building the jury."
+          title="No reviewers yet"
+        />
+      ) : (
+        <Card>
+          <Table className="w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-border text-xs uppercase tracking-wide text-text-muted">
+                <th className="py-2 pr-4 font-medium">Name</th>
+                <th className="py-2 pr-4 font-medium">Model</th>
+                <th className="py-2 pr-4 font-medium">Key</th>
+                <th className="py-2 pr-4 font-medium">Repositories</th>
+                <th className="py-2 pr-4 font-medium">Enabled</th>
+                <th className="py-2 pr-4 font-medium">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.reviewers.map((reviewer) => {
+                const repositories = data.reposByReviewer.get(reviewer.id) ?? [];
+                return (
+                  <Row className="border-b border-border last:border-0" key={reviewer.id}>
+                    <td className="pr-4 font-medium">
+                      <a
+                        className={`inline-flex items-center hover:underline ${tapTarget} ${focusRing}`}
+                        href={`/reviewers/${encodeURIComponent(reviewer.id)}`}
+                      >
+                        {reviewer.name}
+                      </a>
+                    </td>
+                    <td className="pr-4">
+                      <span className="block">{reviewer.model}</span>
+                      <span className="text-xs text-text-muted">{reviewer.flavor}</span>
+                    </td>
+                    <td className="pr-4">
+                      <Badge tone={reviewer.hasApiKey ? 'green' : 'amber'}>
+                        {reviewer.hasApiKey ? 'set' : 'no key'}
+                      </Badge>
+                    </td>
+                    <td className="pr-4 text-text-body">
+                      {repositories.length === 0 ? (
+                        <span className="text-text-muted">None</span>
+                      ) : (
+                        repositories.join(', ')
+                      )}
+                    </td>
+                    <td className="pr-4">
+                      <Switch
+                        checked={reviewer.enabled}
+                        label={reviewer.enabled ? 'Enabled' : 'Disabled'}
+                        onCheckedChange={(enabled) => void toggleEnabled(reviewer, enabled)}
+                      />
+                    </td>
+                    <td className="pr-4">
+                      <a
+                        className={secondaryButtonClass}
+                        href={`/reviewers/${encodeURIComponent(reviewer.id)}`}
+                      >
+                        Edit
+                      </a>
+                    </td>
+                  </Row>
+                );
+              })}
+            </tbody>
+          </Table>
+        </Card>
+      )}
     </div>
   );
-}
-
-function errorText(caught: unknown): string {
-  return caught instanceof ApiError ? caught.code : 'request_failed';
 }

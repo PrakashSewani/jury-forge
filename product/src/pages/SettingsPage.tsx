@@ -1,17 +1,10 @@
 import type { InstanceSettings, SettingsResponse } from '@jury-forge/shared';
 import { useCallback, useState } from 'react';
-import {
-  buttonClass,
-  Card,
-  Field,
-  inputClass,
-  LoadFailed,
-  Loading,
-  Notice,
-  secondaryButtonClass,
-} from '../components';
-import { ApiError, getSettings, updateSettings } from '../lib/api';
+import { getSettings, updateSettings } from '../lib/api';
 import { useLoadable } from '../lib/use-loadable';
+import { Button, Card, Field, Input, Notice, Switch } from '../ui';
+import { errorMessage } from './messages';
+import { PageError, PageLoading } from './screen-state';
 
 type NumberKey =
   | 'inlineCommentsPerReviewer'
@@ -22,12 +15,53 @@ type NumberKey =
   | 'blockingErrorThreshold'
   | 'repoInstructionsMaxBytes';
 
-const NUMBER_FIELDS: { key: NumberKey; label: string; min: number; max: number }[] = [
-  { key: 'inlineCommentsPerReviewer', label: 'Inline comments per reviewer', min: 1, max: 50 },
-  { key: 'inlineCommentsPerRun', label: 'Inline comments per run', min: 1, max: 100 },
-  { key: 'contextTotalBytes', label: 'Context total bytes', min: 20_000, max: 1_000_000 },
-  { key: 'contextFileBytes', label: 'Context file bytes', min: 4_000, max: 200_000 },
-  { key: 'descriptionLimit', label: 'PR description limit', min: 500, max: 20_000 },
+interface NumberField {
+  key: NumberKey;
+  label: string;
+  hint: string;
+  min: number;
+  max: number;
+}
+
+const COMMENT_FIELDS: NumberField[] = [
+  {
+    key: 'inlineCommentsPerReviewer',
+    label: 'Inline comments per reviewer',
+    hint: 'The most inline comments one reviewer can post on a run.',
+    min: 1,
+    max: 50,
+  },
+  {
+    key: 'inlineCommentsPerRun',
+    label: 'Inline comments per run',
+    hint: 'The most inline comments across the whole run; the rest land in the summary.',
+    min: 1,
+    max: 100,
+  },
+];
+
+const CONTEXT_FIELDS: NumberField[] = [
+  {
+    key: 'contextTotalBytes',
+    label: 'Context total bytes',
+    hint: 'The diff budget across all files sent to one reviewer.',
+    min: 20_000,
+    max: 1_000_000,
+  },
+  {
+    key: 'contextFileBytes',
+    label: 'Context file bytes',
+    hint: 'The diff budget for a single file.',
+    min: 4_000,
+    max: 200_000,
+  },
+  {
+    key: 'descriptionLimit',
+    label: 'PR description limit',
+    hint: 'How much of the pull request description reaches the prompt.',
+    min: 500,
+    max: 20_000,
+  },
 ];
 
 export default function SettingsPage() {
@@ -62,7 +96,7 @@ export default function SettingsPage() {
     update(key, Number(raw));
   }
 
-  function resetField<K extends keyof InstanceSettings>(key: K) {
+  function resetField(key: NumberKey | 'blockingMode' | 'repoInstructions') {
     if (current === null) {
       return;
     }
@@ -88,7 +122,9 @@ export default function SettingsPage() {
       setDraft({});
       setSaved(true);
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.code : 'request_failed');
+      setError(
+        errorMessage(caught, 'Could not save the settings. Check the values and try again.'),
+      );
     } finally {
       setBusy(false);
     }
@@ -98,159 +134,167 @@ export default function SettingsPage() {
     <div className="space-y-6">
       <header>
         <h1 className="text-xl font-semibold tracking-tight">Settings</h1>
-        <p className="mt-1 text-sm text-neutral-500">
-          These are the instance&rsquo;s review numbers — the D-009/D-010 caps and budgets. Each
-          field shows its default, and resetting only stages the value until you save.
+        <p className="mt-1 text-sm text-text-muted">
+          These are the instance&rsquo;s review numbers — the comment caps, context budgets, and
+          blocking behavior. Each field shows its default, and resetting only stages the value until
+          you save.
         </p>
       </header>
       {failed ? (
-        <Card>
-          <LoadFailed onRetry={reload} />
-        </Card>
+        <PageError
+          message="The instance settings could not be loaded. Check the Worker and try again."
+          onRetry={reload}
+        />
       ) : current === null ? (
-        <Card>
-          <Loading />
-        </Card>
+        <PageLoading />
       ) : (
         <>
-          <Card title="Advanced">
+          <Card title="Comment volume">
             <div className="space-y-5">
-              {NUMBER_FIELDS.map((field) => (
-                <div key={field.key} className="flex items-start gap-3">
-                  <div className="flex-1">
-                    <Field hint={`Default: ${current.defaults[field.key]}`} label={field.label}>
-                      <input
-                        className={inputClass}
-                        max={field.max}
-                        min={field.min}
-                        onChange={(event) => updateNumber(field.key, event.target.value)}
-                        type="number"
-                        value={draft[field.key] ?? current.settings[field.key]}
-                      />
-                    </Field>
-                  </div>
-                  <button
-                    className="pt-6 text-sm text-neutral-500 underline transition hover:text-neutral-900"
-                    onClick={() => resetField(field.key)}
-                    type="button"
-                  >
-                    Reset
-                  </button>
-                </div>
+              {COMMENT_FIELDS.map((field) => (
+                <NumberSetting
+                  current={current}
+                  draft={draft}
+                  field={field}
+                  key={field.key}
+                  onChange={updateNumber}
+                  onReset={resetField}
+                />
               ))}
             </div>
           </Card>
+
+          <Card title="Context budget">
+            <div className="space-y-5">
+              {CONTEXT_FIELDS.map((field) => (
+                <NumberSetting
+                  current={current}
+                  draft={draft}
+                  field={field}
+                  key={field.key}
+                  onChange={updateNumber}
+                  onReset={resetField}
+                />
+              ))}
+            </div>
+          </Card>
+
           <Card title="Blocking mode">
-            <label className="flex items-start gap-2 text-sm">
-              <input
+            <div className="space-y-4">
+              <Switch
                 checked={draft.blockingMode ?? current.settings.blockingMode}
-                onChange={(event) => update('blockingMode', event.target.checked)}
-                type="checkbox"
+                label="Request changes on error findings"
+                onCheckedChange={(checked) => update('blockingMode', checked)}
               />
-              <span>
-                <span className="block font-medium">Request changes on error findings</span>
-                <span className="block text-xs text-neutral-500">
-                  Off by default. When on, a run that finds at least the threshold of
-                  &ldquo;error&rdquo; findings posts REQUEST_CHANGES; every other run posts a
-                  comment.
-                </span>
-              </span>
-            </label>
-            <div className="flex items-start gap-3">
-              <div className="flex-1">
-                <Field
-                  hint={`Default: ${current.defaults.blockingErrorThreshold}`}
-                  label="Error findings required to block"
-                >
-                  <input
-                    className={inputClass}
-                    disabled={!(draft.blockingMode ?? current.settings.blockingMode)}
-                    max={50}
-                    min={1}
-                    onChange={(event) => updateNumber('blockingErrorThreshold', event.target.value)}
-                    type="number"
-                    value={draft.blockingErrorThreshold ?? current.settings.blockingErrorThreshold}
-                  />
-                </Field>
-              </div>
-              <button
-                className="pt-6 text-sm text-neutral-500 underline transition hover:text-neutral-900 disabled:opacity-50"
+              <p className="text-xs text-text-muted">
+                Off by default. When on, a run that finds at least the threshold of
+                &ldquo;error&rdquo; findings posts REQUEST_CHANGES; every other run posts a comment.
+              </p>
+              <NumberSetting
+                current={current}
                 disabled={!(draft.blockingMode ?? current.settings.blockingMode)}
-                onClick={() => resetField('blockingErrorThreshold')}
-                type="button"
-              >
-                Reset
-              </button>
-            </div>
-          </Card>
-          <Card title="Repository instructions">
-            <label className="flex items-start gap-2 text-sm">
-              <input
-                checked={draft.repoInstructions ?? current.settings.repoInstructions}
-                onChange={(event) => update('repoInstructions', event.target.checked)}
-                type="checkbox"
+                draft={draft}
+                field={{
+                  key: 'blockingErrorThreshold',
+                  label: 'Error findings required to block',
+                  hint: 'How many error findings a run needs before it requests changes.',
+                  min: 1,
+                  max: 50,
+                }}
+                onChange={updateNumber}
+                onReset={resetField}
               />
-              <span>
-                <span className="block font-medium">Include repository instructions</span>
-                <span className="block text-xs text-neutral-500">
-                  Off by default. When on, the run reads AGENTS.md and CONTRIBUTING.md at the pull
-                  request&rsquo;s revision and includes bounded excerpts in the prompts.
-                </span>
-              </span>
-            </label>
-            <div className="flex items-start gap-3">
-              <div className="flex-1">
-                <Field
-                  hint={`Default: ${current.defaults.repoInstructionsMaxBytes}`}
-                  label="Excerpt budget (bytes)"
-                >
-                  <input
-                    className={inputClass}
-                    disabled={!(draft.repoInstructions ?? current.settings.repoInstructions)}
-                    max={50_000}
-                    min={1_000}
-                    onChange={(event) =>
-                      updateNumber('repoInstructionsMaxBytes', event.target.value)
-                    }
-                    type="number"
-                    value={
-                      draft.repoInstructionsMaxBytes ?? current.settings.repoInstructionsMaxBytes
-                    }
-                  />
-                </Field>
-              </div>
-              <button
-                className="pt-6 text-sm text-neutral-500 underline transition hover:text-neutral-900 disabled:opacity-50"
-                disabled={!(draft.repoInstructions ?? current.settings.repoInstructions)}
-                onClick={() => resetField('repoInstructionsMaxBytes')}
-                type="button"
-              >
-                Reset
-              </button>
             </div>
           </Card>
+
+          <Card title="Repository instructions">
+            <div className="space-y-4">
+              <Switch
+                checked={draft.repoInstructions ?? current.settings.repoInstructions}
+                label="Include repository instructions"
+                onCheckedChange={(checked) => update('repoInstructions', checked)}
+              />
+              <p className="text-xs text-text-muted">
+                Off by default. When on, the run reads AGENTS.md and CONTRIBUTING.md at the pull
+                request&rsquo;s revision and includes bounded excerpts in the prompts.
+              </p>
+              <NumberSetting
+                current={current}
+                disabled={!(draft.repoInstructions ?? current.settings.repoInstructions)}
+                draft={draft}
+                field={{
+                  key: 'repoInstructionsMaxBytes',
+                  label: 'Excerpt budget (bytes)',
+                  hint: 'The most repository-instruction text added to one prompt.',
+                  min: 1_000,
+                  max: 50_000,
+                }}
+                onChange={updateNumber}
+                onReset={resetField}
+              />
+            </div>
+          </Card>
+
           {error ? <Notice tone="error">{error}</Notice> : null}
           {saved ? <Notice tone="info">Saved.</Notice> : null}
-          <div className="flex items-center gap-3">
-            <button
-              className={buttonClass}
-              disabled={busy || draftEmpty}
-              onClick={() => void handleSave()}
-              type="button"
-            >
-              {busy ? 'Saving…' : 'Save changes'}
-            </button>
-            <button
-              className={secondaryButtonClass}
-              disabled={busy}
-              onClick={resetAll}
-              type="button"
-            >
+          <div className="flex flex-wrap items-center gap-3">
+            <Button busy={busy} disabled={draftEmpty} onClick={() => void handleSave()}>
+              Save changes
+            </Button>
+            <Button disabled={busy} onClick={resetAll} variant="secondary">
               Reset all to defaults
-            </button>
+            </Button>
+            <p className="text-xs text-text-muted">
+              Changes are staged until you save them; resetting a field only affects the staged
+              value.
+            </p>
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+function NumberSetting({
+  field,
+  current,
+  draft,
+  disabled = false,
+  onChange,
+  onReset,
+}: {
+  field: NumberField;
+  current: SettingsResponse;
+  draft: Partial<InstanceSettings>;
+  disabled?: boolean;
+  onChange: (key: NumberKey, raw: string) => void;
+  onReset: (key: NumberKey) => void;
+}) {
+  return (
+    <div className="flex items-start gap-3">
+      <Field
+        className="flex-1"
+        hint={`Default: ${current.defaults[field.key]}. ${field.hint}`}
+        label={field.label}
+      >
+        <Input
+          disabled={disabled}
+          max={field.max}
+          min={field.min}
+          onChange={(event) => onChange(field.key, event.target.value)}
+          type="number"
+          value={draft[field.key] ?? current.settings[field.key]}
+        />
+      </Field>
+      <Button
+        className="mt-6"
+        disabled={disabled}
+        onClick={() => onReset(field.key)}
+        size="sm"
+        variant="secondary"
+      >
+        Reset
+      </Button>
     </div>
   );
 }

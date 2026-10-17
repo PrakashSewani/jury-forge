@@ -92,15 +92,23 @@ function Content({
       setup={shell?.setup ?? null}
       user={shell?.user ?? null}
     >
-      <Screens route={route} user={shell?.user ?? null} />
+      <Screens route={route} setup={shell?.setup ?? null} user={shell?.user ?? null} />
     </RouteGuard>
   );
 }
 
-function Screens({ route, user }: { route: Route; user: SessionUser | null }) {
+function Screens({
+  route,
+  user,
+  setup,
+}: {
+  route: Route;
+  user: SessionUser | null;
+  setup: SetupState | null;
+}) {
   switch (route.name) {
     case 'home':
-      return user ? <HomePage user={user} /> : null;
+      return user && setup ? <HomePage setup={setup} user={user} /> : null;
     case 'reviewers':
       return <ReviewersPage />;
     case 'reviewer-new':

@@ -60,7 +60,14 @@ export function Shell({ user, setup, route, onLogout, busy = false, children }: 
             >
               {menuOpen ? 'Close' : 'Menu'}
             </button>
-            <a className="min-w-0 truncate text-sm font-semibold tracking-tight" href="/">
+            <a
+              className={cx(
+                'inline-flex min-w-0 items-center truncate text-sm font-semibold tracking-tight',
+                tapTarget,
+                focusRing,
+              )}
+              href="/"
+            >
               {PRODUCT_NAME}
             </a>
           </div>
@@ -90,7 +97,14 @@ export function Shell({ user, setup, route, onLogout, busy = false, children }: 
           />
           <div className="absolute inset-y-0 left-0 flex w-72 max-w-[85%] flex-col gap-4 border-r border-border bg-surface p-4 shadow-panel">
             <div className="flex items-center justify-between gap-3">
-              <a className={cx('text-sm font-semibold tracking-tight', focusRing)} href="/">
+              <a
+                className={cx(
+                  'inline-flex items-center text-sm font-semibold tracking-tight',
+                  tapTarget,
+                  focusRing,
+                )}
+                href="/"
+              >
                 {PRODUCT_NAME}
               </a>
               <Badge tone={status.tone}>{status.label}</Badge>
@@ -105,7 +119,14 @@ export function Shell({ user, setup, route, onLogout, busy = false, children }: 
         {/* Sidebar — lg and above only. */}
         <aside className="hidden w-64 shrink-0 flex-col gap-6 border-r border-border p-6 lg:flex">
           <div className="flex flex-col gap-3">
-            <a className={cx('text-base font-semibold tracking-tight', focusRing)} href="/">
+            <a
+              className={cx(
+                'inline-flex items-center text-base font-semibold tracking-tight',
+                tapTarget,
+                focusRing,
+              )}
+              href="/"
+            >
               {PRODUCT_NAME}
             </a>
             <Badge tone={status.tone}>{status.label}</Badge>

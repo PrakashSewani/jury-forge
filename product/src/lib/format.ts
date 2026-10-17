@@ -36,3 +36,24 @@ export function formatTime(unixSeconds: number | null): string {
 export function shortSha(sha: string): string {
   return sha.slice(0, 7);
 }
+
+/**
+ * A coarse, human relative time for list screens ("3m ago", "2d ago"). It is computed at render
+ * time only — no timer, because live updating is slice D.
+ */
+export function formatRelativeTime(unixSeconds: number | null, nowMs = Date.now()): string {
+  if (unixSeconds === null) {
+    return '—';
+  }
+  const seconds = Math.max(0, Math.floor(nowMs / 1_000) - unixSeconds);
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months}mo ago`;
+  return `${Math.floor(months / 12)}y ago`;
+}

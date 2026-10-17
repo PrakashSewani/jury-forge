@@ -1,11 +1,12 @@
 import type { SetupState } from '@jury-forge/shared';
 import type { FormEvent } from 'react';
 import { useCallback, useEffect, useState } from 'react';
-import { buttonClass, Card, Field, inputClass, Notice, secondaryButtonClass } from '../components';
 import { ApiError, fetchSetupState, submitSetupCode, verifyInstallation } from '../lib/api';
 import { submitManifestForm } from '../lib/manifest';
 import type { WizardStepView } from '../lib/wizard';
 import { installUrl, setupErrorMessage, wizardStep, wizardSteps } from '../lib/wizard';
+import { Button, buttonClass, Card, Field, Input, Notice, secondaryButtonClass } from '../ui';
+import { PageLoading } from './screen-state';
 
 export default function SetupPage() {
   const [state, setState] = useState<SetupState | null>(null);
@@ -29,7 +30,7 @@ export default function SetupPage() {
     <div className="space-y-8">
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold tracking-tight">Set up this instance</h1>
-        <p className="text-sm text-neutral-500">
+        <p className="text-sm text-text-muted">
           Register this instance&rsquo;s own private GitHub App, install it, and claim the instance
           — the app, its credentials, and your model keys all stay in your Cloudflare account.
         </p>
@@ -93,17 +94,16 @@ function CodeStep() {
 
   return (
     <Card title="Enter the setup code">
-      <p className="text-sm text-neutral-500">
+      <p className="text-sm text-text-muted">
         The code is the{' '}
-        <code className="rounded bg-neutral-100 px-1 py-0.5 text-xs">SETUP_CODE</code> secret set
+        <code className="rounded bg-surface-muted px-1 py-0.5 text-xs">SETUP_CODE</code> secret set
         when this instance was deployed. Next, GitHub opens with the app details prefilled — you
         review and create the app there.
       </p>
       <form className="space-y-4" onSubmit={handleSubmit}>
         <Field label="Setup code">
-          <input
+          <Input
             autoComplete="off"
-            className={inputClass}
             onChange={(event) => setCode(event.target.value)}
             placeholder="The SETUP_CODE secret"
             required
@@ -115,18 +115,17 @@ function CodeStep() {
           hint="Create the app under an organization you administer instead of your personal account."
           label="Organization (optional)"
         >
-          <input
+          <Input
             autoComplete="off"
-            className={inputClass}
             onChange={(event) => setOrg(event.target.value)}
             placeholder="acme-inc"
             value={org}
           />
         </Field>
         {error ? <Notice tone="error">{error}</Notice> : null}
-        <button className={buttonClass} disabled={busy || redirecting} type="submit">
+        <Button busy={busy || redirecting} type="submit">
           {redirecting ? 'Redirecting to GitHub…' : busy ? 'Checking…' : 'Continue to GitHub'}
-        </button>
+        </Button>
       </form>
     </Card>
   );
@@ -161,7 +160,7 @@ function InstallStep({ state, onRefresh }: { state: SetupState; onRefresh: () =>
 
   return (
     <Card title="Install the app">
-      <p className="text-sm text-neutral-500">
+      <p className="text-sm text-text-muted">
         The GitHub App is registered. Install it on the account that should run reviews — a private
         app can only be installed by its owner (or members of the owning organization).
       </p>
@@ -173,14 +172,9 @@ function InstallStep({ state, onRefresh }: { state: SetupState; onRefresh: () =>
         ) : (
           <Notice tone="error">The app slug is missing. Restart setup from the code step.</Notice>
         )}
-        <button
-          className={secondaryButtonClass}
-          disabled={busy}
-          onClick={() => void handleVerify()}
-          type="button"
-        >
+        <Button busy={busy} onClick={() => void handleVerify()} variant="secondary">
           {busy ? 'Checking…' : 'I have installed it — verify'}
-        </button>
+        </Button>
       </div>
       {missing ? (
         <Notice tone="info">
@@ -195,7 +189,7 @@ function InstallStep({ state, onRefresh }: { state: SetupState; onRefresh: () =>
 function ClaimStep() {
   return (
     <Card title="Claim the instance">
-      <p className="text-sm text-neutral-500">
+      <p className="text-sm text-text-muted">
         Sign in with GitHub to claim this instance. The first account that can access the
         app&rsquo;s installation becomes the owner; anyone GitHub grants installation access can
         sign in later.
@@ -210,7 +204,7 @@ function ClaimStep() {
 function DoneStep() {
   return (
     <Card title="Setup complete">
-      <p className="text-sm text-neutral-500">
+      <p className="text-sm text-text-muted">
         This instance is claimed. Sign in with GitHub to open the dashboard.
       </p>
       <a className={buttonClass} href="/">
@@ -228,19 +222,19 @@ function StepIndicator({ steps }: { steps: WizardStepView[] }) {
           <span
             className={
               step.status === 'done'
-                ? 'flex h-6 w-6 items-center justify-center rounded-full bg-neutral-900 text-white'
+                ? 'flex h-6 w-6 items-center justify-center rounded-full bg-accent text-text-inverse'
                 : step.status === 'current'
-                  ? 'flex h-6 w-6 items-center justify-center rounded-full border border-neutral-900 font-medium'
-                  : 'flex h-6 w-6 items-center justify-center rounded-full border border-neutral-300 text-neutral-400'
+                  ? 'flex h-6 w-6 items-center justify-center rounded-full border border-accent font-medium'
+                  : 'flex h-6 w-6 items-center justify-center rounded-full border border-border-strong text-text-subtle'
             }
           >
             {step.status === 'done' ? '✓' : index + 1}
           </span>
-          <span className={step.status === 'pending' ? 'text-neutral-400' : 'text-neutral-700'}>
+          <span className={step.status === 'pending' ? 'text-text-subtle' : 'text-text-body'}>
             {step.label}
           </span>
           {index < steps.length - 1 ? (
-            <span aria-hidden="true" className="mx-1 h-px w-4 bg-neutral-200" />
+            <span aria-hidden="true" className="mx-1 h-px w-4 bg-border" />
           ) : null}
         </li>
       ))}
@@ -250,11 +244,11 @@ function StepIndicator({ steps }: { steps: WizardStepView[] }) {
 
 function LoadingCard({ failed, onRetry }: { failed: boolean; onRetry: () => Promise<void> }) {
   if (!failed) {
-    return <p className="text-sm text-neutral-500">Checking setup state…</p>;
+    return <PageLoading label="Checking setup state…" />;
   }
   return (
     <Card>
-      <p className="text-sm text-neutral-600">The setup API did not respond.</p>
+      <p className="text-sm text-text-body">The setup API did not respond.</p>
       <button className={secondaryButtonClass} onClick={() => void onRetry()} type="button">
         Try again
       </button>
