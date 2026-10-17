@@ -34,6 +34,7 @@ Migrations continue in `product/migrations/` (`0002_*` onward). Timestamps are u
 | `sessions`              | dashboard sessions                   | `token_hash`, `login`, `avatar_url`, `created_at`, `expires_at`                                                                                                           |
 | `oauth_states`          | single-use OAuth/manifest states     | `state`, `kind` (`login`/`claim`/`manifest`), `created_at`, `expires_at`                                                                                                  |
 | `webhook_deliveries`    | delivery de-duplication              | `delivery_id`, `received_at`                                                                                                                                              |
+| `instance_settings`     | tunable instance numbers (D-021)     | `key`, `value` (TEXT, validated per key), `updated_at` — see "Instance settings"                                                                                          |
 
 Notes: index `runs(repo_id, created_at desc)` and `sessions(expires_at)`; expired sessions and
 states are pruned on access; `webhook_deliveries` older than 7 days are pruned opportunistically.
@@ -46,6 +47,43 @@ states are pruned on access; `webhook_deliveries` older than 7 days are pruned o
 reviewer API keys. Decryption happens in memory only, immediately before use; secrets are never
 logged and never returned by the API — an API key is write-only, and responses expose only
 whether one is set. Key rotation is out of scope for v1; rotating means re-entering credentials.
+
+## Instance settings and blocking mode (D-021)
+
+`instance_settings` holds the numbers phase 2 fixed in code as key/value rows (`key`, `value`,
+`updated_at`). `worker/lib/settings.ts` owns the spec — every key's parser, bounds, and default —
+and `loadSettings(db)` returns the effective settings, falling back to the default whenever a
+stored value is missing or fails validation (a hand-edited row must never break a run).
+
+| Key                         | Bounds           | Default | Used by                                         |
+| --------------------------- | ---------------- | ------- | ----------------------------------------------- |
+| `inlineCommentsPerReviewer` | 1–50             | 10      | consolidation's per-reviewer inline cap (D-009) |
+| `inlineCommentsPerRun`      | 1–100            | 25      | consolidation's per-run inline cap (D-009)      |
+| `contextTotalBytes`         | 20,000–1,000,000 | 200,000 | context builder total budget (D-010)            |
+| `contextFileBytes`          | 4,000–200,000    | 32,000  | context builder per-file budget (D-010)         |
+| `descriptionLimit`          | 500–20,000       | 4,096   | PR description excerpt in the prompt            |
+| `blockingMode`              | boolean          | `false` | review event selection (item 11, D-013 default) |
+| `blockingErrorThreshold`    | 1–50             | 1       | error findings needed for `REQUEST_CHANGES`     |
+
+`GET /api/settings` returns `{ settings, defaults }` — the effective values and the spec's
+defaults, so the dashboard can render "reset to defaults" without hard-coding them. `PATCH
+/api/settings` takes a partial object; unknown keys are rejected with 400, every value is
+validated against its bounds, and the response is the same shape as `GET`. Both routes are
+session-guarded and same-origin. The dashboard's Settings screen ("Advanced") shows the numbers
+as inputs with the current values, the blocking toggle and threshold, a save action, and a
+per-field reset to the default.
+
+The run engine loads the settings in its `config` step and carries them into the run: the context
+budget and description cap shape the prompt, the inline caps shape consolidation, and the blocking
+numbers shape the posted event. The D-009/D-010 defaults are unchanged, so an instance that never
+opens the screen behaves exactly as before.
+
+**Blocking mode** (item 11): with `blockingMode` off — the default, and D-013's posture — every
+run posts `event: COMMENT`. With it on, a run whose findings contain at least
+`blockingErrorThreshold` findings of severity `error` posts `event: REQUEST_CHANGES`; everything
+else still posts `COMMENT`, and a run with no error findings never blocks. The review body's notes
+state which event was used and, when blocking was on but the threshold was not reached, that it
+was considered.
 
 ## Sessions and access
 
@@ -119,8 +157,9 @@ the durable history.
 Phases, one alarm segment at a time:
 
 - `context` — installation token (`@octokit/auth-app`), PR metadata, and changed files
-  (`pulls.listFiles`, capped at 300 files). Builds the review context within D-010: 200 KB total,
-  32 KB per file, lockfiles/generated/binary skipped, truncation recorded. Files are processed in
+  (`pulls.listFiles`, capped at 300 files). Builds the review context within the instance's
+  configured budget (D-021; D-010's 200 KB total and 32 KB per file are the defaults): lockfiles,
+  generated files and binaries are skipped, truncation is recorded. Files are processed in
   batches (~25 per segment), in priority order — added/changed source first, docs and renames
   trail (D-018) — with a persisted cursor, so a segment stays inside the free plan's CPU budget
   (I/O wait does not count as CPU). Before the files are read, the newest earlier run for the
@@ -134,11 +173,13 @@ Phases, one alarm segment at a time:
 - `consolidate` — validate findings (schema below; stored cap 50 per reviewer), choose inline
   comments (only lines present in the diff's right side, from patch hunk ranges; a finding whose
   `startLine` precedes its `line` and both are commentable becomes a multi-line comment — D-020),
-  apply the D-009 caps (10 inline per reviewer, 25 per run); everything else — overflow and
+  apply the configured inline caps (D-009's 10 per reviewer and 25 per run are the defaults —
+  D-021 makes them instance settings); everything else — overflow and
   findings without a valid line — becomes summary content with `file:line` references. The
   summary also gains the Resolved / Still present / New buckets when the run has previous
   findings, computed against this run's findings (D-020).
-- `post` — one `pulls.createReview` with `event: COMMENT` (see Confirm below),
+- `post` — one `pulls.createReview` with `event: COMMENT` (the default; `REQUEST_CHANGES` only
+  when blocking mode is on and the error threshold is met — D-021, see Confirm below),
   `commit_id: head_sha`, the summary body, and the inline comments. A failed post is retried; if
   any reviewers failed, the summary notes them. After posting, the app's previous reviews on the
   PR are minimized best-effort (`minimizeComment`, `OUTDATED` — D-018), so the thread rests on the
@@ -169,7 +210,8 @@ Two adapters behind one interface, selected by the reviewer's `flavor`:
 | `anthropic` | `POST {base_url}/v1/messages`, `x-api-key`, `anthropic-version: 2023-06-01`, `system` + `messages` |
 
 Prompts: system = the reviewer's instructions + rules + the output contract; user = PR title,
-body (≤4 KB), file list, and the budgeted patches. Output contract v2 (D-020) — strict JSON:
+body (≤ the configured description limit — 4 KB by default, D-021), file list, and the budgeted
+patches. Output contract v2 (D-020) — strict JSON:
 
 ```json
 {
@@ -203,7 +245,8 @@ set, and `PATCH` with `apiKey: *** clears it.
 ## Dashboard
 
 Routes: `/setup` (wizard steps), `/reviewers`, `/reviewers/new`, `/reviewers/:id`,
-`/repositories`, `/runs`, `/runs/:id`, `/` (overview with instance state and recent runs). An
+`/repositories`, `/runs`, `/runs/:id`, `/settings` (Advanced — the D-021 numbers), `/` (overview
+with instance state and recent runs). An
 auth-aware shell redirects to sign-in on 401. Screens: the reviewer editor (instructions, rules,
 flavor, base URL, model, params; the API key is write-only, shown as "set" with a replace
 action), repositories (enable/disable, per-repo reviewer toggles), runs (status, per-reviewer
@@ -240,6 +283,7 @@ action (D-016).
 | GET/PUT          | `/api/repositories/:repoId/reviewers` | session   | per-repo reviewer enablement                 |
 | GET              | `/api/runs`                           | session   | history `{ runs, nextCursor }` (keyset)      |
 | GET              | `/api/runs/:id`                       | session   | run detail `{ run, reviewers }`              |
+| GET/PATCH        | `/api/settings`                       | session   | `{ settings, defaults }` (D-021)             |
 | POST             | `/api/webhooks/github`                | signature | GitHub deliveries                            |
 
 ## Security
@@ -254,7 +298,8 @@ first-run without it).
 Vitest inside the Workers runtime (the existing setup): crypto round-trip and format; session
 middleware and the access gate; context budget, skip rules, and truncation notes; consolidation
 caps and inline selection (pure functions); multi-line `startLine` acceptance and rejection and
-the resolution comparison (D-020, pure functions); provider adapters against mocked `fetch` (both
+the resolution comparison (D-020, pure functions); settings validation, defaults, and the
+blocking-event selection (D-021, pure functions); provider adapters against mocked `fetch` (both
 flavors, timeouts, malformed output, usage envelopes); webhook verification and de-duplication;
 the setup state machine with mocked GitHub endpoints; Durable Object phases, retries, and run
 records via the Workers Vitest plugin with stubbed `fetch`. No test performs real network calls.
@@ -277,7 +322,8 @@ works); the real end-to-end pass happens on a deployed instance, which is manual
 ## Confirm before implementation
 
 - **Review event:** `COMMENT` (non-blocking, recommended) — `REQUEST_CHANGES` would block merges
-  wherever branch protection counts reviews.
+  wherever branch protection counts reviews. D-021 keeps `COMMENT` the default and makes
+  `REQUEST_CHANGES` an explicit per-instance opt-in (blocking mode above).
 - **Dashboard access:** the installation-access gate above, with no separate allowlist UI in v1
   (recommended). The allowlist mentioned in `docs/product.md`'s core concepts would be a later
   addition.

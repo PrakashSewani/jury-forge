@@ -396,3 +396,43 @@ computing buckets only in the summary (the prompt section is what stops the redu
 the buckets are the receipt for it); treating a missing `usage` envelope as a reviewer failure
 (the envelope is optional and provider-specific); `REQUEST_CHANGES`-style pressure from resolved
 counts (blocking is item 11's explicit opt-in, D-013 otherwise stands).
+
+## D-021: Slice 8 — instance settings and optional blocking mode
+
+**Date:** 2026-10-17 (implements roadmap items 5 and 11 from D-017)
+
+**Decision:** (1) **Instance settings.** A new `instance_settings` key/value table (`key`,
+`value`, `updated_at`) holds the numbers phase 2 fixed in code, with the current values as
+defaults: `inlineCommentsPerReviewer` (1–50, default 10), `inlineCommentsPerRun` (1–100, default
+25), `contextTotalBytes` (20,000–1,000,000, default 200,000), `contextFileBytes` (4,000–200,000,
+default 32,000), `descriptionLimit` (500–20,000, default 4,096), plus the blocking pair below.
+`worker/lib/settings.ts` owns the spec (parser, bounds, default per key); `loadSettings()` returns
+effective settings and falls back to a key's default whenever the stored value is missing or
+invalid, so a hand-edited row can never break a run. `GET /api/settings` returns
+`{ settings, defaults }`; `PATCH /api/settings` accepts a partial object, rejects unknown keys and
+out-of-range values with 400, and returns the same shape. The dashboard gains a Settings screen
+(the "Advanced" section) with the current values as defaults, per-field reset, and save. The run
+engine reads the settings in its `config` step and uses them for the context budget, the
+description cap, the inline comment caps, and the review event.
+
+(2) **Optional blocking mode** (item 11). `blockingMode` (boolean, default **false**) and
+`blockingErrorThreshold` (1–50, default 1) select the review event: with blocking off — the
+default, and D-013's posture — every run posts `event: COMMENT`. With it on, a run whose findings
+include at least `blockingErrorThreshold` findings of severity `error` posts
+`event: REQUEST_CHANGES`; any other run still posts `COMMENT`. The review body's notes state which
+event was used, and when blocking was on without reaching the threshold.
+
+**Why:** D-009/D-010's numbers were v1 defaults, not laws — a large diff or a chatty reviewer
+should be tunable from the dashboard instead of by editing the Worker and redeploying; and
+blocking is the one behavior an owner plausibly wants from a review bot on their own repository,
+so it ships as a switch that is off until the owner flips it, keeping the documented D-013
+posture for every instance that never touches it.
+
+**Rejected:** env-var or `wrangler.jsonc` configuration for the numbers (a redeploy per tweak,
+and it puts product behavior in deploy config); per-repository settings in this slice (the demand
+is per-instance; per-repo tuning can be a later decision with its own table); turning blocking on
+by default or inferring it from severity counts (it would silently change merge behavior for
+existing instances — D-013 stands as the default); blocking on _any_ error finding regardless of
+threshold (noisy for reviewers that flag errors liberally — the threshold is the escape hatch);
+a separate `blocking` column on `runs` (the posted `review_url` and the summary's note already
+record what happened).
