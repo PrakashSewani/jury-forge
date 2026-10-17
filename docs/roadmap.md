@@ -23,7 +23,7 @@ item planned.
 | 9     | 10      | Repo instructions (`AGENTS.md`/`CONTRIBUTING.md`) in prompts                        | in review |
 | 10    | 7, 12   | Credential key rotation + audit trail                                               | in review |
 | 11    | 9, 13   | Distribution: guided deploy + reviewer import/export (with phase 3/4 launch polish) | planned   |
-| —     | 8       | Access re-checks — shorter session TTL, no stored user tokens (D-024)               | planned   |
+| —     | 8       | Access re-checks — shorter session TTL, no stored user tokens (D-024)               | in review |
 
 ## Items
 
@@ -43,7 +43,8 @@ item planned.
    (`startLine`), provider token `usage` captured into run detail (D-020, slice 7).
 7. **Key rotation** — key-versioned ciphertexts + lazy re-encrypt on write (v2 format)
    (D-023, slice 10).
-8. **Access re-checks** — decide between shorter session TTL and stored-token re-verification.
+8. **Access re-checks** — shorter session TTL, no stored user tokens (D-024, lands with the
+   slate).
 9. **Guided deploy** — `npm run deploy:guided` (D1 create → secrets → deploy → wizard URL);
    evaluate a "Deploy to Cloudflare" button.
 10. **Repo instructions** — bounded `AGENTS.md`/`CONTRIBUTING.md` excerpts in prompts (opt-in)

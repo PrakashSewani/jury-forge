@@ -512,3 +512,36 @@ would need a manual migration); an activity export/download endpoint (a reading 
 asked for; the table is one `SELECT` away for anyone who wants more); recording request-level noise
 like every page view or failed login (the trail is for state changes, not traffic); an unbounded
 trail (a single instance accumulates rows forever for no benefit — 90 days, pruned on read).
+
+## D-024: Roadmap item 8 — access re-checks: shorter session TTL, no stored user tokens
+
+**Date:** 2026-10-17 (resolves item 8 from D-017)
+
+**Decision:** The dashboard session TTL drops from 30 days to **7 days** (`sessions.expires_at`
+and the cookie's `Max-Age` both follow), and nothing else changes: access is still decided once, at
+sign-in, by the D-012 installation-access gate, and the instance still stores no GitHub user token
+or refresh token of any kind. A user who loses GitHub access therefore keeps a working dashboard
+for at most seven days instead of thirty, and every other attribute of the gate — who may
+authorize the app, what the token must see, single-use OAuth state — is untouched. The server-side
+session row already expires on its own and expired rows are pruned on the next sign-in; the cookie
+lifetime is the only thing that moved.
+
+**Why:** the two candidate answers to item 8 were a shorter TTL or re-verifying the user's
+installation access on every request by keeping their GitHub token; the owner's instruction for
+this slate was to take the conservative option. Dropping the window to a week meaningfully bounds
+the stale-access period — the actual risk item 8 names — while adding no new credential at rest,
+no new failure mode in the request path, and no dependency on GitHub being reachable to serve a
+dashboard page. It also keeps D-005's posture exactly: the only secrets this instance holds are the
+ones the owner's own GitHub App needs.
+
+**Rejected:** stored-token re-verification — persisting each dashboard user's GitHub token (and,
+for the App user tokens issued by an app with expiring tokens, its refresh token) in D1 so the
+gate can be re-run per request: it puts a live credential for the owner's GitHub account into the
+instance database, needs its own encryption, rotation and revocation story, makes every dashboard
+request depend on GitHub being up, and widens the blast radius of a database leak from "encrypted
+app credentials" to "the owner's GitHub session". This is the alternative the owner can overturn
+in review — the decision is recorded separately, so reversing it is a new entry, not a rewrite;
+a middle option (re-check on each _new_ sign-in only, which is today's behaviour) is already what
+the gate does, and per-request re-checks are rejected above; `SameSite=Strict` — would break the
+app's same-site navigation and does not address stale access; shortening below a week (daily
+re-auth) — friction the risk does not justify for a single-owner instance.

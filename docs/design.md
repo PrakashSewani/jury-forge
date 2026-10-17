@@ -128,8 +128,10 @@ per reviewer on every run.
   private apps); the gate makes dashboard access follow installation access, which covers the
   owner and the org members GitHub grants access.
 - Sessions: 32 random bytes, stored as SHA-256 in `sessions`; cookie `jf_session` (HttpOnly,
-  Secure, SameSite=Lax, 30 days). Logout deletes the row. Access is checked at sign-in; someone
-  who loses GitHub access keeps their session until it expires — accepted in v1.
+  Secure, SameSite=Lax, **7 days** — D-024; it was 30 days in v1). Logout deletes the row. Access
+  is checked at sign-in; someone who loses GitHub access keeps their session until it expires —
+  bounded to a week, and the rejected alternative (storing user tokens to re-check on every
+  request) is recorded in D-024.
 - CSRF: state-changing requests must be same-origin (`Origin`/`Sec-Fetch-Site` check); the
   session cookie is SameSite=Lax.
 - Middleware guards `/api/*` except: health, auth start/callback, setup endpoints, and the
