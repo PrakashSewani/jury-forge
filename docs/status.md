@@ -52,17 +52,16 @@ change deploys anything.
 **Rework (2026-10-17):** the post-phase-2 rework is four stacked slices. Slice A merged to `dev` as
 **#17** (`77541fbb`; reviewed head `33b0a50`) on `feat/rework-a-design-system-20261017`; slice B
 merged to `dev` as **#18** (`c48e825e1b`), and post-merge canary verification passed on the merged
-tree. Slice C is in progress on `feat/rework-c-product-shape-20261017` — its plan is recorded in
-D-028 and `docs/design.md`. The backend of C-1–C-4 (computed readiness, reviewer templates,
-reviewer↔repo visibility, manual try runs with migration `0006_run_mode.sql`) has landed; the
-dashboard work is not started. Slice D is not started.
+tree. Slice C is complete on `feat/rework-c-product-shape-20261017` (branched from `c48e825e1b`,
+plan recorded in D-028 and `docs/design.md`) and is open for review against `dev`; slice D is not
+started.
 
-| Slice | Branch                                 | Status                                               |
-| ----- | -------------------------------------- | ---------------------------------------------------- |
-| A     | `feat/rework-a-design-system-20261017` | merged to `dev` (`77541fbb`) (#17)                   |
-| B     | `feat/rework-b-shell-screens-20261017` | merged to `dev` (`c48e825e1b`) (#18)                 |
-| C     | `feat/rework-c-product-shape-20261017` | in progress — backend C-1–C-4 landed; dashboard next |
-| D     | —                                      | not started                                          |
+| Slice | Branch                                 | Status                               |
+| ----- | -------------------------------------- | ------------------------------------ |
+| A     | `feat/rework-a-design-system-20261017` | merged to `dev` (`77541fbb`) (#17)   |
+| B     | `feat/rework-b-shell-screens-20261017` | merged to `dev` (`c48e825e1b`) (#18) |
+| C     | `feat/rework-c-product-shape-20261017` | complete, in review against `dev`    |
+| D     | —                                      | not started                          |
 
 Slice A is the design-system vocabulary and UI harness (D-026): a token layer in
 `product/src/styles.css`, the `product/src/ui/` primitives, a dependency-free
@@ -112,25 +111,49 @@ new screen-local modules carry the shared loading/error blocks (`pages/screen-st
 error copy (`pages/messages.ts`) — no screen prints a machine code at the user any more. No raw
 palette utility and no timer remain anywhere in `product/src/`: live run updates are slice D.
 
-**Slice C backend (2026-10-17):** C-1–C-4 landed on `feat/rework-c-product-shape-20261017` —
-computed readiness (`GET /api/instance/readiness`), reviewer templates, reviewer↔repo visibility,
-and manual try runs (`POST /api/runs/try`, `GET /api/repositories/:repoId/pulls`, migration
-`0006_run_mode.sql`). Manual runs ride the existing Durable Object step machine, skip the
-repository-enabled gate and the D-018 supersession skip, run exactly the named reviewers, and stop
-before the `post` step so they publish nothing to GitHub. **Verified:** `npm run typecheck` exit 0;
-`npm test --workspace @jury-forge/product` exit 0 — worker **195/195** (19 files), UI **95/95**
-(6 files). The dashboard work for slice C is not started.
+**Slice B verified (merged `c48e825e1b`):** `npm run check` exit 0 — workerd **170/170** (17 files) ·
+UI **95/95** (6 files) · both builds · harness exit 0 with `--assert`: **112 cells measured, 0
+failing** (overflow 0, tapTargets 0, contrast 0, focus 0, mobileNav 0) across 8 routes × 7 widths × 2
+themes. Numbers: `docs/rework/final.json` / `final.md`, deltas against `docs/rework/baseline.json`.
 
-**Verified:** `npm run check` exit 0 — workerd **170/170** (17 files) · UI **95/95** (6 files) · both
-builds · harness exit 0 with `--assert`: **112 cells measured, 0 failing** (overflow 0, tapTargets 0,
-contrast 0, focus 0, mobileNav 0) across 8 routes × 7 widths × 2 themes, browser and dev server both
-reaped. Numbers: `docs/rework/final.json` / `final.md`, deltas against `docs/rework/baseline.json`.
+**Slice C (2026-10-17), complete on `feat/rework-c-product-shape-20261017` (base `c48e825e1b`),
+D-028.** Six commits: docs `b178a30`; shared `4d43daf` (the seven reviewer templates in
+`shared/src/templates.ts` plus the slice's contracts — `InstanceReadiness`, `RepositoryPullRequest`,
+`TryRunRequest`/`TryRunResponse`, `RunMode`, `Reviewer.repositories`, `RunSummary.mode`); worker
+`b4fdb58` (readiness derived from D1 in `product/worker/lib/readiness.ts` behind
+`GET /api/instance/readiness`; `Reviewer.repositories` computed in one query) and `b12cebf` (migration
+`0006_run_mode.sql`, `POST /api/runs/try`, `GET /api/repositories/:repoId/pulls`, the Durable Object's
+manual mode); dashboard `0baf98f` and `da82c2e` (the Overview leads with the computed readiness and
+its single next step; the reviewers list renders the API's `repositories` instead of one request per
+repository; the reviewer editor's template picker; the "Try a reviewer" dialog; run detail states that
+a manual run was not posted to GitHub).
+
+C-1 readiness is computed per request from D1 — no stored checklist — as five steps (claim, install
+the app, enable a repository, add a reviewer with a model key, see the first run) with the raw counts
+and a single `nextStep`. C-2 ships the seven built-in starter templates
+(Security, Architecture, Backend, Frontend, Performance, Testing, Documentation) as client-side
+prefill only: no API, no table. C-3 puts each reviewer's enabled repositories on the reviewer record.
+C-4 adds manual try runs: the only schema change in the slice (`runs.mode`, additive, `NOT NULL`,
+default `'auto'`), the same step machine as an automatic run, skipping the repository-enabled gate and
+the D-018 supersession skip, running exactly the named reviewers, and stopping before the `post` step
+so nothing is published to GitHub.
+
+**Verified on the Mac checkout of record (`~/Projects/jury-forge`) at `da82c2e`:** `npm run check`
+**exit 0** — typecheck (three `tsc` programs plus `astro check`), ESLint, Prettier `format:check`,
+workerd **195/195** (19 files) · UI **118/118** (8 files) · both builds, clean tree afterwards.
+`npm run dev:seed` exit 0; `node scripts/measure-layout.mjs --label slice-c --assert` **exit 0** —
+**112 cells, 0 failing** (overflow 0, tapTargets 0, contrast 0, focus 0, mobileNav 0), 51.9 s, browser
+and dev server both reaped. That grid is numerically identical to the committed
+`docs/rework/final.json` on a tree that now carries slice C's new UI, so its own JSON was not
+committed — same reasoning as `docs/rework/README.md`'s note on the redundant intermediate sheet; it
+is reproducible with the command in that README. No raw Tailwind palette utility class appears
+anywhere in `product/src` or `product/test-ui` (grep over `.ts`/`.tsx`: no matches).
 
 **Blocked by:** nothing.
 
-**Next action:** finish slice C — the dashboard work for readiness, templates, reviewer↔repo
-visibility and manual try runs — then slice D (validated contracts, error taxonomy, client routing,
-run polling) from the rework plan in `docs/roadmap.md`.
+**Next action:** slice C's pull request is open for review against `dev` (then Prakash merges); after
+that, slice D (validated contracts, error taxonomy, client routing, run polling) from the rework plan
+in `docs/roadmap.md`.
 
 ## Backlog (owner-owned, deferred)
 
