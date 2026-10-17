@@ -862,3 +862,84 @@ machine and differs only in the skipped `post` step and the recorded `mode`.
 **Not in this slice:** no multi-repository or multi-PR try run; no private or closed pull requests
 in the picker (open pull requests only); no posting to GitHub from a try run; no reviewer
 marketplace; and no deploy — the `dev`-only hold stands.
+
+## D-029: Rework slice D — validated contracts, one error taxonomy, client-side routing, live runs
+
+**Date:** 2026-10-17 (fourth and final slice of the post-phase-2 rework)
+
+**Decision:** (1) **Contracts become schemas.** A new `shared/src/schemas/` (zod, already a repo
+dependency) is the single source of truth for the Worker ↔ dashboard contract: `common`, `auth`,
+`setup`, `reviewers`, `repositories`, `runs`, `settings`, `activity` and `instance`, one module per
+domain plus a barrel. `shared/src/contracts.ts` keeps every exported type name but declares no
+interface: each is `z.infer<typeof XSchema>`, so a shape cannot drift from its schema. The Worker
+gained `product/worker/lib/respond.ts` — `respond(schema, data, status)` parses the payload it is
+about to send and `errorResponse(code, status)` builds every `{ error }` body — and every
+dashboard-facing JSON response in `product/worker/**` now goes through one of the two (91 call sites
+that used to be `c.json`), including the SPA's own `notFound`/`onError` handlers. Parsing runs in dev
+and in the test suite and is skipped only in a production build; an unknown mode means parse, so the
+gap can only ever be closed, never opened. A parse failure throws, which is what turns response drift
+into a red test instead of a blank screen. Two responses need a header before the body
+(`POST /api/setup/code`'s `Set-Cookie`, `GET /api/reviewers/export`'s `Content-Disposition`); they set
+it on the validated `Response` and keep both the header and the validation. No status code, body
+shape or behaviour changed anywhere else.
+
+(2) **The dashboard validates instead of casting.** `product/src/lib/api.ts`'s `request()` now takes
+the schema for the path it calls and parses the response with it — every exported API function passes
+its schema and accepts an `AbortSignal`. A body that does not parse becomes
+`ApiError(status, 'invalid_response')` and the screen shows its error state; `as T` on a response no
+longer exists in the dashboard. `product/test/contracts.test.ts` holds one valid and one drifted
+payload per schema, so a renamed or missing field fails the worker suite by name.
+
+(3) **One error taxonomy.** `shared/src/errors.ts` holds `API_ERROR_CODES` (every code the Worker can
+emit, plus the dashboard's own `request_failed`, `invalid_response` and the provider code it
+recognizes), the derived `ApiErrorCode` union, `ApiErrorCodeSchema`, the `{ error }` body schema
+`ApiErrorSchema`, `API_ERROR_MESSAGES` and `message(code, fallback?)`. `message()` returns a human
+sentence and never a machine code. The screens' copy is byte-identical to slice B's: the table carries
+the dashboard's existing sentences for the codes the screens already mapped, `lib/wizard.ts` keeps its
+setup-specific sentences for the setup screen, and the one code today's maps missed
+(`setup_session_required`) is now covered because the union is exhaustive. Raw codes were already
+gone from the screens since slice B; this slice removes the second and third copies of the mapping.
+
+(4) **Real client-side routing.** `product/src/lib/router.ts` gained `navigate()` (which writes the
+history entry with `pushState` and notifies subscribers), `subscribeRoute()` (which also listens for
+`popstate`) and `handleAppLink()` (which intercepts a plain left click on an in-app anchor and lets a
+modified click, a non-self target and an `/api/` URL through to the browser). `App.tsx` reads the
+route through `useSyncExternalStore(subscribeRoute, …)` instead of
+`window.location.pathname` once, anchors that stay inside the app prevent the default and navigate,
+and modified clicks (meta/ctrl/shift/alt, middle click) still open a new tab. The shell's
+session/setup fetch stays a once-per-page-load concern: a navigation is one fetch for the screen's own
+data, where before it was a full page load that re-ran session, setup state and the screen fetch.
+Deep links keep working through the SPA fallback already configured in `product/wrangler.jsonc`; no
+infrastructure change.
+
+(5) **The data layer.** `use-loadable.ts` became `product/src/lib/use-resource.ts`
+(`useResource(schema, fetcher)`): the fetcher receives an `AbortSignal`, is aborted on unmount and on
+identity change, an aborted request never sets state or shows a failure, and the resource revalidates
+when the window regains focus or the tab becomes visible again. A new
+`product/src/lib/use-poll.ts` (`usePoll(fetcher, { intervalMs, active })`) polls without overlapping
+ticks and clears its interval on unmount or when `active` goes false. The runs list polls while any
+run on screen is `running`, the run detail polls while its run is `running` and stops at any terminal
+status — so a run in progress finally updates on screen without a reload.
+
+**Why:** the rework's remaining hole was the boundary itself. The Worker validated what came in and
+said nothing about what went out, while the dashboard cast every response with `as T`; the two sides
+agreed only in the developer's head, and with no UI test able to see a response shape, drift could
+only be discovered by a user. Making the schema the single source — the shapes, the error codes, the
+parsing on both sides — is what lets a test assert the boundary. Everything else follows from the same
+cause: a full page load per navigation is what made the dashboard feel unlike an application, and no
+timer anywhere is why a `running` run never moved. None of this adds a runtime dependency: zod was
+already a product dependency, and it becomes a declared dependency of `shared` (same resolved version,
+no new package).
+
+**Rejected:** keeping the interfaces and adding a parallel schema — two sources of truth is the bug
+this slice exists to remove; validating in production only — the cost is a parse per response and the
+value is a suite that fails on drift, so validation is on in dev/test and off in a production build;
+making `respond()` return the parsed data for `c.json()` to serialize — a `Response` is what the route
+returns, so the schema validates exactly the bytes that leave; a routing library — `pushState` plus a
+`popstate` listener plus one subscription is the whole requirement, and the repo's rule is the
+smallest thing that fits; polling every screen — only a `running` run needs it, and it stops at a
+terminal status; keeping the dashboard's code→sentence maps as well as the shared one — three copies
+of one taxonomy is how `setup_session_required` went missing in the first place.
+
+**Not in this slice:** no new runtime dependency (zod was already resolved in the repo), no migration,
+no change to the engine, no deploy — the `dev`-only hold stands.

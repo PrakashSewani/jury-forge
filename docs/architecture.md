@@ -67,6 +67,38 @@ rendered by the dashboard, which keeps no checklist of its own and so cannot con
 database. A manual try run is the same engine and the same step machine as an automatic run,
 differing only in the skipped `post` step and the recorded `mode`.
 
+### The Worker ↔ dashboard boundary (D-029, slice D)
+
+The dashboard is a separate program that talks to the Worker over `/api/*`, so the boundary is a real
+contract rather than a TypeScript convenience. These are the invariants the code enforces:
+
+- **One contract source.** `shared/src/schemas/` (zod) is the only place a contract is written. Every
+  exported contract type in `shared/src/contracts.ts` is a `z.infer` of its schema — no interface, no
+  hand-written duplicate — so a response shape cannot drift from the type the dashboard compiles
+  against without failing a test.
+- **Every response is produced by its schema.** A dashboard-facing JSON response comes from
+  `respond(schema, data)` (`product/worker/lib/respond.ts`) and every error body from
+  `errorResponse(code, status)`; no worker route builds a dashboard payload with a bare `c.json`.
+  Parsing runs in dev and in the test suite and is skipped only in a production build (an unknown
+  mode means parse); a parse failure throws, so drift fails the suite instead of a browser. Two
+  responses set a header before the body (`POST /api/setup/code`'s `Set-Cookie`,
+  `GET /api/reviewers/export`'s `Content-Disposition`) and do so on the validated `Response`.
+- **The dashboard never casts a response.** `product/src/lib/api.ts` calls `request(schema, path)`
+  and parses the body with that schema; a body that does not match becomes
+  `ApiError(status, 'invalid_response')` and the screen shows its error state. `as T` on a response
+  is gone, and `product/test/contracts.test.ts` holds a valid and a drifted payload per schema.
+- **One error taxonomy.** `shared/src/errors.ts` holds `API_ERROR_CODES`, the `ApiErrorCode` union,
+  the `{ error }` body schema and `message(code, fallback?)`. A screen renders a human sentence — its
+  own fallback when the code is unknown — and never a machine code.
+- **Real client-side routing.** `product/src/lib/router.ts` owns navigation: `navigate()` writes the
+  history entry with `pushState` and notifies subscribers, `popstate` re-renders on back/forward, and
+  the shell's session/setup fetch happens once per page load rather than once per navigation. Deep
+  links are served by the SPA fallback already configured in `product/wrangler.jsonc`
+  (`not_found_handling: single-page-application`).
+- **Live runs.** While a run is `running`, the runs list and the run detail poll on an interval and
+  stop at a terminal status (`usePoll`); every data fetch is abortable and revalidates when the
+  window regains focus (`useResource`), so a slow response cannot land on an unmounted screen.
+
 ## Branch and release flow
 
 - `dev` is the default branch and the integration target. Agent work happens on feature branches

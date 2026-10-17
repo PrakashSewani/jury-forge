@@ -51,17 +51,17 @@ change deploys anything.
 
 **Rework (2026-10-17):** the post-phase-2 rework is four stacked slices. Slice A merged to `dev` as
 **#17** (`77541fbb`; reviewed head `33b0a50`) on `feat/rework-a-design-system-20261017`; slice B
-merged to `dev` as **#18** (`c48e825e1b`), and post-merge canary verification passed on the merged
-tree. Slice C is complete on `feat/rework-c-product-shape-20261017` (branched from `c48e825e1b`,
-plan recorded in D-028 and `docs/design.md`) and is open for review against `dev`; slice D is not
-started.
+merged to `dev` as **#18** (`c48e825e1b`); slice C merged to `dev` as **#19** (`b93d2f04b1`), and
+post-merge canary verification passed on each merged tree. Slice D is complete on
+`feat/rework-d-architecture-20261017` (branched from `b93d2f04b1`, plan recorded in D-029) and is
+open for review against `dev`.
 
 | Slice | Branch                                 | Status                               |
 | ----- | -------------------------------------- | ------------------------------------ |
 | A     | `feat/rework-a-design-system-20261017` | merged to `dev` (`77541fbb`) (#17)   |
 | B     | `feat/rework-b-shell-screens-20261017` | merged to `dev` (`c48e825e1b`) (#18) |
-| C     | `feat/rework-c-product-shape-20261017` | complete, in review against `dev`    |
-| D     | —                                      | not started                          |
+| C     | `feat/rework-c-product-shape-20261017` | merged to `dev` (`b93d2f04b1`) (#19) |
+| D     | `feat/rework-d-architecture-20261017`  | complete, in review against `dev`    |
 
 Slice A is the design-system vocabulary and UI harness (D-026): a token layer in
 `product/src/styles.css`, the `product/src/ui/` primitives, a dependency-free
@@ -116,8 +116,9 @@ UI **95/95** (6 files) · both builds · harness exit 0 with `--assert`: **112 c
 failing** (overflow 0, tapTargets 0, contrast 0, focus 0, mobileNav 0) across 8 routes × 7 widths × 2
 themes. Numbers: `docs/rework/final.json` / `final.md`, deltas against `docs/rework/baseline.json`.
 
-**Slice C (2026-10-17), complete on `feat/rework-c-product-shape-20261017` (base `c48e825e1b`),
-D-028.** Seven commits: docs `b178a30`; shared `4d43daf` (the seven reviewer templates in
+**Slice C (2026-10-17), merged to `dev` as #19 (`b93d2f04b1`) from
+`feat/rework-c-product-shape-20261017` (base `c48e825e1b`), D-028.** Nine commits: docs `b178a30`;
+shared `4d43daf` (the seven reviewer templates in
 `shared/src/templates.ts` plus the slice's contracts — `InstanceReadiness`, `RepositoryPullRequest`,
 `TryRunRequest`/`TryRunResponse`, `RunMode`, `Reviewer.repositories`, `RunSummary.mode`); worker
 `b4fdb58` (readiness derived from D1 in `product/worker/lib/readiness.ts` behind
@@ -127,7 +128,9 @@ manual mode); dashboard `0baf98f` and `da82c2e` (the Overview leads with the com
 its single next step; the reviewers list renders the API's `repositories` instead of one request per
 repository; the reviewer editor's template picker; the "Try a reviewer" dialog; run detail states that
 a manual run was not posted to GitHub). The seventh — `4b40665` `fix: answer sentry's round-1
-findings on #19 (slice C, D-028)` — answers all four round-1 findings (see the round-1 note below).
+findings on #19 (slice C, D-028)` — answers all four round-1 findings (see the round-1 note below);
+the last two (`57c12f3`, `2b93aea`) are the tracker updates this file received while the review was
+open, which is why the branch carries nine commits and not seven.
 
 C-1 readiness is computed per request from D1 — no stored checklist — as five steps (claim, install
 the app, enable a repository, add a reviewer with a model key, see the first run) with the raw counts
@@ -166,11 +169,34 @@ test (the automatic run's prompt then contains "Previously reported findings"; t
 request answers 202 instead of 404; the old title trips the copy assertions; dropping the badge
 loses the row mark).
 
+**Slice D (2026-10-17), on `feat/rework-d-architecture-20261017` (base `b93d2f04b1`), D-029.** The
+boundary between the Worker and the dashboard, made real: `shared/src/schemas/*` (zod) is the single
+source of the contract and every type in `shared/src/contracts.ts` derives from it with `z.infer`;
+`shared/src/errors.ts` carries `API_ERROR_CODES`, the `ApiErrorCode` union and `message(code)`; the
+Worker gained `product/worker/lib/respond.ts` and every dashboard-facing response in
+`product/worker/**` now goes through `respond(schema, data)` or `errorResponse(code, status)`; the
+dashboard's `request()` validates every response with the same schema instead of casting, and a
+mismatch becomes `invalid_response` on the screen's error path rather than a broken render;
+`product/src/lib/router.ts` gained `navigate()`/`subscribeRoute()`/`handleAppLink()` so a navigation
+is `pushState` plus one screen fetch instead of a full page load (`App.tsx` reads the route through
+`useSyncExternalStore`); `use-loadable.ts` became `use-resource.ts` (`useResource(schema, fetcher)` —
+abortable, revalidating on refocus) and a new `use-poll.ts` (`usePoll`) keeps the runs list and the
+run detail live while a run is `running`, stopping at a terminal status.
+
+**Verified on the Mac checkout of record (`~/Projects/jury-forge`):** `npm run check` **exit 0** —
+typecheck (three `tsc` programs plus `astro check`), ESLint, Prettier `format:check`, workerd
+**289/289** (22 files) · UI **136/136** (12 files), both builds, nothing skipped. The new cases are
+`respond.test.ts`, `errors.test.ts` and `contracts.test.ts` on the worker side (one drifted payload
+per schema) and `router.test.tsx`, `polling.test.tsx`, `use-resource.test.tsx` and
+`error-taxonomy.test.tsx` on the dashboard side. The same suite was re-run independently on this
+VPS against a clean clone of the branch. Screen copy is unchanged: `product/src/pages/messages.ts` no
+longer holds a map of its own, and the shared table carries exactly the sentences those screens
+rendered before (checked code by code), with `lib/wizard.ts` keeping its setup-specific wording.
+
 **Blocked by:** nothing.
 
-**Next action:** slice C's pull request is open for review against `dev` (then Prakash merges); after
-that, slice D (validated contracts, error taxonomy, client routing, run polling) from the rework plan
-in `docs/roadmap.md`.
+**Next action:** slice D's pull request is open for review against `dev` (then Prakash merges); the
+rework plan in `docs/roadmap.md` is then complete, and phase 3 (the promo site) starts after it.
 
 ## Backlog (owner-owned, deferred)
 
