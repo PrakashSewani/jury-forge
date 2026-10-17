@@ -95,7 +95,11 @@ output paths. The script uses only Node builtins — no dependency is added.
 - `shell.json` / `shell.md` / `screens-shell/` — the after-the-shell run (work items 1–3), still
   before the eight screens are rewritten: 88 failing cells, overflow 4, tapTargets 64 (176
   violations), contrast 56 (dark cells only — the light theme passes), focus 0, mobileNav 0.
+- `final.json` / `final.md` / `screens-final/` — the branch tip after the eight screens were rebuilt
+  on the primitives: **0 of 112 cells failing** (overflow 0, tapTargets 0, contrast 0, focus 0,
+  mobileNav 0), captured with `--assert` so any failing cell would have failed the command. The
+  delta against `baseline.json` is slice B's evidence.
 
-The only remaining overflow is the `/reviewers` page toolbar at 320–360 px; the remaining
-contrast failures are the eight screens' raw palette utilities on the dark palette. Both are the
-next run's work. The `screens-*/` PNGs are regenerable and gitignored.
+`shell.json` is the intermediate state — the shell had landed while the screens were still raw — and
+is kept rather than overwritten so the intermediate numbers stay readable. The `screens-*/` PNGs are
+regenerable and gitignored.

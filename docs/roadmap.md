@@ -63,11 +63,12 @@ improvement slate; slice A's merged as **#17**, and B, C and D open behind it:
 | Slice | Scope                                                                                   | Status                       |
 | ----- | --------------------------------------------------------------------------------------- | ---------------------------- |
 | A     | Design system: token layer + `product/src/ui/` primitives + the UI test harness (D-026) | merged to `dev` (`77541fbb`) |
-| B     | Shell + dark mode landed (run 2, D-027); the 8 screens on the primitives remain         | in progress                  |
+| B     | The shell, dark mode, the retuned tokens and all 8 screens on the primitives (D-027)    | in review                    |
 | C     | Product shape: readiness, templates, reviewer↔repo visibility, try-a-reviewer           | not started                  |
 | D     | Architecture: validated contracts, error taxonomy, client routing, run polling          | not started                  |
 
-Slice A merged to `dev` as **#17** (`77541fbb`); slice B run 2 (the shell, wired dark mode, the
-token retune and the primitives) is on `feat/rework-b-shell-screens-20261017` and the eight
-dashboard screens are its remaining work; C and D stack behind it. The rework is product work, not a
-phase — phase 3 (promo site) still starts after it. **Nothing deploys: the hold stands.**
+Slice A merged to `dev` as **#17** (`77541fbb`); slice B (the shell, wired dark mode, the retuned
+token ladder and all eight screens rebuilt on the primitives) is open for review from
+`feat/rework-b-shell-screens-20261017`, rebased onto that merge; C and D stack behind it. The rework
+is product work, not a phase — phase 3 (promo site) still starts after it. **Nothing deploys: the
+hold stands.**

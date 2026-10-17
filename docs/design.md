@@ -318,11 +318,34 @@ first render, so `data-theme` is set from the start. `UserMenu` shows the avatar
 ≥44 px log-out control. The mobile toggle is a real `<button>` with `aria-expanded`/
 `aria-controls`; Escape and a link click both close the panel. `RouteGuard` renders the sign-in,
 not-set-up and API-failure gates as a centred panel with a title, one line of explanation and
-**one** primary action (plus a retry on failure) instead of a bare `Card`. Screens: the reviewer
-editor (instructions, rules, flavor, base URL, model, params; the API key is write-only, shown as
-"set" with a replace action), repositories (enable/disable, per-repo reviewer toggles), runs
-(status, per-reviewer findings, link to the GitHub review), and the wizard. Copy and visuals come
-from the design system in `product/src/ui/` — see [Design system (D-026)](#design-system-d-026).
+**one** primary action (plus a retry on failure) instead of a bare `Card`.
+
+Every screen is built from `product/src/ui/` and uses semantic tokens only — no raw palette utility
+survives anywhere in `product/src/` (D-027). Each one renders four states: loading (`Skeleton`),
+empty (`EmptyState` carrying the next action), error (one human sentence plus a retry) and data.
+`product/src/pages/screen-state.tsx` supplies the shared loading and error blocks, and
+`product/src/pages/messages.ts` maps the API codes these screens can receive to sentences, so no
+screen prints a machine code such as `request_failed` at the user — the shared taxonomy is slice D.
+
+- **Overview** — instance state and the derived next action first, then recent runs as a table with
+  relative times.
+- **Reviewers** — a table (name, model, whether a key is set, repositories, enabled) with inline
+  enable/disable and a per-row edit; the repositories column is derived from each repository's
+  reviewer assignments.
+- **Reviewer editor** — a sectioned form (identity, model, key, instructions, rules, parameters)
+  with per-field validation, a sticky save bar, a `beforeunload` unsaved-changes guard, and the API
+  key shown only as set / replace, never as a value.
+- **Repositories** — a table with an enabled toggle and per-repo reviewer toggles expanded inside
+  the row, instead of a second screen.
+- **Runs** — a table with status and repository filters, relative times and running rows badged; the
+  list is a snapshot, because live updating is slice D.
+- **Run detail** — findings grouped per reviewer with a severity filter, a token-usage strip, and
+  empty / pending / failed reviewer states that explain themselves.
+- **Settings** — the advanced numbers grouped with their defaults and a per-field reset.
+- **Activity** — the trail as a table with actor and action filters.
+
+Copy and visuals come from the design system in `product/src/ui/` — see
+[Design system (D-026)](#design-system-d-026).
 
 The wizard UI derives its current step from setup state: **code** (enter the setup code; the
 manifest form is auto-submitted to GitHub's app-creation page), **install** (link to
@@ -337,10 +360,10 @@ dashboard action (D-016).
 Slice A gives the dashboard a named vocabulary of design tokens and a reusable primitive layer. It
 was a strict visual no-op: every token equals the exact Tailwind default utility it replaces (so
 later slices can swap classes for the names below without changing a pixel), and no page, worker,
-shared, or site source changed. Slice B (D-027) then retuned the three text tokens for contrast,
-shipped dark mode and added the primitives' focus and 44 px target behaviour; the tables below
-carry the current values. The token layer lives in `product/src/styles.css`'s `@theme` block; the
-primitives live in `product/src/ui/`.
+shared, or site source changed. Slice B (D-027) then retuned the four text levels for contrast,
+shipped dark mode, added the primitives' focus and 44 px target behaviour and rebuilt the eight
+screens on them; the tables below carry the current values. The token layer lives in
+`product/src/styles.css`'s `@theme` block; the primitives live in `product/src/ui/`.
 
 ### Design tokens
 
@@ -570,8 +593,9 @@ records via the Workers Vitest plugin with stubbed `fetch`. No test performs rea
 
 Slice A adds a **second vitest project** for UI components. The workerd pool cannot render a
 component — there were zero UI tests before this — so `product/vitest.ui.config.ts` runs
-`happy-dom` with `@testing-library/react`, collecting `product/test-ui/**/*.test.tsx` (65 tests
-across the theme helper, the primitives, the form controls, structure, and the shell). The workerd project's
+`happy-dom` with `@testing-library/react`, collecting `product/test-ui/**/*.test.tsx` (95 tests
+across the theme helper, the primitives, the form controls, structure, the shell, and the eight
+screens). The workerd project's
 test glob is now restricted to `./test/**/*.test.ts`, so the two projects can never collect each
 other's tests; `npm run test` runs `test:worker` then `test:ui`. Tests that need a `Storage` build
 one (`product/test-ui/memory-storage.ts`) instead of reading the ambient `window.localStorage`,
