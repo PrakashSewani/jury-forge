@@ -1,225 +1,109 @@
-export interface SessionUser {
-  login: string;
-  avatarUrl: string | null;
-}
+import { z } from 'zod';
+import {
+  ActivityEntrySchema,
+  ActivityPageSchema,
+  AppManifestSchema,
+  FindingSchema,
+  FindingSeveritySchema,
+  HealthResponseSchema,
+  InstallationInfoSchema,
+  InstanceReadinessNextStepSchema,
+  InstanceReadinessSchema,
+  InstanceReadinessStepSchema,
+  InstanceSettingsSchema,
+  ProviderFlavorSchema,
+  ProviderUsageSchema,
+  RepositoryPullRequestSchema,
+  RepositoryReviewerSchema,
+  RepositoryReviewerUpdateSchema,
+  RepositorySchema,
+  ReviewerExportSchema,
+  ReviewerSchema,
+  ReviewersExportDocumentSchema,
+  ReviewersImportResultSchema,
+  RunDetailSchema,
+  RunModeSchema,
+  RunReviewerOutcomeSchema,
+  RunReviewerStatusSchema,
+  RunStatusSchema,
+  RunSummarySchema,
+  RunsPageSchema,
+  SessionUserSchema,
+  SettingsResponseSchema,
+  SetupCodeResponseSchema,
+  SetupStateSchema,
+  TryRunRequestSchema,
+  TryRunResponseSchema,
+} from './schemas';
 
-export interface SetupState {
-  claimed: boolean;
-  appCreated: boolean;
-  installed: boolean;
-  appSlug: string | null;
-}
+// Every contract type is inferred from its schema so the Worker and the dashboard share one
+// source of truth. The inferred types are re-exported here to keep `@jury-forge/shared` imports
+// unchanged.
 
-export interface AppManifest {
-  name: string;
-  url: string;
-  hook_attributes: { url: string; active: boolean };
-  redirect_url: string;
-  callback_urls: string[];
-  public: boolean;
-  default_permissions: Record<string, string>;
-  default_events: string[];
-}
+export type HealthResponse = z.infer<typeof HealthResponseSchema>;
 
-export interface SetupCodeResponse {
-  actionsUrl: string;
-  state: string;
-  manifest: AppManifest;
-}
+export type SessionUser = z.infer<typeof SessionUserSchema>;
 
-export interface InstallationInfo {
-  installed: boolean;
-  account: { login: string; type: 'user' | 'org' } | null;
-}
+export type SetupState = z.infer<typeof SetupStateSchema>;
 
-export type ProviderFlavor = 'openai' | 'anthropic';
+export type AppManifest = z.infer<typeof AppManifestSchema>;
 
-export type FindingSeverity = 'info' | 'warning' | 'error';
+export type SetupCodeResponse = z.infer<typeof SetupCodeResponseSchema>;
 
-export interface Finding {
-  file: string;
-  line?: number;
-  startLine?: number;
-  severity: FindingSeverity;
-  title: string;
-  body: string;
-}
+export type InstallationInfo = z.infer<typeof InstallationInfoSchema>;
 
-export interface ProviderUsage {
-  promptTokens: number | null;
-  completionTokens: number | null;
-  totalTokens: number | null;
-}
+export type ProviderFlavor = z.infer<typeof ProviderFlavorSchema>;
 
-export interface Reviewer {
-  id: string;
-  name: string;
-  instructions: string;
-  rules: string;
-  flavor: ProviderFlavor;
-  baseUrl: string;
-  model: string;
-  params: Record<string, unknown>;
-  enabled: boolean;
-  hasApiKey: boolean;
-  // full names of the enabled repositories this reviewer will actually run on
-  repositories: string[];
-}
+export type FindingSeverity = z.infer<typeof FindingSeveritySchema>;
 
-export interface ReviewerExport {
-  name: string;
-  instructions: string;
-  rules: string;
-  flavor: ProviderFlavor;
-  baseUrl: string;
-  model: string;
-  params: Record<string, unknown>;
-  enabled: boolean;
-}
+export type Finding = z.infer<typeof FindingSchema>;
 
-export interface ReviewersExportDocument {
-  version: number; // 1
-  exportedAt: number;
-  reviewers: ReviewerExport[];
-}
+export type ProviderUsage = z.infer<typeof ProviderUsageSchema>;
 
-export interface ReviewersImportResult {
-  created: number;
-  updated: number;
-  unchanged: number;
-  skipped: number;
-}
+export type Reviewer = z.infer<typeof ReviewerSchema>;
 
-export interface Repository {
-  repoId: number;
-  fullName: string;
-  private: boolean;
-  enabled: boolean;
-}
+export type ReviewerExport = z.infer<typeof ReviewerExportSchema>;
 
-export interface RepositoryReviewer {
-  reviewerId: string;
-  name: string;
-  enabled: boolean;
-}
+export type ReviewersExportDocument = z.infer<typeof ReviewersExportDocumentSchema>;
 
-export interface RepositoryReviewerUpdate {
-  reviewerId: string;
-  enabled: boolean;
-}
+export type ReviewersImportResult = z.infer<typeof ReviewersImportResultSchema>;
 
-export type RunStatus = 'running' | 'completed' | 'failed' | 'skipped';
+export type Repository = z.infer<typeof RepositorySchema>;
 
-export type RunMode = 'auto' | 'manual';
+export type RepositoryReviewer = z.infer<typeof RepositoryReviewerSchema>;
 
-export interface RunSummary {
-  id: string;
-  repoId: number;
-  prNumber: number;
-  headSha: string;
-  event: string;
-  status: RunStatus;
-  mode: RunMode;
-  error: string | null;
-  reviewUrl: string | null;
-  createdAt: number;
-  finishedAt: number | null;
-}
+export type RepositoryReviewerUpdate = z.infer<typeof RepositoryReviewerUpdateSchema>;
 
-export interface RepositoryPullRequest {
-  number: number;
-  title: string;
-  headSha: string;
-  authorLogin: string | null;
-  draft: boolean;
-}
+export type RunStatus = z.infer<typeof RunStatusSchema>;
 
-export interface TryRunRequest {
-  repoId: number;
-  prNumber: number;
-  reviewerIds: string[];
-}
+export type RunMode = z.infer<typeof RunModeSchema>;
 
-export interface TryRunResponse {
-  runId: string;
-}
+export type RunSummary = z.infer<typeof RunSummarySchema>;
 
-export type RunReviewerStatus = 'pending' | 'completed' | 'failed';
+export type RepositoryPullRequest = z.infer<typeof RepositoryPullRequestSchema>;
 
-export interface RunReviewerOutcome {
-  reviewerId: string;
-  status: RunReviewerStatus;
-  findings: Finding[] | null;
-  summary: string | null;
-  usage: ProviderUsage | null;
-  error: string | null;
-}
+export type TryRunRequest = z.infer<typeof TryRunRequestSchema>;
 
-export interface RunsPage {
-  runs: RunSummary[];
-  nextCursor: string | null;
-}
+export type TryRunResponse = z.infer<typeof TryRunResponseSchema>;
 
-export interface RunDetail {
-  run: RunSummary;
-  reviewers: RunReviewerOutcome[];
-}
+export type RunReviewerStatus = z.infer<typeof RunReviewerStatusSchema>;
 
-export interface InstanceSettings {
-  inlineCommentsPerReviewer: number;
-  inlineCommentsPerRun: number;
-  contextTotalBytes: number;
-  contextFileBytes: number;
-  descriptionLimit: number;
-  blockingMode: boolean;
-  blockingErrorThreshold: number;
-  repoInstructions: boolean;
-  repoInstructionsMaxBytes: number;
-}
+export type RunReviewerOutcome = z.infer<typeof RunReviewerOutcomeSchema>;
 
-export interface SettingsResponse {
-  settings: InstanceSettings;
-  defaults: InstanceSettings;
-}
+export type RunsPage = z.infer<typeof RunsPageSchema>;
 
-export interface ActivityEntry {
-  id: number;
-  at: number;
-  actor: string;
-  action: string;
-  target: string | null;
-  detail: string | null;
-}
+export type RunDetail = z.infer<typeof RunDetailSchema>;
 
-export interface ActivityPage {
-  activity: ActivityEntry[];
-  nextCursor: string | null;
-}
+export type InstanceSettings = z.infer<typeof InstanceSettingsSchema>;
 
-export interface InstanceReadinessStep {
-  key: 'claim' | 'install-app' | 'enable-repo' | 'add-reviewer' | 'first-run';
-  label: string;
-  href: string;
-  done: boolean;
-}
+export type SettingsResponse = z.infer<typeof SettingsResponseSchema>;
 
-export interface InstanceReadinessNextStep {
-  key: InstanceReadinessStep['key'] | 'done';
-  title: string;
-  body: string;
-  href: string;
-  label: string;
-}
+export type ActivityEntry = z.infer<typeof ActivityEntrySchema>;
 
-export interface InstanceReadiness {
-  claimed: boolean;
-  appInstalled: boolean;
-  reposEnabled: number;
-  reviewersWithKey: number;
-  repoReviewerPairs: number;
-  firstRunAt: number | null;
-  completed: number;
-  total: number;
-  steps: InstanceReadinessStep[];
-  nextStep: InstanceReadinessNextStep;
-}
+export type ActivityPage = z.infer<typeof ActivityPageSchema>;
+
+export type InstanceReadinessStep = z.infer<typeof InstanceReadinessStepSchema>;
+
+export type InstanceReadinessNextStep = z.infer<typeof InstanceReadinessNextStepSchema>;
+
+export type InstanceReadiness = z.infer<typeof InstanceReadinessSchema>;
