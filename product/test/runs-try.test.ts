@@ -94,6 +94,18 @@ function mockGitHubPulls(): void {
         head: { sha: HEAD_SHA },
         user: { login: 'octocat' },
         draft: false,
+        state: 'open',
+      }),
+    ),
+    http.get('https://api.github.com/repos/octocat/hello/pulls/3', () =>
+      HttpResponse.json({
+        number: 3,
+        title: 'Already merged',
+        head: { sha: 'deadbeef1234' },
+        user: { login: 'octocat' },
+        draft: false,
+        state: 'closed',
+        merged_at: '2026-01-01T00:00:00Z',
       }),
     ),
     http.get('https://api.github.com/repos/octocat/hello/pulls/999', () =>
@@ -185,6 +197,27 @@ describe('manual try run api', () => {
     );
     expect(missingPr.status).toBe(404);
     await expect(missingPr.json()).resolves.toEqual({ error: 'not_found' });
+  });
+
+  it('404s for a closed pull request, the same way a missing one does (open-only)', async () => {
+    const cookie = await session();
+    await seedReviewer('rev-key', 'Security');
+    await seedRepo(REPO_ID, FULL_NAME);
+    await seedAppAndInstallation();
+    mockGitHubPulls();
+
+    const closed = await tryRequest(
+      { repoId: REPO_ID, prNumber: 3, reviewerIds: ['rev-key'] },
+      { cookie },
+    );
+    expect(closed.status).toBe(404);
+    await expect(closed.json()).resolves.toEqual({ error: 'not_found' });
+
+    // Nothing was kicked and nothing logged: a closed pull request never reaches the engine.
+    const runs = await env.DB.prepare('SELECT COUNT(*) AS count FROM runs').first<{
+      count: number;
+    }>();
+    expect(runs?.count).toBe(0);
   });
 
   it('kicks a manual run, records it, and logs the activity', async () => {

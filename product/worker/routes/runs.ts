@@ -13,7 +13,11 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { recordActivity } from '../lib/activity';
 import { keyRingValues, loadKeyRing } from '../lib/crypto';
-import { GitHubApiError, createInstallationToken, fetchPullRequestSummary } from '../lib/github';
+import {
+  GitHubApiError,
+  createInstallationToken,
+  fetchOpenPullRequestSummary,
+} from '../lib/github';
 import { loadGitHubApp } from '../lib/github-app';
 import { getMeta } from '../lib/instance';
 import { getRepository } from '../lib/repositories';
@@ -137,7 +141,9 @@ runRoutes.post('/try', async (c) => {
     app.privateKey,
     Number(installationIdValue),
   );
-  const pullRequest = await fetchPullRequestSummary(token, repository.fullName, prNumber).catch(
+  // D-028: the picker offers open pull requests only, and the endpoint is not the looser half — a
+  // closed or merged pull request answers the same `not_found` a missing one does.
+  const pullRequest = await fetchOpenPullRequestSummary(token, repository.fullName, prNumber).catch(
     (error: unknown) => {
       if (error instanceof GitHubApiError && error.status === 404) {
         return null;

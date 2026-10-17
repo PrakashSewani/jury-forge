@@ -189,16 +189,23 @@ export async function fetchOpenPullRequests(
   return payload.map(mapPullRequest);
 }
 
-/** One pull request by number; a 404 surfaces as a `GitHubApiError` with status 404. */
-export async function fetchPullRequestSummary(
+/**
+ * One pull request by number, but only while GitHub still reports it open; `null` for a closed or
+ * merged one (D-028: the try endpoint is open-only, exactly like the picker — the API is not the
+ * looser half). A 404 surfaces as a `GitHubApiError` with status 404.
+ */
+export async function fetchOpenPullRequestSummary(
   token: string,
   fullName: string,
   prNumber: number,
-): Promise<RepositoryPullRequest> {
+): Promise<RepositoryPullRequest | null> {
   const response = await fetch(`${API_BASE}/repos/${fullName}/pulls/${prNumber}`, {
     headers: bearerHeaders(token),
   });
   const payload = await readJsonStrict<PullRequestPayload>(response);
+  if (payload.state !== 'open') {
+    return null;
+  }
   return mapPullRequest(payload);
 }
 
@@ -208,6 +215,8 @@ interface PullRequestPayload {
   head: { sha: string };
   user: { login: string } | null;
   draft?: boolean;
+  /** `'open'` or `'closed'`; GitHub sends it on every pull request object. */
+  state?: string;
 }
 
 function mapPullRequest(pull: PullRequestPayload): RepositoryPullRequest {

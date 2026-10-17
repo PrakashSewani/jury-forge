@@ -63,11 +63,12 @@ async function seedRun(
   id: string,
   status: 'running' | 'completed' | 'failed' | 'skipped',
   createdAt: number,
+  mode: 'auto' | 'manual' = 'auto',
 ): Promise<void> {
   await env.DB.prepare(
-    'INSERT INTO runs (id, delivery_id, repo_id, pr_number, head_sha, event, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    'INSERT INTO runs (id, delivery_id, repo_id, pr_number, head_sha, event, status, created_at, mode) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
   )
-    .bind(id, `delivery-${id}`, 101, 1, 'sha', 'pull_request', status, createdAt)
+    .bind(id, `delivery-${id}`, 101, 1, 'sha', 'pull_request', status, createdAt, mode)
     .run();
 }
 
@@ -171,11 +172,31 @@ describe('computeReadiness', () => {
     expect(readiness.steps.every((step) => step.done)).toBe(true);
     expect(readiness.nextStep).toEqual({
       key: 'done',
-      title: 'Your jury is reviewing',
-      body: 'Every enabled repository, every pull request. Recent runs are one click away.',
+      title: 'Your jury is ready',
+      body: 'Send a pull request on an enabled repository, or run a reviewer against an open one. Recent runs are one click away.',
       href: '/runs',
       label: 'View runs',
     });
+  });
+
+  it('counts a manual trial as the first run, and its closing copy claims no reviews', async () => {
+    await seedMeta('claimed_at', '1700000000');
+    await seedMeta('installation_id', '4242');
+    await seedRepo(101, 'octocat/hello', true);
+    await seedReviewer('rev-1', 'Security');
+    await seedRun('run-trial', 'completed', 200, 'manual');
+
+    const readiness = await computeReadiness(env.DB);
+    // A trial is a run that finished and produced findings, so the fifth step is honestly done
+    // (D-028 keeps `firstRunAt` = the earliest non-skipped run)...
+    expect(readiness.firstRunAt).toBe(200);
+    expect(readiness.completed).toBe(5);
+    expect(readiness.nextStep.key).toBe('done');
+    // ...but a trial posts nothing to GitHub, so the closing copy must not claim that the jury is
+    // reviewing every repository and every pull request.
+    expect(readiness.nextStep.title).not.toMatch(/reviewing/i);
+    expect(readiness.nextStep.body).not.toMatch(/every enabled repository, every pull request/i);
+    expect(readiness.nextStep.body).toMatch(/run a reviewer/i);
   });
 });
 

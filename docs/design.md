@@ -146,6 +146,12 @@ step, and renders the same five steps as a checklist. Readiness is computed per 
 the dashboard holds no onboarding state of its own, so it cannot claim a step is done when the
 database disagrees.
 
+The fifth step counts any run that finished, and a manual trial counts: it is a real run of the
+whole engine against a real revision, so it is honest for that one step. The closing state's copy
+therefore asks for the next action (send a pull request, or run a reviewer against an open one)
+rather than announcing that every repository and pull request is being reviewed — a trial-only
+instance would make that sentence false. `D-028` records the same reading.
+
 ### Reviewer templates (C-2)
 
 `shared/src/templates.ts` exports `REVIEWER_TEMPLATES`: seven built-in starters — Security,
@@ -175,7 +181,12 @@ the Durable Object's step machine runs the same config → files → context →
 consolidate path and skips the `post` step in manual mode, finishing `completed` with no
 `review_url`. A manual run ignores the repository-enabled gate and the superseded-run skip, and
 runs exactly the reviewers named in the request rather than every reviewer enabled for the
-repository. Run detail states plainly that a manual run was not posted to GitHub.
+repository. Run detail states plainly that a manual run was not posted to GitHub; the runs list
+marks a manual row with a `manual` badge, so a trial is distinguishable where the history is
+scanned, not only on the run's own page. The endpoint is open-only in the same sense the picker
+is: `fetchOpenPullRequestSummary` returns null for a pull request GitHub reports closed or merged,
+so `POST /api/runs/try` answers the same `not_found` a missing pull request does instead of
+running a trial against a revision nobody will review again.
 
 ## Sessions and access
 
@@ -256,9 +267,11 @@ Phases, one alarm segment at a time:
   generated files and binaries are skipped, truncation is recorded. Files are processed in
   batches (~25 per segment), in priority order — added/changed source first, docs and renames
   trail (D-018) — with a persisted cursor, so a segment stays inside the free plan's CPU budget
-  (I/O wait does not count as CPU). Before the files are read, the newest earlier run for the
-  same repository and pull request that recorded findings is loaded and kept as the run's
-  previous findings, per reviewer (D-020). When repository instructions are enabled, the
+  (I/O wait does not count as CPU). Before the files are read, the newest earlier automatic run for
+  the same repository and pull request that recorded findings is loaded and kept as the run's
+  previous findings, per reviewer (D-020) — a manual trial is never one, since it publishes
+  nothing (D-028), so a trial cannot change what an automatic run asks or posts. When repository
+  instructions are enabled, the
   repository's `AGENTS.md` and `CONTRIBUTING.md` are read at the PR's head SHA here, bounded by
   the configured budget, and kept for the prompts (D-022).
 - `review` — for each enabled reviewer of the repository: prompts are prepared in their own

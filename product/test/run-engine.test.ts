@@ -798,6 +798,63 @@ describe('manual try run', () => {
     expect(outcomes?.count).toBe(0);
     expect(mocks.reviewCalls()).toBe(0);
   });
+
+  it("does not feed a manual trial's findings to a later automatic run (D-020 input)", async () => {
+    await seedGitHubApp();
+    await seedRepositoryAndReviewers(['openai']);
+    const mocks = mockGitHubRun();
+    const provider = mockOpenAiReviewSequence([
+      JSON.stringify({
+        summary: 'Trial pass.',
+        findings: [
+          {
+            file: 'src/app.ts',
+            line: 2,
+            severity: 'warning',
+            title: 'Odd naming',
+            body: 'Rename it.',
+          },
+        ],
+      }),
+      JSON.stringify({ summary: 'Automatic pass.', findings: [] }),
+    ]);
+
+    const trialRunId = '101:1:abc123def456:try-named';
+    await env.RUNS.getByName(trialRunId).start(
+      manualPayload('try-named', { reviewerIds: ['rev-0'] }),
+    );
+    await driveRun(trialRunId);
+
+    // The trial really did record a finding — otherwise the assertions below would pass for the
+    // wrong reason.
+    const trialRows = await env.DB.prepare(
+      'SELECT findings_json FROM run_reviewers WHERE run_id = ?',
+    )
+      .bind(trialRunId)
+      .all<{ findings_json: string | null }>();
+    expect(trialRows.results[0]?.findings_json).toContain('Odd naming');
+    expect(provider.prompts).toHaveLength(1);
+
+    // The trial happened before the push that triggers the automatic run — the supersession skip
+    // (D-018) compares created_at and then the run id, and both runs would otherwise land in the
+    // same second with the trial's id sorting last.
+    await env.DB.prepare('UPDATE runs SET created_at = unixepoch() - 60 WHERE id = ?')
+      .bind(trialRunId)
+      .run();
+
+    // Then an automatic run on the same repository and pull request, after the trial.
+    await postWebhook(pullRequestEvent({ deliveryId: 'delivery-1' }), { deliveryId: 'delivery-1' });
+    await driveRun(RUN_ID);
+
+    expect(provider.prompts).toHaveLength(2);
+    expect(provider.prompts[1]).not.toContain('Previously reported findings');
+    expect(provider.prompts[1]).not.toContain('Odd naming');
+
+    const body = mocks.lastReview()?.body ?? '';
+    expect(body).toContain('Automatic pass.');
+    expect(body).not.toContain('### Previous findings');
+    expect(mocks.reviewCalls()).toBe(1);
+  });
 });
 
 describe('runs api', () => {

@@ -453,6 +453,19 @@ describe('RunsPage', () => {
     expect(await screen.findByText('No runs yet')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Enable a repository' })).toBeTruthy();
   });
+
+  it('marks a manual trial in the run list, where the history is scanned', async () => {
+    listRunsMock.mockResolvedValue({
+      runs: [{ ...COMPLETED_RUN, mode: 'manual', reviewUrl: null }, RUNNING_RUN],
+      nextCursor: null,
+    });
+    listRepositoriesMock.mockResolvedValue([REPO]);
+    render(<RunsPage />);
+    const table = await screen.findByRole('table');
+    expect(within(table).getByText('manual')).toBeTruthy();
+    // Only the manual row is marked; the automatic one keeps its plain status cell.
+    expect(within(table).getAllByText('manual')).toHaveLength(1);
+  });
 });
 
 describe('RunDetailPage', () => {

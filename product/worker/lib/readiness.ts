@@ -50,8 +50,11 @@ const NEXT_STEPS: Record<
     label: 'Watch runs',
   },
   done: {
-    title: 'Your jury is reviewing',
-    body: 'Every enabled repository, every pull request. Recent runs are one click away.',
+    title: 'Your jury is ready',
+    // A manual trial satisfies the fifth step (it is a run that finished and produced findings), so
+    // this closing copy asks for the next action instead of claiming that reviews are happening
+    // (D-028): "every enabled repository, every pull request" would be false on a trial-only instance.
+    body: 'Send a pull request on an enabled repository, or run a reviewer against an open one. Recent runs are one click away.',
     href: '/runs',
     label: 'View runs',
   },

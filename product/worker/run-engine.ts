@@ -311,6 +311,9 @@ export class RunEngine extends DurableObject<Env> {
 
     // D-020: the newest earlier run for this repository + pull request that recorded findings
     // supplies each reviewer's previous findings, and their de-duplicated union.
+    // D-028: only automatic runs qualify. A manual trial posts nothing to GitHub, so its findings
+    // are not "previously reported" on this pull request — counting them would change what an
+    // automatic run asks its reviewers and what it publishes, which slice C promises it does not.
     const previousRows = await db
       .prepare(
         `SELECT rr.reviewer_id, rr.findings_json
@@ -318,6 +321,7 @@ export class RunEngine extends DurableObject<Env> {
          JOIN runs r ON r.id = rr.run_id
          WHERE r.repo_id = ? AND r.pr_number = ?
            AND r.id != ?
+           AND r.mode = 'auto'
            AND r.status IN ('completed', 'failed')
            AND rr.findings_json IS NOT NULL AND rr.findings_json != '[]'
          ORDER BY r.created_at DESC, r.id DESC, rr.reviewer_id`,

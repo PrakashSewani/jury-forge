@@ -389,7 +389,12 @@ export default function RunsPage() {
                       </td>
                       <td className="pr-4">#{run.prNumber}</td>
                       <td className="pr-4">
-                        <Badge tone={runStatusTone(run.status)}>{run.status}</Badge>
+                        <span className="flex flex-wrap items-center gap-2">
+                          <Badge tone={runStatusTone(run.status)}>{run.status}</Badge>
+                          {/* D-028: a trial posts nothing to GitHub — say so here, where the run
+                              history is scanned, instead of only on the run's own page. */}
+                          {run.mode === 'manual' ? <Badge tone="neutral">manual</Badge> : null}
+                        </span>
                       </td>
                       <td className="pr-4 text-text-body">{run.event}</td>
                       <td className="pr-4 whitespace-nowrap text-text-muted">

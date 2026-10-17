@@ -797,7 +797,12 @@ and no `reviewer_repositories` row with `enabled = 0` for the pair); and `firstR
 earliest `runs.created_at` for a run that was not `skipped`, or null. The five steps, in order:
 claim the instance, install the GitHub App, enable a repository, add a reviewer with a model key,
 see the first run. `nextStep` is the first step that is not done (title, one-line body, href and
-button label); once all five are done it is a closing state pointing at the run list. The
+button label); once all five are done it is a closing state pointing at the run list. The fifth
+step counts any run that finished, a manual trial included — a trial is a real run of the engine
+against a real revision, so it satisfies that line honestly — and the closing copy therefore
+invites the next action ("send a pull request on an enabled repository, or run a reviewer against
+an open one") instead of announcing that every enabled repository and pull request is being
+reviewed, which a trial-only instance would make a false claim. The
 dashboard Overview leads with `completed` of `total` and that next step, and renders the same five
 steps as a checklist — so the screen cannot claim a step is done when the database disagrees.
 There is no client-side checklist and no stored "onboarding" flag.
@@ -829,7 +834,13 @@ and skips the `post` step in manual mode, finishing `completed` with no `review_
 also ignores the repository-enabled gate and the superseded-run skip, because neither is what the
 operator asked for; and it runs exactly the reviewers named in the request rather than every
 reviewer enabled for the repository. Run detail states plainly that a manual run was not posted to
-GitHub.
+GitHub, and the runs list marks a manual row with a `manual` badge, so a trial is distinguishable
+where the run history is scanned. The endpoint is open-only exactly as the picker is: the pull
+request is read through `fetchOpenPullRequestSummary`, which returns null for one GitHub reports
+closed or merged, and the route answers the same `not_found` a missing pull request does — the API
+is never the looser half of the picker's promise. The D-020 previous-findings input counts
+automatic runs only, so a trial's findings (posted nowhere) cannot become the "previously reported
+findings" of a later automatic run's prompt or of the review it publishes.
 
 **Why:** the first five minutes are where a self-hosted instance is won or lost, and the dashboard
 was guessing at them: a stored checklist or an "onboarding" flag goes stale the moment the
