@@ -33,9 +33,9 @@
 
   /* text */
   --color-text: oklch(20.5% 0 none); /* = text-neutral-900 */
-  --color-text-body: oklch(43.9% 0 none); /* = text-neutral-600 — generic secondary copy */
-  --color-text-muted: oklch(55.6% 0 none); /* = text-neutral-500 */
-  --color-text-subtle: oklch(70.8% 0 none); /* = text-neutral-400 */
+  --color-text-body: oklch(37.1% 0 none); /* = text-neutral-700 — generic secondary copy */
+  --color-text-muted: oklch(43.9% 0 none); /* = text-neutral-600 */
+  --color-text-subtle: oklch(55.6% 0 none); /* = text-neutral-500 */
   --color-text-inverse: #fff; /* = text-white */
   --color-text-error: oklch(44.4% 0.177 26.899); /* = text-red-800 */
   --color-text-info: oklch(42.4% 0.199 265.638); /* = text-blue-800 */
@@ -81,9 +81,9 @@
   --color-border-error: oklch(39.6% 0.141 25.723); /* red-900 */
   --color-border-info: oklch(37.9% 0.146 265.522); /* blue-900 */
   --color-text: oklch(97% 0 none); /* neutral-100 */
-  --color-text-body: oklch(70.8% 0 none); /* neutral-400 */
-  --color-text-muted: oklch(70.8% 0 none); /* neutral-400 */
-  --color-text-subtle: oklch(55.6% 0 none); /* neutral-500 */
+  --color-text-body: oklch(92.2% 0 none); /* neutral-200 */
+  --color-text-muted: oklch(87% 0 none); /* neutral-300 */
+  --color-text-subtle: oklch(70.8% 0 none); /* neutral-400 */
   --color-text-inverse: oklch(20.5% 0 none); /* neutral-900 */
   --color-text-error: oklch(80.8% 0.114 19.571); /* red-300 */
   --color-text-info: oklch(80.9% 0.105 251.813); /* blue-300 */

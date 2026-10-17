@@ -1,6 +1,5 @@
 import type { Repository, RepositoryReviewer } from '@jury-forge/shared';
-import { useCallback, useState } from 'react';
-import { Badge, Card, LoadFailed, Loading, Notice, secondaryButtonClass } from '../components';
+import { Fragment, useCallback, useState } from 'react';
 import {
   getRepositoryReviewers,
   listRepositories,
@@ -8,6 +7,9 @@ import {
   setRepositoryEnabled,
 } from '../lib/api';
 import { useLoadable } from '../lib/use-loadable';
+import { Badge, Button, Card, EmptyState, Notice, Row, Switch, Table } from '../ui';
+import { errorMessage } from './messages';
+import { PageError, PageLoading } from './screen-state';
 
 export default function RepositoriesPage() {
   const load = useCallback(() => listRepositories(), []);
@@ -21,8 +23,13 @@ export default function RepositoriesPage() {
     try {
       await listRepositories(true);
       await reload();
-    } catch {
-      setRefreshError('GitHub did not answer the refresh — check the installation and try again.');
+    } catch (caught) {
+      setRefreshError(
+        errorMessage(
+          caught,
+          'GitHub did not answer the refresh — check the installation and try again.',
+        ),
+      );
     } finally {
       setRefreshing(false);
     }
@@ -30,43 +37,57 @@ export default function RepositoriesPage() {
 
   return (
     <div className="space-y-6">
-      <header className="flex items-center justify-between">
+      <header className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold tracking-tight">Repositories</h1>
-        <button
-          className={secondaryButtonClass}
-          disabled={refreshing}
-          onClick={() => void handleRefresh()}
-          type="button"
-        >
+        <Button busy={refreshing} onClick={() => void handleRefresh()} variant="secondary">
           {refreshing ? 'Refreshing…' : 'Refresh from GitHub'}
-        </button>
+        </Button>
       </header>
       {refreshError ? <Notice tone="error">{refreshError}</Notice> : null}
       {failed ? (
-        <Card>
-          <LoadFailed onRetry={reload} />
-        </Card>
+        <PageError
+          message="The repository list could not be loaded. Check the Worker and try again."
+          onRetry={reload}
+        />
       ) : data === null ? (
-        <Loading />
+        <PageLoading />
       ) : data.length === 0 ? (
-        <Card>
-          <p className="text-sm text-neutral-500">
-            No repositories yet — refresh from GitHub to import the installation&rsquo;s
-            repositories, then enable the ones that should get reviews.
-          </p>
-        </Card>
+        <EmptyState
+          action={
+            <Button busy={refreshing} onClick={() => void handleRefresh()}>
+              Refresh from GitHub
+            </Button>
+          }
+          description="Refresh from GitHub to import the installation's repositories, then enable the ones that should get reviews."
+          title="No repositories yet"
+        />
       ) : (
-        <div className="space-y-3">
-          {data.map((repository) => (
-            <RepositoryRow key={repository.repoId} repository={repository} onChanged={reload} />
-          ))}
-        </div>
+        <Card>
+          <Table className="w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-border text-xs uppercase tracking-wide text-text-muted">
+                <th className="py-2 pr-4 font-medium">Repository</th>
+                <th className="py-2 pr-4 font-medium">Enabled</th>
+                <th className="py-2 pr-4 font-medium">Reviewers</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.map((repository) => (
+                <RepositoryRows
+                  key={repository.repoId}
+                  onChanged={reload}
+                  repository={repository}
+                />
+              ))}
+            </tbody>
+          </Table>
+        </Card>
       )}
     </div>
   );
 }
 
-function RepositoryRow({
+function RepositoryRows({
   repository,
   onChanged,
 }: {
@@ -87,8 +108,8 @@ function RepositoryRow({
     try {
       await setRepositoryEnabled(repository.repoId, enabled);
       await onChanged();
-    } catch {
-      setError('Could not update the repository.');
+    } catch (caught) {
+      setError(errorMessage(caught, 'Could not update the repository. Try again.'));
     } finally {
       setSaving(false);
     }
@@ -102,8 +123,8 @@ function RepositoryRow({
         const list = await getRepositoryReviewers(repository.repoId);
         setReviewers(list);
         setDraft(Object.fromEntries(list.map((entry) => [entry.reviewerId, entry.enabled])));
-      } catch {
-        setReviewersError('Could not load the reviewer toggles.');
+      } catch (caught) {
+        setReviewersError(errorMessage(caught, 'Could not load the reviewer toggles. Try again.'));
       }
     }
   }
@@ -124,83 +145,91 @@ function RepositoryRow({
       );
       setReviewers(updated);
       setDraft(Object.fromEntries(updated.map((entry) => [entry.reviewerId, entry.enabled])));
-    } catch {
-      setReviewersError('Could not save the reviewer toggles.');
+    } catch (caught) {
+      setReviewersError(errorMessage(caught, 'Could not save the reviewer toggles. Try again.'));
     } finally {
       setSavingReviewers(false);
     }
   }
 
   return (
-    <Card>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="space-y-1">
-          <p className="flex items-center gap-2 text-sm font-medium">
-            {repository.fullName}
-            {repository.private ? <Badge>private</Badge> : null}
-          </p>
-          <p className="text-xs text-neutral-500">repo {repository.repoId}</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              checked={repository.enabled}
-              disabled={saving}
-              onChange={(event) => void toggleEnabled(event.target.checked)}
-              type="checkbox"
-            />
-            {repository.enabled ? 'Enabled' : 'Disabled'}
-          </label>
-          <button
-            className="text-xs text-neutral-500 underline transition hover:text-neutral-900"
+    <Fragment>
+      <Row className="border-b border-border">
+        <td className="py-1 pr-4">
+          <div className="flex flex-wrap items-center gap-2 py-1">
+            <span className="font-medium">{repository.fullName}</span>
+            {repository.private ? <Badge tone="neutral">private</Badge> : null}
+          </div>
+          <p className="text-xs text-text-muted">repo {repository.repoId}</p>
+        </td>
+        <td className="py-1 pr-4">
+          <Switch
+            checked={repository.enabled}
+            label={repository.enabled ? 'Enabled' : 'Disabled'}
+            onCheckedChange={(enabled) => void toggleEnabled(enabled)}
+          />
+        </td>
+        <td className="py-1 pr-4">
+          <Button
+            aria-expanded={expanded}
+            disabled={saving}
             onClick={() => void toggleExpanded()}
-            type="button"
+            size="sm"
+            variant="secondary"
           >
-            {expanded ? 'Hide reviewers' : 'Reviewers'}
-          </button>
-        </div>
-      </div>
-      {error ? <Notice tone="error">{error}</Notice> : null}
-      {expanded ? (
-        <div className="space-y-3 border-t border-neutral-100 pt-3">
-          {reviewersError ? <Notice tone="error">{reviewersError}</Notice> : null}
-          {reviewers === null ? (
-            <Loading label="Loading reviewers…" />
-          ) : reviewers.length === 0 ? (
-            <p className="text-sm text-neutral-500">No reviewers exist yet.</p>
-          ) : (
-            <>
-              <ul className="space-y-2">
-                {reviewers.map((entry) => (
-                  <li key={entry.reviewerId}>
-                    <label className="flex items-center gap-2 text-sm">
-                      <input
-                        checked={draft[entry.reviewerId] ?? entry.enabled}
-                        onChange={(event) =>
-                          setDraft((current) => ({
-                            ...current,
-                            [entry.reviewerId]: event.target.checked,
-                          }))
-                        }
-                        type="checkbox"
-                      />
-                      {entry.name}
-                    </label>
-                  </li>
-                ))}
-              </ul>
-              <button
-                className={secondaryButtonClass}
-                disabled={savingReviewers}
-                onClick={() => void saveReviewers()}
-                type="button"
-              >
-                {savingReviewers ? 'Saving…' : 'Save reviewer toggles'}
-              </button>
-            </>
-          )}
-        </div>
+            {expanded ? 'Hide reviewers' : 'Manage reviewers'}
+          </Button>
+        </td>
+      </Row>
+      {error ? (
+        <Row>
+          <td className="pb-3" colSpan={3}>
+            <Notice tone="error">{error}</Notice>
+          </td>
+        </Row>
       ) : null}
-    </Card>
+      {expanded ? (
+        <Row className="border-b border-border last:border-0">
+          <td className="bg-surface-muted p-4" colSpan={3}>
+            <div className="space-y-3">
+              {reviewersError ? <Notice tone="error">{reviewersError}</Notice> : null}
+              {reviewers === null ? (
+                <PageLoading label="Loading reviewers…" />
+              ) : reviewers.length === 0 ? (
+                <p className="text-sm text-text-muted">
+                  No reviewers exist yet — create one on the Reviewers page.
+                </p>
+              ) : (
+                <>
+                  <ul className="grid gap-2 sm:grid-cols-2">
+                    {reviewers.map((entry) => (
+                      <li key={entry.reviewerId}>
+                        <Switch
+                          checked={draft[entry.reviewerId] ?? entry.enabled}
+                          label={entry.name}
+                          onCheckedChange={(checked) =>
+                            setDraft((current) => ({
+                              ...current,
+                              [entry.reviewerId]: checked,
+                            }))
+                          }
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                  <Button
+                    busy={savingReviewers}
+                    onClick={() => void saveReviewers()}
+                    variant="secondary"
+                  >
+                    {savingReviewers ? 'Saving…' : 'Save reviewer toggles'}
+                  </Button>
+                </>
+              )}
+            </div>
+          </td>
+        </Row>
+      ) : null}
+    </Fragment>
   );
 }

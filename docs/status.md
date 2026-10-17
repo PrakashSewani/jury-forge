@@ -49,30 +49,75 @@ clean tree afterwards. The command was run on the Mac checkout of record
 that script is deliberately not exercised against a real Cloudflare account here — no part of this
 change deploys anything.
 
-**Rework (2026-10-17):** the post-phase-2 rework is four stacked slices. Slice A is committed,
-pushed and open against `dev` as **#17** on `feat/rework-a-design-system-20261017` (`6201eda` docs,
-`0d379c3` implementation), in review; slice B's branch is `feat/rework-b-shell-screens-20261017`.
+**Rework (2026-10-17):** the post-phase-2 rework is four stacked slices. Slice A merged to `dev` as
+**#17** (`77541fbb`; reviewed head `33b0a50`) on `feat/rework-a-design-system-20261017`; slice B is
+in progress on `feat/rework-b-shell-screens-20261017`, rebased onto that merge.
 
-| Slice | Branch                                 | Status              |
-| ----- | -------------------------------------- | ------------------- |
-| A     | `feat/rework-a-design-system-20261017` | in review (#17)     |
-| B     | `feat/rework-b-shell-screens-20261017` | in progress, from A |
-| C     | —                                      | not started         |
-| D     | —                                      | not started         |
+| Slice | Branch                                 | Status                       |
+| ----- | -------------------------------------- | ---------------------------- |
+| A     | `feat/rework-a-design-system-20261017` | merged to `dev` (`77541fbb`) |
+| B     | `feat/rework-b-shell-screens-20261017` | in progress (runs 2–3)       |
+| C     | —                                      | not started                  |
+| D     | —                                      | not started                  |
 
 Slice A is the design-system vocabulary and UI harness (D-026): a token layer in
-`product/src/styles.css`, the `product/src/ui/` primitives re-exported through
-`product/src/components.tsx`, a dependency-free `product/src/lib/theme.ts` (no runtime caller yet —
-the toggle is slice B), and a second happy-dom vitest project with 60 UI tests. Strict visual
-no-op: no page, worker, shared, or site source changed. Scopes for B/C/D are in
+`product/src/styles.css`, the `product/src/ui/` primitives, a dependency-free
+`product/src/lib/theme.ts` (the theme toggle that calls it is slice B), and a second happy-dom
+vitest project with 95 UI tests. Strict visual no-op: no page, worker, shared, or site source
+changed. Scopes for B/C/D are in
 `docs/roadmap.md`; the rework is product work, not a phase, so phase 3 stays `not started`.
 
-**Verified:** `npm run check` exit 0 — workerd 170/170 · UI 60/60.
+**Slice A:** merged to `dev` as PR #17 (`6201eda` docs, `0d379c3` implementation, `82fb6b8` and
+`33b0a50` review rounds; CI `check` success). **Slice B run 1 (2026-10-17):** landed
+`scripts/measure-layout.mjs`, a dependency-free
+Chrome DevTools Protocol layout harness, and captured the pre-change baseline under `docs/rework/`
+(`README.md`, `baseline.json`, `baseline.md`; the 32 baseline PNGs are regenerable and gitignored). The harness measures
+the eight dashboard screens at seven widths (320–1440) in light and dark for horizontal overflow,
+mobile tap targets, contrast, focus indicators and the 390 px nav. The baseline measures `dev`'s app
+source at `77541fb`, the merge this branch was later rebased onto — no page, worker, `shared/`,
+`site/` or slice B source changed.
+It fails as expected: no mobile nav, all mobile widths overflow, tap targets under 44 px, and the
+`text-neutral-400` footer/log-out text is ~2.5:1. The numbers are in `docs/rework/baseline.md`.
+
+**Slice B run 2 (2026-10-17):** landed the shell and the measured accessibility retune. New
+`product/src/shell/` (`Shell`, `Nav`, `ThemeToggle`, `UserMenu`, `RouteGuard`, barrel `index.ts`) —
+sidebar at `lg`, top bar plus slide-over below, `max-w-7xl` grid with `min-w-0`, the instance
+status chip and active-route state. Dark mode is actually wired: `main.tsx` applies the resolved
+preference at boot and `ThemeToggle` cycles light → dark → system under `jf:theme`. The whole text
+ladder was retuned so all four levels clear AA in both themes — light body neutral-700 / muted
+neutral-600 / subtle neutral-500, dark body neutral-200 / muted neutral-300 / subtle neutral-400,
+with the measured ratios in D-027 — the primitives gained `focus-visible` outlines and 44 px
+targets, and `Loading`/`LoadFailed` moved to theme-flipping tokens. `scripts/measure-layout.mjs` got
+two methodological fixes — keyboard (`Tab`) focus instead of scripted `.focus()`, and the WCAG 2.5.5
+inline-link tap-target exemption — and the baseline was **re-captured** with the amended harness, on
+`dev`'s source at `77541fb`, so before/after share one rule and one base.
+`docs/rework/shell.md` is the after-shell run (`shell.json` was dropped at PR time as the redundant
+intermediate sheet — `docs/rework/README.md` says why). At that point the eight screens were untouched:
+overflow remained only on the `/reviewers` toolbar at 320–360 px and contrast still failed on the
+dark theme, both deferred to run 3.
+
+**Slice B run 3 (2026-10-17):** rebuilt all eight screens in `product/src/pages/` on
+`product/src/ui/`. Overview leads with the instance state and a derived next action plus recent runs;
+Reviewers is a table with inline enable/disable; the reviewer editor is a sectioned form with
+per-field validation, a sticky save bar, a `beforeunload` guard and the key shown only as set or
+replace; Repositories expands per-repo reviewer toggles inside the row; Runs filters by status and
+repository with relative times; Run detail groups findings per reviewer with a severity filter and a
+usage strip; Settings groups the advanced numbers with their defaults and a per-field reset; Activity
+filters the trail by actor and action. Every screen has loading, empty, error and data states, and two
+new screen-local modules carry the shared loading/error blocks (`pages/screen-state.tsx`) and human
+error copy (`pages/messages.ts`) — no screen prints a machine code at the user any more. No raw
+palette utility and no timer remain anywhere in `product/src/`: live run updates are slice D.
+
+**Verified:** `npm run check` exit 0 — workerd **170/170** (17 files) · UI **95/95** (6 files) · both
+builds · harness exit 0 with `--assert`: **112 cells measured, 0 failing** (overflow 0, tapTargets 0,
+contrast 0, focus 0, mobileNav 0) across 8 routes × 7 widths × 2 themes, browser and dev server both
+reaped. Numbers: `docs/rework/final.json` / `final.md`, deltas against `docs/rework/baseline.json`.
 
 **Blocked by:** nothing.
 
-**Next action:** review and merge slice A's PR (#17); slice B continues on
-`feat/rework-b-shell-screens-20261017`.
+**Next action:** slice B is open for review against `dev`; then slice C (readiness, reviewer
+templates, reviewer↔repo visibility, try-a-reviewer) and slice D (validated contracts, error
+taxonomy, client routing, run polling) from the rework plan in `docs/roadmap.md`.
 
 ## Backlog (owner-owned, deferred)
 

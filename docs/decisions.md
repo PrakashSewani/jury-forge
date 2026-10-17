@@ -666,3 +666,115 @@ loaded the dashboard, breaking the no-op baseline the rest of the stack depends 
 preference is resolved in JS only and `data-theme` stays unset until Slice B; shipping the theme
 toggle inside this slice — it changes every screen's render and belongs with the shell rewrite,
 not the vocabulary.
+
+## D-027: Rework slice B — the shell, wired dark mode, and the measured accessibility retune
+
+**Date:** 2026-10-17 (second slice of the post-phase-2 rework; runs 2 and 3)
+
+**Decision:** (1) **Shell extraction.** The chrome moves out of `App.tsx` into
+`product/src/shell/`, a barrel `index.ts` over `Shell`, `Nav`, `ThemeToggle`, `UserMenu` and
+`RouteGuard`. `Shell({ user, setup, route, children })` renders a sidebar at `lg` and above and a
+top bar plus a slide-over panel below it (`hidden lg:flex` / `lg:hidden`, so exactly one nav is
+visible at every width). Content sits in a `max-w-7xl` grid with `min-w-0` on the flex children;
+header, main and footer share that width. The sidebar and panel show the instance status chip (a
+`Badge` from `setup.claimed` / `setup.installed` / `setup.appSlug`) and the route list with the
+active section driven by `routeFromPath` (a sub-route keeps its section active, unchanged). The
+mobile toggle is a real `<button>` with `aria-expanded` and `aria-controls`; Escape and a link
+click both close the panel. `RouteGuard` turns the sign-in, not-set-up and API-failure gates into a
+centred panel with one primary action (plus a retry). `App.tsx` keeps its behaviour — session and
+setup loading, `jf:unauthorized`, logout, and the route switch — and only the markup moved.
+
+(2) **Dark mode ships.** `main.tsx` resolves `readStoredTheme()` → `resolveTheme(pref,
+systemPrefersDark())` and calls `applyTheme` before the first render, and `ThemeToggle` is
+`applyTheme`'s interactive caller: it cycles light → dark → system and persists under `jf:theme`.
+`data-theme` is now set from boot, so the `:root[data-theme='dark']` overrides actually take
+effect and a dark-OS machine gets dark mode. This changed the render of the eight screens that had
+not been rewritten yet — a half-dark interim state, expected at the time and finished by run 3.
+
+(3) **Text-token retune, measured.** The re-captured baseline named exactly one failing colour
+pair: `text-neutral-400`, the footer and the log-out control — 112 failing cells and 224 violating
+elements, worst ratios **2.48:1** (`#a1a1a1` on `#fafafa`, the page) and **2.58:1** (`#a1a1a1` on
+`#fefffe`, a white card). Every other contrast pair passed. Slice A left **four** text levels, so
+the whole ladder moved one step further from the floor instead of patching that single pair:
+
+| Token                 | light                         | ratio, page / card | dark                          | ratio, page / card |
+| --------------------- | ----------------------------- | ------------------ | ----------------------------- | ------------------ |
+| `--color-text`        | neutral-900                   | 17.16:1 / 17.91:1  | neutral-100                   | 18.15:1 / 16.42:1  |
+| `--color-text-body`   | neutral-700 (was neutral-600) | 9.95:1 / 10.39:1   | neutral-200 (was neutral-400) | 15.72:1 / 14.22:1  |
+| `--color-text-muted`  | neutral-600 (was neutral-500) | 7.47:1 / 7.80:1    | neutral-300 (was neutral-400) | 13.36:1 / 12.09:1  |
+| `--color-text-subtle` | neutral-500 (was neutral-400) | 4.53:1 / 4.73:1    | neutral-400 (was neutral-500) | 7.63:1 / 6.91:1    |
+
+Four distinct, monotonically ordered levels, every one AA-safe in both themes, and every value still
+a named Tailwind ramp step — no invented numbers. The dark ladder is compressed into 200/300/400
+because dim text on a dark surface loses contrast fast: there is no fifth level that clears 4.5:1
+there. `text-subtle` is fine print and sits just above the floor (4.53:1); the two levels that carry
+meaning clear 7.47:1 and 9.95:1. The verdict and status palettes keep the values slice A's review
+rounds landed — light chips with dark text in the light theme, dark chips with light text in the
+dark one (`red-950` surface under `red-300` text, and so on). This slice does not touch them.
+
+(4) **44 px controls.** `Button`, `Input`, `Select`, `Textarea`, `Switch` and `Tabs` triggers get
+`min-h-11 min-w-11` (44 px), on every viewport; 44 px controls are the intended look, not a
+mobile-only rule.
+
+(5) **Two harness rule fixes.** `scripts/measure-layout.mjs` now (a) moves focus with a real Tab
+keypress instead of scripted `.focus()`, because `.focus()` cannot match `:focus-visible` and so
+could not distinguish "no focus styling" from "correctly focus-visible styling" — it only passed a
+`:focus` outline, the wrong UX bar — and passes only when the element is `:focus-visible` **and**
+shows an outline ≥ 1 px or a non-none box-shadow, recording the path as `focusMethod`; and
+(b) exempts `a[href]` whose computed `display` is `inline` from the 44 px tap-target rule, per
+WCAG 2.5.5 (a target in a sentence or block of text cannot be 44 px tall without destroying the
+paragraph), recording the excluded count as `tapTargetsInlineExempt`. These are methodological
+fixes, not threshold tuning: neither changes the numeric bar (still 44 px, still a visible focus
+indicator). The baseline was **re-captured** with the amended harness on `dev`'s app source at
+`77541fb` — this branch's base after it was rebased onto merged slice A — so the before/after
+deltas share one rule _and_ one base; re-capturing reproduced the first capture cell for cell
+(only the provenance line and one rasterised background sample differ).
+
+(6) **The eight screens on the primitives.** Every screen in `product/src/pages/` was rebuilt on
+`product/src/ui/` and carries semantic tokens only: no raw palette utility survives anywhere in
+`product/src/` (checked mechanically: a grep for raw palette utility classes in quoted class strings
+across `product/src` and `product/test-ui` returns nothing). Each screen renders
+four states — loading (`Skeleton` via the shared `PageLoading`), empty (`EmptyState` with a next
+action), error (a human sentence plus a retry) and data — and the two screens that used to print
+`caught.code` at the user no longer do: `product/src/pages/messages.ts` maps the API codes these
+screens can receive to sentences and falls back to the caller's own sentence, never echoing a code.
+`product/src/pages/screen-state.tsx` holds the shared loading and error blocks. The reviewer editor
+became a sectioned form with per-field validation, a sticky save bar, a `beforeunload`
+unsaved-changes guard, and the API key shown only as set/replace; repositories expand per-repo
+reviewer toggles inside the row; runs and activity filter in place; run detail groups findings by
+reviewer with a severity filter and a usage strip. Screens compute relative times at render time
+only — no timer anywhere in `product/src/`, because live run updates are slice D, and so is the
+shared error taxonomy.
+
+**Why:** the shell was the thing forcing 650 px of horizontal scroll at every width below 768 px
+(six unwrapped nav links plus the logout cluster) and hiding the only nav behind that same header.
+Extracting it into `product/src/shell/` with `min-w-0` on the flex children and a real mobile
+slide-over is the smallest change that fixes overflow and navigation together. Dark mode was
+prepared in Slice A and had no caller; wiring it is why every screen now has to be finished. The
+contrast retune is deliberately a step past the floor for the levels that carry meaning: a 4.5:1
+pass with no margin breaks on any slightly different surface. The two harness fixes exist so the
+numbers mean what they claim — a focus check that passes only `:focus` outlines measures the wrong
+thing, and a 44 px rule applied to prose links is a rule WCAG itself exempts.
+
+**Measured:** baseline (amended harness, `dev`'s app source at `77541fb`): 112/112 cells failing —
+overflow 64, tapTargets 64 (740 violations, 32 inline exempt), contrast 112 (224 elements),
+focus 0, mobileNav 16. After the shell (screens still raw): 88 failing cells — overflow 4 (the
+`/reviewers` toolbar at 320–360 px), tapTargets 64 (176 violations), contrast 56 (dark cells only),
+focus 0, mobileNav 0. **Final, after the eight screens, re-run by the orchestrator with `--assert`
+on the branch tip: 112 cells measured, 0 failing** (overflow 0, tapTargets 0, contrast 0, focus 0,
+mobileNav 0), 51.4 s, browser and dev server both reaped. The numbers live in
+`docs/rework/baseline.json` and `final.json`, with the three sheets beside them (`shell.json`, the
+intermediate checkpoint, was dropped at PR time — `docs/rework/README.md` has the reasoning).
+Re-verified while opening the PR: the harness run at `a43497f` reported 112 cells and **0 failing**
+in 50.7 s with **0 per-cell numeric differences** against the committed `final.json`.
+
+**Rejected:** keeping `--color-text-muted` at neutral-500 (4.5:1 is the floor, not a target — a
+marginal pass breaks on any slightly different surface); a `:focus` outline instead of
+`:focus-visible` (it lights up on every mouse click); a neutral badge on a background that does not
+flip with its text — **withdrawn in the merge:** slice A's review rounds added the dark values for
+`--color-surface-muted` and the `--color-text-body` level, so the shipped badge
+(`bg-surface-muted text-text-body`) does flip both together and measures 9.53:1 light / 12.00:1
+dark; responsive-only 44 px targets (the controls look and behave better at 44 px on every
+viewport, and scoping the rule to mobile makes the desktop tap area a second, untested bar);
+`.focus()`-based focus measurement and a blanket 44 px rule for inline links (the two wrong bars
+above).

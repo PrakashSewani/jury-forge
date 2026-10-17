@@ -3,6 +3,7 @@ export type { BadgeTone } from './Badge';
 export { Button, buttonClass, secondaryButtonClass } from './Button';
 export type { ButtonProps } from './Button';
 export { Card, Panel } from './Card';
+export { cx, focusRing, tapTarget } from './class-names';
 export { Dialog } from './Dialog';
 export { EmptyState } from './EmptyState';
 export { Field } from './Field';
