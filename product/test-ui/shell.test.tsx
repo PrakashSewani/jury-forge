@@ -1,9 +1,10 @@
 import type { SetupState } from '@jury-forge/shared';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { THEME_STORAGE_KEY } from '../src/lib/theme';
 import { isActive, Nav, RouteGuard, Shell, ThemeToggle } from '../src/shell';
+import { memoryStorage } from './memory-storage';
 
 const CLAIMED: SetupState = {
   claimed: true,
@@ -12,9 +13,19 @@ const CLAIMED: SetupState = {
   appSlug: 'jury-forge-local',
 };
 
+// Never the ambient `window.localStorage`: Node ≥26 defines that global as a disabled accessor, and
+// vitest's happy-dom environment then declines to install its own Storage (see memory-storage.ts),
+// which failed all 11 tests in this file. The stub gives the component and the assertions one store.
+let store: Storage;
+
 beforeEach(() => {
-  window.localStorage.clear();
+  store = memoryStorage();
+  vi.stubGlobal('localStorage', store);
   delete document.documentElement.dataset.theme;
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
 });
 
 describe('Nav', () => {
@@ -73,16 +84,16 @@ describe('ThemeToggle', () => {
     render(<ThemeToggle />);
     await user.click(screen.getByRole('button', { name: /theme: system/i }));
     expect(document.documentElement.dataset.theme).toBe('light');
-    expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe('light');
+    expect(store.getItem(THEME_STORAGE_KEY)).toBe('light');
   });
 
   it('cycles light to dark', async () => {
-    window.localStorage.setItem(THEME_STORAGE_KEY, 'light');
+    store.setItem(THEME_STORAGE_KEY, 'light');
     const user = userEvent.setup();
     render(<ThemeToggle />);
     await user.click(screen.getByRole('button', { name: /theme: light/i }));
     expect(document.documentElement.dataset.theme).toBe('dark');
-    expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe('dark');
+    expect(store.getItem(THEME_STORAGE_KEY)).toBe('dark');
   });
 });
 

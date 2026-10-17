@@ -109,7 +109,11 @@ export function Shell({ user, setup, route, onLogout, busy = false, children }: 
               </a>
               <Badge tone={status.tone}>{status.label}</Badge>
             </div>
-            <Nav id="mobile-nav" onNavigate={() => setMenuOpen(false)} route={route} />
+            {/* Gated on `setup.claimed`, as the pre-shell App did (D-027: only the markup moved) —
+                before the instance is claimed every link lands on the same gate panel. */}
+            {setup?.claimed ? (
+              <Nav id="mobile-nav" onNavigate={() => setMenuOpen(false)} route={route} />
+            ) : null}
           </div>
         </div>
       ) : null}
@@ -131,7 +135,7 @@ export function Shell({ user, setup, route, onLogout, busy = false, children }: 
             </a>
             <Badge tone={status.tone}>{status.label}</Badge>
           </div>
-          <Nav route={route} />
+          {setup?.claimed ? <Nav route={route} /> : null}
           <div className="mt-auto flex flex-col gap-3 border-t border-border pt-4">
             <ThemeToggle className="self-start" />
             {user ? (

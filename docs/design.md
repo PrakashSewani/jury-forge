@@ -17,7 +17,7 @@ the decision it implements.
 | Contracts     | `shared/src/`                  | API request/response types shared by the Worker and the dashboard                            |
 | Dashboard     | `product/src/`                 | React screens: setup wizard, reviewers, repositories, runs                                   |
 | Shell         | `product/src/shell/`           | `Shell`, `Nav`, `ThemeToggle`, `UserMenu`, `RouteGuard` — the chrome around the screens      |
-| UI primitives | `product/src/ui/`              | the D-026 design-system primitives, re-exported through `product/src/components.tsx`         |
+| UI primitives | `product/src/ui/`              | the D-026 design-system primitives, plus `cx` / `focusRing` / `tapTarget`                    |
 
 ## Data model (D1)
 
@@ -516,13 +516,14 @@ re-exports the public surface. Every interactive primitive (`Button`, `Input`, `
 `Textarea`, `Switch`, `Tabs` triggers) and every nav/menu link carries
 `focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent` and a
 `min-h-11 min-w-11` (44 px) target — 44 px controls are the intended look, not a mobile-only
-rule (D-027). `Badge`'s neutral tone is `bg-verdict-info-surface text-verdict-info-text`, a light
-chip with dark text in both themes, not `bg-surface-muted`, which flips dark while its text does
-not. `product/src/components.tsx` is a
-re-export shim only — it keeps the nine names the existing screens import (`Badge`, `buttonClass`,
-`Card`, `Field`, `inputClass`, `Notice`, `secondaryButtonClass`, `Loading`, `LoadFailed`) working
-while every screen is migrated to `product/src/ui/` in Slice B. Nothing else lives there, and the
-primitives themselves import no application code.
+rule (D-027). `Badge`'s neutral tone is `bg-surface-muted text-text-body`, which flips surface and
+text together and measures 9.53:1 light / 12.00:1 dark; the
+`bg-verdict-info-surface text-verdict-info-text` variant was withdrawn during slice A's review
+rounds, when the dark values for `--color-surface-muted` and `--color-text-body` landed. Slice A's
+`product/src/components.tsx` re-export shim is gone — slice B deleted it once the last screen had
+migrated, so the nine names it kept alive (`Badge`, `buttonClass`, `Card`, `Field`, `inputClass`,
+`Notice`, `secondaryButtonClass`, `Loading`, `LoadFailed`) are imported from here directly, and
+nothing else lived there. The primitives themselves import no application code.
 
 ## Distribution (D-025)
 

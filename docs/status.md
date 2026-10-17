@@ -61,10 +61,10 @@ in progress on `feat/rework-b-shell-screens-20261017`, rebased onto that merge.
 | D     | —                                      | not started                  |
 
 Slice A is the design-system vocabulary and UI harness (D-026): a token layer in
-`product/src/styles.css`, the `product/src/ui/` primitives re-exported through
-`product/src/components.tsx`, a dependency-free `product/src/lib/theme.ts` (no runtime caller yet —
-the toggle is slice B), and a second happy-dom vitest project with 60 UI tests. Strict visual
-no-op: no page, worker, shared, or site source changed. Scopes for B/C/D are in
+`product/src/styles.css`, the `product/src/ui/` primitives, a dependency-free
+`product/src/lib/theme.ts` (the theme toggle that calls it is slice B), and a second happy-dom
+vitest project with 95 UI tests. Strict visual no-op: no page, worker, shared, or site source
+changed. Scopes for B/C/D are in
 `docs/roadmap.md`; the rework is product work, not a phase, so phase 3 stays `not started`.
 
 **Slice A:** merged to `dev` as PR #17 (`6201eda` docs, `0d379c3` implementation, `82fb6b8` and

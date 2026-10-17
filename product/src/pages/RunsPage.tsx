@@ -7,8 +7,10 @@ import {
   Button,
   buttonClass,
   Card,
+  cx,
   EmptyState,
   Field,
+  focusRing,
   Row,
   Select,
   Table,
@@ -161,7 +163,10 @@ export default function RunsPage() {
                     >
                       <td className="pr-4">
                         <a
-                          className="inline-flex min-h-11 items-center hover:underline"
+                          className={cx(
+                            'inline-flex min-h-11 items-center hover:underline',
+                            focusRing,
+                          )}
                           href={`/runs/${encodeURIComponent(run.id)}`}
                         >
                           {data.repos.get(run.repoId) ?? `repo ${run.repoId}`}

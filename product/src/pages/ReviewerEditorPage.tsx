@@ -1,6 +1,6 @@
 import type { ProviderFlavor } from '@jury-forge/shared';
 import type { FormEvent } from 'react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReviewerCreateInput, ReviewerUpdateInput } from '../lib/api';
 import { createReviewer, deleteReviewer, getReviewer, updateReviewer } from '../lib/api';
 import {
@@ -99,6 +99,12 @@ export default function ReviewerEditorPage({ id }: { id?: string }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Set once a save or a delete has landed. The navigation that follows is a plain
+  // `window.location.href` assignment, so the `beforeunload` handler reads this ref rather than
+  // waiting for React to flush the state update — otherwise the browser asks "Leave site?" for
+  // changes that are already stored.
+  const savedRef = useRef(false);
+
   const load = useCallback(async () => {
     if (id === undefined) {
       return;
@@ -138,6 +144,9 @@ export default function ReviewerEditorPage({ id }: { id?: string }) {
       return;
     }
     function onBeforeUnload(event: BeforeUnloadEvent) {
+      if (savedRef.current) {
+        return;
+      }
       event.preventDefault();
       event.returnValue = '';
     }
@@ -202,6 +211,10 @@ export default function ReviewerEditorPage({ id }: { id?: string }) {
         }
         await updateReviewer(id, input);
       }
+      // The stored state is now the form's state: disarm the guard and take the saved values as the
+      // new baseline before leaving the page.
+      savedRef.current = true;
+      setBaseline(form);
       window.location.href = '/reviewers';
     } catch (caught) {
       setError(
@@ -221,6 +234,8 @@ export default function ReviewerEditorPage({ id }: { id?: string }) {
     setBusy(true);
     try {
       await deleteReviewer(id);
+      // Same guard, same disarm: the record is gone, there is nothing left to warn about.
+      savedRef.current = true;
       window.location.href = '/reviewers';
     } catch (caught) {
       setError(errorMessage(caught, 'Could not delete the reviewer. Try again.'));
