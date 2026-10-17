@@ -86,10 +86,12 @@ output paths. The script uses only Node builtins — no dependency is added.
 ## Which baseline is which
 
 - `baseline.json` / `baseline.md` / `screens-baseline/` — **re-captured 2026-10-17** with the
-  amended harness, on the unmodified slice A tree (before any slice B styling change). This is
-  the before snapshot the shell run is a delta against: 112 cells, all failing, with overflow 64,
-  tapTargets 64 (740 violations), contrast 112 (224 elements, 2.49:1 and 2.58:1), focus 0 (the
-  corrected check — the app's own `:focus-visible` ring), mobileNav 16.
+  amended harness, on `dev`'s app source at `77541fb` (the branch's base, before any slice B
+  styling change). This is the before snapshot the later runs are a delta against: 112 cells, all
+  failing, with overflow 64, tapTargets 64 (740 violations), contrast 112 (224 elements, 2.48:1
+  and 2.58:1), focus 0 (the corrected check — the app's own `:focus-visible` ring), mobileNav 16.
+  Slice B was rebased onto `77541fb` after slice A merged, so the baseline was measured there
+  rather than on A's unreviewed head; the first capture and the re-capture agree cell for cell.
 - `shell.json` / `shell.md` / `screens-shell/` — the after-the-shell run (work items 1–3), still
   before the eight screens are rewritten: 88 failing cells, overflow 4, tapTargets 64 (176
   violations), contrast 56 (dark cells only — the light theme passes), focus 0, mobileNav 0.

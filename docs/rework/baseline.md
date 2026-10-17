@@ -1,7 +1,7 @@
 # Layout baseline: baseline
 
-- Generated: 2026-10-17T08:22:34.742Z
-- Branch: `feat/rework-b-shell-screens-20261017` @ `f1d7fd0`
+- Generated: 2026-10-17T09:21:14.358Z
+- Branch: `dev` @ `77541fb`
 - Browser: `/Applications/Brave Browser.app/Contents/MacOS/Brave Browser`
 - Browser string: Chrome/155.0.8059.40
 - Base URL: http://127.0.0.1:5173
@@ -222,7 +222,7 @@ Inline links exempt under WCAG 2.5.5: 32
 
 Total violating text elements: 224
 
-- 2.49:1 (needs 4.5:1) #a1a1a1 on #fafbfb — 112 occurrence(s), e.g. "Self-hosted on your own Cloudflare account."
+- 2.48:1 (needs 4.5:1) #a1a1a1 on #fafafa — 112 occurrence(s), e.g. "Self-hosted on your own Cloudflare account."
 - 2.58:1 (needs 4.5:1) #a1a1a1 on #fefffe — 112 occurrence(s), e.g. "Log out"
 
 ## Focus indicators (first three interactive elements)
