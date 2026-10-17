@@ -259,3 +259,20 @@ production-code seams.
 **Rejected:** `vi.stubGlobal("fetch")` (Workers globals are not stubbable); fetch-injection
 plumbing through routes and the run engine (production code shaped by tests); a config-level
 `miniflare.outboundService` mock (no per-test control).
+
+## D-015: Wizard UI contract and client routing
+
+**Date:** 2026-10-07
+
+**Decision:** Slice 2b adds `appSlug` to `GET /api/setup/state` so the install step can link to
+`https://github.com/apps/{slug}/installations/new`. The slug is public app metadata, not a
+credential — the endpoint's "never credentials" rule stands. The dashboard ships no routing
+dependency in this slice: a minimal `routeFromPath` maps paths to pages and navigation between
+them is full-page.
+
+**Why:** the wizard cannot render its install step without the slug, and two routes do not
+justify a router framework; a new dependency would need live version resolution and a recorded
+choice. Revisit when the full dashboard (slice 5) needs nested routes.
+
+**Rejected:** composing the install URL from manifest data (not available client-side);
+React Router now (deferred, not ruled out).

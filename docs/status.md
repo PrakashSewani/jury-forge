@@ -15,26 +15,27 @@ rule 4. Keep exactly one phase `in progress`.
 
 ## Current handoff
 
-**Phase:** 2 in progress — slice 2a (the wizard backend) is in review on
-`phase-2/2a-wizard-flows`; the design (#4), slice 1 (#5), and the post-merge tracker refresh
-(#7) are merged to `dev`.
+**Phase:** 2 in progress — slice 2b (the wizard UI) is in review on `phase-2/2b-wizard-ui`
+(#9); slice 2a (#8) is merged to `dev`.
 
-**Done this session:** built slice 2a — GitHub plumbing (app JWT via `@octokit/auth-app`,
-manifest conversion, installation lookup, OAuth exchange, `/user` + `/user/installations`
-calls, the D-012 access gate), including normalizing GitHub's PKCS#1 app keys to PKCS#8 for the
-JWT library; setup routes (state, code, manifest callback, installation verification gated by
-the short-lived `jf_setup` cookie) and auth routes (OAuth start/callback with claim, session,
-logout); same-origin and session middleware; MSW wired into the test setup (`msw` 3.0.1,
-`@msw/cloudflare` 0.2.0 — D-014) with setup-flow, auth-flow, and access-gate suites; design
-note updated.
+**Done this session:** built slice 2b — the React setup wizard and shell: `/setup` derives its
+step from setup state (setup code with the auto-submitted manifest form, install link and
+verification, claim via GitHub sign-in, done) with a step indicator and error banners for
+claim-callback redirects; the shell and home show instance state and the signed-in user (sign
+in / log out); `GET /api/setup/state` now includes `appSlug` (public metadata — D-015). Added
+pure-module tests for step derivation, manifest form shaping, the install URL, error copy, and
+route resolution; fixed a pre-existing flaky crypto test (the tampered-input case could be a
+no-op in about 25% of runs).
 
-**Verified:** `npm run check` exits 0 — typecheck, lint, Prettier, 32/32 tests across 6 files on
-migrated D1 (including the MSW-backed flows), both builds.
+**Verified:** `npm run check` exits 0 — typecheck, lint, Prettier, 44/44 tests across 7 files,
+both builds. Manually exercised the wizard against the dev server in a browser: all four states
+render from live state, and submitting the setup code auto-posts the manifest form and lands on
+GitHub's manifest page.
 
-**Blocked by:** nothing. Slice 2b stacks on this branch once this merges.
+**Blocked by:** nothing. Slice 3 stacks on `phase-2/2b-wizard-ui` once this merges.
 
-**Next action:** build slice 2b — the React wizard (code → create app → install → claim) — then
-the reviewers/providers slice.
+**Next action:** build slice 3 — reviewers and providers (reviewers CRUD API, provider
+adapters, context builder and consolidation as tested pure modules).
 
 ## Backlog (owner-owned, deferred)
 

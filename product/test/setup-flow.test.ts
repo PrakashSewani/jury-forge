@@ -76,6 +76,7 @@ describe('setup flow', () => {
       claimed: false,
       appCreated: false,
       installed: false,
+      appSlug: null,
     });
   });
 
@@ -147,6 +148,14 @@ describe('setup flow', () => {
     expect(row?.private_key_enc).toMatch(/^v1\./);
     expect(row?.private_key_enc).not.toContain('PRIVATE KEY');
 
+    const state = await app.request(`${ORIGIN}/api/setup/state`, {}, env);
+    await expect(state.json()).resolves.toEqual({
+      claimed: false,
+      appCreated: true,
+      installed: false,
+      appSlug: 'jury-forge-test',
+    });
+
     const remaining = await env.DB.prepare('SELECT COUNT(*) AS count FROM oauth_states').first<{
       count: number;
     }>();
@@ -200,6 +209,7 @@ describe('setup flow', () => {
       claimed: false,
       appCreated: true,
       installed: true,
+      appSlug: 'jury-forge-test',
     });
   });
 

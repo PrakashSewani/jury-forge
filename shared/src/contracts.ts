@@ -7,6 +7,7 @@ export interface SetupState {
   claimed: boolean;
   appCreated: boolean;
   installed: boolean;
+  appSlug: string | null;
 }
 
 export interface AppManifest {

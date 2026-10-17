@@ -64,8 +64,9 @@ whether one is set. Key rotation is out of scope for v1; rotating means re-enter
 
 ## Setup wizard
 
-Public state: `GET /api/setup/state` → `{ claimed, appCreated, installed }` (never credentials).
-Steps, in order:
+Public state: `GET /api/setup/state` → `{ claimed, appCreated, installed, appSlug }` — `appSlug` is
+the app's public slug (`null` until the app exists), used to link to the install page; credentials
+are never included. Steps, in order:
 
 1. **Code** — `POST /api/setup/code` validates against the deploy-time `SETUP_CODE` secret while
    the instance is unclaimed (constant-time compare; 409 once claimed; a clear error when the
@@ -175,6 +176,14 @@ flavor, base URL, model, params; the API key is write-only, shown as "set" with 
 action), repositories (enable/disable, per-repo reviewer toggles), runs (status, per-reviewer
 findings, link to the GitHub review), and the wizard. Copy and visuals follow the brand constants
 in `shared/`.
+
+The wizard UI derives its current step from setup state: **code** (enter the setup code; the
+manifest form is auto-submitted to GitHub's app-creation page), **install** (link to
+`https://github.com/apps/{appSlug}/installations/new`, then verify), **claim** (GitHub sign-in),
+then done. Errors redirected back from the claim callback (`?error=installation_required`,
+`?error=access_denied`) render as messages on `/setup`. In slice 2b, routing is a dependency-free
+path switch with full-page navigation; the signed-in shell and deeper routes arrive with their
+screens.
 
 ## API surface
 

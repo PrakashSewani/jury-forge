@@ -37,7 +37,10 @@ describe('crypto', () => {
   it('rejects tampered and malformed input', async () => {
     const key = await importEncryptionKey(KEY);
     const encrypted = await encryptSecret(key, 'secret');
-    const tampered = `${encrypted.slice(0, -1)}${encrypted.endsWith('A') ? 'B' : 'A'}`;
+    // Flip a character that always carries data bits — the final base64url character can be
+    // mostly padding, in which case flipping it leaves the ciphertext unchanged (~25% of runs).
+    const flipped = encrypted.at(-2) === 'A' ? 'B' : 'A';
+    const tampered = `${encrypted.slice(0, -2)}${flipped}${encrypted.slice(-1)}`;
     await expect(decryptSecret(key, tampered)).rejects.toThrow();
     await expect(decryptSecret(key, 'not-a-secret')).rejects.toThrow();
     await expect(decryptSecret(key, 'v2.a.b')).rejects.toThrow();

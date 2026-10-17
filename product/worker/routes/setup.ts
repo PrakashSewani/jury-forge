@@ -28,7 +28,7 @@ setupRoutes.use('*', sameOrigin());
 
 setupRoutes.get('/state', async (c) => {
   const [app, claimedAt, installationId] = await Promise.all([
-    c.env.DB.prepare('SELECT app_id FROM github_app LIMIT 1').first<{ app_id: number }>(),
+    c.env.DB.prepare('SELECT slug FROM github_app LIMIT 1').first<{ slug: string }>(),
     getMeta(c.env.DB, 'claimed_at'),
     getMeta(c.env.DB, 'installation_id'),
   ]);
@@ -36,6 +36,7 @@ setupRoutes.get('/state', async (c) => {
     claimed: claimedAt !== null,
     appCreated: app !== null,
     installed: installationId !== null,
+    appSlug: app?.slug ?? null,
   };
   return c.json(body);
 });
