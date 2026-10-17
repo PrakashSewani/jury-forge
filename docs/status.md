@@ -67,12 +67,24 @@ the toggle is slice B), and a second happy-dom vitest project with 60 UI tests. 
 no-op: no page, worker, shared, or site source changed. Scopes for B/C/D are in
 `docs/roadmap.md`; the rework is product work, not a phase, so phase 3 stays `not started`.
 
-**Verified:** `npm run check` exit 0 — workerd 170/170 · UI 60/60.
+**Slice A:** open for review as PR #17 (`6201eda` docs, `0d379c3` implementation; CI `check`
+success). **Slice B run 1 (2026-10-17):** landed `scripts/measure-layout.mjs`, a dependency-free Chrome
+DevTools Protocol layout harness, and captured the pre-change baseline under `docs/rework/`
+(`README.md`, `baseline.json`, `baseline.md`; the 32 baseline PNGs are regenerable and gitignored). The harness measures
+the eight dashboard screens at seven widths (320–1440) in light and dark for horizontal overflow,
+mobile tap targets, contrast, focus indicators and the 390 px nav. The baseline measures the
+app exactly as slice A left it — no page, worker, `shared/`, `site/` or slice A source changed.
+It fails as expected: no mobile nav, all mobile widths overflow, tap targets under 44 px, and the
+`text-neutral-400` footer/log-out text is ~2.5:1. The numbers are in `docs/rework/baseline.md`.
+
+**Verified:** `npm run check` exit 0 — workerd 170/170 · UI 54/54 · harness run exit 0 with the
+browser and dev server both reaped.
 
 **Blocked by:** nothing.
 
-**Next action:** review and merge slice A's PR (#17); slice B continues on
-`feat/rework-b-shell-screens-20261017`.
+**Next action:** slice B's actual styling work — rewrite the shell and the eight screens on the
+`product/src/ui/` primitives with the dark-mode toggle, then re-run the harness as a delta against
+`docs/rework/baseline.json`.
 
 ## Backlog (owner-owned, deferred)
 
