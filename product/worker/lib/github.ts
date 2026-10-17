@@ -229,3 +229,30 @@ async function readJsonStrict<T>(response: Response): Promise<T> {
   }
   return response.json() as Promise<T>;
 }
+
+export interface InstallationRepository {
+  repoId: number;
+  fullName: string;
+  private: boolean;
+}
+
+export async function fetchInstallationRepositories(
+  token: string,
+  page: number,
+): Promise<{ totalCount: number; repositories: InstallationRepository[] }> {
+  const response = await fetch(`${API_BASE}/installation/repositories?per_page=100&page=${page}`, {
+    headers: bearerHeaders(token),
+  });
+  const payload = await readJsonStrict<{
+    total_count: number;
+    repositories: { id: number; full_name: string; private: boolean }[];
+  }>(response);
+  return {
+    totalCount: payload.total_count,
+    repositories: payload.repositories.map((repository) => ({
+      repoId: repository.id,
+      fullName: repository.full_name,
+      private: repository.private,
+    })),
+  };
+}

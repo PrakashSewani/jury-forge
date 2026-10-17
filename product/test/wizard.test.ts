@@ -113,12 +113,21 @@ describe('setup error messages', () => {
 
 describe('route resolution', () => {
   it('resolves the setup route', () => {
-    expect(routeFromPath('/setup')).toBe('/setup');
-    expect(routeFromPath('/setup/anything')).toBe('/setup');
+    expect(routeFromPath('/setup')).toEqual({ name: 'setup' });
+    expect(routeFromPath('/setup/anything')).toEqual({ name: 'setup' });
   });
 
-  it('falls back to home', () => {
-    expect(routeFromPath('/')).toBe('/');
-    expect(routeFromPath('/reviewers')).toBe('/');
+  it('resolves dashboard routes', () => {
+    expect(routeFromPath('/')).toEqual({ name: 'home' });
+    expect(routeFromPath('/reviewers')).toEqual({ name: 'reviewers' });
+    expect(routeFromPath('/reviewers/new')).toEqual({ name: 'reviewer-new' });
+    expect(routeFromPath('/reviewers/rev-1')).toEqual({ name: 'reviewer-edit', id: 'rev-1' });
+    expect(routeFromPath('/repositories')).toEqual({ name: 'repositories' });
+    expect(routeFromPath('/runs')).toEqual({ name: 'runs' });
+    expect(routeFromPath('/runs/101%3A1%3Aabc%3Ad1')).toEqual({
+      name: 'run-detail',
+      id: '101:1:abc:d1',
+    });
+    expect(routeFromPath('/unknown')).toEqual({ name: 'home' });
   });
 });

@@ -2,6 +2,7 @@ import { PRODUCT_NAME, type HealthResponse } from '@jury-forge/shared';
 import { Hono } from 'hono';
 import type { AppEnv } from './middleware';
 import { authRoutes } from './routes/auth';
+import { repositoryRoutes } from './routes/repositories';
 import { reviewerRoutes } from './routes/reviewers';
 import { runRoutes } from './routes/runs';
 import { setupRoutes } from './routes/setup';
@@ -17,6 +18,7 @@ app.get('/api/health', (c) => {
 app.route('/api/setup', setupRoutes);
 app.route('/api/auth', authRoutes);
 app.route('/api/reviewers', reviewerRoutes);
+app.route('/api/repositories', repositoryRoutes);
 app.route('/api/runs', runRoutes);
 app.route('/api/webhooks', webhookRoutes);
 

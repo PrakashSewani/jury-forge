@@ -15,28 +15,27 @@ rule 4. Keep exactly one phase `in progress`.
 
 ## Current handoff
 
-**Phase:** 2 in progress — slice 4 (webhook intake and the run engine) is in review on
-`phase-2/4-webhooks-run-engine` (#11), stacked on slice 3 (`phase-2/3-reviewers-providers`, #10);
-slice 2b (`phase-2/2b-wizard-ui`, #9) targets `dev`; slice 2a (#8) is merged to `dev`.
+**Phase:** 2 — all slices are built. Slice 5 (the dashboard) is in review on
+`phase-2/5-dashboard` (#12), stacked on slice 4 (#11) → slice 3 (#10) → slice 2b (#9) → `dev`;
+slices 1 and 2a are merged to `dev`.
 
-**Done this session:** built slice 4 — the webhook receiver (raw-body HMAC verification,
-`pull_request` filtering, delivery de-duplication with pruning, an idempotent run kick) and the
-`RunEngine` Durable Object end to end (config → file pages → 25-file context batches →
-per-reviewer prompts → parallel provider calls → consolidation → one `COMMENT` review), with
-per-step backoff retries, non-retryable 4xx handling, `skipped` runs for disabled repositories
-or no applicable reviewers, and `runs` / `run_reviewers` as the durable history (D-016 records
-the activation semantics); plus the run history API (`GET /api/runs`, `GET /api/runs/:id`) and
-batched context accumulation.
+**Done this session:** built slice 5 — the repositories API (list, `?refresh=1` sync from GitHub
+with new repositories arriving disabled, enable/disable, per-repo reviewer toggles) and the
+dashboard: the auth-aware shell (nav, instance state, sign-in gate), overview with recent runs,
+the reviewers list and editor (create/edit/delete; write-only keys with replace and clear), the
+repositories screen (enable toggles and per-repo reviewer checkboxes), the runs list (keyset
+load-more, repo-name resolution), and the run detail (per-reviewer findings, GitHub review link).
+The dependency-free router now serves all eight routes.
 
-**Verified:** `npm run check` exits 0 — typecheck, lint, Prettier, 95/95 tests across 13 files,
-both builds. Engine tests drive real Durable Object alarms (including backoff retries) against
-MSW-mocked GitHub and provider endpoints.
+**Verified:** `npm run check` exits 0 — typecheck, lint, Prettier, 100/100 tests across 14 files,
+both builds. End-to-end pass against the dev server in a browser: sign-in gate → home (recent
+runs) → created a reviewer through the UI → enabled a repository → disabled a per-repo reviewer
+toggle → runs list → run detail with findings, all against live local state.
 
-**Blocked by:** nothing. Slice 5 (the dashboard screens) stacks on `phase-2/4-webhooks-run-engine`
-once this merges.
+**Blocked by:** nothing. Phase 2 is code-complete; every slice is in review.
 
-**Next action:** build slice 5 — the reviewers, repositories, and runs dashboard screens
-(repositories API and per-repo toggles included), then the end-to-end pass.
+**Next action:** review and merge the stack (#9 → #10 → #11 → #12, retargeting each in turn);
+phase 3 (the promo site) begins after per the phase tracker.
 
 ## Backlog (owner-owned, deferred)
 

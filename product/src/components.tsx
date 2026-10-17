@@ -31,3 +31,59 @@ export function Notice({ tone, children }: { tone: 'error' | 'info'; children: R
     </p>
   );
 }
+
+const BADGE_TONES = {
+  neutral: 'bg-neutral-100 text-neutral-600',
+  green: 'bg-green-100 text-green-800',
+  red: 'bg-red-100 text-red-800',
+  amber: 'bg-amber-100 text-amber-800',
+} as const;
+
+export function Badge({
+  tone = 'neutral',
+  children,
+}: {
+  tone?: keyof typeof BADGE_TONES;
+  children: ReactNode;
+}) {
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${BADGE_TONES[tone]}`}
+    >
+      {children}
+    </span>
+  );
+}
+
+export function Field({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: ReactNode;
+}) {
+  return (
+    <label className="block space-y-1.5">
+      <span className="block text-sm font-medium">{label}</span>
+      {children}
+      {hint ? <span className="block text-xs text-neutral-500">{hint}</span> : null}
+    </label>
+  );
+}
+
+export function Loading({ label = 'Loading…' }: { label?: string }) {
+  return <p className="text-sm text-neutral-500">{label}</p>;
+}
+
+export function LoadFailed({ onRetry }: { onRetry: () => Promise<void> }) {
+  return (
+    <>
+      <p className="text-sm text-neutral-600">The dashboard API did not respond.</p>
+      <button className={secondaryButtonClass} onClick={() => void onRetry()} type="button">
+        Try again
+      </button>
+    </>
+  );
+}
