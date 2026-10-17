@@ -4,6 +4,7 @@ import type { FormEvent } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReviewerCreateInput, ReviewerUpdateInput } from '../lib/api';
 import { createReviewer, deleteReviewer, getReviewer, updateReviewer } from '../lib/api';
+import { handleAppLink, navigate, registerNavigationBlocker } from '../lib/router';
 import {
   Button,
   Card,
@@ -106,10 +107,9 @@ export default function ReviewerEditorPage({ id }: { id?: string }) {
   const [templateKey, setTemplateKey] = useState('blank');
   const [appliedTemplate, setAppliedTemplate] = useState<string | null>(null);
 
-  // Set once a save or a delete has landed. The navigation that follows is a plain
-  // `window.location.href` assignment, so the `beforeunload` handler reads this ref rather than
-  // waiting for React to flush the state update — otherwise the browser asks "Leave site?" for
-  // changes that are already stored.
+  // Set once a save or a delete has landed. The navigation that follows is a client route change,
+  // so the `beforeunload` handler reads this ref rather than waiting for React to flush the state
+  // update — otherwise the browser asks "Leave site?" for changes that are already stored.
   const savedRef = useRef(false);
 
   const load = useCallback(async () => {
@@ -158,7 +158,19 @@ export default function ReviewerEditorPage({ id }: { id?: string }) {
       event.returnValue = '';
     }
     window.addEventListener('beforeunload', onBeforeUnload);
-    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+    // `beforeunload` never fires for a client-side route change (slice D turned every in-app link
+    // into a `pushState`), so the guard has to live in the router as well: this blocker is what
+    // makes the nav links, the shell's links and the back button ask before they drop the edits.
+    const unregister = registerNavigationBlocker(() => {
+      if (savedRef.current) {
+        return true;
+      }
+      return window.confirm('This reviewer has unsaved changes. Leave the page and discard them?');
+    });
+    return () => {
+      window.removeEventListener('beforeunload', onBeforeUnload);
+      unregister();
+    };
   }, [dirty]);
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
@@ -252,7 +264,7 @@ export default function ReviewerEditorPage({ id }: { id?: string }) {
       // new baseline before leaving the page.
       savedRef.current = true;
       setBaseline(form);
-      window.location.href = '/reviewers';
+      navigate('/reviewers');
     } catch (caught) {
       setError(
         errorMessage(caught, 'Could not save the reviewer. Check the fields and try again.'),
@@ -273,7 +285,7 @@ export default function ReviewerEditorPage({ id }: { id?: string }) {
       await deleteReviewer(id);
       // Same guard, same disarm: the record is gone, there is nothing left to warn about.
       savedRef.current = true;
-      window.location.href = '/reviewers';
+      navigate('/reviewers');
     } catch (caught) {
       setError(errorMessage(caught, 'Could not delete the reviewer. Try again.'));
       setBusy(false);
@@ -499,6 +511,7 @@ function EditorHeader({ id }: { id?: string }) {
           focusRing,
         )}
         href="/reviewers"
+        onClick={handleAppLink}
       >
         ← All reviewers
       </a>

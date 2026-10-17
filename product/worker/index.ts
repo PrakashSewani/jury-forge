@@ -1,5 +1,6 @@
-import { PRODUCT_NAME, type HealthResponse } from '@jury-forge/shared';
+import { PRODUCT_NAME, HealthResponseSchema, type HealthResponse } from '@jury-forge/shared';
 import { Hono } from 'hono';
+import { errorResponse, respond } from './lib/respond';
 import type { AppEnv } from './middleware';
 import { activityRoutes } from './routes/activity';
 import { authRoutes } from './routes/auth';
@@ -13,9 +14,9 @@ import { webhookRoutes } from './routes/webhooks';
 
 const app = new Hono<AppEnv>();
 
-app.get('/api/health', (c) => {
+app.get('/api/health', () => {
   const body: HealthResponse = { ok: true, name: PRODUCT_NAME };
-  return c.json(body);
+  return respond(HealthResponseSchema, body);
 });
 
 app.route('/api/setup', setupRoutes);
@@ -28,11 +29,11 @@ app.route('/api/settings', settingsRoutes);
 app.route('/api/activity', activityRoutes);
 app.route('/api/webhooks', webhookRoutes);
 
-app.notFound((c) => c.json({ error: 'not_found' }, 404));
+app.notFound(() => errorResponse('not_found', 404));
 
-app.onError((error, c) => {
+app.onError((error) => {
   console.error(error);
-  return c.json({ error: 'internal_error' }, 500);
+  return errorResponse('internal_error', 500);
 });
 
 export { RunEngine } from './run-engine';

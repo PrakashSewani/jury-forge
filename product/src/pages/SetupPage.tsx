@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 import { ApiError, fetchSetupState, submitSetupCode, verifyInstallation } from '../lib/api';
 import { submitManifestForm } from '../lib/manifest';
+import { handleAppLink } from '../lib/router';
 import type { WizardStepView } from '../lib/wizard';
 import { installUrl, setupErrorMessage, wizardStep, wizardSteps } from '../lib/wizard';
 import { Button, buttonClass, Card, Field, Input, Notice, secondaryButtonClass } from '../ui';
@@ -166,6 +167,8 @@ function InstallStep({ state, onRefresh }: { state: SetupState; onRefresh: () =>
       </p>
       <div className="flex flex-wrap items-center gap-3">
         {state.appSlug ? (
+          // An absolute GitHub URL: the router's `handleAppLink` only takes same-origin `/` paths, so
+          // there is nothing to intercept here and the browser owns the click.
           <a className={buttonClass} href={installUrl(state.appSlug)}>
             Install {state.appSlug} on GitHub
           </a>
@@ -194,7 +197,7 @@ function ClaimStep() {
         app&rsquo;s installation becomes the owner; anyone GitHub grants installation access can
         sign in later.
       </p>
-      <a className={buttonClass} href="/api/auth/github/start">
+      <a className={buttonClass} href="/api/auth/github/start" onClick={handleAppLink}>
         Sign in with GitHub
       </a>
     </Card>
@@ -207,7 +210,7 @@ function DoneStep() {
       <p className="text-sm text-text-muted">
         This instance is claimed. Sign in with GitHub to open the dashboard.
       </p>
-      <a className={buttonClass} href="/">
+      <a className={buttonClass} href="/" onClick={handleAppLink}>
         Go to the dashboard
       </a>
     </Card>

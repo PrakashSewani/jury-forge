@@ -1,3 +1,8 @@
+import {
+  RepositoryPullRequestSchema,
+  RepositoryReviewerSchema,
+  RepositorySchema,
+} from '@jury-forge/shared';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { recordActivity } from '../lib/activity';
@@ -18,6 +23,7 @@ import {
   syncRepositories,
   type RepositorySyncRow,
 } from '../lib/repositories';
+import { errorResponse, respond } from '../lib/respond';
 import { listReviewers } from '../lib/reviewers';
 import { requireSession, sameOrigin, type AppEnv } from '../middleware';
 
@@ -38,12 +44,12 @@ repositoryRoutes.get('/', async (c) => {
   if (refresh === '1' || refresh === 'true') {
     const values = keyRingValues(c.env);
     if (!values) {
-      return c.json({ error: 'encryption_key_unset' }, 500);
+      return errorResponse('encryption_key_unset', 500);
     }
     const installationIdValue = await getMeta(c.env.DB, 'installation_id');
     const app = await loadGitHubApp(c.env.DB, await loadKeyRing(values));
     if (!app || !installationIdValue) {
-      return c.json({ error: 'setup_required' }, 409);
+      return errorResponse('setup_required', 409);
     }
     const token = await createInstallationToken(
       app.appId,
@@ -60,25 +66,25 @@ repositoryRoutes.get('/', async (c) => {
     }
     await syncRepositories(c.env.DB, rows);
   }
-  return c.json(await listRepositories(c.env.DB));
+  return respond(z.array(RepositorySchema), await listRepositories(c.env.DB));
 });
 
 repositoryRoutes.patch('/:repoId', async (c) => {
   const parsed = patchBody.safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) {
-    return c.json({ error: 'invalid_request' }, 400);
+    return errorResponse('invalid_request', 400);
   }
   const repoId = Number(c.req.param('repoId'));
   if (!Number.isInteger(repoId)) {
-    return c.json({ error: 'invalid_request' }, 400);
+    return errorResponse('invalid_request', 400);
   }
   if (!(await getRepository(c.env.DB, repoId))) {
-    return c.json({ error: 'not_found' }, 404);
+    return errorResponse('not_found', 404);
   }
   await setRepositoryEnabled(c.env.DB, repoId, parsed.data.enabled);
   const updated = await getRepository(c.env.DB, repoId);
   if (!updated) {
-    return c.json({ error: 'not_found' }, 404);
+    return errorResponse('not_found', 404);
   }
   await recordActivity(c.env.DB, {
     actor: c.get('user').login,
@@ -86,65 +92,71 @@ repositoryRoutes.patch('/:repoId', async (c) => {
     target: updated.fullName,
     detail: parsed.data.enabled ? 'enabled' : 'disabled',
   });
-  return c.json(updated);
+  return respond(RepositorySchema, updated);
 });
 
 repositoryRoutes.get('/:repoId/reviewers', async (c) => {
   const repoId = Number(c.req.param('repoId'));
   if (!Number.isInteger(repoId)) {
-    return c.json({ error: 'invalid_request' }, 400);
+    return errorResponse('invalid_request', 400);
   }
   if (!(await getRepository(c.env.DB, repoId))) {
-    return c.json({ error: 'not_found' }, 404);
+    return errorResponse('not_found', 404);
   }
-  return c.json(await listRepositoryReviewers(c.env.DB, repoId));
+  return respond(
+    z.array(RepositoryReviewerSchema),
+    await listRepositoryReviewers(c.env.DB, repoId),
+  );
 });
 
 // D-028: the open pull requests the manual try-run picker offers.
 repositoryRoutes.get('/:repoId/pulls', async (c) => {
   const repoId = Number(c.req.param('repoId'));
   if (!Number.isInteger(repoId)) {
-    return c.json({ error: 'invalid_request' }, 400);
+    return errorResponse('invalid_request', 400);
   }
   const repository = await getRepository(c.env.DB, repoId);
   if (!repository) {
-    return c.json({ error: 'not_found' }, 404);
+    return errorResponse('not_found', 404);
   }
   const values = keyRingValues(c.env);
   if (!values) {
-    return c.json({ error: 'encryption_key_unset' }, 500);
+    return errorResponse('encryption_key_unset', 500);
   }
   const installationIdValue = await getMeta(c.env.DB, 'installation_id');
   const app = await loadGitHubApp(c.env.DB, await loadKeyRing(values));
   if (!app || !installationIdValue) {
-    return c.json({ error: 'setup_required' }, 409);
+    return errorResponse('setup_required', 409);
   }
   const token = await createInstallationToken(
     app.appId,
     app.privateKey,
     Number(installationIdValue),
   );
-  return c.json(await fetchOpenPullRequests(token, repository.fullName));
+  return respond(
+    z.array(RepositoryPullRequestSchema),
+    await fetchOpenPullRequests(token, repository.fullName),
+  );
 });
 
 repositoryRoutes.put('/:repoId/reviewers', async (c) => {
   const parsed = reviewersBody.safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) {
-    return c.json({ error: 'invalid_request' }, 400);
+    return errorResponse('invalid_request', 400);
   }
   const repoId = Number(c.req.param('repoId'));
   if (!Number.isInteger(repoId)) {
-    return c.json({ error: 'invalid_request' }, 400);
+    return errorResponse('invalid_request', 400);
   }
   const repository = await getRepository(c.env.DB, repoId);
   if (!repository) {
-    return c.json({ error: 'not_found' }, 404);
+    return errorResponse('not_found', 404);
   }
   const reviewerNames = new Map(
     (await listReviewers(c.env.DB)).map((reviewer) => [reviewer.id, reviewer.name]),
   );
   if (parsed.data.reviewers.some((update) => !reviewerNames.has(update.reviewerId))) {
-    return c.json({ error: 'invalid_request' }, 400);
+    return errorResponse('invalid_request', 400);
   }
   await setRepositoryReviewers(c.env.DB, repoId, parsed.data.reviewers);
   const summary = parsed.data.reviewers
@@ -159,5 +171,8 @@ repositoryRoutes.put('/:repoId/reviewers', async (c) => {
     target: repository.fullName,
     detail: summary === '' ? null : summary,
   });
-  return c.json(await listRepositoryReviewers(c.env.DB, repoId));
+  return respond(
+    z.array(RepositoryReviewerSchema),
+    await listRepositoryReviewers(c.env.DB, repoId),
+  );
 });

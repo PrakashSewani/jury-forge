@@ -1,5 +1,6 @@
 import type {
   ActivityPage,
+  ApiErrorCode,
   InstallationInfo,
   InstanceReadiness,
   InstanceSettings,
@@ -20,12 +21,32 @@ import type {
   TryRunRequest,
   TryRunResponse,
 } from '@jury-forge/shared';
+import {
+  ActivityPageSchema,
+  ApiErrorSchema,
+  InstallationInfoSchema,
+  InstanceReadinessSchema,
+  RepositoryPullRequestSchema,
+  RepositoryReviewerSchema,
+  RepositorySchema,
+  ReviewerSchema,
+  ReviewersExportDocumentSchema,
+  ReviewersImportResultSchema,
+  RunDetailSchema,
+  RunsPageSchema,
+  SessionUserSchema,
+  SettingsResponseSchema,
+  SetupCodeResponseSchema,
+  SetupStateSchema,
+  TryRunResponseSchema,
+} from '@jury-forge/shared';
+import { z } from 'zod';
 
 export class ApiError extends Error {
-  readonly code: string;
+  readonly code: ApiErrorCode;
   readonly status: number;
 
-  constructor(status: number, code: string) {
+  constructor(status: number, code: ApiErrorCode) {
     super(code);
     this.name = 'ApiError';
     this.status = status;
@@ -33,67 +54,27 @@ export class ApiError extends Error {
   }
 }
 
-async function errorFrom(response: Response): Promise<ApiError> {
-  const body = (await response.json().catch(() => null)) as { error?: string } | null;
-  return new ApiError(response.status, body?.error ?? 'request_failed');
-}
-
-export async function fetchSession(): Promise<SessionUser | null> {
-  const response = await fetch('/api/auth/session');
-  if (response.status === 401) {
-    return null;
-  }
-  if (!response.ok) {
-    throw await errorFrom(response);
-  }
-  return (await response.json()) as SessionUser;
-}
-
-export async function fetchSetupState(): Promise<SetupState> {
-  const response = await fetch('/api/setup/state');
-  if (!response.ok) {
-    throw await errorFrom(response);
-  }
-  return (await response.json()) as SetupState;
-}
-
-export async function submitSetupCode(
-  code: string,
-  org: string | null,
-): Promise<SetupCodeResponse> {
-  const response = await fetch('/api/setup/code', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(org === null ? { code } : { code, org }),
-  });
-  if (!response.ok) {
-    throw await errorFrom(response);
-  }
-  return (await response.json()) as SetupCodeResponse;
-}
-
-export async function verifyInstallation(): Promise<InstallationInfo> {
-  const response = await fetch('/api/setup/verify-installation', { method: 'POST' });
-  if (!response.ok) {
-    throw await errorFrom(response);
-  }
-  return (await response.json()) as InstallationInfo;
-}
-
-export async function logOut(): Promise<void> {
-  const response = await fetch('/api/auth/logout', { method: 'POST' });
-  if (!response.ok) {
-    throw await errorFrom(response);
-  }
-}
-
-const jsonHeaders = { 'Content-Type': 'application/json' };
+const ReviewerListSchema = z.array(ReviewerSchema);
+const RepositoryListSchema = z.array(RepositorySchema);
+const RepositoryReviewerListSchema = z.array(RepositoryReviewerSchema);
+const RepositoryPullRequestListSchema = z.array(RepositoryPullRequestSchema);
 
 /**
- * Dashboard request helper: a 401 means the session is gone (e.g. it expired), so notify the
- * shell — it re-checks the session and shows the sign-in gate.
+ * Read the `{ error: code }` body. A code that is not in the union (or a body that is not the
+ * expected shape at all) degrades to `request_failed`, as the dashboard did before.
  */
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+async function errorFrom(response: Response): Promise<ApiError> {
+  const body: unknown = await response.json().catch(() => null);
+  const parsed = ApiErrorSchema.safeParse(body);
+  return new ApiError(response.status, parsed.success ? parsed.data.error : 'request_failed');
+}
+
+/**
+ * Dashboard request helper. A 401 means the session is gone (e.g. it expired), so notify the
+ * shell — it re-checks the session and shows the sign-in gate. A success body that does not
+ * match `schema` throws `invalid_response`; the unvalidated body never reaches a component.
+ */
+async function request<T>(schema: z.ZodType<T>, path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, init);
   if (response.status === 401) {
     window.dispatchEvent(new Event('jf:unauthorized'));
@@ -102,8 +83,66 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!response.ok) {
     throw await errorFrom(response);
   }
-  return (await response.json()) as T;
+  const body: unknown = await response.json().catch(() => null);
+  const parsed = schema.safeParse(body);
+  if (!parsed.success) {
+    throw new ApiError(response.status, 'invalid_response');
+  }
+  return parsed.data;
 }
+
+export async function fetchSession(signal?: AbortSignal): Promise<SessionUser | null> {
+  const response = await fetch('/api/auth/session', { signal });
+  if (response.status === 401) {
+    return null;
+  }
+  if (!response.ok) {
+    throw await errorFrom(response);
+  }
+  const body: unknown = await response.json().catch(() => null);
+  const parsed = SessionUserSchema.safeParse(body);
+  if (!parsed.success) {
+    throw new ApiError(response.status, 'invalid_response');
+  }
+  return parsed.data;
+}
+
+export function fetchSetupState(signal?: AbortSignal): Promise<SetupState> {
+  return request(SetupStateSchema, '/api/setup/state', { signal });
+}
+
+export function submitSetupCode(
+  code: string,
+  org: string | null,
+  signal?: AbortSignal,
+): Promise<SetupCodeResponse> {
+  return request(SetupCodeResponseSchema, '/api/setup/code', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(org === null ? { code } : { code, org }),
+    signal,
+  });
+}
+
+export function verifyInstallation(signal?: AbortSignal): Promise<InstallationInfo> {
+  return request(InstallationInfoSchema, '/api/setup/verify-installation', {
+    method: 'POST',
+    signal,
+  });
+}
+
+export async function logOut(signal?: AbortSignal): Promise<void> {
+  const response = await fetch('/api/auth/logout', { method: 'POST', signal });
+  if (response.status === 401) {
+    window.dispatchEvent(new Event('jf:unauthorized'));
+    throw new ApiError(401, 'unauthorized');
+  }
+  if (!response.ok) {
+    throw await errorFrom(response);
+  }
+}
+
+const jsonHeaders = { 'Content-Type': 'application/json' };
 
 export interface ReviewerDraft {
   name: string;
@@ -124,19 +163,23 @@ export interface ReviewerUpdateInput extends Partial<ReviewerDraft> {
   apiKey?: string | null;
 }
 
-export function listReviewers(): Promise<Reviewer[]> {
-  return request('/api/reviewers');
+export function listReviewers(signal?: AbortSignal): Promise<Reviewer[]> {
+  return request(ReviewerListSchema, '/api/reviewers', { signal });
 }
 
-export function exportReviewers(): Promise<ReviewersExportDocument> {
-  return request('/api/reviewers/export');
+export function exportReviewers(signal?: AbortSignal): Promise<ReviewersExportDocument> {
+  return request(ReviewersExportDocumentSchema, '/api/reviewers/export', { signal });
 }
 
-export function importReviewers(input: unknown): Promise<ReviewersImportResult> {
-  return request('/api/reviewers/import', {
+export function importReviewers(
+  input: unknown,
+  signal?: AbortSignal,
+): Promise<ReviewersImportResult> {
+  return request(ReviewersImportResultSchema, '/api/reviewers/import', {
     method: 'POST',
     headers: jsonHeaders,
     body: JSON.stringify(input),
+    signal,
   });
 }
 
@@ -155,28 +198,40 @@ export function downloadReviewersExport(exportDocument: ReviewersExportDocument)
   URL.revokeObjectURL(url);
 }
 
-export function getReviewer(id: string): Promise<Reviewer> {
-  return request(`/api/reviewers/${encodeURIComponent(id)}`);
+export function getReviewer(id: string, signal?: AbortSignal): Promise<Reviewer> {
+  return request(ReviewerSchema, `/api/reviewers/${encodeURIComponent(id)}`, { signal });
 }
 
-export function createReviewer(input: ReviewerCreateInput): Promise<Reviewer> {
-  return request('/api/reviewers', {
+export function createReviewer(
+  input: ReviewerCreateInput,
+  signal?: AbortSignal,
+): Promise<Reviewer> {
+  return request(ReviewerSchema, '/api/reviewers', {
     method: 'POST',
     headers: jsonHeaders,
     body: JSON.stringify(input),
+    signal,
   });
 }
 
-export function updateReviewer(id: string, input: ReviewerUpdateInput): Promise<Reviewer> {
-  return request(`/api/reviewers/${encodeURIComponent(id)}`, {
+export function updateReviewer(
+  id: string,
+  input: ReviewerUpdateInput,
+  signal?: AbortSignal,
+): Promise<Reviewer> {
+  return request(ReviewerSchema, `/api/reviewers/${encodeURIComponent(id)}`, {
     method: 'PATCH',
     headers: jsonHeaders,
     body: JSON.stringify(input),
+    signal,
   });
 }
 
-export async function deleteReviewer(id: string): Promise<void> {
-  const response = await fetch(`/api/reviewers/${encodeURIComponent(id)}`, { method: 'DELETE' });
+export async function deleteReviewer(id: string, signal?: AbortSignal): Promise<void> {
+  const response = await fetch(`/api/reviewers/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    signal,
+  });
   if (response.status === 401) {
     window.dispatchEvent(new Event('jf:unauthorized'));
     throw new ApiError(401, 'unauthorized');
@@ -186,71 +241,95 @@ export async function deleteReviewer(id: string): Promise<void> {
   }
 }
 
-export function listRepositories(refresh = false): Promise<Repository[]> {
-  return request(`/api/repositories${refresh ? '?refresh=1' : ''}`);
-}
-
-export function setRepositoryEnabled(repoId: number, enabled: boolean): Promise<Repository> {
-  return request(`/api/repositories/${repoId}`, {
-    method: 'PATCH',
-    headers: jsonHeaders,
-    body: JSON.stringify({ enabled }),
+export function listRepositories(refresh = false, signal?: AbortSignal): Promise<Repository[]> {
+  return request(RepositoryListSchema, `/api/repositories${refresh ? '?refresh=1' : ''}`, {
+    signal,
   });
 }
 
-export function getRepositoryReviewers(repoId: number): Promise<RepositoryReviewer[]> {
-  return request(`/api/repositories/${repoId}/reviewers`);
+export function setRepositoryEnabled(
+  repoId: number,
+  enabled: boolean,
+  signal?: AbortSignal,
+): Promise<Repository> {
+  return request(RepositorySchema, `/api/repositories/${repoId}`, {
+    method: 'PATCH',
+    headers: jsonHeaders,
+    body: JSON.stringify({ enabled }),
+    signal,
+  });
+}
+
+export function getRepositoryReviewers(
+  repoId: number,
+  signal?: AbortSignal,
+): Promise<RepositoryReviewer[]> {
+  return request(RepositoryReviewerListSchema, `/api/repositories/${repoId}/reviewers`, {
+    signal,
+  });
 }
 
 export function saveRepositoryReviewers(
   repoId: number,
   reviewers: RepositoryReviewerUpdate[],
+  signal?: AbortSignal,
 ): Promise<RepositoryReviewer[]> {
-  return request(`/api/repositories/${repoId}/reviewers`, {
+  return request(RepositoryReviewerListSchema, `/api/repositories/${repoId}/reviewers`, {
     method: 'PUT',
     headers: jsonHeaders,
     body: JSON.stringify({ reviewers }),
+    signal,
   });
 }
 
-export function listOpenPullRequests(repoId: number): Promise<RepositoryPullRequest[]> {
-  return request(`/api/repositories/${repoId}/pulls`);
+export function listOpenPullRequests(
+  repoId: number,
+  signal?: AbortSignal,
+): Promise<RepositoryPullRequest[]> {
+  return request(RepositoryPullRequestListSchema, `/api/repositories/${repoId}/pulls`, {
+    signal,
+  });
 }
 
-export function listRuns(cursor?: string): Promise<RunsPage> {
+export function listRuns(cursor?: string, signal?: AbortSignal): Promise<RunsPage> {
   const query = cursor === undefined ? '' : `?cursor=${encodeURIComponent(cursor)}`;
-  return request(`/api/runs${query}`);
+  return request(RunsPageSchema, `/api/runs${query}`, { signal });
 }
 
-export function getRun(id: string): Promise<RunDetail> {
-  return request(`/api/runs/${encodeURIComponent(id)}`);
+export function getRun(id: string, signal?: AbortSignal): Promise<RunDetail> {
+  return request(RunDetailSchema, `/api/runs/${encodeURIComponent(id)}`, { signal });
 }
 
-export function startTryRun(input: TryRunRequest): Promise<TryRunResponse> {
-  return request('/api/runs/try', {
+export function startTryRun(input: TryRunRequest, signal?: AbortSignal): Promise<TryRunResponse> {
+  return request(TryRunResponseSchema, '/api/runs/try', {
     method: 'POST',
     headers: jsonHeaders,
     body: JSON.stringify(input),
+    signal,
   });
 }
 
-export function getReadiness(): Promise<InstanceReadiness> {
-  return request('/api/instance/readiness');
+export function getReadiness(signal?: AbortSignal): Promise<InstanceReadiness> {
+  return request(InstanceReadinessSchema, '/api/instance/readiness', { signal });
 }
 
-export function getSettings(): Promise<SettingsResponse> {
-  return request('/api/settings');
+export function getSettings(signal?: AbortSignal): Promise<SettingsResponse> {
+  return request(SettingsResponseSchema, '/api/settings', { signal });
 }
 
-export function listActivity(cursor?: string): Promise<ActivityPage> {
+export function listActivity(cursor?: string, signal?: AbortSignal): Promise<ActivityPage> {
   const query = cursor === undefined ? '' : `?cursor=${encodeURIComponent(cursor)}`;
-  return request(`/api/activity${query}`);
+  return request(ActivityPageSchema, `/api/activity${query}`, { signal });
 }
 
-export function updateSettings(patch: Partial<InstanceSettings>): Promise<SettingsResponse> {
-  return request('/api/settings', {
+export function updateSettings(
+  patch: Partial<InstanceSettings>,
+  signal?: AbortSignal,
+): Promise<SettingsResponse> {
+  return request(SettingsResponseSchema, '/api/settings', {
     method: 'PATCH',
     headers: jsonHeaders,
     body: JSON.stringify(patch),
+    signal,
   });
 }

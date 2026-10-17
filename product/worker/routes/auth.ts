@@ -1,4 +1,4 @@
-import type { SessionUser } from '@jury-forge/shared';
+import { SessionUserSchema, type SessionUser } from '@jury-forge/shared';
 import { Hono } from 'hono';
 import { hasInstallationAccess } from '../lib/access';
 import { recordActivity } from '../lib/activity';
@@ -6,6 +6,7 @@ import { keyRingValues, loadKeyRing, randomToken } from '../lib/crypto';
 import { exchangeOAuthCode, fetchUser } from '../lib/github';
 import { loadGitHubApp } from '../lib/github-app';
 import { deleteMeta, getMeta, isClaimed, setMeta } from '../lib/instance';
+import { errorResponse, respond } from '../lib/respond';
 import {
   clearSessionCookie,
   cookieValue,
@@ -25,11 +26,11 @@ authRoutes.use('*', sameOrigin());
 authRoutes.get('/github/start', async (c) => {
   const values = keyRingValues(c.env);
   if (!values) {
-    return c.json({ error: 'encryption_key_unset' }, 500);
+    return errorResponse('encryption_key_unset', 500);
   }
   const app = await loadGitHubApp(c.env.DB, await loadKeyRing(values));
   if (!app) {
-    return c.json({ error: 'setup_required' }, 409);
+    return errorResponse('setup_required', 409);
   }
 
   const claimed = await isClaimed(c.env.DB);
@@ -55,11 +56,11 @@ authRoutes.get('/github/callback', async (c) => {
   const state = c.req.query('state');
   const origin = new URL(c.req.url).origin;
   if (!code || !state) {
-    return c.json({ error: 'invalid_request' }, 400);
+    return errorResponse('invalid_request', 400);
   }
   const encryptionKeyValues = keyRingValues(c.env);
   if (!encryptionKeyValues) {
-    return c.json({ error: 'encryption_key_unset' }, 500);
+    return errorResponse('encryption_key_unset', 500);
   }
 
   const db = c.env.DB;
@@ -72,12 +73,12 @@ authRoutes.get('/github/callback', async (c) => {
     await db.prepare('DELETE FROM oauth_states WHERE state = ?').bind(state).run();
   }
   if (!stateRow) {
-    return c.json({ error: 'invalid_state' }, 400);
+    return errorResponse('invalid_state', 400);
   }
 
   const app = await loadGitHubApp(db, await loadKeyRing(encryptionKeyValues));
   if (!app) {
-    return c.json({ error: 'setup_required' }, 409);
+    return errorResponse('setup_required', 409);
   }
 
   const token = await exchangeOAuthCode(app.clientId, app.clientSecret, code);
@@ -115,7 +116,7 @@ authRoutes.get('/github/callback', async (c) => {
 
 authRoutes.get('/session', requireSession(), (c) => {
   const user: SessionUser = c.get('user');
-  return c.json(user);
+  return respond(SessionUserSchema, user);
 });
 
 authRoutes.post('/logout', requireSession(), async (c) => {

@@ -1,5 +1,8 @@
 import {
   PRODUCT_NAME,
+  InstallationInfoSchema,
+  SetupCodeResponseSchema,
+  SetupStateSchema,
   type AppManifest,
   type InstallationInfo,
   type SetupCodeResponse,
@@ -17,6 +20,7 @@ import {
 import { convertManifest, listAppInstallations } from '../lib/github';
 import { loadGitHubApp, storeGitHubApp } from '../lib/github-app';
 import { deleteMeta, getMeta, isClaimed, setMeta } from '../lib/instance';
+import { errorResponse, respond } from '../lib/respond';
 import { cookieValue } from '../lib/sessions';
 import { sameOrigin, type AppEnv } from '../middleware';
 
@@ -44,25 +48,25 @@ setupRoutes.get('/state', async (c) => {
     installed: installationId !== null,
     appSlug: app?.slug ?? null,
   };
-  return c.json(body);
+  return respond(SetupStateSchema, body);
 });
 
 setupRoutes.post('/code', async (c) => {
   const db = c.env.DB;
   const setupCode = c.env.SETUP_CODE;
   if (!setupCode) {
-    return c.json({ error: 'setup_code_unset' }, 500);
+    return errorResponse('setup_code_unset', 500);
   }
   if (await isClaimed(db)) {
-    return c.json({ error: 'already_claimed' }, 409);
+    return errorResponse('already_claimed', 409);
   }
 
   const parsed = codeRequest.safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) {
-    return c.json({ error: 'invalid_request' }, 400);
+    return errorResponse('invalid_request', 400);
   }
   if (!(await constantTimeEqual(parsed.data.code, setupCode))) {
-    return c.json({ error: 'invalid_code' }, 401);
+    return errorResponse('invalid_code', 401);
   }
 
   const now = Math.floor(Date.now() / 1000);
@@ -78,33 +82,33 @@ setupRoutes.post('/code', async (c) => {
   await setMeta(db, 'setup_session_hash', await sha256Hex(setupToken));
   await setMeta(db, 'setup_session_expires', String(now + SETUP_TTL_SECONDS));
 
-  c.header(
-    'Set-Cookie',
-    `${SETUP_COOKIE}=${setupToken}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${SETUP_TTL_SECONDS}`,
-  );
-
   const origin = new URL(c.req.url).origin;
   const body: SetupCodeResponse = {
     actionsUrl: manifestActionsUrl(parsed.data.org, state),
     state,
     manifest: manifestFor(origin),
   };
-  return c.json(body);
+  const response = respond(SetupCodeResponseSchema, body);
+  response.headers.set(
+    'Set-Cookie',
+    `${SETUP_COOKIE}=${setupToken}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${SETUP_TTL_SECONDS}`,
+  );
+  return response;
 });
 
 setupRoutes.get('/manifest/callback', async (c) => {
   const code = c.req.query('code');
   const state = c.req.query('state');
   if (!code || !state) {
-    return c.json({ error: 'invalid_request' }, 400);
+    return errorResponse('invalid_request', 400);
   }
   const db = c.env.DB;
   const values = keyRingValues(c.env);
   if (await isClaimed(db)) {
-    return c.json({ error: 'already_claimed' }, 409);
+    return errorResponse('already_claimed', 409);
   }
   if (!values) {
-    return c.json({ error: 'encryption_key_unset' }, 500);
+    return errorResponse('encryption_key_unset', 500);
   }
 
   const now = Math.floor(Date.now() / 1000);
@@ -116,7 +120,7 @@ setupRoutes.get('/manifest/callback', async (c) => {
     await db.prepare('DELETE FROM oauth_states WHERE state = ?').bind(state).run();
   }
   if (!stateRow) {
-    return c.json({ error: 'invalid_state' }, 400);
+    return errorResponse('invalid_state', 400);
   }
 
   const conversion = await convertManifest(code);
@@ -132,10 +136,10 @@ setupRoutes.post('/verify-installation', async (c) => {
   const db = c.env.DB;
   const values = keyRingValues(c.env);
   if (await isClaimed(db)) {
-    return c.json({ error: 'already_claimed' }, 409);
+    return errorResponse('already_claimed', 409);
   }
   if (!values) {
-    return c.json({ error: 'encryption_key_unset' }, 500);
+    return errorResponse('encryption_key_unset', 500);
   }
 
   const now = Math.floor(Date.now() / 1000);
@@ -148,19 +152,19 @@ setupRoutes.post('/verify-installation', async (c) => {
     expiresAt > now &&
     (await constantTimeEqual(await sha256Hex(setupToken), storedHash));
   if (!sessionValid) {
-    return c.json({ error: 'setup_session_required' }, 401);
+    return errorResponse('setup_session_required', 401);
   }
 
   const app = await loadGitHubApp(db, await loadKeyRing(values));
   if (!app) {
-    return c.json({ error: 'app_missing' }, 409);
+    return errorResponse('app_missing', 409);
   }
 
   const installations = await listAppInstallations(app.appId, app.privateKey);
   const installation = installations[0];
   if (!installation) {
     const body: InstallationInfo = { installed: false, account: null };
-    return c.json(body);
+    return respond(InstallationInfoSchema, body);
   }
 
   const accountType = installation.account.type === 'Organization' ? 'org' : 'user';
@@ -172,7 +176,7 @@ setupRoutes.post('/verify-installation', async (c) => {
     installed: true,
     account: { login: installation.account.login, type: accountType },
   };
-  return c.json(body);
+  return respond(InstallationInfoSchema, body);
 });
 
 function manifestActionsUrl(org: string | undefined, state: string): string {

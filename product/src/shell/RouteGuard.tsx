@@ -1,5 +1,6 @@
 import type { SessionUser, SetupState } from '@jury-forge/shared';
 import type { ReactNode } from 'react';
+import { handleAppLink } from '../lib/router';
 import { Button, buttonClass, Panel } from '../ui';
 
 function GatePanel({
@@ -55,7 +56,7 @@ export function RouteGuard({
     return (
       <GatePanel
         action={
-          <a className={buttonClass} href="/setup">
+          <a className={buttonClass} href="/setup" onClick={handleAppLink}>
             Start setup
           </a>
         }
@@ -68,7 +69,7 @@ export function RouteGuard({
     return (
       <GatePanel
         action={
-          <a className={buttonClass} href="/api/auth/github/start">
+          <a className={buttonClass} href="/api/auth/github/start" onClick={handleAppLink}>
             Sign in with GitHub
           </a>
         }

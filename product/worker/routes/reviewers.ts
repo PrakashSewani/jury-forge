@@ -1,7 +1,13 @@
+import {
+  ReviewerSchema,
+  ReviewersExportDocumentSchema,
+  ReviewersImportResultSchema,
+  type ReviewersImportResult,
+} from '@jury-forge/shared';
 import { Hono } from 'hono';
-import type { ReviewersImportResult } from '@jury-forge/shared';
 import { recordActivity } from '../lib/activity';
 import { keyRingValues, loadKeyRing } from '../lib/crypto';
+import { errorResponse, respond } from '../lib/respond';
 import {
   buildExportDocument,
   deleteReviewerRow,
@@ -22,19 +28,23 @@ export const reviewerRoutes = new Hono<AppEnv>();
 reviewerRoutes.use('*', requireSession(), sameOrigin());
 
 reviewerRoutes.get('/', async (c) => {
-  return c.json(await listReviewers(c.env.DB));
+  return respond(ReviewerSchema.array(), await listReviewers(c.env.DB));
 });
 
 reviewerRoutes.get('/export', async (c) => {
   const reviewers = await listReviewers(c.env.DB);
-  c.header('Content-Disposition', 'attachment; filename="jury-forge-reviewers.json"');
-  return c.json(buildExportDocument(reviewers, Math.floor(Date.now() / 1_000)));
+  const response = respond(
+    ReviewersExportDocumentSchema,
+    buildExportDocument(reviewers, Math.floor(Date.now() / 1_000)),
+  );
+  response.headers.set('Content-Disposition', 'attachment; filename="jury-forge-reviewers.json"');
+  return response;
 });
 
 reviewerRoutes.post('/import', async (c) => {
   const parsed = reviewersImportDocument.safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) {
-    return c.json({ error: 'invalid_request' }, 400);
+    return errorResponse('invalid_request', 400);
   }
   const values = keyRingValues(c.env);
   const ring = values ? await loadKeyRing(values) : null;
@@ -45,16 +55,16 @@ reviewerRoutes.post('/import', async (c) => {
     target: null,
     detail: importDetail(result),
   });
-  return c.json(result);
+  return respond(ReviewersImportResultSchema, result);
 });
 
 reviewerRoutes.post('/', async (c) => {
   const parsed = reviewerCreate.safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) {
-    return c.json({ error: 'invalid_request' }, 400);
+    return errorResponse('invalid_request', 400);
   }
   if (parsed.data.apiKey !== undefined && !c.env.ENCRYPTION_KEY) {
-    return c.json({ error: 'encryption_key_unset' }, 500);
+    return errorResponse('encryption_key_unset', 500);
   }
   const values = keyRingValues(c.env);
   const ring = values ? await loadKeyRing(values) : null;
@@ -62,64 +72,71 @@ reviewerRoutes.post('/', async (c) => {
   const id = crypto.randomUUID();
   await insertReviewer(c.env.DB, id, ring, parsed.data);
   const reviewer = await getReviewer(c.env.DB, id);
-  if (reviewer) {
-    await recordActivity(c.env.DB, {
-      actor: c.get('user').login,
-      action: 'reviewer_create',
-      target: reviewer.name,
-    });
+  if (!reviewer) {
+    // The row that was just written did not read back. Answer with the taxonomy's own code instead
+    // of a `null` body: the dashboard requires a reviewer (`createReviewer` parses the same
+    // non-nullable `ReviewerSchema`), so a 201 + `null` could only surface as `invalid_response`.
+    return errorResponse('internal_error', 500);
   }
-  return c.json(reviewer, 201);
+  await recordActivity(c.env.DB, {
+    actor: c.get('user').login,
+    action: 'reviewer_create',
+    target: reviewer.name,
+  });
+  return respond(ReviewerSchema, reviewer, 201);
 });
 
 reviewerRoutes.get('/:id', async (c) => {
   const reviewer = await getReviewer(c.env.DB, c.req.param('id'));
   if (!reviewer) {
-    return c.json({ error: 'not_found' }, 404);
+    return errorResponse('not_found', 404);
   }
-  return c.json(reviewer);
+  return respond(ReviewerSchema, reviewer);
 });
 
 reviewerRoutes.patch('/:id', async (c) => {
   const parsed = reviewerUpdate.safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) {
-    return c.json({ error: 'invalid_request' }, 400);
+    return errorResponse('invalid_request', 400);
   }
   const id = c.req.param('id');
   if (!(await getReviewer(c.env.DB, id))) {
-    return c.json({ error: 'not_found' }, 404);
+    return errorResponse('not_found', 404);
   }
   if (typeof parsed.data.apiKey === 'string' && !c.env.ENCRYPTION_KEY) {
-    return c.json({ error: 'encryption_key_unset' }, 500);
+    return errorResponse('encryption_key_unset', 500);
   }
   const values = keyRingValues(c.env);
   const ring = values ? await loadKeyRing(values) : null;
   const { apiKeyReencrypted } = await updateReviewerRow(c.env.DB, id, ring, parsed.data);
   const reviewer = await getReviewer(c.env.DB, id);
-  if (reviewer) {
+  if (!reviewer) {
+    // Same as the create above: the row existed at the check and is gone after the update, so this
+    // is a 500 the dashboard can render, never a `null` body it would call `invalid_response`.
+    return errorResponse('internal_error', 500);
+  }
+  await recordActivity(c.env.DB, {
+    actor: c.get('user').login,
+    action: 'reviewer_update',
+    target: reviewer.name,
+    detail: reviewerUpdateDetail(parsed.data, apiKeyReencrypted),
+  });
+  if (apiKeyReencrypted && ring) {
     await recordActivity(c.env.DB, {
       actor: c.get('user').login,
-      action: 'reviewer_update',
+      action: 'credential_rotation',
       target: reviewer.name,
-      detail: reviewerUpdateDetail(parsed.data, apiKeyReencrypted),
+      detail: `api_key re-wrapped for key version ${ring.current.version}`,
     });
-    if (apiKeyReencrypted && ring) {
-      await recordActivity(c.env.DB, {
-        actor: c.get('user').login,
-        action: 'credential_rotation',
-        target: reviewer.name,
-        detail: `api_key re-wrapped for key version ${ring.current.version}`,
-      });
-    }
   }
-  return c.json(reviewer);
+  return respond(ReviewerSchema, reviewer);
 });
 
 reviewerRoutes.delete('/:id', async (c) => {
   const id = c.req.param('id');
   const reviewer = await getReviewer(c.env.DB, id);
   if (!reviewer) {
-    return c.json({ error: 'not_found' }, 404);
+    return errorResponse('not_found', 404);
   }
   await deleteReviewerRow(c.env.DB, id);
   await recordActivity(c.env.DB, {

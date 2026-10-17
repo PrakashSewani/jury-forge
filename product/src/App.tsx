@@ -1,8 +1,8 @@
 import type { SessionUser, SetupState } from '@jury-forge/shared';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { fetchSession, fetchSetupState, logOut } from './lib/api';
 import type { Route } from './lib/router';
-import { routeFromPath } from './lib/router';
+import { routeFromPath, subscribeRoute } from './lib/router';
 import ActivityPage from './pages/ActivityPage';
 import HomePage from './pages/HomePage';
 import RepositoriesPage from './pages/RepositoriesPage';
@@ -20,7 +20,8 @@ interface ShellState {
 }
 
 export default function App() {
-  const route = routeFromPath(window.location.pathname);
+  const pathname = useSyncExternalStore(subscribeRoute, () => window.location.pathname);
+  const route = routeFromPath(pathname);
   const [shell, setShell] = useState<ShellState | null>(null);
   const [failed, setFailed] = useState(false);
   const [busy, setBusy] = useState(false);

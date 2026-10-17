@@ -1,4 +1,5 @@
 import type { Route } from '../lib/router';
+import { handleAppLink } from '../lib/router';
 import { cx, focusRing } from '../ui';
 
 export const NAV_ITEMS = [
@@ -59,7 +60,10 @@ export function Nav({
             )}
             href={item.href}
             key={item.href}
-            onClick={onNavigate}
+            onClick={(event) => {
+              handleAppLink(event);
+              onNavigate?.();
+            }}
           >
             {item.label}
           </a>

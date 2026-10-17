@@ -1,17 +1,22 @@
 import type { Finding, FindingSeverity, ProviderUsage, RunDetail } from '@jury-forge/shared';
+import { ReviewerSchema, RunDetailSchema, message } from '@jury-forge/shared';
 import { useCallback, useMemo, useState } from 'react';
+import { z } from 'zod';
 import { getRun, listReviewers } from '../lib/api';
 import { formatTime, runStatusTone, severityTone, shortSha } from '../lib/format';
-import { useLoadable } from '../lib/use-loadable';
+import { usePoll } from '../lib/use-poll';
+import { useResource } from '../lib/use-resource';
 import { Badge, Card, cx, EmptyState, focusRing, Notice, Row, Table, Tabs, tapTarget } from '../ui';
 import type { TabItem } from '../ui';
-import { humanMessage, reviewerFailureMessage } from './messages';
+import { reviewerFailureMessage } from './messages';
 import { PageError, PageLoading } from './screen-state';
 
-interface DetailData {
-  detail: RunDetail;
-  names: Map<string, string>;
-}
+const DetailDataSchema = z.object({
+  detail: RunDetailSchema,
+  reviewers: z.array(ReviewerSchema),
+});
+
+type DetailData = z.infer<typeof DetailDataSchema>;
 
 const SEVERITY_TABS: TabItem[] = [
   { id: 'all', label: 'All' },
@@ -49,12 +54,21 @@ function totalUsage(outcomes: RunDetail['reviewers']): ProviderUsage | null {
 }
 
 export default function RunDetailPage({ id }: { id: string }) {
-  const load = useCallback(async (): Promise<DetailData> => {
-    const [detail, reviewers] = await Promise.all([getRun(id), listReviewers()]);
-    return { detail, names: new Map(reviewers.map((reviewer) => [reviewer.id, reviewer.name])) };
-  }, [id]);
-  const { data, failed, reload } = useLoadable(load);
+  const load = useCallback(
+    async (signal: AbortSignal): Promise<DetailData> => {
+      const [detail, reviewers] = await Promise.all([getRun(id, signal), listReviewers(signal)]);
+      return { detail, reviewers };
+    },
+    [id],
+  );
+  const { data, failed, reload } = useResource(DetailDataSchema, load);
   const [severity, setSeverity] = useState<'all' | FindingSeverity>('all');
+  const names = useMemo(
+    () => new Map((data?.reviewers ?? []).map((reviewer) => [reviewer.id, reviewer.name])),
+    [data],
+  );
+
+  usePoll(reload, { intervalMs: 5000, active: data?.detail.run.status === 'running' });
 
   const usage = useMemo(() => totalUsage(data?.detail.reviewers ?? []), [data]);
 
@@ -70,7 +84,7 @@ export default function RunDetailPage({ id }: { id: string }) {
     return <PageLoading />;
   }
 
-  const { detail, names } = data;
+  const { detail } = data;
   const { run } = detail;
 
   return (
@@ -102,7 +116,7 @@ export default function RunDetailPage({ id }: { id: string }) {
 
       {run.error ? (
         <Notice tone="error">
-          {humanMessage(run.error, 'The run did not finish. Check the Worker and run again.')}
+          {message(run.error, 'The run did not finish. Check the Worker and run again.')}
         </Notice>
       ) : null}
 

@@ -1,6 +1,11 @@
-import type { InstanceSettings, SettingsResponse } from '@jury-forge/shared';
+import {
+  SettingsResponseSchema,
+  type InstanceSettings,
+  type SettingsResponse,
+} from '@jury-forge/shared';
 import { Hono } from 'hono';
 import { recordActivity } from '../lib/activity';
+import { errorResponse, respond } from '../lib/respond';
 import {
   DEFAULT_SETTINGS,
   loadSettings,
@@ -18,7 +23,7 @@ settingsRoutes.get('/', async (c) => {
     settings: await loadSettings(c.env.DB),
     defaults: DEFAULT_SETTINGS,
   };
-  return c.json(body);
+  return respond(SettingsResponseSchema, body);
 });
 
 settingsRoutes.patch('/', async (c) => {
@@ -26,11 +31,11 @@ settingsRoutes.patch('/', async (c) => {
   try {
     body = await c.req.json();
   } catch {
-    return c.json({ error: 'invalid_request' }, 400);
+    return errorResponse('invalid_request', 400);
   }
   const result = validateSettingsPatch(body);
   if (!result.ok) {
-    return c.json({ error: result.error }, 400);
+    return errorResponse(result.error, 400);
   }
   const before = await loadSettings(c.env.DB);
   const settings = await updateSettings(c.env.DB, result.patch);
@@ -48,5 +53,5 @@ settingsRoutes.patch('/', async (c) => {
     settings,
     defaults: DEFAULT_SETTINGS,
   };
-  return c.json(response);
+  return respond(SettingsResponseSchema, response);
 });

@@ -58,19 +58,21 @@ one-slice-per-PR flow. Each slice still landed as its own docs commit and implem
 ## Post-phase-2 rework (2026-10-17)
 
 The owner's rework item lands as four stacked pull requests against `dev` (D-011's flow), after the
-improvement slate; slice A merged as **#17** (`77541fbb`), slice B merged as **#18**
-(`c48e825e1b`), C is in progress and D is not started:
+improvement slate; slice A merged as **#17** (`77541fbb`), slice B merged as **#18** (`c48e825e1b`),
+slice C merged as **#19** (`b93d2f04b1`), and D is in progress:
 
 | Slice | Scope                                                                                   | Status                               |
 | ----- | --------------------------------------------------------------------------------------- | ------------------------------------ |
 | A     | Design system: token layer + `product/src/ui/` primitives + the UI test harness (D-026) | merged to `dev` (`77541fbb`) (#17)   |
 | B     | The shell, dark mode, the retuned tokens and all 8 screens on the primitives (D-027)    | merged to `dev` (`c48e825e1b`) (#18) |
-| C     | Product shape: readiness, templates, reviewer↔repo visibility, try-a-reviewer           | in progress                          |
-| D     | Architecture: validated contracts, error taxonomy, client routing, run polling          | not started                          |
+| C     | Product shape: readiness, templates, reviewer↔repo visibility, try-a-reviewer (D-028)   | merged to `dev` (`b93d2f04b1`) (#19) |
+| D     | Architecture: validated contracts, error taxonomy, client routing, run polling (D-029)  | in progress                          |
 
 Slice C (D-028) covers computed readiness, the seven built-in reviewer templates, reviewer↔repo
 visibility, and manual try runs. Slice B (the shell, wired dark mode, the retuned token ladder and
 all eight screens rebuilt on the primitives) merged to `dev` from
 `feat/rework-b-shell-screens-20261017`, and post-merge canary verification passed on the merged
-tree; C stacks on that merge and D stacks behind C. The rework is product work, not a phase — phase
+tree. Slice D (D-029) makes the Worker↔dashboard boundary real — zod schemas as the contract source,
+one error taxonomy, validated responses on both sides, real client-side routing and a polling data
+layer — and stacks on C's merge (`b93d2f04b1`). The rework is product work, not a phase — phase
 3 (promo site) still starts after it. **Nothing deploys: the hold stands.**

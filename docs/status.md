@@ -51,17 +51,17 @@ change deploys anything.
 
 **Rework (2026-10-17):** the post-phase-2 rework is four stacked slices. Slice A merged to `dev` as
 **#17** (`77541fbb`; reviewed head `33b0a50`) on `feat/rework-a-design-system-20261017`; slice B
-merged to `dev` as **#18** (`c48e825e1b`), and post-merge canary verification passed on the merged
-tree. Slice C is complete on `feat/rework-c-product-shape-20261017` (branched from `c48e825e1b`,
-plan recorded in D-028 and `docs/design.md`) and is open for review against `dev`; slice D is not
-started.
+merged to `dev` as **#18** (`c48e825e1b`); slice C merged to `dev` as **#19** (`b93d2f04b1`), and
+post-merge canary verification passed on each merged tree. Slice D is complete on
+`feat/rework-d-architecture-20261017` (branched from `b93d2f04b1`, plan recorded in D-029) and is
+open for review against `dev`.
 
 | Slice | Branch                                 | Status                               |
 | ----- | -------------------------------------- | ------------------------------------ |
 | A     | `feat/rework-a-design-system-20261017` | merged to `dev` (`77541fbb`) (#17)   |
 | B     | `feat/rework-b-shell-screens-20261017` | merged to `dev` (`c48e825e1b`) (#18) |
-| C     | `feat/rework-c-product-shape-20261017` | complete, in review against `dev`    |
-| D     | —                                      | not started                          |
+| C     | `feat/rework-c-product-shape-20261017` | merged to `dev` (`b93d2f04b1`) (#19) |
+| D     | `feat/rework-d-architecture-20261017`  | complete, in review against `dev`    |
 
 Slice A is the design-system vocabulary and UI harness (D-026): a token layer in
 `product/src/styles.css`, the `product/src/ui/` primitives, a dependency-free
@@ -116,8 +116,9 @@ UI **95/95** (6 files) · both builds · harness exit 0 with `--assert`: **112 c
 failing** (overflow 0, tapTargets 0, contrast 0, focus 0, mobileNav 0) across 8 routes × 7 widths × 2
 themes. Numbers: `docs/rework/final.json` / `final.md`, deltas against `docs/rework/baseline.json`.
 
-**Slice C (2026-10-17), complete on `feat/rework-c-product-shape-20261017` (base `c48e825e1b`),
-D-028.** Seven commits: docs `b178a30`; shared `4d43daf` (the seven reviewer templates in
+**Slice C (2026-10-17), merged to `dev` as #19 (`b93d2f04b1`) from
+`feat/rework-c-product-shape-20261017` (base `c48e825e1b`), D-028.** Nine commits: docs `b178a30`;
+shared `4d43daf` (the seven reviewer templates in
 `shared/src/templates.ts` plus the slice's contracts — `InstanceReadiness`, `RepositoryPullRequest`,
 `TryRunRequest`/`TryRunResponse`, `RunMode`, `Reviewer.repositories`, `RunSummary.mode`); worker
 `b4fdb58` (readiness derived from D1 in `product/worker/lib/readiness.ts` behind
@@ -127,7 +128,9 @@ manual mode); dashboard `0baf98f` and `da82c2e` (the Overview leads with the com
 its single next step; the reviewers list renders the API's `repositories` instead of one request per
 repository; the reviewer editor's template picker; the "Try a reviewer" dialog; run detail states that
 a manual run was not posted to GitHub). The seventh — `4b40665` `fix: answer sentry's round-1
-findings on #19 (slice C, D-028)` — answers all four round-1 findings (see the round-1 note below).
+findings on #19 (slice C, D-028)` — answers all four round-1 findings (see the round-1 note below);
+the last two (`57c12f3`, `2b93aea`) are the tracker updates this file received while the review was
+open, which is why the branch carries nine commits and not seven.
 
 C-1 readiness is computed per request from D1 — no stored checklist — as five steps (claim, install
 the app, enable a repository, add a reviewer with a model key, see the first run) with the raw counts
@@ -166,11 +169,70 @@ test (the automatic run's prompt then contains "Previously reported findings"; t
 request answers 202 instead of 404; the old title trips the copy assertions; dropping the badge
 loses the row mark).
 
+**Slice D (2026-10-17), on `feat/rework-d-architecture-20261017` (base `b93d2f04b1`), D-029.** The
+boundary between the Worker and the dashboard, made real: `shared/src/schemas/*` (zod) is the single
+source of the contract and every type in `shared/src/contracts.ts` derives from it with `z.infer`;
+`shared/src/errors.ts` carries `API_ERROR_CODES`, the `ApiErrorCode` union and `message(code)`; the
+Worker gained `product/worker/lib/respond.ts` and every dashboard-facing response in
+`product/worker/**` now goes through `respond(schema, data)` or `errorResponse(code, status)`; the
+dashboard's `request()` validates every response with the same schema instead of casting, and a
+mismatch becomes `invalid_response` on the screen's error path rather than a broken render;
+`product/src/lib/router.ts` gained `navigate()`/`subscribeRoute()`/`handleAppLink()` so a navigation
+is `pushState` plus one screen fetch instead of a full page load (`App.tsx` reads the route through
+`useSyncExternalStore`); `use-loadable.ts` became `use-resource.ts` (`useResource(schema, fetcher)` —
+abortable, revalidating on refocus) and a new `use-poll.ts` (`usePoll`) keeps the runs list and the
+run detail live while a run is `running`, stopping at a terminal status.
+
+**Verified on the Mac checkout of record (`~/Projects/jury-forge`):** `npm run check` **exit 0** —
+typecheck (three `tsc` programs plus `astro check`), ESLint, Prettier `format:check`, workerd
+**289/289** (22 files) · UI **136/136** (12 files), both builds, nothing skipped. The new cases are
+`respond.test.ts`, `errors.test.ts` and `contracts.test.ts` on the worker side (one drifted payload
+per schema) and `router.test.tsx`, `polling.test.tsx`, `use-resource.test.tsx` and
+`error-taxonomy.test.tsx` on the dashboard side. The same suite was re-run independently on this
+VPS against a clean clone of the branch. Screen copy is unchanged: `product/src/pages/messages.ts` no
+longer holds a map of its own, and the shared table carries exactly the sentences those screens
+rendered before (checked code by code), with `lib/wizard.ts` keeping its setup-specific wording.
+
+**Round 1 of the review debate (PR #20, sentry, merge confidence 45%) — answered in `635e74b` plus
+this tracker commit: 7 findings, 6 resolved / 1 rejected**, one reply per comment thread on the PR. (1)
+The editor's unsaved-changes guard was dead for in-app navigation — `beforeunload` never fires for a
+`pushState` route change — so `router.ts` gained `registerNavigationBlocker()`: `navigate()` consults
+every blocker before it writes the entry (and returns `false` when vetoed) and the router's own
+`popstate` handler asks first too, putting the entry back and notifying nobody when refused; the
+editor registers one while its form is dirty (its `beforeunload` handler stays for a real unload). (2)
+`POST /api/reviewers` and `PATCH /api/reviewers/:id` were validating their response as
+`ReviewerSchema.nullable()` while the dashboard parses a non-null reviewer: both now answer
+`errorResponse('internal_error', 500)` when the row does not read back and validate `ReviewerSchema`.
+(3) The new `test-ui/router.test.tsx` rendered the shell without stubbing `localStorage`, so all six of
+its tests died on Node ≥26 — it now takes `memoryStorage()` like `shell.test.tsx` and
+`theme.test.tsx`. (4) The runs list's 5s tick replaced the whole list with page 1 and refetched
+repositories; it now refreshes the first page in place, leaving the "Load more" tail, the cursor and
+the repository map alone (repositories are fetched at mount and on an explicit retry only). (5) The
+one finding **rejected**: parsing is deliberately off in a production build (D-029, `architecture.md`)
+— the dashboard still validates every response, the parse is on in dev and test where drift must fail
+a test, and flipping it on the hot path is a plan-level cost decision, not a review fix. (6) `focus`
+and `visibilitychange` both fire when the tab comes back; the revalidate path now skips a load that is
+already in flight (the effect's own load is never skipped, so a new fetcher still fetches). (7) The
+setup screen's install link points at an absolute GitHub URL, which `handleAppLink` can never
+intercept, so the dead handler is gone.
+
+Numbers after the round: workerd **292/292** (23 files, +3 in the new `test/reviewers-missing-row.test.ts`
+— a create and an update whose row does not read back, driven through a D1 wrapper that stops
+answering that read, plus the 201 body parsing as the dashboard's `ReviewerSchema`) and UI
+**141/141** (12 files, +5: three in `router.test.tsx` for the veto itself, the declined-then-accepted
+in-app click and the vetoed back button, one in `use-resource.test.tsx` for the double-event
+revalidate, one in `polling.test.tsx` for the tick that keeps the loaded page and the cursor). Each of
+the five new cases was mutation-checked: reverting the fix it covers makes exactly that case fail.
+
+**Verified at `635e74b` on this VPS (Node 26.7.0, `npm run check` **exit 0**):** prettier clean ·
+ESLint clean · typecheck (three `tsc` programs + `astro check`, 0 errors) · workerd **292/292** (23
+files) · UI **141/141** (12 files) · worker + client + site builds, nothing skipped. That is the CI
+Node's suite plus the Node ≥26 storage bug the round found, which the pinned Node 24 cannot see.
+
 **Blocked by:** nothing.
 
-**Next action:** slice C's pull request is open for review against `dev` (then Prakash merges); after
-that, slice D (validated contracts, error taxonomy, client routing, run polling) from the rework plan
-in `docs/roadmap.md`.
+**Next action:** sentry re-reviews the answered head (round 2); Prakash merges on its verdict; the
+rework plan in `docs/roadmap.md` is then complete, and phase 3 (the promo site) starts after it.
 
 ## Backlog (owner-owned, deferred)
 
