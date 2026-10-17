@@ -1,6 +1,19 @@
-import type { RunStatus, RunSummary } from '@jury-forge/shared';
+import type {
+  Repository,
+  RepositoryPullRequest,
+  Reviewer,
+  RunStatus,
+  RunSummary,
+} from '@jury-forge/shared';
+import type { FormEvent } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { listRepositories, listRuns } from '../lib/api';
+import {
+  listOpenPullRequests,
+  listRepositories,
+  listReviewers,
+  listRuns,
+  startTryRun,
+} from '../lib/api';
 import { formatRelativeTime, runStatusTone, shortSha } from '../lib/format';
 import {
   Badge,
@@ -8,20 +21,24 @@ import {
   buttonClass,
   Card,
   cx,
+  Dialog,
   EmptyState,
   Field,
   focusRing,
+  Notice,
   Row,
   Select,
   Table,
   Toolbar,
 } from '../ui';
+import { errorMessage } from './messages';
 import { PageError, PageLoading } from './screen-state';
 
 interface RunsData {
   runs: RunSummary[];
   nextCursor: string | null;
   repos: Map<number, string>;
+  repositories: Repository[];
 }
 
 const STATUS_OPTIONS: { value: 'all' | RunStatus; label: string }[] = [
@@ -32,12 +49,206 @@ const STATUS_OPTIONS: { value: 'all' | RunStatus; label: string }[] = [
   { value: 'skipped', label: 'Skipped' },
 ];
 
+function reviewerOptionSuffix(reviewer: Reviewer): string {
+  if (!reviewer.enabled) {
+    return ' — disabled';
+  }
+  if (!reviewer.hasApiKey) {
+    return ' — needs a model key';
+  }
+  return '';
+}
+
+function TryRunDialog({
+  onClose,
+  repositories,
+}: {
+  onClose: () => void;
+  repositories: Repository[];
+}) {
+  const [repoId, setRepoId] = useState('');
+  const [prNumber, setPrNumber] = useState('');
+  const [reviewerId, setReviewerId] = useState('');
+  const [pullRequests, setPullRequests] = useState<RepositoryPullRequest[] | null>(null);
+  const [pullRequestsLoading, setPullRequestsLoading] = useState(false);
+  const [pullRequestsFailed, setPullRequestsFailed] = useState(false);
+  const [reviewers, setReviewers] = useState<Reviewer[] | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    listReviewers()
+      .then((list) => {
+        if (active) {
+          setReviewers(list);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setReviewers([]);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (reviewers === null) {
+      return;
+    }
+    const first = reviewers.find((reviewer) => reviewer.enabled && reviewer.hasApiKey);
+    setReviewerId(first === undefined ? '' : first.id);
+  }, [reviewers]);
+
+  const loadPullRequests = useCallback(async (id: number) => {
+    setPullRequests(null);
+    setPullRequestsFailed(false);
+    setPullRequestsLoading(true);
+    setPrNumber('');
+    try {
+      setPullRequests(await listOpenPullRequests(id));
+    } catch {
+      setPullRequestsFailed(true);
+    } finally {
+      setPullRequestsLoading(false);
+    }
+  }, []);
+
+  function handleRepoChange(value: string) {
+    setRepoId(value);
+    if (value === '') {
+      setPullRequests(null);
+      setPullRequestsFailed(false);
+      setPrNumber('');
+      return;
+    }
+    void loadPullRequests(Number(value));
+  }
+
+  const canRun = repoId !== '' && prNumber !== '' && reviewerId !== '';
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!canRun) {
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await startTryRun({
+        repoId: Number(repoId),
+        prNumber: Number(prNumber),
+        reviewerIds: [reviewerId],
+      });
+      window.location.href = '/runs/' + encodeURIComponent(response.runId);
+    } catch (caught) {
+      setError(errorMessage(caught, 'The trial run could not be started. Try again.'));
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog onClose={onClose} open title="Try a reviewer">
+      <form className="mt-4 space-y-4" onSubmit={(event) => void handleSubmit(event)}>
+        <Notice tone="info">
+          A trial run posts nothing to GitHub — the findings are recorded in Jury Forge only.
+        </Notice>
+
+        <Field label="Repository">
+          <Select onChange={(event) => handleRepoChange(event.target.value)} value={repoId}>
+            <option value="">Choose a repository</option>
+            {repositories.map((repository) => (
+              <option key={repository.repoId} value={String(repository.repoId)}>
+                {repository.fullName}
+              </option>
+            ))}
+          </Select>
+        </Field>
+
+        <Field label="Pull request">
+          {repoId === '' ? (
+            <Select disabled value="">
+              <option value="">Choose a repository first</option>
+            </Select>
+          ) : (
+            <Select
+              disabled={pullRequestsLoading || pullRequestsFailed}
+              onChange={(event) => setPrNumber(event.target.value)}
+              value={prNumber}
+            >
+              <option value="">Choose a pull request</option>
+              {(pullRequests ?? []).map((pullRequest) => (
+                <option key={pullRequest.number} value={String(pullRequest.number)}>
+                  {`#${pullRequest.number} — ${pullRequest.title}${
+                    pullRequest.draft ? ' (draft)' : ''
+                  }`}
+                </option>
+              ))}
+            </Select>
+          )}
+        </Field>
+        {repoId !== '' && pullRequestsLoading ? (
+          <p className="text-sm text-text-muted">Loading open pull requests…</p>
+        ) : null}
+        {repoId !== '' && pullRequestsFailed ? (
+          <div className="space-y-2">
+            <p className="text-sm text-text-muted">
+              The open pull requests could not be loaded. Check the Worker and try again.
+            </p>
+            <Button onClick={() => void loadPullRequests(Number(repoId))} variant="secondary">
+              Try again
+            </Button>
+          </div>
+        ) : null}
+        {repoId !== '' &&
+        !pullRequestsLoading &&
+        !pullRequestsFailed &&
+        pullRequests !== null &&
+        pullRequests.length === 0 ? (
+          <p className="text-sm text-text-muted">This repository has no open pull requests.</p>
+        ) : null}
+
+        <Field label="Reviewer">
+          <Select onChange={(event) => setReviewerId(event.target.value)} value={reviewerId}>
+            {reviewers === null ? (
+              <option value="">Loading reviewers…</option>
+            ) : (
+              reviewers.map((reviewer) => {
+                const unavailable = !reviewer.enabled || !reviewer.hasApiKey;
+                return (
+                  <option disabled={unavailable} key={reviewer.id} value={reviewer.id}>
+                    {`${reviewer.name}${reviewerOptionSuffix(reviewer)}`}
+                  </option>
+                );
+              })
+            )}
+          </Select>
+        </Field>
+
+        {error ? <Notice tone="error">{error}</Notice> : null}
+
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <Button disabled={busy} onClick={onClose} variant="secondary">
+            Cancel
+          </Button>
+          <Button busy={busy} disabled={!canRun} type="submit">
+            Run trial
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+}
+
 export default function RunsPage() {
   const [data, setData] = useState<RunsData | null>(null);
   const [failed, setFailed] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [status, setStatus] = useState<'all' | RunStatus>('all');
   const [repo, setRepo] = useState('all');
+  const [tryOpen, setTryOpen] = useState(false);
 
   const load = useCallback(async () => {
     setFailed(false);
@@ -47,6 +258,7 @@ export default function RunsPage() {
         runs: page.runs,
         nextCursor: page.nextCursor,
         repos: new Map(repositories.map((repository) => [repository.repoId, repository.fullName])),
+        repositories,
       });
     } catch {
       setFailed(true);
@@ -93,6 +305,9 @@ export default function RunsPage() {
     <div className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold tracking-tight">Runs</h1>
+        <Button onClick={() => setTryOpen(true)} variant="secondary">
+          Try a reviewer
+        </Button>
       </header>
       <Card>
         {failed ? (
@@ -196,6 +411,9 @@ export default function RunsPage() {
           </>
         )}
       </Card>
+      {tryOpen ? (
+        <TryRunDialog onClose={() => setTryOpen(false)} repositories={data?.repositories ?? []} />
+      ) : null}
     </div>
   );
 }
