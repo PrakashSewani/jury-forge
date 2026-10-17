@@ -117,7 +117,7 @@ failing** (overflow 0, tapTargets 0, contrast 0, focus 0, mobileNav 0) across 8 
 themes. Numbers: `docs/rework/final.json` / `final.md`, deltas against `docs/rework/baseline.json`.
 
 **Slice C (2026-10-17), complete on `feat/rework-c-product-shape-20261017` (base `c48e825e1b`),
-D-028.** Six commits: docs `b178a30`; shared `4d43daf` (the seven reviewer templates in
+D-028.** Seven commits: docs `b178a30`; shared `4d43daf` (the seven reviewer templates in
 `shared/src/templates.ts` plus the slice's contracts — `InstanceReadiness`, `RepositoryPullRequest`,
 `TryRunRequest`/`TryRunResponse`, `RunMode`, `Reviewer.repositories`, `RunSummary.mode`); worker
 `b4fdb58` (readiness derived from D1 in `product/worker/lib/readiness.ts` behind
@@ -126,7 +126,8 @@ D-028.** Six commits: docs `b178a30`; shared `4d43daf` (the seven reviewer templ
 manual mode); dashboard `0baf98f` and `da82c2e` (the Overview leads with the computed readiness and
 its single next step; the reviewers list renders the API's `repositories` instead of one request per
 repository; the reviewer editor's template picker; the "Try a reviewer" dialog; run detail states that
-a manual run was not posted to GitHub).
+a manual run was not posted to GitHub). The seventh — `4b40665` `fix: answer sentry's round-1
+findings on #19 (slice C, D-028)` — answers all four round-1 findings (see the round-1 note below).
 
 C-1 readiness is computed per request from D1 — no stored checklist — as five steps (claim, install
 the app, enable a repository, add a reviewer with a model key, see the first run) with the raw counts
@@ -138,16 +139,32 @@ default `'auto'`), the same step machine as an automatic run, skipping the repos
 the D-018 supersession skip, running exactly the named reviewers, and stopping before the `post` step
 so nothing is published to GitHub.
 
-**Verified on the Mac checkout of record (`~/Projects/jury-forge`) at `da82c2e`:** `npm run check`
+**Verified on the Mac checkout of record (`~/Projects/jury-forge`) at `4b40665`:** `npm run check`
 **exit 0** — typecheck (three `tsc` programs plus `astro check`), ESLint, Prettier `format:check`,
-workerd **195/195** (19 files) · UI **118/118** (8 files) · both builds, clean tree afterwards.
-`npm run dev:seed` exit 0; `node scripts/measure-layout.mjs --label slice-c --assert` **exit 0** —
-**112 cells, 0 failing** (overflow 0, tapTargets 0, contrast 0, focus 0, mobileNav 0), 51.9 s, browser
+workerd **198/198** (19 files) · UI **119/119** (8 files) · both builds, clean tree afterwards.
+`npm run dev:seed` exit 0; `node scripts/measure-layout.mjs --label slice-c-round1 --assert` **exit 0** —
+**112 cells, 0 failing** (overflow 0, tapTargets 0, contrast 0, focus 0, mobileNav 0), 50.7 s, browser
 and dev server both reaped. That grid is numerically identical to the committed
-`docs/rework/final.json` on a tree that now carries slice C's new UI, so its own JSON was not
-committed — same reasoning as `docs/rework/README.md`'s note on the redundant intermediate sheet; it
-is reproducible with the command in that README. No raw Tailwind palette utility class appears
-anywhere in `product/src` or `product/test-ui` (grep over `.ts`/`.tsx`: no matches).
+`docs/rework/final.json` on a tree that now carries slice C's new UI (the runs list's manual badge
+included), so its own JSON was not committed — same reasoning as `docs/rework/README.md`'s note on
+the redundant intermediate sheet; it is reproducible with the command in that README. No raw
+Tailwind palette utility class appears anywhere in `product/src` or `product/test-ui` (grep over
+`.ts`/`.tsx`: no matches).
+
+**Round 1 of the review debate (PR #19, sentry, merge confidence 58%) — answered in `4b40665`:
+4 findings, 4 resolved / 0 rejected**, one reply per comment thread on the PR. (1) The D-020
+previous-findings query now requires `r.mode = 'auto'`, so a manual trial cannot reach a later
+automatic run's prompt or its posted review — the PR body's "nothing about an automatic run's
+behaviour or output changed" now holds literally. (2) The try endpoint refuses a pull request
+GitHub reports closed or merged with the same `not_found` a missing one gets, so the API is not
+laxer than the picker. (3) `firstRunAt` keeps D-028's definition (a trial is a real run, so the
+fifth step is honestly done) and the Overview's closing copy now invites the next action instead
+of claiming every repository and pull request is being reviewed. (4) A `manual` badge in the runs
+list, where the history is scanned. Each carries a new test — run-engine **+1**, runs-try **+1**,
+readiness **+1**, screens **+1** — and each was mutation-checked: reverting its fix fails that
+test (the automatic run's prompt then contains "Previously reported findings"; the closed-PR
+request answers 202 instead of 404; the old title trips the copy assertions; dropping the badge
+loses the row mark).
 
 **Blocked by:** nothing.
 
