@@ -595,3 +595,74 @@ for a file the operator may have edited by hand — merge-by-name is predictable
 did); importing into a per-repo reviewer matrix as well (the export carries reviewer definitions,
 not repository assignments — repository scoping stays a dashboard action, D-016); a full
 configuration export of settings and repositories too (only reviewer configs were asked for).
+
+## D-026: Rework slice A — design tokens, the dashboard primitives, and the UI test harness
+
+**Date:** 2026-10-17 (first slice of the post-phase-2 rework)
+
+**Decision:** (1) **Token layer.** `product/src/styles.css` declares the dashboard's colours,
+radii, shadow and font stack as Tailwind v4 `@theme` tokens, plus a `dark` custom variant
+(`@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *))`) and a
+`:root[data-theme='dark']` override block. Every token's value is copied from the Tailwind default
+utility it replaces (documented token by token in `docs/design.md`), so applying the names is a
+strict visual no-op by construction.
+
+(2) **Primitive layer.** `product/src/ui/` holds 15 primitives (`Badge`, `Button`, `Card`/`Panel`,
+`Dialog`, `EmptyState`, `Field`, `Input`, `Notice`, `Select`, `Skeleton`, `Switch`, `Table`/`Row`,
+`Tabs`, `Textarea`, `Toolbar`) plus `class-names.ts` (`cx`) and a barrel `index.ts`. They import no
+application code and are class-only wrappers over the existing markup. `product/src/components.tsx`
+becomes a re-export shim keeping the nine names the existing screens import (`Badge`,
+`buttonClass`, `Card`, `Field`, `inputClass`, `Notice`, `secondaryButtonClass`, `Loading`,
+`LoadFailed`) — no screen changes in this slice.
+
+(3) **UI test harness.** A second vitest project, `product/vitest.ui.config.ts`, runs `happy-dom`
+with `@testing-library/react` over `product/test-ui/**/*.test.tsx` (60 tests). It exists because
+the workerd pool cannot render React — there were zero UI tests before this — and the workerd
+project's glob is narrowed to `./test/**/*.test.ts` so the two projects can never collect each
+other's tests. `npm run test` chains `test:worker` then `test:ui`.
+
+(4) **Dependencies.** Three dev-only additions — `happy-dom`, `@testing-library/react`,
+`@testing-library/user-event`. This is the only dependency change in the whole rework; there is no
+runtime or production dependency.
+
+(5) **Dark mode is prepared, not shipped.** `product/src/lib/theme.ts` (`readStoredTheme`,
+`resolveTheme`, `systemPrefersDark`, `applyTheme`) resolves a `light`/`dark`/`system` preference
+and persists it under `jf:theme`, but nothing calls it yet: no element carries `data-theme`, and
+there is deliberately no `prefers-color-scheme` media rule, so the default render is the light one.
+Wiring the toggle is Slice B.
+
+(6) **Dev seed.** `scripts/seed-dev.mjs`, run as `npm run dev:seed`, seeds the local D1 state with
+one claimed instance, three reviewers (one deliberately without an API key), two repositories,
+twelve runs across all four statuses with findings at all three severities, an activity trail and
+one session. It is local-only by construction — every wrangler call is `--local`, there is no
+`--remote` path and no Cloudflare credential is touched — and idempotent: a second run leaves the
+same rows (`runs 12 · run_reviewers 22 · reviewers 3 · repositories 2 · reviewer_repositories 4 ·
+activity 8 · sessions 1 · instance_meta 7 · github_app 1`). Slice B's layout measurements and the
+new screen tests render real shapes because of it.
+
+**Why:** every later slice rewrites the six existing primitives and eight screens; doing that
+against loose Tailwind utilities would spread the palette across dozens of files and make a dark
+theme a find-and-replace. A token layer whose values are exactly the utilities in use today lets
+the rework proceed screen by screen from a provable no-op baseline, and a primitive layer gives
+the new screens one place to change. The UI harness is a prerequisite, not an extra: without it
+the design-system rewrite would land with no test that a component renders, and the workerd pool
+has no DOM. Three dev-only test dependencies are the smallest thing that fits.
+
+**No-op verification:** `npm run check` is exit 0 with the workerd suite at 170/170 and the UI
+suite at 60/60 (green on Node 24 and on Node 26), and no page, worker, `shared/`, or `site/` source
+file changed in this slice. The token table in `docs/design.md` is the reviewable proof — each row
+pairs a token with the utility it equals.
+
+**Rejected:** a component library (shadcn/Radix/Headless UI) or any runtime dependency — a new
+supply-chain surface and a second design language for a dashboard whose whole visual vocabulary is
+Tailwind classes the codebase already owns; `jsdom` — heavier than `happy-dom`, which is already
+reachable through the test toolchain and renders everything these tests need;
+`@testing-library/jest-dom` — the suite asserts roles and accessible names with plain vitest
+matchers, so the matcher package buys nothing; a second separate test _directory_ tree with its
+own tsconfig and build rather than the `test-ui/` glob on a second config — the glob keeps both
+projects inside the one product workspace and one `npm run check`; `prefers-color-scheme` as the
+default dark trigger — it would restyle the six existing primitives the moment a dark-OS visitor
+loaded the dashboard, breaking the no-op baseline the rest of the stack depends on, so system
+preference is resolved in JS only and `data-theme` stays unset until Slice B; shipping the theme
+toggle inside this slice — it changes every screen's render and belongs with the shell rewrite,
+not the vocabulary.

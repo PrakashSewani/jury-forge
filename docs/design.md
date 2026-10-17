@@ -304,8 +304,8 @@ with instance state and recent runs). An
 auth-aware shell redirects to sign-in on 401. Screens: the reviewer editor (instructions, rules,
 flavor, base URL, model, params; the API key is write-only, shown as "set" with a replace
 action), repositories (enable/disable, per-repo reviewer toggles), runs (status, per-reviewer
-findings, link to the GitHub review), and the wizard. Copy and visuals follow the brand constants
-in `shared/`.
+findings, link to the GitHub review), and the wizard. Copy and visuals come from the design system
+in `product/src/ui/` — see [Design system (D-026)](#design-system-d-026).
 
 The wizard UI derives its current step from setup state: **code** (enter the setup code; the
 manifest form is auto-submitted to GitHub's app-creation page), **install** (link to
@@ -316,6 +316,167 @@ with full-page navigation; the shell shows the nav, the instance state, and the 
 and gates the dashboard screens behind sign-in. A repositories refresh imports the installation's
 repositories; newly discovered ones arrive disabled — enabling one is an explicit dashboard
 action (D-016).
+
+## Design system (D-026)
+
+Slice A gives the dashboard a named vocabulary of design tokens and a reusable primitive layer. It
+is a strict visual no-op: every token equals the exact Tailwind default utility it replaces (so
+later slices can swap classes for the names below without changing a pixel), and no page, worker,
+shared, or site source changed. The token layer lives in `product/src/styles.css`'s `@theme`
+block; the primitives live in `product/src/ui/`.
+
+### Design tokens
+
+Every value below is copied verbatim from `product/src/styles.css`. The "Tailwind default" column
+names the utility whose value the token now spells — the token names are the only new thing, which
+is what makes the swap a no-op.
+
+**Surfaces**
+
+| Token                     | Value                      | Tailwind default |
+| ------------------------- | -------------------------- | ---------------- |
+| `--color-surface-page`    | `oklch(98.5% 0 none)`      | `bg-neutral-50`  |
+| `--color-surface`         | `#fff`                     | `bg-white`       |
+| `--color-surface-muted`   | `oklch(97% 0 none)`        | `bg-neutral-100` |
+| `--color-surface-inverse` | `oklch(20.5% 0 none)`      | `bg-neutral-900` |
+| `--color-surface-error`   | `oklch(97.1% 0.013 17.38)` | `bg-red-50`      |
+| `--color-surface-info`    | `oklch(97% 0.014 254.604)` | `bg-blue-50`     |
+
+**Borders**
+
+| Token                   | Value                        | Tailwind default     |
+| ----------------------- | ---------------------------- | -------------------- |
+| `--color-border`        | `oklch(92.2% 0 none)`        | `border-neutral-200` |
+| `--color-border-strong` | `oklch(87% 0 none)`          | `border-neutral-300` |
+| `--color-border-error`  | `oklch(88.5% 0.062 18.334)`  | `border-red-200`     |
+| `--color-border-info`   | `oklch(88.2% 0.059 254.128)` | `border-blue-200`    |
+
+**Text**
+
+| Token                  | Value                        | Tailwind default   |
+| ---------------------- | ---------------------------- | ------------------ |
+| `--color-text`         | `oklch(20.5% 0 none)`        | `text-neutral-900` |
+| `--color-text-body`    | `oklch(43.9% 0 none)`        | `text-neutral-600` |
+| `--color-text-muted`   | `oklch(55.6% 0 none)`        | `text-neutral-500` |
+| `--color-text-subtle`  | `oklch(70.8% 0 none)`        | `text-neutral-400` |
+| `--color-text-inverse` | `#fff`                       | `text-white`       |
+| `--color-text-error`   | `oklch(44.4% 0.177 26.899)`  | `text-red-800`     |
+| `--color-text-info`    | `oklch(42.4% 0.199 265.638)` | `text-blue-800`    |
+
+**Accent**
+
+| Token                  | Value                 | Tailwind default       |
+| ---------------------- | --------------------- | ---------------------- |
+| `--color-accent`       | `oklch(20.5% 0 none)` | `bg-neutral-900`       |
+| `--color-accent-hover` | `oklch(37.1% 0 none)` | `hover:bg-neutral-700` |
+
+**Verdict severities**
+
+| Token                             | Value                       | Tailwind default   |
+| --------------------------------- | --------------------------- | ------------------ |
+| `--color-verdict-error-surface`   | `oklch(93.6% 0.032 17.717)` | `bg-red-100`       |
+| `--color-verdict-error-text`      | `oklch(44.4% 0.177 26.899)` | `text-red-800`     |
+| `--color-verdict-warning-surface` | `oklch(96.2% 0.059 95.617)` | `bg-amber-100`     |
+| `--color-verdict-warning-text`    | `oklch(47.3% 0.137 46.201)` | `text-amber-800`   |
+| `--color-verdict-info-surface`    | `oklch(97% 0 none)`         | `bg-neutral-100`   |
+| `--color-verdict-info-text`       | `oklch(43.9% 0 none)`       | `text-neutral-600` |
+
+**Run statuses**
+
+| Token                              | Value                        | Tailwind default   |
+| ---------------------------------- | ---------------------------- | ------------------ |
+| `--color-status-running-surface`   | `oklch(96.2% 0.059 95.617)`  | `bg-amber-100`     |
+| `--color-status-running-text`      | `oklch(47.3% 0.137 46.201)`  | `text-amber-800`   |
+| `--color-status-completed-surface` | `oklch(96.2% 0.044 156.743)` | `bg-green-100`     |
+| `--color-status-completed-text`    | `oklch(44.8% 0.119 151.328)` | `text-green-800`   |
+| `--color-status-failed-surface`    | `oklch(93.6% 0.032 17.717)`  | `bg-red-100`       |
+| `--color-status-failed-text`       | `oklch(44.4% 0.177 26.899)`  | `text-red-800`     |
+| `--color-status-skipped-surface`   | `oklch(97% 0 none)`          | `bg-neutral-100`   |
+| `--color-status-skipped-text`      | `oklch(43.9% 0 none)`        | `text-neutral-600` |
+
+**Radii and shadow**
+
+| Token              | Value                           | Tailwind default |
+| ------------------ | ------------------------------- | ---------------- |
+| `--radius-control` | `0.375rem`                      | `rounded-md`     |
+| `--radius-card`    | `0.5rem`                        | `rounded-lg`     |
+| `--shadow-panel`   | `0 1px 2px 0 rgb(0 0 0 / 0.05)` | `shadow-xs`      |
+
+**Font stack**
+
+| Token         | Value                                                                                                                                                                                   | Tailwind default |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| `--font-sans` | `-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', 'Noto Sans', Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'` | `font-sans`      |
+
+### Dark mode
+
+Dark mode is **prepared, not shipped**. `styles.css` declares an explicit `dark` custom variant,
+`@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *))`, and a
+`:root[data-theme='dark']` block that overrides every token that has a dark value — surfaces,
+borders, text, accent, and the verdict and status palettes. The palettes are included because their
+light surfaces move under the override (Badge's neutral tone sits on `--color-surface-muted`) while
+their `*-800` text stayed at its light value, which lands near 2:1 on the dark surface; each dark
+value is again one Tailwind default, in the same hue family at the ramp that clears it (`red-950`
+surface under `red-300` text, and so on). The system preference is resolved in
+`product/src/lib/theme.ts` (`readStoredTheme`, `resolveTheme`, `systemPrefersDark`, `applyTheme`),
+which persists the choice under `jf:theme`. Nothing calls `applyTheme` yet and there is
+deliberately no `prefers-color-scheme` media rule: no element carries `data-theme`, so the
+stylesheet resolves to exactly the light values above and the default render is unchanged. Slice B
+wires the toggle and becomes the helper's first caller.
+
+**Dark overrides** — the complete `:root[data-theme='dark']` block, again one Tailwind default
+each:
+
+| Token                              | Dark value                   | Tailwind default |
+| ---------------------------------- | ---------------------------- | ---------------- |
+| `--color-surface-page`             | `oklch(14.5% 0 none)`        | `neutral-950`    |
+| `--color-surface`                  | `oklch(20.5% 0 none)`        | `neutral-900`    |
+| `--color-surface-muted`            | `oklch(26.9% 0 none)`        | `neutral-800`    |
+| `--color-surface-inverse`          | `oklch(97% 0 none)`          | `neutral-100`    |
+| `--color-border`                   | `oklch(26.9% 0 none)`        | `neutral-800`    |
+| `--color-border-strong`            | `oklch(37.1% 0 none)`        | `neutral-700`    |
+| `--color-text`                     | `oklch(97% 0 none)`          | `neutral-100`    |
+| `--color-text-muted`               | `oklch(70.8% 0 none)`        | `neutral-400`    |
+| `--color-text-subtle`              | `oklch(55.6% 0 none)`        | `neutral-500`    |
+| `--color-text-inverse`             | `oklch(20.5% 0 none)`        | `neutral-900`    |
+| `--color-accent`                   | `oklch(97% 0 none)`          | `neutral-100`    |
+| `--color-accent-hover`             | `oklch(87% 0 none)`          | `neutral-300`    |
+| `--color-surface-error`            | `oklch(25.8% 0.092 26.042)`  | `red-950`        |
+| `--color-surface-info`             | `oklch(28.2% 0.091 267.935)` | `blue-950`       |
+| `--color-border-error`             | `oklch(39.6% 0.141 25.723)`  | `red-900`        |
+| `--color-border-info`              | `oklch(37.9% 0.146 265.522)` | `blue-900`       |
+| `--color-text-body`                | `oklch(70.8% 0 none)`        | `neutral-400`    |
+| `--color-text-error`               | `oklch(80.8% 0.114 19.571)`  | `red-300`        |
+| `--color-text-info`                | `oklch(80.9% 0.105 251.813)` | `blue-300`       |
+| `--color-verdict-error-surface`    | `oklch(25.8% 0.092 26.042)`  | `red-950`        |
+| `--color-verdict-error-text`       | `oklch(80.8% 0.114 19.571)`  | `red-300`        |
+| `--color-verdict-warning-surface`  | `oklch(27.9% 0.077 45.635)`  | `amber-950`      |
+| `--color-verdict-warning-text`     | `oklch(87.9% 0.169 91.605)`  | `amber-300`      |
+| `--color-verdict-info-surface`     | `oklch(26.9% 0 none)`        | `neutral-800`    |
+| `--color-verdict-info-text`        | `oklch(87% 0 none)`          | `neutral-300`    |
+| `--color-status-running-surface`   | `oklch(27.9% 0.077 45.635)`  | `amber-950`      |
+| `--color-status-running-text`      | `oklch(87.9% 0.169 91.605)`  | `amber-300`      |
+| `--color-status-completed-surface` | `oklch(26.6% 0.065 152.934)` | `green-950`      |
+| `--color-status-completed-text`    | `oklch(87.1% 0.15 154.449)`  | `green-300`      |
+| `--color-status-failed-surface`    | `oklch(25.8% 0.092 26.042)`  | `red-950`        |
+| `--color-status-failed-text`       | `oklch(80.8% 0.114 19.571)`  | `red-300`        |
+| `--color-status-skipped-surface`   | `oklch(26.9% 0 none)`        | `neutral-800`    |
+| `--color-status-skipped-text`      | `oklch(87% 0 none)`          | `neutral-300`    |
+
+### Primitives
+
+`product/src/ui/` holds 15 primitives — one module each:
+
+`Badge` · `Button` (plus `buttonClass` and `secondaryButtonClass`) · `Card` (plus `Panel`) ·
+`Dialog` · `EmptyState` · `Field` · `Input` (plus `inputClass`) · `Notice` · `Select` · `Skeleton` ·
+`Switch` · `Table` (plus `Row`) · `Tabs` · `Textarea` · `Toolbar`.
+
+Two support modules sit alongside them: `class-names.ts` exports `cx` (a tiny class-name joiner),
+and `index.ts` is the barrel that re-exports the public surface. `product/src/components.tsx` is a
+re-export shim only — it keeps the nine names the existing screens import (`Badge`, `buttonClass`,
+`Card`, `Field`, `inputClass`, `Notice`, `secondaryButtonClass`, `Loading`, `LoadFailed`) working
+while every screen is migrated to `product/src/ui/` in Slice B. Nothing else lives there, and the
+primitives themselves import no application code.
 
 ## Distribution (D-025)
 
@@ -383,6 +544,16 @@ decryption (D-023, pure functions); the activity trail's best-effort writes and 
 flavors, timeouts, malformed output, usage envelopes); webhook verification and de-duplication;
 the setup state machine with mocked GitHub endpoints; Durable Object phases, retries, and run
 records via the Workers Vitest plugin with stubbed `fetch`. No test performs real network calls.
+
+Slice A adds a **second vitest project** for UI components. The workerd pool cannot render a
+component — there were zero UI tests before this — so `product/vitest.ui.config.ts` runs
+`happy-dom` with `@testing-library/react`, collecting `product/test-ui/**/*.test.tsx` (60 tests
+across the theme helper, the primitives, the form controls, and structure). The workerd project's
+test glob is now restricted to `./test/**/*.test.ts`, so the two projects can never collect each
+other's tests; `npm run test` runs `test:worker` then `test:ui`. Tests that need a `Storage` build
+one (`product/test-ui/memory-storage.ts`) instead of reading the ambient `window.localStorage`,
+which Node ≥26 defines as a disabled global that vitest's happy-dom environment then declines to
+replace.
 
 ## Build order
 

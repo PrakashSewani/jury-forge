@@ -15,8 +15,8 @@ rule 4. Keep exactly one phase `in progress`.
 
 No phase is `in progress` right now: phase 2 landed in full on 2026-10-17 and phase 3 starts after
 the improvement slices in `docs/roadmap.md` (D-017). The remaining improvement slices 7–11 plus
-roadmap item 8 are in review in one pull request against `dev` (D-019); they are product work,
-not a phase.
+roadmap item 8 landed on `dev` in one pull request (D-019, #16, merged 2026-10-17 as `f277f1e4`); it
+was product work, not a phase.
 
 ## Current handoff
 
@@ -24,10 +24,10 @@ not a phase.
 #13 → #14, each retargeted to `dev` and merged with a merge commit to match the repository's
 history. The tracker refresh (#15) merged to `dev` on 2026-10-17 (`8221de5`).
 
-**In review:** the improvement slate's remaining slices — 7, 8, 9, 10, 11 and roadmap item 8 — in
-one pull request against `dev` (D-019), on `feat/jury-forge-roadmap-20261017`, branched from
-`8221de5`. One docs commit plus one implementation commit per slice, each with `npm run check`
-green:
+**Merged:** the improvement slate's remaining slices — 7, 8, 9, 10, 11 and roadmap item 8 — landed
+in one pull request against `dev` (D-019, #16, merged 2026-10-17 as `f277f1e4`), on
+`feat/jury-forge-roadmap-20261017`, branched from `8221de5`. One docs commit plus one implementation
+commit per slice, each with `npm run check` green:
 
 - slice 7 — resolution tracking + output contract v2 → docs `a8f3ba2`, implementation `6ce1fc3`
   (D-020)
@@ -49,11 +49,30 @@ clean tree afterwards. The command was run on the Mac checkout of record
 that script is deliberately not exercised against a real Cloudflare account here — no part of this
 change deploys anything.
 
+**Rework (2026-10-17):** the post-phase-2 rework is four stacked slices. Slice A is committed,
+pushed and open against `dev` as **#17** on `feat/rework-a-design-system-20261017` (`6201eda` docs,
+`0d379c3` implementation), in review; slice B's branch is `feat/rework-b-shell-screens-20261017`.
+
+| Slice | Branch                                 | Status              |
+| ----- | -------------------------------------- | ------------------- |
+| A     | `feat/rework-a-design-system-20261017` | in review (#17)     |
+| B     | `feat/rework-b-shell-screens-20261017` | in progress, from A |
+| C     | —                                      | not started         |
+| D     | —                                      | not started         |
+
+Slice A is the design-system vocabulary and UI harness (D-026): a token layer in
+`product/src/styles.css`, the `product/src/ui/` primitives re-exported through
+`product/src/components.tsx`, a dependency-free `product/src/lib/theme.ts` (no runtime caller yet —
+the toggle is slice B), and a second happy-dom vitest project with 60 UI tests. Strict visual
+no-op: no page, worker, shared, or site source changed. Scopes for B/C/D are in
+`docs/roadmap.md`; the rework is product work, not a phase, so phase 3 stays `not started`.
+
+**Verified:** `npm run check` exit 0 — workerd 170/170 · UI 60/60.
+
 **Blocked by:** nothing.
 
-**Next action:** the owner reviews and merges the roadmap pull request (sentry's review loop runs
-on it in `📬・pr-reviews`); the rework the owner asked for then becomes its own work item, and
-phase 3 (promo site) still starts after that.
+**Next action:** review and merge slice A's PR (#17); slice B continues on
+`feat/rework-b-shell-screens-20261017`.
 
 ## Backlog (owner-owned, deferred)
 
