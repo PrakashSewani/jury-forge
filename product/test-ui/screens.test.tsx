@@ -70,6 +70,7 @@ const COMPLETED_RUN: RunSummary = {
   headSha: '9f2c1a7e4b8d0f3a6c5e2b1d4a7f0c3e8b6d9a2f',
   event: 'pull_request',
   status: 'completed',
+  mode: 'auto',
   error: null,
   reviewUrl: 'https://github.com/prakashsewani/jury-forge/pull/12#pullrequestreview-1',
   createdAt: 1_700_000_000,

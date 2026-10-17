@@ -1,4 +1,5 @@
 import { createAppAuth } from '@octokit/auth-app';
+import type { RepositoryPullRequest } from '@jury-forge/shared';
 
 const API_BASE = 'https://api.github.com';
 const OAUTH_TOKEN_URL = 'https://github.com/login/oauth/access_token';
@@ -173,6 +174,50 @@ export async function fetchPullRequest(
   });
   const payload = await readJsonStrict<{ title: string; body: string | null }>(response);
   return { title: payload.title, body: payload.body };
+}
+
+/** The repository's open pull requests, newest first, for the manual try-run picker. */
+export async function fetchOpenPullRequests(
+  token: string,
+  fullName: string,
+): Promise<RepositoryPullRequest[]> {
+  const response = await fetch(
+    `${API_BASE}/repos/${fullName}/pulls?state=open&per_page=100&sort=created&direction=desc`,
+    { headers: bearerHeaders(token) },
+  );
+  const payload = await readJsonStrict<PullRequestPayload[]>(response);
+  return payload.map(mapPullRequest);
+}
+
+/** One pull request by number; a 404 surfaces as a `GitHubApiError` with status 404. */
+export async function fetchPullRequestSummary(
+  token: string,
+  fullName: string,
+  prNumber: number,
+): Promise<RepositoryPullRequest> {
+  const response = await fetch(`${API_BASE}/repos/${fullName}/pulls/${prNumber}`, {
+    headers: bearerHeaders(token),
+  });
+  const payload = await readJsonStrict<PullRequestPayload>(response);
+  return mapPullRequest(payload);
+}
+
+interface PullRequestPayload {
+  number: number;
+  title: string;
+  head: { sha: string };
+  user: { login: string } | null;
+  draft?: boolean;
+}
+
+function mapPullRequest(pull: PullRequestPayload): RepositoryPullRequest {
+  return {
+    number: pull.number,
+    title: pull.title,
+    headSha: pull.head.sha,
+    authorLogin: pull.user?.login ?? null,
+    draft: pull.draft === true,
+  };
 }
 
 export async function fetchPullFiles(

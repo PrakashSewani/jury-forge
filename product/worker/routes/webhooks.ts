@@ -87,6 +87,7 @@ webhookRoutes.post('/github', async (c) => {
     headSha: pullRequest.head.sha,
     action,
     installationId: installation.id,
+    mode: 'auto',
   };
   const runKey = `${payload.repoId}:${payload.prNumber}:${payload.headSha}:${payload.deliveryId}`;
   try {

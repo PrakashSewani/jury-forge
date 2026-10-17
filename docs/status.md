@@ -53,16 +53,16 @@ change deploys anything.
 **#17** (`77541fbb`; reviewed head `33b0a50`) on `feat/rework-a-design-system-20261017`; slice B
 merged to `dev` as **#18** (`c48e825e1b`), and post-merge canary verification passed on the merged
 tree. Slice C is in progress on `feat/rework-c-product-shape-20261017` — its plan is recorded in
-D-028 and `docs/design.md`. The backend of C-1–C-3 (computed readiness, reviewer templates,
-reviewer↔repo visibility) has landed; C-4 (manual try runs, migration `0006_run_mode.sql`) and the
-dashboard work are not started. Slice D is not started.
+D-028 and `docs/design.md`. The backend of C-1–C-4 (computed readiness, reviewer templates,
+reviewer↔repo visibility, manual try runs with migration `0006_run_mode.sql`) has landed; the
+dashboard work is not started. Slice D is not started.
 
-| Slice | Branch                                 | Status                                                       |
-| ----- | -------------------------------------- | ------------------------------------------------------------ |
-| A     | `feat/rework-a-design-system-20261017` | merged to `dev` (`77541fbb`) (#17)                           |
-| B     | `feat/rework-b-shell-screens-20261017` | merged to `dev` (`c48e825e1b`) (#18)                         |
-| C     | `feat/rework-c-product-shape-20261017` | in progress — backend C-1–C-3 landed; C-4 and dashboard next |
-| D     | —                                      | not started                                                  |
+| Slice | Branch                                 | Status                                               |
+| ----- | -------------------------------------- | ---------------------------------------------------- |
+| A     | `feat/rework-a-design-system-20261017` | merged to `dev` (`77541fbb`) (#17)                   |
+| B     | `feat/rework-b-shell-screens-20261017` | merged to `dev` (`c48e825e1b`) (#18)                 |
+| C     | `feat/rework-c-product-shape-20261017` | in progress — backend C-1–C-4 landed; dashboard next |
+| D     | —                                      | not started                                          |
 
 Slice A is the design-system vocabulary and UI harness (D-026): a token layer in
 `product/src/styles.css`, the `product/src/ui/` primitives, a dependency-free
@@ -112,6 +112,15 @@ new screen-local modules carry the shared loading/error blocks (`pages/screen-st
 error copy (`pages/messages.ts`) — no screen prints a machine code at the user any more. No raw
 palette utility and no timer remain anywhere in `product/src/`: live run updates are slice D.
 
+**Slice C backend (2026-10-17):** C-1–C-4 landed on `feat/rework-c-product-shape-20261017` —
+computed readiness (`GET /api/instance/readiness`), reviewer templates, reviewer↔repo visibility,
+and manual try runs (`POST /api/runs/try`, `GET /api/repositories/:repoId/pulls`, migration
+`0006_run_mode.sql`). Manual runs ride the existing Durable Object step machine, skip the
+repository-enabled gate and the D-018 supersession skip, run exactly the named reviewers, and stop
+before the `post` step so they publish nothing to GitHub. **Verified:** `npm run typecheck` exit 0;
+`npm test --workspace @jury-forge/product` exit 0 — worker **195/195** (19 files), UI **95/95**
+(6 files). The dashboard work for slice C is not started.
+
 **Verified:** `npm run check` exit 0 — workerd **170/170** (17 files) · UI **95/95** (6 files) · both
 builds · harness exit 0 with `--assert`: **112 cells measured, 0 failing** (overflow 0, tapTargets 0,
 contrast 0, focus 0, mobileNav 0) across 8 routes × 7 widths × 2 themes, browser and dev server both
@@ -119,10 +128,9 @@ reaped. Numbers: `docs/rework/final.json` / `final.md`, deltas against `docs/rew
 
 **Blocked by:** nothing.
 
-**Next action:** finish slice C — C-4 (manual try runs: `POST /api/runs/try`,
-`GET /api/repositories/:repoId/pulls`, migration `0006_run_mode.sql`) and the dashboard work for
-readiness, templates and reviewer↔repo visibility — then slice D (validated contracts, error
-taxonomy, client routing, run polling) from the rework plan in `docs/roadmap.md`.
+**Next action:** finish slice C — the dashboard work for readiness, templates, reviewer↔repo
+visibility and manual try runs — then slice D (validated contracts, error taxonomy, client routing,
+run polling) from the rework plan in `docs/roadmap.md`.
 
 ## Backlog (owner-owned, deferred)
 

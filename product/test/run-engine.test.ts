@@ -3,7 +3,7 @@ import { env } from 'cloudflare:workers';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
 import app from '../worker';
-import type { RunEngine } from '../worker/run-engine';
+import type { RunEngine, RunPayload } from '../worker/run-engine';
 import { encryptSecret, keyRingValues, loadKeyRing } from '../worker/lib/crypto';
 import { createSession } from '../worker/lib/sessions';
 import { resetInstanceState } from './db';
@@ -11,18 +11,28 @@ import { network } from './network';
 import { ORIGIN, pullRequestEvent, postWebhook, seedGitHubApp } from './webhook-helpers';
 
 const RUN_ID = '101:1:abc123def456:delivery-1';
+const MANUAL_RUN_IDS = [
+  '101:1:abc123def456:try-named',
+  '101:1:abc123def456:try-disabled',
+  '101:1:abc123def456:auto-disabled',
+  '101:1:abc123def456:try-superseded',
+  '101:1:abc123def456:try-nokey',
+  '101:1:abc123def456:try-unknown',
+];
 
 beforeEach(async () => {
   await resetInstanceState();
   // The run id is deterministic, so wipe the run's Durable Object between tests — `start()` is
   // intentionally idempotent and would otherwise swallow a repeated kick for the same run.
-  await runInDurableObject(
-    env.RUNS.getByName(RUN_ID),
-    async (_instance: RunEngine, state: DurableObjectState) => {
-      await state.storage.deleteAll();
-      await state.storage.deleteAlarm();
-    },
-  );
+  for (const runId of [RUN_ID, ...MANUAL_RUN_IDS]) {
+    await runInDurableObject(
+      env.RUNS.getByName(runId),
+      async (_instance: RunEngine, state: DurableObjectState) => {
+        await state.storage.deleteAll();
+        await state.storage.deleteAlarm();
+      },
+    );
+  }
 });
 
 async function seedRepositoryAndReviewers(flavors: ('openai' | 'anthropic')[]): Promise<void> {
@@ -653,6 +663,140 @@ describe('run engine', () => {
     expect(finished?.status).toBe('completed');
     expect(provider.prompts[0]).toContain('### CONTRIBUTING.md');
     expect(provider.prompts[0]).not.toContain('### AGENTS.md');
+  });
+});
+
+describe('manual try run', () => {
+  function manualPayload(deliveryId: string, overrides: Partial<RunPayload> = {}): RunPayload {
+    return {
+      deliveryId,
+      repoId: 101,
+      repoFullName: 'octocat/hello',
+      prNumber: 1,
+      headSha: 'abc123def456',
+      action: 'try',
+      installationId: 4242,
+      mode: 'manual',
+      ...overrides,
+    };
+  }
+
+  it('runs only the named reviewer and posts nothing to GitHub', async () => {
+    await seedGitHubApp();
+    await seedRepositoryAndReviewers(['openai', 'anthropic']);
+    const mocks = mockGitHubRun();
+    const provider = mockOpenAiReviewSequence(['{"findings":[]}']);
+    const runId = '101:1:abc123def456:try-named';
+
+    await env.RUNS.getByName(runId).start(manualPayload('try-named', { reviewerIds: ['rev-0'] }));
+    await driveRun(runId);
+
+    const row = await env.DB.prepare(
+      'SELECT status, error, review_url, mode FROM runs WHERE id = ?',
+    )
+      .bind(runId)
+      .first<{ status: string; error: string | null; review_url: string | null; mode: string }>();
+    expect(row).toEqual({
+      status: 'completed',
+      error: null,
+      review_url: null,
+      mode: 'manual',
+    });
+    expect(mocks.reviewCalls()).toBe(0);
+    expect(provider.prompts).toHaveLength(1);
+
+    const outcomes = await env.DB.prepare(
+      'SELECT reviewer_id FROM run_reviewers WHERE run_id = ? ORDER BY reviewer_id',
+    )
+      .bind(runId)
+      .all<{ reviewer_id: string }>();
+    expect(outcomes.results.map((outcome) => outcome.reviewer_id)).toEqual(['rev-0']);
+  });
+
+  it('ignores the repository-enabled gate for manual runs but not for automatic ones', async () => {
+    await seedGitHubApp();
+    await seedRepositoryAndReviewers(['openai']);
+    await env.DB.prepare('UPDATE repositories SET enabled = 0 WHERE repo_id = 101').run();
+    const mocks = mockGitHubRun();
+    mockOpenAiReview('{"findings":[]}');
+
+    const autoRunId = '101:1:abc123def456:auto-disabled';
+    await env.RUNS.getByName(autoRunId).start(manualPayload('auto-disabled', { mode: 'auto' }));
+    await driveRun(autoRunId);
+    const autoRow = await env.DB.prepare('SELECT status, mode FROM runs WHERE id = ?')
+      .bind(autoRunId)
+      .first<{ status: string; mode: string }>();
+    expect(autoRow).toEqual({ status: 'skipped', mode: 'auto' });
+
+    const manualRunId = '101:1:abc123def456:try-disabled';
+    await env.RUNS.getByName(manualRunId).start(
+      manualPayload('try-disabled', { reviewerIds: ['rev-0'] }),
+    );
+    await driveRun(manualRunId);
+    const manualRow = await env.DB.prepare(
+      'SELECT status, error, review_url FROM runs WHERE id = ?',
+    )
+      .bind(manualRunId)
+      .first<{ status: string; error: string | null; review_url: string | null }>();
+    expect(manualRow).toEqual({ status: 'completed', error: null, review_url: null });
+    expect(mocks.reviewCalls()).toBe(0);
+  });
+
+  it('is not superseded by a newer run for the same pull request', async () => {
+    await seedGitHubApp();
+    await seedRepositoryAndReviewers(['openai']);
+    const mocks = mockGitHubRun();
+    mockOpenAiReview('{"findings":[]}');
+    await env.DB.prepare(
+      "INSERT INTO runs (id, delivery_id, repo_id, pr_number, head_sha, event, status, created_at) VALUES ('101:1:freshsha999:auto-newer', 'auto-newer', 101, 1, 'freshsha999', 'synchronize', 'running', unixepoch() + 60)",
+    ).run();
+    const runId = '101:1:abc123def456:try-superseded';
+
+    await env.RUNS.getByName(runId).start(
+      manualPayload('try-superseded', { reviewerIds: ['rev-0'] }),
+    );
+    await driveRun(runId);
+
+    const row = await env.DB.prepare('SELECT status FROM runs WHERE id = ?')
+      .bind(runId)
+      .first<{ status: string }>();
+    expect(row?.status).toBe('completed');
+    expect(mocks.reviewCalls()).toBe(0);
+  });
+
+  it('fails with reviewer_unavailable when no named reviewer is usable', async () => {
+    await seedGitHubApp();
+    await seedRepositoryAndReviewers(['openai']);
+    await env.DB.prepare("UPDATE reviewers SET api_key_enc = '' WHERE id = 'rev-0'").run();
+    const mocks = mockGitHubRun();
+    mockOpenAiReview('{"findings":[]}');
+
+    const noKeyRunId = '101:1:abc123def456:try-nokey';
+    await env.RUNS.getByName(noKeyRunId).start(
+      manualPayload('try-nokey', { reviewerIds: ['rev-0'] }),
+    );
+    await driveRun(noKeyRunId);
+    const noKey = await env.DB.prepare('SELECT status, error, review_url FROM runs WHERE id = ?')
+      .bind(noKeyRunId)
+      .first<{ status: string; error: string | null; review_url: string | null }>();
+    expect(noKey).toEqual({ status: 'failed', error: 'reviewer_unavailable', review_url: null });
+
+    const unknownRunId = '101:1:abc123def456:try-unknown';
+    await env.RUNS.getByName(unknownRunId).start(
+      manualPayload('try-unknown', { reviewerIds: ['nope'] }),
+    );
+    await driveRun(unknownRunId);
+    const unknown = await env.DB.prepare('SELECT status, error FROM runs WHERE id = ?')
+      .bind(unknownRunId)
+      .first<{ status: string; error: string | null }>();
+    expect(unknown).toEqual({ status: 'failed', error: 'reviewer_unavailable' });
+    const outcomes = await env.DB.prepare(
+      'SELECT COUNT(*) AS count FROM run_reviewers WHERE run_id = ?',
+    )
+      .bind(unknownRunId)
+      .first<{ count: number }>();
+    expect(outcomes?.count).toBe(0);
+    expect(mocks.reviewCalls()).toBe(0);
   });
 });
 

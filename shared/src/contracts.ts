@@ -110,6 +110,8 @@ export interface RepositoryReviewerUpdate {
 
 export type RunStatus = 'running' | 'completed' | 'failed' | 'skipped';
 
+export type RunMode = 'auto' | 'manual';
+
 export interface RunSummary {
   id: string;
   repoId: number;
@@ -117,10 +119,29 @@ export interface RunSummary {
   headSha: string;
   event: string;
   status: RunStatus;
+  mode: RunMode;
   error: string | null;
   reviewUrl: string | null;
   createdAt: number;
   finishedAt: number | null;
+}
+
+export interface RepositoryPullRequest {
+  number: number;
+  title: string;
+  headSha: string;
+  authorLogin: string | null;
+  draft: boolean;
+}
+
+export interface TryRunRequest {
+  repoId: number;
+  prNumber: number;
+  reviewerIds: string[];
+}
+
+export interface TryRunResponse {
+  runId: string;
 }
 
 export type RunReviewerStatus = 'pending' | 'completed' | 'failed';

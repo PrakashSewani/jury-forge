@@ -2,7 +2,11 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { recordActivity } from '../lib/activity';
 import { keyRingValues, loadKeyRing } from '../lib/crypto';
-import { createInstallationToken, fetchInstallationRepositories } from '../lib/github';
+import {
+  createInstallationToken,
+  fetchInstallationRepositories,
+  fetchOpenPullRequests,
+} from '../lib/github';
 import { loadGitHubApp } from '../lib/github-app';
 import { getMeta } from '../lib/instance';
 import {
@@ -94,6 +98,33 @@ repositoryRoutes.get('/:repoId/reviewers', async (c) => {
     return c.json({ error: 'not_found' }, 404);
   }
   return c.json(await listRepositoryReviewers(c.env.DB, repoId));
+});
+
+// D-028: the open pull requests the manual try-run picker offers.
+repositoryRoutes.get('/:repoId/pulls', async (c) => {
+  const repoId = Number(c.req.param('repoId'));
+  if (!Number.isInteger(repoId)) {
+    return c.json({ error: 'invalid_request' }, 400);
+  }
+  const repository = await getRepository(c.env.DB, repoId);
+  if (!repository) {
+    return c.json({ error: 'not_found' }, 404);
+  }
+  const values = keyRingValues(c.env);
+  if (!values) {
+    return c.json({ error: 'encryption_key_unset' }, 500);
+  }
+  const installationIdValue = await getMeta(c.env.DB, 'installation_id');
+  const app = await loadGitHubApp(c.env.DB, await loadKeyRing(values));
+  if (!app || !installationIdValue) {
+    return c.json({ error: 'setup_required' }, 409);
+  }
+  const token = await createInstallationToken(
+    app.appId,
+    app.privateKey,
+    Number(installationIdValue),
+  );
+  return c.json(await fetchOpenPullRequests(token, repository.fullName));
 });
 
 repositoryRoutes.put('/:repoId/reviewers', async (c) => {
