@@ -616,7 +616,7 @@ becomes a re-export shim keeping the nine names the existing screens import (`Ba
 `LoadFailed`) — no screen changes in this slice.
 
 (3) **UI test harness.** A second vitest project, `product/vitest.ui.config.ts`, runs `happy-dom`
-with `@testing-library/react` over `product/test-ui/**/*.test.tsx` (54 tests). It exists because
+with `@testing-library/react` over `product/test-ui/**/*.test.tsx` (59 tests). It exists because
 the workerd pool cannot render React — there were zero UI tests before this — and the workerd
 project's glob is narrowed to `./test/**/*.test.ts` so the two projects can never collect each
 other's tests. `npm run test` chains `test:worker` then `test:ui`.
@@ -631,6 +631,15 @@ and persists it under `jf:theme`, but nothing calls it yet: no element carries `
 there is deliberately no `prefers-color-scheme` media rule, so the default render is the light one.
 Wiring the toggle is Slice B.
 
+(6) **Dev seed.** `scripts/seed-dev.mjs`, run as `npm run dev:seed`, seeds the local D1 state with
+one claimed instance, three reviewers (one deliberately without an API key), two repositories,
+twelve runs across all four statuses with findings at all three severities, an activity trail and
+one session. It is local-only by construction — every wrangler call is `--local`, there is no
+`--remote` path and no Cloudflare credential is touched — and idempotent: a second run leaves the
+same rows (`runs 12 · run_reviewers 22 · reviewers 3 · repositories 2 · reviewer_repositories 4 ·
+activity 8 · sessions 1 · instance_meta 7 · github_app 1`). Slice B's layout measurements and the
+new screen tests render real shapes because of it.
+
 **Why:** every later slice rewrites the six existing primitives and eight screens; doing that
 against loose Tailwind utilities would spread the palette across dozens of files and make a dark
 theme a find-and-replace. A token layer whose values are exactly the utilities in use today lets
@@ -640,9 +649,9 @@ the design-system rewrite would land with no test that a component renders, and 
 has no DOM. Three dev-only test dependencies are the smallest thing that fits.
 
 **No-op verification:** `npm run check` is exit 0 with the workerd suite at 170/170 and the UI
-suite at 54/54, and no page, worker, `shared/`, or `site/` source file changed in this slice. The
-token table in `docs/design.md` is the reviewable proof — each row pairs a token with the utility
-it equals.
+suite at 59/59 (green on Node 24 and on Node 26), and no page, worker, `shared/`, or `site/` source
+file changed in this slice. The token table in `docs/design.md` is the reviewable proof — each row
+pairs a token with the utility it equals.
 
 **Rejected:** a component library (shadcn/Radix/Headless UI) or any runtime dependency — a new
 supply-chain surface and a second design language for a dashboard whose whole visual vocabulary is

@@ -33,6 +33,7 @@
 
   /* text */
   --color-text: oklch(20.5% 0 none); /* = text-neutral-900 */
+  --color-text-body: oklch(43.9% 0 none); /* = text-neutral-600 — generic secondary copy */
   --color-text-muted: oklch(55.6% 0 none); /* = text-neutral-500 */
   --color-text-subtle: oklch(70.8% 0 none); /* = text-neutral-400 */
   --color-text-inverse: #fff; /* = text-white */
@@ -63,18 +64,47 @@
 }
 
 /* Dark values are plain CSS variable overrides: the selector outranks :root, so no ordering
-   or layer trickery is needed. Nothing sets data-theme today, so this changes nothing yet. */
+   or layer trickery is needed. Nothing sets data-theme today, so this changes nothing yet.
+   The verdict and status palettes are overridden here too, not left at their light values: their
+   light surfaces move (e.g. Badge's neutral tone sits on the overridden --color-surface-muted) and
+   the light *-800 text on a dark surface is close to unreadable. Each dark value is again one
+   Tailwind default — the same hue family, at the ramp that clears the dark surface. */
 :root[data-theme='dark'] {
   --color-surface-page: oklch(14.5% 0 none); /* neutral-950 */
   --color-surface: oklch(20.5% 0 none); /* neutral-900 */
   --color-surface-muted: oklch(26.9% 0 none); /* neutral-800 */
   --color-surface-inverse: oklch(97% 0 none); /* neutral-100 */
+  --color-surface-error: oklch(25.8% 0.092 26.042); /* red-950 */
+  --color-surface-info: oklch(28.2% 0.091 267.935); /* blue-950 */
   --color-border: oklch(26.9% 0 none); /* neutral-800 */
   --color-border-strong: oklch(37.1% 0 none); /* neutral-700 */
+  --color-border-error: oklch(39.6% 0.141 25.723); /* red-900 */
+  --color-border-info: oklch(37.9% 0.146 265.522); /* blue-900 */
   --color-text: oklch(97% 0 none); /* neutral-100 */
+  --color-text-body: oklch(70.8% 0 none); /* neutral-400 */
   --color-text-muted: oklch(70.8% 0 none); /* neutral-400 */
   --color-text-subtle: oklch(55.6% 0 none); /* neutral-500 */
   --color-text-inverse: oklch(20.5% 0 none); /* neutral-900 */
+  --color-text-error: oklch(80.8% 0.114 19.571); /* red-300 */
+  --color-text-info: oklch(80.9% 0.105 251.813); /* blue-300 */
   --color-accent: oklch(97% 0 none); /* neutral-100 */
   --color-accent-hover: oklch(87% 0 none); /* neutral-300 */
+
+  /* finding severities */
+  --color-verdict-error-surface: oklch(25.8% 0.092 26.042); /* red-950 */
+  --color-verdict-error-text: oklch(80.8% 0.114 19.571); /* red-300 */
+  --color-verdict-warning-surface: oklch(27.9% 0.077 45.635); /* amber-950 */
+  --color-verdict-warning-text: oklch(87.9% 0.169 91.605); /* amber-300 */
+  --color-verdict-info-surface: oklch(26.9% 0 none); /* neutral-800 */
+  --color-verdict-info-text: oklch(87% 0 none); /* neutral-300 */
+
+  /* run statuses */
+  --color-status-running-surface: oklch(27.9% 0.077 45.635); /* amber-950 */
+  --color-status-running-text: oklch(87.9% 0.169 91.605); /* amber-300 */
+  --color-status-completed-surface: oklch(26.6% 0.065 152.934); /* green-950 */
+  --color-status-completed-text: oklch(87.1% 0.15 154.449); /* green-300 */
+  --color-status-failed-surface: oklch(25.8% 0.092 26.042); /* red-950 */
+  --color-status-failed-text: oklch(80.8% 0.114 19.571); /* red-300 */
+  --color-status-skipped-surface: oklch(26.9% 0 none); /* neutral-800 */
+  --color-status-skipped-text: oklch(87% 0 none); /* neutral-300 */
 }

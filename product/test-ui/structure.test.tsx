@@ -57,6 +57,11 @@ describe('Tabs', () => {
     { id: 'activity', label: 'Activity' },
   ];
 
+  function TabsHarness() {
+    const [value, setValue] = useState('overview');
+    return <Tabs items={items} onChange={setValue} value={value} />;
+  }
+
   it('marks the selected tab', () => {
     render(<Tabs items={items} onChange={() => {}} value="overview" />);
     expect(screen.getByRole('tab', { name: 'Overview' }).getAttribute('aria-selected')).toBe(
@@ -69,11 +74,14 @@ describe('Tabs', () => {
 
   it('moves the selection when a tab is clicked', async () => {
     const user = userEvent.setup();
-    render(<Tabs items={items} onChange={() => {}} value="overview" />);
+    render(<TabsHarness />);
     await user.click(screen.getByRole('tab', { name: 'Activity' }));
-    expect(
-      screen.getByRole('tab', { name: 'Activity' }).getAttribute('aria-selected'),
-    ).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Activity' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    expect(screen.getByRole('tab', { name: 'Overview' }).getAttribute('aria-selected')).toBe(
+      'false',
+    );
   });
 
   it('calls onChange with the tab id', async () => {
@@ -82,6 +90,42 @@ describe('Tabs', () => {
     render(<Tabs items={items} onChange={onChange} value="overview" />);
     await user.click(screen.getByRole('tab', { name: 'Activity' }));
     expect(onChange).toHaveBeenCalledWith('activity');
+  });
+
+  it('keeps only the selected tab in the tab order', () => {
+    render(<TabsHarness />);
+    expect(screen.getByRole('tab', { name: 'Overview' }).tabIndex).toBe(0);
+    expect(screen.getByRole('tab', { name: 'Activity' }).tabIndex).toBe(-1);
+  });
+
+  it('selects the next and previous tab with the arrow keys', async () => {
+    const user = userEvent.setup();
+    render(<TabsHarness />);
+    const overview = screen.getByRole('tab', { name: 'Overview' });
+    const activity = screen.getByRole('tab', { name: 'Activity' });
+
+    overview.focus();
+    await user.keyboard('{ArrowRight}');
+    expect(activity.getAttribute('aria-selected')).toBe('true');
+    expect(document.activeElement).toBe(activity);
+
+    await user.keyboard('{ArrowLeft}');
+    expect(overview.getAttribute('aria-selected')).toBe('true');
+    expect(document.activeElement).toBe(overview);
+  });
+
+  it('selects the last tab with End and the first with Home', async () => {
+    const user = userEvent.setup();
+    render(<TabsHarness />);
+    const overview = screen.getByRole('tab', { name: 'Overview' });
+    const activity = screen.getByRole('tab', { name: 'Activity' });
+
+    overview.focus();
+    await user.keyboard('{End}');
+    expect(activity.getAttribute('aria-selected')).toBe('true');
+
+    await user.keyboard('{Home}');
+    expect(overview.getAttribute('aria-selected')).toBe('true');
   });
 });
 
@@ -102,7 +146,7 @@ function DialogHarness() {
 }
 
 describe('Dialog', () => {
-  it('opens as a modal dialog', async () => {
+  it('opens as a modal dialog with an accessible name', async () => {
     const user = userEvent.setup();
     const { container } = render(<DialogHarness />);
     const dialog = container.querySelector('dialog') as HTMLDialogElement;
@@ -110,6 +154,8 @@ describe('Dialog', () => {
     await user.click(screen.getByRole('button', { name: 'Open dialog' }));
     await waitFor(() => expect(dialog.open).toBe(true));
     expect(screen.getByRole('heading', { level: 2, name: 'Confirm' })).toBeTruthy();
+    // The dialog's name comes from its title heading through aria-labelledby, not from nothing.
+    expect(screen.getByRole('dialog', { name: 'Confirm' })).toBeTruthy();
   });
 
   it('closes when the open prop becomes false', async () => {

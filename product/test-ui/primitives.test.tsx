@@ -118,7 +118,7 @@ describe('Badge', () => {
     render(<Badge>neutral</Badge>);
     const badge = screen.getByText('neutral');
     expect(badge.className).toContain('bg-surface-muted');
-    expect(badge.className).toContain('text-verdict-info-text');
+    expect(badge.className).toContain('text-text-body');
   });
 
   it('renders the green tone', () => {

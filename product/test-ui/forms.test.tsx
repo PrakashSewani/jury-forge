@@ -31,6 +31,21 @@ describe('Field', () => {
     );
     expect(screen.getByRole('alert').textContent).toBe('This field is required');
   });
+
+  it('points the control at its hint and its error', () => {
+    render(
+      <Field error="This field is required" hint="Lowercase only" label="Slug">
+        <Input />
+      </Field>,
+    );
+    const control = screen.getByRole('textbox');
+    const describedBy = control.getAttribute('aria-describedby');
+    expect(describedBy).toBeTruthy();
+    expect(
+      (describedBy as string).split(' ').map((id) => document.getElementById(id)?.textContent),
+    ).toEqual(['Lowercase only', 'This field is required']);
+    expect(control.getAttribute('aria-invalid')).toBe('true');
+  });
 });
 
 describe('Input', () => {

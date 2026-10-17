@@ -9,7 +9,7 @@ export function Loading({ label = 'Loading…' }: { label?: string }) {
 export function LoadFailed({ onRetry }: { onRetry: () => Promise<void> }) {
   return (
     <>
-      <p className="text-sm text-verdict-info-text">The dashboard API did not respond.</p>
+      <p className="text-sm text-text-body">The dashboard API did not respond.</p>
       <button className={secondaryButtonClass} onClick={() => void onRetry()} type="button">
         Try again
       </button>

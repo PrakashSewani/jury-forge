@@ -2,7 +2,10 @@
 
 ## Prerequisites
 
-- Node.js 24 (see `.nvmrc`; `wrangler` requires >= 22) and npm 11.
+- Node.js 24 (see `.nvmrc`; `wrangler` requires >= 22) and npm 11. Node 26 runs `npm run check`
+  green as well — the UI suite builds its own `Storage` in tests (`product/test-ui/memory-storage.ts`)
+  rather than reading the ambient `window.localStorage`, which Node ≥26 defines as a disabled global
+  that vitest's happy-dom environment then declines to replace.
 - A Cloudflare account for deploys — the free plan is enough; Workers Paid is optional headroom.
 - No accounts or services are needed for local development and tests.
 
@@ -19,21 +22,24 @@ skips dev dependencies — run `npm install --include=dev` in that case.
 
 ## Commands
 
-| Command                                                                 | What it does                                                                                                                     |
-| ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `npm run check`                                                         | typecheck + lint + format check + tests + build — the one command that must pass before anything is "done"; CI runs exactly this |
-| `npm run typecheck`                                                     | typecheck in every workspace (three `tsc` programs in `product/`, `astro check` in `site/`, `tsc` in `shared/`)                  |
-| `npm run lint`                                                          | ESLint across the repo                                                                                                           |
-| `npm run format` / `npm run format:check`                               | Prettier write / verify                                                                                                          |
-| `npm run test`                                                          | Vitest in `product/` — runs inside the Workers runtime via the Cloudflare Vitest plugin                                          |
-| `npm run build`                                                         | `vite build` in `product/`, `astro build` in `site/`                                                                             |
-| `npm run dev`                                                           | product dev server — Worker and dashboard in one Vite process (HMR)                                                              |
-| `npm run dev --workspace @jury-forge/site`                              | promo site dev server                                                                                                            |
-| `npm run preview --workspace @jury-forge/product`                       | serve the built product output in workerd (run a build first)                                                                    |
-| `npm run preview --workspace @jury-forge/site`                          | serve the built promo site                                                                                                       |
-| `npm run cf-typegen --workspace @jury-forge/product`                    | regenerate `product/worker-configuration.d.ts` after changing `product/wrangler.jsonc`                                           |
-| `npx wrangler d1 migrations apply jury-forge --local` (from `product/`) | apply D1 migrations to local dev state                                                                                           |
-| `node scripts/release.mjs <patch\|minor\|major> [--dry-run]`            | version bump used by the release workflow                                                                                        |
+| Command                                                                 | What it does                                                                                                                                      |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run check`                                                         | typecheck + lint + format check + tests + build — the one command that must pass before anything is "done"; CI runs exactly this                  |
+| `npm run typecheck`                                                     | typecheck in every workspace (three `tsc` programs in `product/`, `astro check` in `site/`, `tsc` in `shared/`)                                   |
+| `npm run lint`                                                          | ESLint across the repo                                                                                                                            |
+| `npm run format` / `npm run format:check`                               | Prettier write / verify                                                                                                                           |
+| `npm run test`                                                          | Vitest across `product/` — the workerd suite (`test:worker`) then the UI suite (`test:ui`)                                                        |
+| `npm run test:worker --workspace @jury-forge/product`                   | workerd suite: `product/test/**/*.test.ts` inside the Workers runtime via the Cloudflare Vitest plugin                                            |
+| `npm run test:ui --workspace @jury-forge/product`                       | UI suite: `product/test-ui/**/*.test.tsx` in happy-dom with Testing Library                                                                       |
+| `npm run build`                                                         | `vite build` in `product/`, `astro build` in `site/`                                                                                              |
+| `npm run dev`                                                           | product dev server — Worker and dashboard in one Vite process (HMR)                                                                               |
+| `npm run dev:seed`                                                      | seed the local D1 dev state with one instance, reviewers, repositories, runs and findings — idempotent, `--local` only, never a deployed instance |
+| `npm run dev --workspace @jury-forge/site`                              | promo site dev server                                                                                                                             |
+| `npm run preview --workspace @jury-forge/product`                       | serve the built product output in workerd (run a build first)                                                                                     |
+| `npm run preview --workspace @jury-forge/site`                          | serve the built promo site                                                                                                                        |
+| `npm run cf-typegen --workspace @jury-forge/product`                    | regenerate `product/worker-configuration.d.ts` after changing `product/wrangler.jsonc`                                                            |
+| `npx wrangler d1 migrations apply jury-forge --local` (from `product/`) | apply D1 migrations to local dev state                                                                                                            |
+| `node scripts/release.mjs <patch\|minor\|major> [--dry-run]`            | version bump used by the release workflow                                                                                                         |
 
 ## Environment
 

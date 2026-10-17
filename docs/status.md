@@ -49,20 +49,21 @@ clean tree afterwards. The command was run on the Mac checkout of record
 that script is deliberately not exercised against a real Cloudflare account here — no part of this
 change deploys anything.
 
-**Rework (2026-10-17):** the post-phase-2 rework is four stacked slices. Slice A is uncommitted in
-the working tree on `feat/rework-a-design-system-20261017`; nothing has been pushed.
+**Rework (2026-10-17):** the post-phase-2 rework is four stacked slices. Slice A is committed,
+pushed and open against `dev` as **#17** on `feat/rework-a-design-system-20261017` (`6201eda` docs,
+`0d379c3` implementation), in review; slice B's branch is `feat/rework-b-shell-screens-20261017`.
 
-| Slice | Branch                                 | Status      |
-| ----- | -------------------------------------- | ----------- |
-| A     | `feat/rework-a-design-system-20261017` | in progress |
-| B     | —                                      | not started |
-| C     | —                                      | not started |
-| D     | —                                      | not started |
+| Slice | Branch                                 | Status                  |
+| ----- | -------------------------------------- | ----------------------- |
+| A     | `feat/rework-a-design-system-20261017` | in review (#17)         |
+| B     | `feat/rework-b-shell-screens-20261017` | in progress, on A's tip |
+| C     | —                                      | not started             |
+| D     | —                                      | not started             |
 
 Slice A is the design-system vocabulary and UI harness (D-026): a token layer in
 `product/src/styles.css`, the `product/src/ui/` primitives re-exported through
 `product/src/components.tsx`, a dependency-free `product/src/lib/theme.ts` (no runtime caller yet —
-the toggle is slice B), and a second happy-dom vitest project with 54 UI tests. Strict visual
+the toggle is slice B), and a second happy-dom vitest project with 59 UI tests. Strict visual
 no-op: no page, worker, shared, or site source changed. Scopes for B/C/D are in
 `docs/roadmap.md`; the rework is product work, not a phase, so phase 3 stays `not started`.
 

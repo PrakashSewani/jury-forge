@@ -4,7 +4,7 @@ import { cx } from './class-names';
 export type BadgeTone = 'neutral' | 'green' | 'red' | 'amber';
 
 const BADGE_TONES: Record<BadgeTone, string> = {
-  neutral: 'bg-surface-muted text-verdict-info-text',
+  neutral: 'bg-surface-muted text-text-body',
   green: 'bg-status-completed-surface text-status-completed-text',
   red: 'bg-status-failed-surface text-status-failed-text',
   amber: 'bg-status-running-surface text-status-running-text',

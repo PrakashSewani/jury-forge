@@ -6,6 +6,7 @@ import {
   systemPrefersDark,
   THEME_STORAGE_KEY,
 } from '../src/lib/theme';
+import { memoryStorage } from './memory-storage';
 
 function fakeWindow(matches: boolean | undefined): Window {
   if (matches === undefined) {
@@ -16,24 +17,35 @@ function fakeWindow(matches: boolean | undefined): Window {
   } as unknown as Window;
 }
 
+function fakeDocument(matches: boolean): Document {
+  return {
+    defaultView: fakeWindow(matches),
+    documentElement: { dataset: {} },
+  } as unknown as Document;
+}
+
+let store: Storage;
+
 beforeEach(() => {
-  window.localStorage.clear();
+  // Never `window.localStorage`: on Node ≥26 that global exists but is disabled, and vitest's
+  // happy-dom environment then never installs happy-dom's own Storage (see memory-storage.ts).
+  store = memoryStorage();
   delete document.documentElement.dataset.theme;
 });
 
 describe('readStoredTheme', () => {
   it('returns null when nothing is stored', () => {
-    expect(readStoredTheme(window.localStorage)).toBeNull();
+    expect(readStoredTheme(store)).toBeNull();
   });
 
   it('returns a valid stored preference', () => {
-    window.localStorage.setItem(THEME_STORAGE_KEY, 'dark');
-    expect(readStoredTheme(window.localStorage)).toBe('dark');
+    store.setItem(THEME_STORAGE_KEY, 'dark');
+    expect(readStoredTheme(store)).toBe('dark');
   });
 
   it('returns null for a garbage value', () => {
-    window.localStorage.setItem(THEME_STORAGE_KEY, 'sepia');
-    expect(readStoredTheme(window.localStorage)).toBeNull();
+    store.setItem(THEME_STORAGE_KEY, 'sepia');
+    expect(readStoredTheme(store)).toBeNull();
   });
 });
 
@@ -71,22 +83,29 @@ describe('systemPrefersDark', () => {
 
 describe('applyTheme', () => {
   it('sets data-theme and persists an explicit preference', () => {
-    applyTheme('dark', document, window.localStorage);
+    applyTheme('dark', document, store);
     expect(document.documentElement.dataset.theme).toBe('dark');
-    expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe('dark');
+    expect(store.getItem(THEME_STORAGE_KEY)).toBe('dark');
   });
 
   it('sets data-theme to light for the light preference', () => {
-    applyTheme('light', document, window.localStorage);
+    applyTheme('light', document, store);
     expect(document.documentElement.dataset.theme).toBe('light');
   });
 
   it('removes the stored key for the system preference', () => {
-    window.localStorage.setItem(THEME_STORAGE_KEY, 'dark');
-    applyTheme('system', document, window.localStorage);
-    expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBeNull();
-    expect(resolveTheme(document.documentElement.dataset.theme as 'light' | 'dark', false)).toBe(
-      document.documentElement.dataset.theme,
-    );
+    store.setItem(THEME_STORAGE_KEY, 'dark');
+    applyTheme('system', document, store);
+    expect(store.getItem(THEME_STORAGE_KEY)).toBeNull();
+  });
+
+  it('resolves the system preference into a concrete theme through the document view', () => {
+    const dark = fakeDocument(true);
+    applyTheme('system', dark, store);
+    expect(dark.documentElement.dataset.theme).toBe('dark');
+
+    const light = fakeDocument(false);
+    applyTheme('system', light, store);
+    expect(light.documentElement.dataset.theme).toBe('light');
   });
 });

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import { cx } from './class-names';
 
 export function Dialog({
@@ -16,6 +16,7 @@ export function Dialog({
   className?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
 
   useEffect(() => {
     const element = ref.current;
@@ -33,11 +34,14 @@ export function Dialog({
 
   return (
     <dialog
+      aria-labelledby={titleId}
       className={cx('rounded-card border border-border bg-surface p-6 text-text', className)}
       onClose={onClose}
       ref={ref}
     >
-      <h2 className="text-base font-semibold tracking-tight">{title}</h2>
+      <h2 className="text-base font-semibold tracking-tight" id={titleId}>
+        {title}
+      </h2>
       {children}
     </dialog>
   );

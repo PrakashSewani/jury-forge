@@ -356,6 +356,7 @@ is what makes the swap a no-op.
 | Token                  | Value                        | Tailwind default   |
 | ---------------------- | ---------------------------- | ------------------ |
 | `--color-text`         | `oklch(20.5% 0 none)`        | `text-neutral-900` |
+| `--color-text-body`    | `oklch(43.9% 0 none)`        | `text-neutral-600` |
 | `--color-text-muted`   | `oklch(55.6% 0 none)`        | `text-neutral-500` |
 | `--color-text-subtle`  | `oklch(70.8% 0 none)`        | `text-neutral-400` |
 | `--color-text-inverse` | `#fff`                       | `text-white`       |
@@ -411,8 +412,12 @@ is what makes the swap a no-op.
 
 Dark mode is **prepared, not shipped**. `styles.css` declares an explicit `dark` custom variant,
 `@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *))`, and a
-`:root[data-theme='dark']` block that overrides the surfaces, borders, text and accent tokens (the
-verdict and status palettes keep their light values for now). The system preference is resolved in
+`:root[data-theme='dark']` block that overrides every token that has a dark value — surfaces,
+borders, text, accent, and the verdict and status palettes. The palettes are included because their
+light surfaces move under the override (Badge's neutral tone sits on `--color-surface-muted`) while
+their `*-800` text stayed at its light value, which lands near 2:1 on the dark surface; each dark
+value is again one Tailwind default, in the same hue family at the ramp that clears it (`red-950`
+surface under `red-300` text, and so on). The system preference is resolved in
 `product/src/lib/theme.ts` (`readStoredTheme`, `resolveTheme`, `systemPrefersDark`, `applyTheme`),
 which persists the choice under `jf:theme`. Nothing calls `applyTheme` yet and there is
 deliberately no `prefers-color-scheme` media rule: no element carries `data-theme`, so the
@@ -422,20 +427,41 @@ wires the toggle and becomes the helper's first caller.
 **Dark overrides** — the complete `:root[data-theme='dark']` block, again one Tailwind default
 each:
 
-| Token                     | Dark value            | Tailwind default |
-| ------------------------- | --------------------- | ---------------- |
-| `--color-surface-page`    | `oklch(14.5% 0 none)` | `neutral-950`    |
-| `--color-surface`         | `oklch(20.5% 0 none)` | `neutral-900`    |
-| `--color-surface-muted`   | `oklch(26.9% 0 none)` | `neutral-800`    |
-| `--color-surface-inverse` | `oklch(97% 0 none)`   | `neutral-100`    |
-| `--color-border`          | `oklch(26.9% 0 none)` | `neutral-800`    |
-| `--color-border-strong`   | `oklch(37.1% 0 none)` | `neutral-700`    |
-| `--color-text`            | `oklch(97% 0 none)`   | `neutral-100`    |
-| `--color-text-muted`      | `oklch(70.8% 0 none)` | `neutral-400`    |
-| `--color-text-subtle`     | `oklch(55.6% 0 none)` | `neutral-500`    |
-| `--color-text-inverse`    | `oklch(20.5% 0 none)` | `neutral-900`    |
-| `--color-accent`          | `oklch(97% 0 none)`   | `neutral-100`    |
-| `--color-accent-hover`    | `oklch(87% 0 none)`   | `neutral-300`    |
+| Token                              | Dark value                   | Tailwind default |
+| ---------------------------------- | ---------------------------- | ---------------- |
+| `--color-surface-page`             | `oklch(14.5% 0 none)`        | `neutral-950`    |
+| `--color-surface`                  | `oklch(20.5% 0 none)`        | `neutral-900`    |
+| `--color-surface-muted`            | `oklch(26.9% 0 none)`        | `neutral-800`    |
+| `--color-surface-inverse`          | `oklch(97% 0 none)`          | `neutral-100`    |
+| `--color-border`                   | `oklch(26.9% 0 none)`        | `neutral-800`    |
+| `--color-border-strong`            | `oklch(37.1% 0 none)`        | `neutral-700`    |
+| `--color-text`                     | `oklch(97% 0 none)`          | `neutral-100`    |
+| `--color-text-muted`               | `oklch(70.8% 0 none)`        | `neutral-400`    |
+| `--color-text-subtle`              | `oklch(55.6% 0 none)`        | `neutral-500`    |
+| `--color-text-inverse`             | `oklch(20.5% 0 none)`        | `neutral-900`    |
+| `--color-accent`                   | `oklch(97% 0 none)`          | `neutral-100`    |
+| `--color-accent-hover`             | `oklch(87% 0 none)`          | `neutral-300`    |
+| `--color-surface-error`            | `oklch(25.8% 0.092 26.042)`  | `red-950`        |
+| `--color-surface-info`             | `oklch(28.2% 0.091 267.935)` | `blue-950`       |
+| `--color-border-error`             | `oklch(39.6% 0.141 25.723)`  | `red-900`        |
+| `--color-border-info`              | `oklch(37.9% 0.146 265.522)` | `blue-900`       |
+| `--color-text-body`                | `oklch(70.8% 0 none)`        | `neutral-400`    |
+| `--color-text-error`               | `oklch(80.8% 0.114 19.571)`  | `red-300`        |
+| `--color-text-info`                | `oklch(80.9% 0.105 251.813)` | `blue-300`       |
+| `--color-verdict-error-surface`    | `oklch(25.8% 0.092 26.042)`  | `red-950`        |
+| `--color-verdict-error-text`       | `oklch(80.8% 0.114 19.571)`  | `red-300`        |
+| `--color-verdict-warning-surface`  | `oklch(27.9% 0.077 45.635)`  | `amber-950`      |
+| `--color-verdict-warning-text`     | `oklch(87.9% 0.169 91.605)`  | `amber-300`      |
+| `--color-verdict-info-surface`     | `oklch(26.9% 0 none)`        | `neutral-800`    |
+| `--color-verdict-info-text`        | `oklch(87% 0 none)`          | `neutral-300`    |
+| `--color-status-running-surface`   | `oklch(27.9% 0.077 45.635)`  | `amber-950`      |
+| `--color-status-running-text`      | `oklch(87.9% 0.169 91.605)`  | `amber-300`      |
+| `--color-status-completed-surface` | `oklch(26.6% 0.065 152.934)` | `green-950`      |
+| `--color-status-completed-text`    | `oklch(87.1% 0.15 154.449)`  | `green-300`      |
+| `--color-status-failed-surface`    | `oklch(25.8% 0.092 26.042)`  | `red-950`        |
+| `--color-status-failed-text`       | `oklch(80.8% 0.114 19.571)`  | `red-300`        |
+| `--color-status-skipped-surface`   | `oklch(26.9% 0 none)`        | `neutral-800`    |
+| `--color-status-skipped-text`      | `oklch(87% 0 none)`          | `neutral-300`    |
 
 ### Primitives
 
@@ -521,10 +547,13 @@ records via the Workers Vitest plugin with stubbed `fetch`. No test performs rea
 
 Slice A adds a **second vitest project** for UI components. The workerd pool cannot render a
 component — there were zero UI tests before this — so `product/vitest.ui.config.ts` runs
-`happy-dom` with `@testing-library/react`, collecting `product/test-ui/**/*.test.tsx` (54 tests
+`happy-dom` with `@testing-library/react`, collecting `product/test-ui/**/*.test.tsx` (59 tests
 across the theme helper, the primitives, the form controls, and structure). The workerd project's
 test glob is now restricted to `./test/**/*.test.ts`, so the two projects can never collect each
-other's tests; `npm run test` runs `test:worker` then `test:ui`.
+other's tests; `npm run test` runs `test:worker` then `test:ui`. Tests that need a `Storage` build
+one (`product/test-ui/memory-storage.ts`) instead of reading the ambient `window.localStorage`,
+which Node ≥26 defines as a disabled global that vitest's happy-dom environment then declines to
+replace.
 
 ## Build order
 
