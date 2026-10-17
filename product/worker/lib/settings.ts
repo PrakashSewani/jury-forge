@@ -37,6 +37,14 @@ const SETTING_SPECS: { [K in keyof InstanceSettings]: SettingSpec<InstanceSettin
     schema: z.number().int().min(1).max(50),
     defaultValue: 1,
   },
+  repoInstructions: {
+    schema: z.boolean(),
+    defaultValue: false,
+  },
+  repoInstructionsMaxBytes: {
+    schema: z.number().int().min(1_000).max(50_000),
+    defaultValue: 8_000,
+  },
 };
 
 export const DEFAULT_SETTINGS: InstanceSettings = {
@@ -47,6 +55,8 @@ export const DEFAULT_SETTINGS: InstanceSettings = {
   descriptionLimit: SETTING_SPECS.descriptionLimit.defaultValue,
   blockingMode: SETTING_SPECS.blockingMode.defaultValue,
   blockingErrorThreshold: SETTING_SPECS.blockingErrorThreshold.defaultValue,
+  repoInstructions: SETTING_SPECS.repoInstructions.defaultValue,
+  repoInstructionsMaxBytes: SETTING_SPECS.repoInstructionsMaxBytes.defaultValue,
 };
 
 export type SettingsPatchResult =

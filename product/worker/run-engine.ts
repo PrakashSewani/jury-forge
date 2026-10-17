@@ -2,12 +2,15 @@ import type { Finding, InstanceSettings, ProviderFlavor, ProviderUsage } from '@
 import { DurableObject } from 'cloudflare:workers';
 import { consolidateReview, parseReviewerOutput, type ReviewerFindings } from './lib/consolidate';
 import {
+  buildRepoInstructionsBlock,
   buildReviewContext,
   buildReviewPrompt,
   buildSystemPrompt,
   contextNotes,
   prioritizedOrder,
+  REPO_INSTRUCTION_FILES,
   type PullFile,
+  type RepoInstructionFile,
   type ReviewContext,
 } from './lib/context';
 import { decryptSecret, importEncryptionKey } from './lib/crypto';
@@ -17,6 +20,7 @@ import {
   createPullReview,
   fetchPullFiles,
   fetchPullRequest,
+  fetchRepoFileText,
   listPullReviews,
   minimizeComment,
   type PullFileEntry,
@@ -310,6 +314,30 @@ export class RunEngine extends DurableObject<Env> {
     await this.ctx.storage.put('botLogin', `${app.slug}[bot]`);
     const token = await createInstallationToken(app.appId, app.privateKey, payload.installationId);
     await this.ctx.storage.put('token', token);
+
+    // D-022: opt-in repository instructions, read at the PR's head SHA. A failed or missing
+    // file is skipped so it never fails the run; the key is absent when the setting is off.
+    if (settings.repoInstructions) {
+      const sections: RepoInstructionFile[] = [];
+      for (const path of REPO_INSTRUCTION_FILES) {
+        try {
+          const text = await fetchRepoFileText(token, payload.repoFullName, path, payload.headSha);
+          if (text !== null) {
+            sections.push({ path, text });
+          }
+        } catch (error) {
+          console.error(
+            `run ${runIdFor(payload)} repository instruction fetch failed (${path}):`,
+            error,
+          );
+        }
+      }
+      await this.ctx.storage.put(
+        'repoInstructions',
+        buildRepoInstructionsBlock(sections, settings.repoInstructionsMaxBytes),
+      );
+    }
+
     const pullRequest = await fetchPullRequest(token, payload.repoFullName, payload.prNumber);
     await this.ctx.storage.put('pr', pullRequest);
 
@@ -412,11 +440,13 @@ export class RunEngine extends DurableObject<Env> {
     const previousByReviewer =
       (await this.ctx.storage.get<Record<string, Finding[]>>('previousByReviewer')) ?? {};
     const settings = (await this.ctx.storage.get<InstanceSettings>('settings')) ?? DEFAULT_SETTINGS;
+    const repoInstructions = await this.ctx.storage.get<string | null>('repoInstructions');
     await this.ctx.storage.put(`prompt:${reviewer.id}`, {
       system: buildSystemPrompt(reviewer),
       user: buildReviewPrompt(pullRequest, context, {
         previousFindings: previousByReviewer[reviewer.id] ?? [],
         descriptionLimit: settings.descriptionLimit,
+        repoInstructions,
       }),
     });
 

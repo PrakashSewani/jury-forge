@@ -197,6 +197,27 @@ export async function fetchPullFiles(
   };
 }
 
+/** Reads one file from the repository at `ref` as raw text; `null` when the file does not exist. */
+export async function fetchRepoFileText(
+  token: string,
+  fullName: string,
+  path: string,
+  ref: string,
+): Promise<string | null> {
+  const encodedPath = path.split('/').map(encodeURIComponent).join('/');
+  const response = await fetch(
+    `${API_BASE}/repos/${fullName}/contents/${encodedPath}?ref=${encodeURIComponent(ref)}`,
+    { headers: { ...bearerHeaders(token), Accept: 'application/vnd.github.raw' } },
+  );
+  if (response.status === 404) {
+    return null;
+  }
+  if (!response.ok) {
+    throw new GitHubApiError(response.status, `github_request_failed (${response.status})`);
+  }
+  return response.text();
+}
+
 export type PullReviewEvent = 'COMMENT' | 'REQUEST_CHANGES';
 
 export interface PullReviewRequest {

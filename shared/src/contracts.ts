@@ -126,6 +126,8 @@ export interface InstanceSettings {
   descriptionLimit: number;
   blockingMode: boolean;
   blockingErrorThreshold: number;
+  repoInstructions: boolean;
+  repoInstructionsMaxBytes: number;
 }
 
 export interface SettingsResponse {

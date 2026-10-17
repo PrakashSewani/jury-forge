@@ -573,6 +573,87 @@ describe('run engine', () => {
     expect(review?.event).toBe('COMMENT');
     expect(review?.body).not.toContain('Blocking mode');
   });
+
+  it('does not read repository instructions when the setting is off', async () => {
+    await seedGitHubApp();
+    await seedRepositoryAndReviewers(['openai']);
+    mockGitHubRun();
+    let contentsRequests = 0;
+    network.use(
+      http.get('https://api.github.com/repos/octocat/hello/contents/*', () => {
+        contentsRequests += 1;
+        return new HttpResponse('should not be read', { status: 500 });
+      }),
+    );
+    const provider = mockOpenAiReviewSequence(['{"findings":[]}']);
+
+    await postWebhook(pullRequestEvent(), { deliveryId: 'delivery-1' });
+    await driveRun(RUN_ID);
+
+    expect(contentsRequests).toBe(0);
+    expect(provider.prompts).toHaveLength(1);
+    expect(provider.prompts[0]).not.toContain('Repository instructions');
+  });
+
+  it('reads repository instructions at the head SHA and puts them in the prompt', async () => {
+    await seedGitHubApp();
+    await seedRepositoryAndReviewers(['openai']);
+    await env.DB.prepare(
+      "INSERT INTO instance_settings (key, value) VALUES ('repoInstructions', 'true')",
+    ).run();
+    const mocks = mockGitHubRun();
+    const acceptHeaders: (string | null)[] = [];
+    network.use(
+      http.get('https://api.github.com/repos/octocat/hello/contents/AGENTS.md', ({ request }) => {
+        acceptHeaders.push(request.headers.get('Accept'));
+        expect(new URL(request.url).searchParams.get('ref')).toBe('abc123def456');
+        return HttpResponse.text('Follow the repository style guide.');
+      }),
+      http.get('https://api.github.com/repos/octocat/hello/contents/CONTRIBUTING.md', () =>
+        HttpResponse.text('Run the test suite.'),
+      ),
+    );
+    const provider = mockOpenAiReviewSequence(['{"findings":[]}']);
+
+    await postWebhook(pullRequestEvent(), { deliveryId: 'delivery-1' });
+    await driveRun(RUN_ID);
+
+    expect(acceptHeaders).toEqual(['application/vnd.github.raw']);
+    expect(provider.prompts[0]).toContain('### AGENTS.md');
+    expect(provider.prompts[0]).toContain('Follow the repository style guide.');
+    expect(provider.prompts[0]).toContain('### CONTRIBUTING.md');
+    expect(provider.prompts[0]).toContain('Run the test suite.');
+    expect(mocks.reviewCalls()).toBe(1);
+  });
+
+  it('skips a repository instruction file that returns 404 without failing the run', async () => {
+    await seedGitHubApp();
+    await seedRepositoryAndReviewers(['openai']);
+    await env.DB.prepare(
+      "INSERT INTO instance_settings (key, value) VALUES ('repoInstructions', 'true')",
+    ).run();
+    mockGitHubRun();
+    network.use(
+      http.get(
+        'https://api.github.com/repos/octocat/hello/contents/AGENTS.md',
+        () => new HttpResponse(null, { status: 404 }),
+      ),
+      http.get('https://api.github.com/repos/octocat/hello/contents/CONTRIBUTING.md', () =>
+        HttpResponse.text('Run the test suite.'),
+      ),
+    );
+    const provider = mockOpenAiReviewSequence(['{"findings":[]}']);
+
+    await postWebhook(pullRequestEvent(), { deliveryId: 'delivery-1' });
+    await driveRun(RUN_ID);
+
+    const finished = await env.DB.prepare('SELECT status FROM runs WHERE id = ?')
+      .bind(RUN_ID)
+      .first<{ status: string }>();
+    expect(finished?.status).toBe('completed');
+    expect(provider.prompts[0]).toContain('### CONTRIBUTING.md');
+    expect(provider.prompts[0]).not.toContain('### AGENTS.md');
+  });
 });
 
 describe('runs api', () => {

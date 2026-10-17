@@ -19,7 +19,8 @@ type NumberKey =
   | 'contextTotalBytes'
   | 'contextFileBytes'
   | 'descriptionLimit'
-  | 'blockingErrorThreshold';
+  | 'blockingErrorThreshold'
+  | 'repoInstructionsMaxBytes';
 
 const NUMBER_FIELDS: { key: NumberKey; label: string; min: number; max: number }[] = [
   { key: 'inlineCommentsPerReviewer', label: 'Inline comments per reviewer', min: 1, max: 50 },
@@ -176,6 +177,52 @@ export default function SettingsPage() {
                 className="pt-6 text-sm text-neutral-500 underline transition hover:text-neutral-900 disabled:opacity-50"
                 disabled={!(draft.blockingMode ?? current.settings.blockingMode)}
                 onClick={() => resetField('blockingErrorThreshold')}
+                type="button"
+              >
+                Reset
+              </button>
+            </div>
+          </Card>
+          <Card title="Repository instructions">
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                checked={draft.repoInstructions ?? current.settings.repoInstructions}
+                onChange={(event) => update('repoInstructions', event.target.checked)}
+                type="checkbox"
+              />
+              <span>
+                <span className="block font-medium">Include repository instructions</span>
+                <span className="block text-xs text-neutral-500">
+                  Off by default. When on, the run reads AGENTS.md and CONTRIBUTING.md at the pull
+                  request&rsquo;s revision and includes bounded excerpts in the prompts.
+                </span>
+              </span>
+            </label>
+            <div className="flex items-start gap-3">
+              <div className="flex-1">
+                <Field
+                  hint={`Default: ${current.defaults.repoInstructionsMaxBytes}`}
+                  label="Excerpt budget (bytes)"
+                >
+                  <input
+                    className={inputClass}
+                    disabled={!(draft.repoInstructions ?? current.settings.repoInstructions)}
+                    max={50_000}
+                    min={1_000}
+                    onChange={(event) =>
+                      updateNumber('repoInstructionsMaxBytes', event.target.value)
+                    }
+                    type="number"
+                    value={
+                      draft.repoInstructionsMaxBytes ?? current.settings.repoInstructionsMaxBytes
+                    }
+                  />
+                </Field>
+              </div>
+              <button
+                className="pt-6 text-sm text-neutral-500 underline transition hover:text-neutral-900 disabled:opacity-50"
+                disabled={!(draft.repoInstructions ?? current.settings.repoInstructions)}
+                onClick={() => resetField('repoInstructionsMaxBytes')}
                 type="button"
               >
                 Reset
