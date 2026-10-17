@@ -1,5 +1,6 @@
 import type {
   Finding,
+  ProviderUsage,
   RunDetail,
   RunReviewerOutcome,
   RunStatus,
@@ -88,19 +89,23 @@ runRoutes.get('/:id', async (c) => {
     return c.json({ error: 'not_found' }, 404);
   }
   const reviewerRows = await c.env.DB.prepare(
-    'SELECT reviewer_id, status, findings_json, error FROM run_reviewers WHERE run_id = ? ORDER BY reviewer_id',
+    'SELECT reviewer_id, status, findings_json, summary, usage_json, error FROM run_reviewers WHERE run_id = ? ORDER BY reviewer_id',
   )
     .bind(row.id)
     .all<{
       reviewer_id: string;
       status: RunReviewerOutcome['status'];
       findings_json: string | null;
+      summary: string | null;
+      usage_json: string | null;
       error: string | null;
     }>();
   const reviewers: RunReviewerOutcome[] = reviewerRows.results.map((reviewer) => ({
     reviewerId: reviewer.reviewer_id,
     status: reviewer.status,
     findings: reviewer.findings_json ? (JSON.parse(reviewer.findings_json) as Finding[]) : null,
+    summary: reviewer.summary,
+    usage: reviewer.usage_json ? (JSON.parse(reviewer.usage_json) as ProviderUsage) : null,
     error: reviewer.error,
   }));
   const body: RunDetail = { run: summaryFromRow(row), reviewers };

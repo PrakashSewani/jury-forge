@@ -1,9 +1,9 @@
-import type { Finding, ProviderFlavor } from '@jury-forge/shared';
+import type { Finding, ProviderFlavor, ProviderUsage } from '@jury-forge/shared';
 import { DurableObject } from 'cloudflare:workers';
 import {
   FINDING_CAPS,
   consolidateReview,
-  parseFindings,
+  parseReviewerOutput,
   type ReviewerFindings,
 } from './lib/consolidate';
 import {
@@ -29,6 +29,7 @@ import {
 } from './lib/github';
 import { loadGitHubApp } from './lib/github-app';
 import { callProvider } from './lib/providers';
+import { compareFindings, findingKey } from './lib/resolution';
 
 const FILES_CAP = 300;
 const CONTEXT_BATCH_SIZE = 25;
@@ -64,12 +65,14 @@ interface StoredReviewer {
 interface ReviewerOutcome {
   status: 'completed' | 'failed';
   findings: Finding[] | null;
+  summary: string | null;
+  usage: ProviderUsage | null;
   error: string | null;
 }
 
 interface ReviewPlan {
   body: string;
-  comments: { path: string; line: number; body: string }[];
+  comments: { path: string; line: number; startLine?: number; body: string }[];
 }
 
 interface ReviewerRow {
@@ -86,6 +89,23 @@ interface ReviewerRow {
 
 function runIdFor(payload: RunPayload): string {
   return `${payload.repoId}:${payload.prNumber}:${payload.headSha}:${payload.deliveryId}`;
+}
+
+function findingLocation(finding: Finding): string {
+  return finding.line !== undefined ? `${finding.file}:${finding.line}` : finding.file;
+}
+
+function bucketLine(label: string, findings: Finding[]): string {
+  if (findings.length === 0) {
+    return `- **${label}** (0): none`;
+  }
+  const shown = findings
+    .slice(0, 20)
+    .map((finding) => `\`${findingLocation(finding)}\` — ${finding.title}`);
+  if (findings.length > 20) {
+    shown.push(`… and ${findings.length - 20} more`);
+  }
+  return `- **${label}** (${findings.length}): ${shown.join('; ')}`;
 }
 
 function errorMessage(error: unknown): string {
@@ -245,6 +265,41 @@ export class RunEngine extends DurableObject<Env> {
     }));
     await this.ctx.storage.put('reviewers', reviewers);
 
+    // D-020: the newest earlier run for this repository + pull request that recorded findings
+    // supplies each reviewer's previous findings, and their de-duplicated union.
+    const previousRows = await db
+      .prepare(
+        `SELECT rr.reviewer_id, rr.findings_json
+         FROM run_reviewers rr
+         JOIN runs r ON r.id = rr.run_id
+         WHERE r.repo_id = ? AND r.pr_number = ?
+           AND r.id != ?
+           AND r.status IN ('completed', 'failed')
+           AND rr.findings_json IS NOT NULL AND rr.findings_json != '[]'
+         ORDER BY r.created_at DESC, r.id DESC, rr.reviewer_id`,
+      )
+      .bind(payload.repoId, payload.prNumber, runId)
+      .all<{ reviewer_id: string; findings_json: string }>();
+    const previousByReviewer: Record<string, Finding[]> = {};
+    const previousFindings: Finding[] = [];
+    const seenKeys = new Set<string>();
+    for (const row of previousRows.results) {
+      if (previousByReviewer[row.reviewer_id] !== undefined) {
+        continue;
+      }
+      const findings = JSON.parse(row.findings_json) as Finding[];
+      previousByReviewer[row.reviewer_id] = findings;
+      for (const finding of findings) {
+        const key = findingKey(finding);
+        if (!seenKeys.has(key)) {
+          seenKeys.add(key);
+          previousFindings.push(finding);
+        }
+      }
+    }
+    await this.ctx.storage.put('previousByReviewer', previousByReviewer);
+    await this.ctx.storage.put('previousFindings', previousFindings);
+
     const encryptionKeyValue = this.env.ENCRYPTION_KEY;
     if (!encryptionKeyValue) {
       throw new Error('encryption_key_unset');
@@ -348,9 +403,13 @@ export class RunEngine extends DurableObject<Env> {
     if (!reviewer) {
       throw new Error('reviewer cursor out of range');
     }
+    const previousByReviewer =
+      (await this.ctx.storage.get<Record<string, Finding[]>>('previousByReviewer')) ?? {};
     await this.ctx.storage.put(`prompt:${reviewer.id}`, {
       system: buildSystemPrompt(reviewer),
-      user: buildReviewPrompt(pullRequest, context),
+      user: buildReviewPrompt(pullRequest, context, {
+        previousFindings: previousByReviewer[reviewer.id] ?? [],
+      }),
     });
 
     if (cursor + 1 < reviewers.length) {
@@ -389,7 +448,7 @@ export class RunEngine extends DurableObject<Env> {
           system: prompt.system,
           user: prompt.user,
         });
-        return parseFindings(value);
+        return { output: parseReviewerOutput(value.value), usage: value.usage };
       }),
     );
 
@@ -398,8 +457,20 @@ export class RunEngine extends DurableObject<Env> {
       const result = settled[index];
       entries[`outcome:${reviewer.id}`] =
         result.status === 'fulfilled'
-          ? { status: 'completed', findings: result.value, error: null }
-          : { status: 'failed', findings: null, error: errorMessage(result.reason) };
+          ? {
+              status: 'completed',
+              findings: result.value.output.findings,
+              summary: result.value.output.summary,
+              usage: result.value.usage,
+              error: null,
+            }
+          : {
+              status: 'failed',
+              findings: null,
+              summary: null,
+              usage: null,
+              error: errorMessage(result.reason),
+            };
     });
     await this.ctx.storage.put(entries);
     return 'consolidate';
@@ -464,6 +535,9 @@ export class RunEngine extends DurableObject<Env> {
         sections.push(`_Failed: ${outcome.error ?? 'unknown error'}_`);
         continue;
       }
+      if (outcome.summary) {
+        sections.push('', outcome.summary, '');
+      }
       const findings = outcome.findings ?? [];
       const overflow = overflowByReviewer.get(reviewer.id) ?? [];
       const inlineCount = inlineByReviewer.get(reviewer.id) ?? 0;
@@ -480,6 +554,21 @@ export class RunEngine extends DurableObject<Env> {
         sections.push('', `- \`${location}\` — **${finding.severity}** — ${finding.title}`);
         sections.push(`  > ${finding.body.split('\n').join('\n  > ')}`);
       }
+    }
+
+    const previousFindings = (await this.ctx.storage.get<Finding[]>('previousFindings')) ?? [];
+    if (previousFindings.length > 0) {
+      const currentFindings = withFindings.flatMap((group) => group.findings);
+      const buckets = compareFindings(previousFindings, currentFindings);
+      sections.push(
+        '',
+        '### Previous findings',
+        '_Compared with the last run on this pull request. "Resolved" means this run did not report the item again — not that a fix was verified._',
+        '',
+        bucketLine('Resolved', buckets.resolved),
+        bucketLine('Still present', buckets.stillPresent),
+        bucketLine('New', buckets.new),
+      );
     }
 
     const notes: string[] = [...contextNotes(context)];
@@ -499,11 +588,17 @@ export class RunEngine extends DurableObject<Env> {
     }
 
     const nameOf = new Map(reviewers.map((reviewer) => [reviewer.id, reviewer.name]));
-    const comments = consolidated.inline.map((selection) => ({
-      path: selection.finding.file,
-      line: selection.finding.line,
-      body: `**${nameOf.get(selection.reviewerId) ?? 'Reviewer'}** — ${selection.finding.severity}: ${selection.finding.title}\n\n${selection.finding.body}`,
-    }));
+    const comments = consolidated.inline.map((selection) => {
+      const comment: { path: string; line: number; startLine?: number; body: string } = {
+        path: selection.finding.file,
+        line: selection.finding.line,
+        body: `**${nameOf.get(selection.reviewerId) ?? 'Reviewer'}** — ${selection.finding.severity}: ${selection.finding.title}\n\n${selection.finding.body}`,
+      };
+      if (selection.finding.startLine !== undefined) {
+        comment.startLine = selection.finding.startLine;
+      }
+      return comment;
+    });
     const plan: ReviewPlan = { body: sections.join('\n'), comments };
     await this.ctx.storage.put('plan', plan);
     return 'post';
@@ -573,12 +668,14 @@ export class RunEngine extends DurableObject<Env> {
         const outcome = outcomes.get(`outcome:${reviewer.id}`);
         statements.push(
           this.env.DB.prepare(
-            'INSERT OR REPLACE INTO run_reviewers (run_id, reviewer_id, status, findings_json, error) VALUES (?, ?, ?, ?, ?)',
+            'INSERT OR REPLACE INTO run_reviewers (run_id, reviewer_id, status, findings_json, summary, usage_json, error) VALUES (?, ?, ?, ?, ?, ?, ?)',
           ).bind(
             runIdFor(payload),
             reviewer.id,
             outcome?.status ?? 'failed',
             outcome?.findings ? JSON.stringify(outcome.findings) : null,
+            outcome?.summary ?? null,
+            outcome?.usage ? JSON.stringify(outcome.usage) : null,
             outcome?.error ?? (outcome ? null : (error ?? 'run failed before this reviewer ran')),
           ),
         );

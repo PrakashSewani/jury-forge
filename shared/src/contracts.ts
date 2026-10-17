@@ -39,9 +39,16 @@ export type FindingSeverity = 'info' | 'warning' | 'error';
 export interface Finding {
   file: string;
   line?: number;
+  startLine?: number;
   severity: FindingSeverity;
   title: string;
   body: string;
+}
+
+export interface ProviderUsage {
+  promptTokens: number | null;
+  completionTokens: number | null;
+  totalTokens: number | null;
 }
 
 export interface Reviewer {
@@ -96,6 +103,8 @@ export interface RunReviewerOutcome {
   reviewerId: string;
   status: RunReviewerStatus;
   findings: Finding[] | null;
+  summary: string | null;
+  usage: ProviderUsage | null;
   error: string | null;
 }
 

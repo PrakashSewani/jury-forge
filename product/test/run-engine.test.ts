@@ -142,6 +142,26 @@ function mockOpenAiReview(content: string): void {
   );
 }
 
+/**
+ * Serves one OpenAI response per call in order, capturing the user prompt of each call so a test
+ * can assert what a later run received.
+ */
+function mockOpenAiReviewSequence(contents: string[]): { prompts: string[] } {
+  const prompts: string[] = [];
+  network.use(
+    http.post('https://providers.test/v1/chat/completions', async ({ request }) => {
+      const body = (await request.json()) as { messages?: { role: string; content: string }[] };
+      prompts.push(body.messages?.find((message) => message.role === 'user')?.content ?? '');
+      const content = contents[prompts.length - 1] ?? '{"findings":[]}';
+      return HttpResponse.json({
+        choices: [{ message: { content } }],
+        usage: { prompt_tokens: 100, completion_tokens: 20, total_tokens: 120 },
+      });
+    }),
+  );
+  return { prompts };
+}
+
 function mockAnthropicFailure(): void {
   network.use(
     http.post('https://providers.test/v1/messages', () => new HttpResponse(null, { status: 500 })),
@@ -238,6 +258,88 @@ describe('run engine', () => {
     expect(review?.comments).toHaveLength(1);
     expect(review?.comments?.[0]?.path).toBe('src/app.ts');
     expect(review?.comments?.[0]?.line).toBe(2);
+  });
+
+  it('compares a second run against the first and records summary and usage', async () => {
+    await seedGitHubApp();
+    await seedRepositoryAndReviewers(['openai']);
+    const mocks = mockGitHubRun();
+    const provider = mockOpenAiReviewSequence([
+      JSON.stringify({
+        summary: 'First pass.',
+        findings: [
+          {
+            file: 'src/app.ts',
+            line: 2,
+            severity: 'warning',
+            title: 'Off by one',
+            body: 'Check the boundary.',
+          },
+          {
+            file: 'src/app.ts',
+            line: 3,
+            severity: 'info',
+            title: 'Odd naming',
+            body: 'Rename it.',
+          },
+        ],
+      }),
+      JSON.stringify({
+        summary: 'Second pass.',
+        findings: [
+          {
+            file: 'src/app.ts',
+            line: 2,
+            severity: 'warning',
+            title: 'Off by one',
+            body: 'Still there.',
+          },
+          {
+            file: 'src/app.ts',
+            line: 99,
+            severity: 'info',
+            title: 'New thing',
+            body: 'Fresh find.',
+          },
+        ],
+      }),
+    ]);
+
+    await postWebhook(pullRequestEvent(), { deliveryId: 'delivery-1' });
+    await driveRun(RUN_ID);
+    expect(provider.prompts[0]).not.toContain('Previously reported findings');
+
+    const secondRunId = '101:1:abc123def456:delivery-2';
+    await postWebhook(pullRequestEvent({ deliveryId: 'delivery-2' }), {
+      deliveryId: 'delivery-2',
+    });
+    await driveRun(secondRunId);
+
+    expect(provider.prompts).toHaveLength(2);
+    expect(provider.prompts[1]).toContain('Previously reported findings');
+    expect(provider.prompts[1]).toContain('src/app.ts:2');
+    expect(provider.prompts[1]).toContain('Odd naming');
+    expect(provider.prompts[1]).not.toContain('New thing');
+
+    const body = mocks.lastReview()?.body ?? '';
+    expect(body).toContain('Second pass.');
+    expect(body).toContain('### Previous findings');
+    expect(body).toContain('**Resolved** (1)');
+    expect(body).toContain('**Still present** (1)');
+    expect(body).toContain('**New** (1)');
+    expect(body).toContain('src/app.ts:3');
+
+    const rows = await env.DB.prepare(
+      'SELECT summary, usage_json FROM run_reviewers WHERE run_id = ? ORDER BY reviewer_id',
+    )
+      .bind(secondRunId)
+      .all<{ summary: string | null; usage_json: string | null }>();
+    expect(rows.results[0]?.summary).toBe('Second pass.');
+    expect(JSON.parse(rows.results[0]?.usage_json ?? 'null')).toEqual({
+      promptTokens: 100,
+      completionTokens: 20,
+      totalTokens: 120,
+    });
   });
 
   it('skips a repository that is not enabled', async () => {
@@ -470,12 +572,15 @@ describe('runs api', () => {
   it('returns run detail with reviewer outcomes', async () => {
     await insertRun('run-d', 400);
     await env.DB.prepare(
-      "INSERT INTO run_reviewers (run_id, reviewer_id, status, findings_json, error) VALUES ('run-d', 'rev-0', 'completed', ?, NULL)",
+      "INSERT INTO run_reviewers (run_id, reviewer_id, status, findings_json, summary, usage_json, error) VALUES ('run-d', 'rev-0', 'completed', ?, 'Looks good.', ?, NULL)",
     )
-      .bind(JSON.stringify([{ file: 'a.ts', severity: 'info', title: 't', body: 'b' }]))
+      .bind(
+        JSON.stringify([{ file: 'a.ts', severity: 'info', title: 't', body: 'b' }]),
+        JSON.stringify({ promptTokens: 10, completionTokens: 5, totalTokens: 15 }),
+      )
       .run();
     await env.DB.prepare(
-      "INSERT INTO run_reviewers (run_id, reviewer_id, status, findings_json, error) VALUES ('run-d', 'rev-1', 'failed', NULL, 'boom')",
+      "INSERT INTO run_reviewers (run_id, reviewer_id, status, findings_json, summary, usage_json, error) VALUES ('run-d', 'rev-1', 'failed', NULL, NULL, NULL, 'boom')",
     ).run();
     const cookie = await session();
 
@@ -495,9 +600,18 @@ describe('runs api', () => {
         reviewerId: 'rev-0',
         status: 'completed',
         findings: [{ file: 'a.ts', severity: 'info', title: 't', body: 'b' }],
+        summary: 'Looks good.',
+        usage: { promptTokens: 10, completionTokens: 5, totalTokens: 15 },
         error: null,
       },
-      { reviewerId: 'rev-1', status: 'failed', findings: null, error: 'boom' },
+      {
+        reviewerId: 'rev-1',
+        status: 'failed',
+        findings: null,
+        summary: null,
+        usage: null,
+        error: 'boom',
+      },
     ]);
 
     const missing = await app.request(

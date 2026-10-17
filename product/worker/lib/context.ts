@@ -1,4 +1,4 @@
-import type { Reviewer } from '@jury-forge/shared';
+import type { Finding, Reviewer } from '@jury-forge/shared';
 
 // D-010: fixed defaults for v1 — 200 KB total, 32 KB per file, 4 KB of PR description.
 export const CONTEXT_LIMITS = { totalBytes: 200_000, fileBytes: 32_000 };
@@ -114,7 +114,8 @@ export function prioritizedOrder(entries: FilePriorityEntry[]): number[] {
 
 export const OUTPUT_CONTRACT = [
   'Respond with a single JSON object and nothing else:',
-  '{"findings": [{"file": "src/x.ts", "line": 42, "severity": "warning", "title": "…", "body": "…"}]}',
+  '{"summary": "one or two sentences about the change as a whole", "findings": [{"file": "src/x.ts", "line": 42, "startLine": 40, "severity": "warning", "title": "…", "body": "…"}]}',
+  '"summary" is optional, at most 500 characters. Each finding may set "startLine" (smaller than "line") when it spans several lines.',
   '"severity" is "info", "warning", or "error". "title" is at most 120 characters, "body" at most 2000.',
   'Use "line" only when it points at a specific changed line. Report nothing rather than guesses; use an empty findings array when the change is clean.',
 ].join('\n');
@@ -136,7 +137,11 @@ export interface PullRequestInfo {
   body: string | null;
 }
 
-export function buildReviewPrompt(pullRequest: PullRequestInfo, context: ReviewContext): string {
+export function buildReviewPrompt(
+  pullRequest: PullRequestInfo,
+  context: ReviewContext,
+  options: { previousFindings?: Finding[] } = {},
+): string {
   const body = pullRequest.body?.trim() ?? '';
   const description = body === '' ? '(no description)' : truncateToBytes(body, DESCRIPTION_LIMIT);
   const lines: string[] = [
@@ -156,6 +161,25 @@ export function buildReviewPrompt(pullRequest: PullRequestInfo, context: ReviewC
   const notes = contextNotes(context);
   if (notes.length > 0) {
     lines.push('', 'Context notes:', ...notes.map((note) => `- ${note}`));
+  }
+  const previousFindings = options.previousFindings ?? [];
+  if (previousFindings.length > 0) {
+    lines.push(
+      '',
+      'Previously reported findings on this pull request (from an earlier review run):',
+      ...previousFindings.slice(0, 25).map((finding) => {
+        const location =
+          finding.line !== undefined ? `${finding.file}:${finding.line}` : finding.file;
+        return `- \`${location}\` — ${finding.severity} — ${finding.title}`;
+      }),
+    );
+    if (previousFindings.length > 25) {
+      lines.push(`- + ${previousFindings.length - 25} more`);
+    }
+    lines.push(
+      '',
+      'Re-report an item only if it still applies to this revision. Do not repeat an item the current code has fixed.',
+    );
   }
   return lines.join('\n');
 }

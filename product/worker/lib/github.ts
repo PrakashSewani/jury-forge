@@ -200,7 +200,7 @@ export async function fetchPullFiles(
 export interface PullReviewRequest {
   commitId: string;
   body: string;
-  comments: { path: string; line: number; body: string }[];
+  comments: { path: string; line: number; startLine?: number; body: string }[];
 }
 
 export interface CreatedPullReview {
@@ -221,7 +221,18 @@ export async function createPullReview(
       commit_id: review.commitId,
       body: review.body,
       event: 'COMMENT',
-      comments: review.comments,
+      comments: review.comments.map((comment) =>
+        comment.startLine !== undefined
+          ? {
+              path: comment.path,
+              body: comment.body,
+              line: comment.line,
+              start_line: comment.startLine,
+              side: 'RIGHT',
+              start_side: 'RIGHT',
+            }
+          : { path: comment.path, body: comment.body, line: comment.line },
+      ),
     }),
   });
   const payload = await readJsonStrict<{ id: number; html_url: string }>(response);

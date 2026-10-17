@@ -34,7 +34,11 @@ describe('provider adapters', () => {
       }),
     );
 
-    const value = await callProvider({ ...BASE, flavor: 'openai', params: { temperature: 0.2 } });
+    const { value, usage } = await callProvider({
+      ...BASE,
+      flavor: 'openai',
+      params: { temperature: 0.2 },
+    });
 
     expect(seen[0]?.authorization).toBe('Bearer pk-test');
     expect(seen[0]?.body.model).toBe('model-x');
@@ -46,6 +50,7 @@ describe('provider adapters', () => {
     expect(value).toEqual({
       findings: [{ file: 'src/x.ts', line: 3, severity: 'warning', title: 't', body: 'b' }],
     });
+    expect(usage).toBeNull();
   });
 
   it('calls an Anthropic-compatible endpoint with a default max_tokens', async () => {
@@ -67,7 +72,7 @@ describe('provider adapters', () => {
       }),
     );
 
-    const value = await callProvider({
+    const { value } = await callProvider({
       ...BASE,
       baseUrl: 'https://api.example.com',
       flavor: 'anthropic',
@@ -98,6 +103,64 @@ describe('provider adapters', () => {
       params: { max_tokens: 512 },
     });
     expect(maxTokens).toBe(512);
+  });
+
+  it('normalizes OpenAI token usage', async () => {
+    network.use(
+      http.post('https://api.example.com/v1/chat/completions', () =>
+        HttpResponse.json({
+          choices: [{ message: { content: '{"findings":[]}' } }],
+          usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+        }),
+      ),
+    );
+
+    const { usage } = await callProvider({ ...BASE, flavor: 'openai' });
+    expect(usage).toEqual({ promptTokens: 10, completionTokens: 5, totalTokens: 15 });
+  });
+
+  it('normalizes Anthropic token usage with a summed total', async () => {
+    network.use(
+      http.post('https://api.example.com/v1/messages', () =>
+        HttpResponse.json({
+          content: [{ type: 'text', text: '{"findings":[]}' }],
+          usage: { input_tokens: 10, output_tokens: 5 },
+        }),
+      ),
+    );
+
+    const { usage } = await callProvider({
+      ...BASE,
+      baseUrl: 'https://api.example.com',
+      flavor: 'anthropic',
+    });
+    expect(usage).toEqual({ promptTokens: 10, completionTokens: 5, totalTokens: 15 });
+  });
+
+  it('nulls missing or non-numeric usage fields', async () => {
+    network.use(
+      http.post('https://api.example.com/v1/chat/completions', () =>
+        HttpResponse.json({
+          choices: [{ message: { content: '{"findings":[]}' } }],
+          usage: { prompt_tokens: 'ten', total_tokens: 15 },
+        }),
+      ),
+    );
+
+    const { usage } = await callProvider({ ...BASE, flavor: 'openai' });
+    expect(usage).toEqual({ promptTokens: null, completionTokens: null, totalTokens: 15 });
+  });
+
+  it('returns null usage without failing when the envelope reports none', async () => {
+    network.use(
+      http.post('https://api.example.com/v1/chat/completions', () =>
+        HttpResponse.json({ choices: [{ message: { content: '{"findings":[]}' } }] }),
+      ),
+    );
+
+    const { value, usage } = await callProvider({ ...BASE, flavor: 'openai' });
+    expect(value).toEqual({ findings: [] });
+    expect(usage).toBeNull();
   });
 
   it('rejects a non-success response', async () => {

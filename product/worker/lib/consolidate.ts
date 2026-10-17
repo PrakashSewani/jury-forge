@@ -7,6 +7,7 @@ export const FINDING_CAPS = { stored: 50, inlinePerReviewer: 10, inlinePerRun: 2
 const findingSchema = z.object({
   file: z.string().min(1),
   line: z.number().int().positive().optional().catch(undefined),
+  startLine: z.number().int().positive().optional().catch(undefined),
   severity: z.enum(['info', 'warning', 'error']).catch('info'),
   title: z
     .string()
@@ -18,8 +19,12 @@ const findingSchema = z.object({
     .transform((value) => value.slice(0, 2_000)),
 });
 
-/** Validates a provider's parsed output into findings; drops what cannot be repaired. */
-export function parseFindings(raw: unknown): Finding[] {
+export interface ReviewerOutput {
+  summary: string | null;
+  findings: Finding[];
+}
+
+function extractFindings(raw: unknown): Finding[] {
   let list: unknown[] = [];
   if (Array.isArray(raw)) {
     list = raw;
@@ -41,6 +46,24 @@ export function parseFindings(raw: unknown): Finding[] {
     }
   }
   return findings;
+}
+
+/** Validates a provider's parsed output into findings; drops what cannot be repaired. */
+export function parseFindings(raw: unknown): Finding[] {
+  return parseReviewerOutput(raw).findings;
+}
+
+/** Output contract v2 (D-020): the optional reviewer summary plus its findings. */
+export function parseReviewerOutput(raw: unknown): ReviewerOutput {
+  let summary: string | null = null;
+  if (raw !== null && typeof raw === 'object') {
+    const value = (raw as { summary?: unknown }).summary;
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      summary = trimmed === '' ? null : trimmed.slice(0, 500);
+    }
+  }
+  return { summary, findings: extractFindings(raw) };
 }
 
 /** The right-side (new file) line numbers a patch makes commentable. */
@@ -115,7 +138,19 @@ export function consolidateReview(
       const lines = linesOf(finding.file);
       const commentable = line !== undefined && lines !== null && lines.has(line);
       if (commentable && inlined < caps.perReviewer && inline.length < caps.perRun) {
-        inline.push({ reviewerId: reviewer.reviewerId, finding: { ...finding, line } });
+        const startLine =
+          finding.startLine !== undefined &&
+          finding.startLine < line &&
+          lines.has(finding.startLine)
+            ? finding.startLine
+            : undefined;
+        const normalized: Finding & { line: number } = { ...finding, line };
+        if (startLine === undefined) {
+          delete normalized.startLine;
+        } else {
+          normalized.startLine = startLine;
+        }
+        inline.push({ reviewerId: reviewer.reviewerId, finding: normalized });
         inlined += 1;
       } else {
         overflowed.push(finding);
