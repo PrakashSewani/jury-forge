@@ -1,6 +1,8 @@
 import type { Reviewer } from '@jury-forge/shared';
+import { RepositorySchema, ReviewerSchema } from '@jury-forge/shared';
 import type { ChangeEvent } from 'react';
 import { useCallback, useRef, useState } from 'react';
+import { z } from 'zod';
 import {
   downloadReviewersExport,
   exportReviewers,
@@ -9,7 +11,8 @@ import {
   listReviewers,
   updateReviewer,
 } from '../lib/api';
-import { useLoadable } from '../lib/use-loadable';
+import { handleAppLink } from '../lib/router';
+import { useResource } from '../lib/use-resource';
 import {
   Badge,
   Button,
@@ -28,22 +31,24 @@ import {
 import { errorMessage } from './messages';
 import { PageError, PageLoading } from './screen-state';
 
-interface ReviewersData {
-  reviewers: Reviewer[];
-  enabledRepoCount: number;
-}
+const ReviewersDataSchema = z.object({
+  reviewers: z.array(ReviewerSchema),
+  repositories: z.array(RepositorySchema),
+});
 
 type NoticeState = { tone: 'error' | 'info'; text: string };
 
 export default function ReviewersPage() {
-  const load = useCallback(async (): Promise<ReviewersData> => {
-    const [reviewers, repositories] = await Promise.all([listReviewers(), listRepositories()]);
-    return {
-      reviewers,
-      enabledRepoCount: repositories.filter((repository) => repository.enabled).length,
-    };
+  const load = useCallback(async (signal: AbortSignal) => {
+    const [reviewers, repositories] = await Promise.all([
+      listReviewers(signal),
+      listRepositories(false, signal),
+    ]);
+    return { reviewers, repositories };
   }, []);
-  const { data, failed, reload } = useLoadable(load);
+  const { data, failed, reload } = useResource(ReviewersDataSchema, load);
+  const enabledRepoCount =
+    data?.repositories.filter((repository) => repository.enabled).length ?? 0;
   const [notice, setNotice] = useState<NoticeState | null>(null);
   const [busy, setBusy] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -127,7 +132,7 @@ export default function ReviewersPage() {
             ref={fileInput}
             type="file"
           />
-          <a className={buttonClass} href="/reviewers/new">
+          <a className={buttonClass} href="/reviewers/new" onClick={handleAppLink}>
             New reviewer
           </a>
         </Toolbar>
@@ -143,7 +148,7 @@ export default function ReviewersPage() {
       ) : data.reviewers.length === 0 ? (
         <EmptyState
           action={
-            <a className={buttonClass} href="/reviewers/new">
+            <a className={buttonClass} href="/reviewers/new" onClick={handleAppLink}>
               New reviewer
             </a>
           }
@@ -172,6 +177,7 @@ export default function ReviewersPage() {
                       <a
                         className={`inline-flex items-center hover:underline ${tapTarget} ${focusRing}`}
                         href={`/reviewers/${encodeURIComponent(reviewer.id)}`}
+                        onClick={handleAppLink}
                       >
                         {reviewer.name}
                       </a>
@@ -188,9 +194,8 @@ export default function ReviewersPage() {
                     <td className="pr-4 text-text-body">
                       {repositories.length === 0 ? (
                         <span className="text-text-muted">None</span>
-                      ) : repositories.length === data.enabledRepoCount &&
-                        data.enabledRepoCount > 0 ? (
-                        `All ${data.enabledRepoCount} enabled repositories`
+                      ) : repositories.length === enabledRepoCount && enabledRepoCount > 0 ? (
+                        `All ${enabledRepoCount} enabled repositories`
                       ) : (
                         repositories.join(', ')
                       )}
@@ -206,6 +211,7 @@ export default function ReviewersPage() {
                       <a
                         className={secondaryButtonClass}
                         href={`/reviewers/${encodeURIComponent(reviewer.id)}`}
+                        onClick={handleAppLink}
                       >
                         Edit
                       </a>

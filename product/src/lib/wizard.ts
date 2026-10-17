@@ -1,4 +1,5 @@
 import type { SetupCodeResponse, SetupState } from '@jury-forge/shared';
+import { message } from '@jury-forge/shared';
 
 export type WizardStep = 'code' | 'install' | 'claim' | 'done';
 
@@ -61,6 +62,9 @@ export function installUrl(appSlug: string): string {
   return `https://github.com/apps/${encodeURIComponent(appSlug)}/installations/new`;
 }
 
+// The setup flow keeps its own, more explicit sentences for the codes an operator hits while
+// standing up an instance; every other code is delegated to the shared taxonomy so no sentence is
+// duplicated here.
 const SETUP_ERROR_MESSAGES: Record<string, string> = {
   invalid_code:
     'That code does not match the SETUP_CODE secret on this instance. Check the value with "npx wrangler secret put SETUP_CODE".',
@@ -69,18 +73,14 @@ const SETUP_ERROR_MESSAGES: Record<string, string> = {
     'This instance has no SETUP_CODE secret yet. Set it with "npx wrangler secret put SETUP_CODE" and reload.',
   encryption_key_unset:
     'This instance has no ENCRYPTION_KEY secret yet. Set it with "npx wrangler secret put ENCRYPTION_KEY" and reload.',
-  setup_session_required:
-    'The setup session expired or was lost. Re-enter the setup code to continue.',
   app_missing: 'No GitHub App is registered on this instance yet. Start from the setup code step.',
-  installation_required:
-    'Sign-in finished, but no installation exists yet. Install the app on your account, then try the claim again.',
-  access_denied:
-    "Your GitHub account cannot access this instance's installation. Sign in as the owner, or as a member of the organization the app is installed on.",
   invalid_state: 'That link expired or was already used. Start again from the setup code step.',
   invalid_request: 'The request was rejected. Try again.',
   request_failed: 'Something went wrong. Try again.',
 };
 
+const SETUP_FALLBACK = 'Something went wrong. Try again.';
+
 export function setupErrorMessage(code: string): string {
-  return SETUP_ERROR_MESSAGES[code] ?? SETUP_ERROR_MESSAGES.request_failed;
+  return SETUP_ERROR_MESSAGES[code] ?? message(code, SETUP_FALLBACK);
 }

@@ -1,19 +1,23 @@
 import type { Repository, RepositoryReviewer } from '@jury-forge/shared';
+import { RepositorySchema } from '@jury-forge/shared';
 import { Fragment, useCallback, useState } from 'react';
+import { z } from 'zod';
 import {
   getRepositoryReviewers,
   listRepositories,
   saveRepositoryReviewers,
   setRepositoryEnabled,
 } from '../lib/api';
-import { useLoadable } from '../lib/use-loadable';
+import { useResource } from '../lib/use-resource';
 import { Badge, Button, Card, EmptyState, Notice, Row, Switch, Table } from '../ui';
 import { errorMessage } from './messages';
 import { PageError, PageLoading } from './screen-state';
 
+const RepositoriesSchema = z.array(RepositorySchema);
+
 export default function RepositoriesPage() {
-  const load = useCallback(() => listRepositories(), []);
-  const { data, failed, reload } = useLoadable(load);
+  const load = useCallback((signal: AbortSignal) => listRepositories(false, signal), []);
+  const { data, failed, reload } = useResource(RepositoriesSchema, load);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState<string | null>(null);
 

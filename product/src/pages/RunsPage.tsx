@@ -15,6 +15,8 @@ import {
   startTryRun,
 } from '../lib/api';
 import { formatRelativeTime, runStatusTone, shortSha } from '../lib/format';
+import { handleAppLink, navigate } from '../lib/router';
+import { usePoll } from '../lib/use-poll';
 import {
   Badge,
   Button,
@@ -142,7 +144,7 @@ function TryRunDialog({
         prNumber: Number(prNumber),
         reviewerIds: [reviewerId],
       });
-      window.location.href = '/runs/' + encodeURIComponent(response.runId);
+      navigate('/runs/' + encodeURIComponent(response.runId));
     } catch (caught) {
       setError(errorMessage(caught, 'The trial run could not be started. Try again.'));
       setBusy(false);
@@ -250,10 +252,13 @@ export default function RunsPage() {
   const [repo, setRepo] = useState('all');
   const [tryOpen, setTryOpen] = useState(false);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (signal?: AbortSignal) => {
     setFailed(false);
     try {
-      const [page, repositories] = await Promise.all([listRuns(), listRepositories()]);
+      const [page, repositories] = await Promise.all([
+        listRuns(undefined, signal),
+        listRepositories(false, signal),
+      ]);
       setData({
         runs: page.runs,
         nextCursor: page.nextCursor,
@@ -261,13 +266,19 @@ export default function RunsPage() {
         repositories,
       });
     } catch {
-      setFailed(true);
+      if (!signal?.aborted) {
+        setFailed(true);
+      }
     }
   }, []);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  const hasRunning = data?.runs.some((run) => run.status === 'running') ?? false;
+  const poll = useCallback((signal: AbortSignal) => load(signal), [load]);
+  usePoll(poll, { intervalMs: 5000, active: hasRunning });
 
   async function loadMore() {
     if (data === null || data.nextCursor === null) {
@@ -320,7 +331,7 @@ export default function RunsPage() {
         ) : data.runs.length === 0 ? (
           <EmptyState
             action={
-              <a className={buttonClass} href="/repositories">
+              <a className={buttonClass} href="/repositories" onClick={handleAppLink}>
                 Enable a repository
               </a>
             }
@@ -383,6 +394,7 @@ export default function RunsPage() {
                             focusRing,
                           )}
                           href={`/runs/${encodeURIComponent(run.id)}`}
+                          onClick={handleAppLink}
                         >
                           {data.repos.get(run.repoId) ?? `repo ${run.repoId}`}
                         </a>

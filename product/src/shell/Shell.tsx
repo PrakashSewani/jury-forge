@@ -3,6 +3,7 @@ import { PRODUCT_NAME } from '@jury-forge/shared';
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import type { Route } from '../lib/router';
+import { handleAppLink } from '../lib/router';
 import type { BadgeTone } from '../ui';
 import { Badge, cx, focusRing, tapTarget } from '../ui';
 import { Nav } from './Nav';
@@ -67,6 +68,7 @@ export function Shell({ user, setup, route, onLogout, busy = false, children }: 
                 focusRing,
               )}
               href="/"
+              onClick={handleAppLink}
             >
               {PRODUCT_NAME}
             </a>
@@ -104,6 +106,7 @@ export function Shell({ user, setup, route, onLogout, busy = false, children }: 
                   focusRing,
                 )}
                 href="/"
+                onClick={handleAppLink}
               >
                 {PRODUCT_NAME}
               </a>
@@ -130,6 +133,7 @@ export function Shell({ user, setup, route, onLogout, busy = false, children }: 
                 focusRing,
               )}
               href="/"
+              onClick={handleAppLink}
             >
               {PRODUCT_NAME}
             </a>

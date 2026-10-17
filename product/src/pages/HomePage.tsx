@@ -1,32 +1,41 @@
-import type { InstanceReadiness, RunSummary, SessionUser } from '@jury-forge/shared';
-import { PRODUCT_TAGLINE } from '@jury-forge/shared';
-import { useCallback } from 'react';
+import type { SessionUser } from '@jury-forge/shared';
+import {
+  InstanceReadinessSchema,
+  PRODUCT_TAGLINE,
+  RepositorySchema,
+  RunsPageSchema,
+} from '@jury-forge/shared';
+import { useCallback, useMemo } from 'react';
+import { z } from 'zod';
 import { getReadiness, listRepositories, listRuns } from '../lib/api';
 import { formatRelativeTime, runStatusTone } from '../lib/format';
-import { useLoadable } from '../lib/use-loadable';
+import { handleAppLink } from '../lib/router';
+import { useResource } from '../lib/use-resource';
 import { Badge, buttonClass, Card, cx, EmptyState, focusRing, Row, Table, tapTarget } from '../ui';
 import { PageError, PageLoading } from './screen-state';
 
-interface Overview {
-  readiness: InstanceReadiness;
-  runs: RunSummary[];
-  repos: Map<number, string>;
-}
+const HomeDataSchema = z.object({
+  readiness: InstanceReadinessSchema,
+  runsPage: RunsPageSchema,
+  repositories: z.array(RepositorySchema),
+});
+
+type HomeData = z.infer<typeof HomeDataSchema>;
 
 export default function HomePage({ user }: { user: SessionUser }) {
-  const load = useCallback(async (): Promise<Overview> => {
-    const [readiness, page, repositories] = await Promise.all([
-      getReadiness(),
-      listRuns(),
-      listRepositories(),
+  const load = useCallback(async (signal: AbortSignal): Promise<HomeData> => {
+    const [readiness, runsPage, repositories] = await Promise.all([
+      getReadiness(signal),
+      listRuns(undefined, signal),
+      listRepositories(false, signal),
     ]);
-    return {
-      readiness,
-      runs: page.runs,
-      repos: new Map(repositories.map((repository) => [repository.repoId, repository.fullName])),
-    };
+    return { readiness, runsPage, repositories };
   }, []);
-  const { data, failed, reload } = useLoadable(load);
+  const { data, failed, reload } = useResource(HomeDataSchema, load);
+  const repos = useMemo(
+    () => new Map((data?.repositories ?? []).map((repo) => [repo.repoId, repo.fullName])),
+    [data],
+  );
 
   return (
     <div className="space-y-8">
@@ -56,7 +65,11 @@ export default function HomePage({ user }: { user: SessionUser }) {
                 <p className="text-sm font-semibold">{data.readiness.nextStep.title}</p>
                 <p className="text-sm text-text-muted">{data.readiness.nextStep.body}</p>
               </div>
-              <a className={buttonClass} href={data.readiness.nextStep.href}>
+              <a
+                className={buttonClass}
+                href={data.readiness.nextStep.href}
+                onClick={handleAppLink}
+              >
                 {data.readiness.nextStep.label}
               </a>
             </div>
@@ -70,6 +83,7 @@ export default function HomePage({ user }: { user: SessionUser }) {
                       focusRing,
                     )}
                     href={step.href}
+                    onClick={handleAppLink}
                   >
                     <span>{step.label}</span>
                     <Badge tone={step.done ? 'green' : 'neutral'}>
@@ -82,10 +96,10 @@ export default function HomePage({ user }: { user: SessionUser }) {
           </Card>
 
           <Card title="Recent runs">
-            {data.runs.length === 0 ? (
+            {data.runsPage.runs.length === 0 ? (
               <EmptyState
                 action={
-                  <a className={buttonClass} href="/reviewers">
+                  <a className={buttonClass} href="/reviewers" onClick={handleAppLink}>
                     Create a reviewer
                   </a>
                 }
@@ -104,7 +118,7 @@ export default function HomePage({ user }: { user: SessionUser }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {data.runs.slice(0, 5).map((run) => (
+                    {data.runsPage.runs.slice(0, 5).map((run) => (
                       <Row className="border-b border-border last:border-0" key={run.id}>
                         <td className="pr-4">
                           <a
@@ -114,8 +128,9 @@ export default function HomePage({ user }: { user: SessionUser }) {
                               focusRing,
                             )}
                             href={`/runs/${encodeURIComponent(run.id)}`}
+                            onClick={handleAppLink}
                           >
-                            {data.repos.get(run.repoId) ?? `repo ${run.repoId}`}
+                            {repos.get(run.repoId) ?? `repo ${run.repoId}`}
                           </a>
                         </td>
                         <td className="pr-4">#{run.prNumber}</td>
@@ -130,7 +145,7 @@ export default function HomePage({ user }: { user: SessionUser }) {
                   </tbody>
                 </Table>
                 <div>
-                  <a className={cx(buttonClass, 'mt-2')} href="/runs">
+                  <a className={cx(buttonClass, 'mt-2')} href="/runs" onClick={handleAppLink}>
                     All runs
                   </a>
                 </div>

@@ -1,7 +1,8 @@
 import type { InstanceSettings, SettingsResponse } from '@jury-forge/shared';
+import { SettingsResponseSchema } from '@jury-forge/shared';
 import { useCallback, useState } from 'react';
 import { getSettings, updateSettings } from '../lib/api';
-import { useLoadable } from '../lib/use-loadable';
+import { useResource } from '../lib/use-resource';
 import { Button, Card, Field, Input, Notice, Switch } from '../ui';
 import { errorMessage } from './messages';
 import { PageError, PageLoading } from './screen-state';
@@ -65,8 +66,8 @@ const CONTEXT_FIELDS: NumberField[] = [
 ];
 
 export default function SettingsPage() {
-  const load = useCallback(() => getSettings(), []);
-  const { data, failed, reload } = useLoadable(load);
+  const load = useCallback((signal: AbortSignal) => getSettings(signal), []);
+  const { data, failed, reload } = useResource(SettingsResponseSchema, load);
   const [server, setServer] = useState<SettingsResponse | null>(null);
   const [draft, setDraft] = useState<Partial<InstanceSettings>>({});
   const [busy, setBusy] = useState(false);
