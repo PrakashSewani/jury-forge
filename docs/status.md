@@ -49,13 +49,14 @@ clean tree afterwards. The command was run on the Mac checkout of record
 that script is deliberately not exercised against a real Cloudflare account here — no part of this
 change deploys anything.
 
-**Rework (2026-10-17):** the post-phase-2 rework is four stacked slices. Slice A is uncommitted in
-the working tree on `feat/rework-a-design-system-20261017`; nothing has been pushed.
+**Rework (2026-10-17):** the post-phase-2 rework is four stacked slices. Slice A is committed on
+`feat/rework-a-design-system-20261017` (`0d379c3`); slice B's branch is
+`feat/rework-b-shell-screens-20261017`; nothing has been pushed.
 
 | Slice | Branch                                 | Status      |
 | ----- | -------------------------------------- | ----------- |
-| A     | `feat/rework-a-design-system-20261017` | in progress |
-| B     | —                                      | not started |
+| A     | `feat/rework-a-design-system-20261017` | in review   |
+| B     | `feat/rework-b-shell-screens-20261017` | in progress |
 | C     | —                                      | not started |
 | D     | —                                      | not started |
 
@@ -66,11 +67,24 @@ the toggle is slice B), and a second happy-dom vitest project with 54 UI tests. 
 no-op: no page, worker, shared, or site source changed. Scopes for B/C/D are in
 `docs/roadmap.md`; the rework is product work, not a phase, so phase 3 stays `not started`.
 
-**Verified:** `npm run check` exit 0 — workerd 170/170 · UI 54/54.
+**Slice A:** open for review as PR #17 (`6201eda` docs, `0d379c3` implementation; CI `check`
+success). **Slice B run 1 (2026-10-17):** landed `scripts/measure-layout.mjs`, a dependency-free Chrome
+DevTools Protocol layout harness, and captured the pre-change baseline under `docs/rework/`
+(`README.md`, `baseline.json`, `baseline.md`; the 32 baseline PNGs are regenerable and gitignored). The harness measures
+the eight dashboard screens at seven widths (320–1440) in light and dark for horizontal overflow,
+mobile tap targets, contrast, focus indicators and the 390 px nav. The baseline measures the
+app exactly as slice A left it — no page, worker, `shared/`, `site/` or slice A source changed.
+It fails as expected: no mobile nav, all mobile widths overflow, tap targets under 44 px, and the
+`text-neutral-400` footer/log-out text is ~2.5:1. The numbers are in `docs/rework/baseline.md`.
+
+**Verified:** `npm run check` exit 0 — workerd 170/170 · UI 54/54 · harness run exit 0 with the
+browser and dev server both reaped.
 
 **Blocked by:** nothing.
 
-**Next action:** open slice A's PR against `dev` (`feat/rework-a-design-system-20261017`).
+**Next action:** slice B's actual styling work — rewrite the shell and the eight screens on the
+`product/src/ui/` primitives with the dark-mode toggle, then re-run the harness as a delta against
+`docs/rework/baseline.json`.
 
 ## Backlog (owner-owned, deferred)
 

@@ -40,3 +40,6 @@ coverage/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Regenerable measurement artefacts — the numbers are committed in docs/rework/*.json|*.md
+docs/rework/screens-*/
