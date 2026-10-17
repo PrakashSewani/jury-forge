@@ -7,6 +7,8 @@ import type {
   RepositoryReviewer,
   RepositoryReviewerUpdate,
   Reviewer,
+  ReviewersExportDocument,
+  ReviewersImportResult,
   RunDetail,
   RunsPage,
   SessionUser,
@@ -120,6 +122,33 @@ export interface ReviewerUpdateInput extends Partial<ReviewerDraft> {
 
 export function listReviewers(): Promise<Reviewer[]> {
   return request('/api/reviewers');
+}
+
+export function exportReviewers(): Promise<ReviewersExportDocument> {
+  return request('/api/reviewers/export');
+}
+
+export function importReviewers(input: unknown): Promise<ReviewersImportResult> {
+  return request('/api/reviewers/import', {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify(input),
+  });
+}
+
+/** Turns an exported document into a downloaded JSON file. */
+export function downloadReviewersExport(exportDocument: ReviewersExportDocument): void {
+  const blob = new Blob([JSON.stringify(exportDocument, null, 2)], {
+    type: 'application/json',
+  });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = 'jury-forge-reviewers.json';
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
 }
 
 export function getReviewer(id: string): Promise<Reviewer> {

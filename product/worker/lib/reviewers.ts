@@ -1,4 +1,10 @@
-import type { ProviderFlavor, Reviewer } from '@jury-forge/shared';
+import type {
+  ProviderFlavor,
+  Reviewer,
+  ReviewerExport,
+  ReviewersExportDocument,
+  ReviewersImportResult,
+} from '@jury-forge/shared';
 import { z } from 'zod';
 import {
   encryptSecret,
@@ -46,6 +52,56 @@ export const reviewerUpdate = z.object({
 
 export type ReviewerCreate = z.infer<typeof reviewerCreate>;
 export type ReviewerUpdate = z.infer<typeof reviewerUpdate>;
+
+export const REVIEWERS_IMPORT_VERSION = 1;
+export const REVIEWERS_IMPORT_MAX = 100;
+
+const importEntry = z.object({
+  name: z.string().max(120).optional(),
+  instructions: z.string().max(20_000).default(''),
+  rules: z.string().max(20_000).default(''),
+  flavor: z.enum(['openai', 'anthropic']),
+  baseUrl,
+  model: z.string().min(1).max(200),
+  params: z.record(z.string(), z.unknown()).default({}),
+  enabled: z.boolean().default(true),
+});
+
+/**
+ * An exported reviewer document. Unknown keys are stripped by zod, so an imported entry that
+ * carries an `apiKey` never stores one.
+ */
+export const reviewersImportDocument = z.object({
+  version: z.literal(REVIEWERS_IMPORT_VERSION),
+  reviewers: z.array(importEntry).max(REVIEWERS_IMPORT_MAX),
+});
+
+export type ReviewersImportDocument = z.infer<typeof reviewersImportDocument>;
+
+export function toReviewerExport(reviewer: Reviewer): ReviewerExport {
+  return {
+    name: reviewer.name,
+    instructions: reviewer.instructions,
+    rules: reviewer.rules,
+    flavor: reviewer.flavor,
+    baseUrl: reviewer.baseUrl,
+    model: reviewer.model,
+    params: reviewer.params,
+    enabled: reviewer.enabled,
+  };
+}
+
+/** `listReviewers` already orders by name, so the export keeps that order. */
+export function buildExportDocument(
+  reviewers: Reviewer[],
+  exportedAt: number,
+): ReviewersExportDocument {
+  return {
+    version: REVIEWERS_IMPORT_VERSION,
+    exportedAt,
+    reviewers: reviewers.map(toReviewerExport),
+  };
+}
 
 interface ReviewerRow {
   id: string;
@@ -200,4 +256,109 @@ async function encryptKeyValue(ring: EncryptionKeyRing | null, value: string): P
     throw new Error('an encryption key is required to store provider API keys');
   }
   return encryptSecret(ring, value);
+}
+
+function normalizeName(name: string): string {
+  return name.trim().toLowerCase();
+}
+
+/** Canonical form so equal param objects compare equal regardless of key order. */
+function stableStringify(value: unknown): string {
+  if (value === null || typeof value !== 'object') {
+    return JSON.stringify(value) ?? 'undefined';
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map(stableStringify).join(',')}]`;
+  }
+  const entries = Object.entries(value as Record<string, unknown>).sort(([a], [b]) =>
+    a < b ? -1 : a > b ? 1 : 0,
+  );
+  return `{${entries.map(([key, item]) => `${JSON.stringify(key)}:${stableStringify(item)}`).join(',')}}`;
+}
+
+/** Only the fields that differ from the stored reviewer; never `apiKey`. */
+function importPatch(current: Reviewer, desired: ReviewerExport): ReviewerUpdate {
+  const patch: ReviewerUpdate = {};
+  if (current.name !== desired.name) {
+    patch.name = desired.name;
+  }
+  if (current.instructions !== desired.instructions) {
+    patch.instructions = desired.instructions;
+  }
+  if (current.rules !== desired.rules) {
+    patch.rules = desired.rules;
+  }
+  if (current.flavor !== desired.flavor) {
+    patch.flavor = desired.flavor;
+  }
+  if (current.baseUrl !== desired.baseUrl) {
+    patch.baseUrl = desired.baseUrl;
+  }
+  if (current.model !== desired.model) {
+    patch.model = desired.model;
+  }
+  if (stableStringify(current.params) !== stableStringify(desired.params)) {
+    patch.params = desired.params;
+  }
+  if (current.enabled !== desired.enabled) {
+    patch.enabled = desired.enabled;
+  }
+  return patch;
+}
+
+/**
+ * Merges an exported document by case-insensitive, trimmed name. New names are created without a
+ * key; existing reviewers are patched field by field, never touching `api_key_enc`. The document
+ * is validated whole before this runs, and an entry with no usable name writes nothing.
+ */
+export async function importReviewers(
+  db: D1Database,
+  ring: EncryptionKeyRing | null,
+  document: ReviewersImportDocument,
+): Promise<ReviewersImportResult> {
+  const result: ReviewersImportResult = { created: 0, updated: 0, unchanged: 0, skipped: 0 };
+  const existing = new Map<string, Reviewer>();
+  for (const reviewer of await listReviewers(db)) {
+    existing.set(normalizeName(reviewer.name), reviewer);
+  }
+
+  for (const entry of document.reviewers) {
+    const name = (entry.name ?? '').trim();
+    if (name === '') {
+      result.skipped += 1;
+      continue;
+    }
+    const desired: ReviewerExport = {
+      name,
+      instructions: entry.instructions,
+      rules: entry.rules,
+      flavor: entry.flavor,
+      baseUrl: entry.baseUrl,
+      model: entry.model,
+      params: entry.params,
+      enabled: entry.enabled,
+    };
+    const key = normalizeName(name);
+    const current = existing.get(key);
+    if (current === undefined) {
+      const id = crypto.randomUUID();
+      await insertReviewer(db, id, ring, desired);
+      const created = await getReviewer(db, id);
+      if (created) {
+        existing.set(key, created);
+      }
+      result.created += 1;
+      continue;
+    }
+
+    const patch = importPatch(current, desired);
+    if (Object.keys(patch).length === 0) {
+      result.unchanged += 1;
+      continue;
+    }
+    await updateReviewerRow(db, current.id, ring, patch);
+    result.updated += 1;
+  }
+
+  return result;
 }

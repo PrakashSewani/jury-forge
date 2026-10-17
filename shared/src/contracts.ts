@@ -64,6 +64,30 @@ export interface Reviewer {
   hasApiKey: boolean;
 }
 
+export interface ReviewerExport {
+  name: string;
+  instructions: string;
+  rules: string;
+  flavor: ProviderFlavor;
+  baseUrl: string;
+  model: string;
+  params: Record<string, unknown>;
+  enabled: boolean;
+}
+
+export interface ReviewersExportDocument {
+  version: number; // 1
+  exportedAt: number;
+  reviewers: ReviewerExport[];
+}
+
+export interface ReviewersImportResult {
+  created: number;
+  updated: number;
+  unchanged: number;
+  skipped: number;
+}
+
 export interface Repository {
   repoId: number;
   fullName: string;

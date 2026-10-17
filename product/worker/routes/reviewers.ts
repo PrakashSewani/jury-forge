@@ -1,12 +1,16 @@
 import { Hono } from 'hono';
+import type { ReviewersImportResult } from '@jury-forge/shared';
 import { recordActivity } from '../lib/activity';
 import { keyRingValues, loadKeyRing } from '../lib/crypto';
 import {
+  buildExportDocument,
   deleteReviewerRow,
   getReviewer,
+  importReviewers,
   insertReviewer,
   listReviewers,
   reviewerCreate,
+  reviewersImportDocument,
   reviewerUpdate,
   updateReviewerRow,
   type ReviewerUpdate,
@@ -19,6 +23,29 @@ reviewerRoutes.use('*', requireSession(), sameOrigin());
 
 reviewerRoutes.get('/', async (c) => {
   return c.json(await listReviewers(c.env.DB));
+});
+
+reviewerRoutes.get('/export', async (c) => {
+  const reviewers = await listReviewers(c.env.DB);
+  c.header('Content-Disposition', 'attachment; filename="jury-forge-reviewers.json"');
+  return c.json(buildExportDocument(reviewers, Math.floor(Date.now() / 1_000)));
+});
+
+reviewerRoutes.post('/import', async (c) => {
+  const parsed = reviewersImportDocument.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) {
+    return c.json({ error: 'invalid_request' }, 400);
+  }
+  const values = keyRingValues(c.env);
+  const ring = values ? await loadKeyRing(values) : null;
+  const result = await importReviewers(c.env.DB, ring, parsed.data);
+  await recordActivity(c.env.DB, {
+    actor: c.get('user').login,
+    action: 'reviewer_import',
+    target: null,
+    detail: importDetail(result),
+  });
+  return c.json(result);
 });
 
 reviewerRoutes.post('/', async (c) => {
@@ -113,4 +140,8 @@ function reviewerUpdateDetail(patch: ReviewerUpdate, apiKeyReencrypted: boolean)
     parts.push('api_key: re-wrapped');
   }
   return parts.length === 0 ? null : parts.join(', ');
+}
+
+function importDetail(result: ReviewersImportResult): string {
+  return `created ${result.created}, updated ${result.updated}, unchanged ${result.unchanged}, skipped ${result.skipped}`;
 }
