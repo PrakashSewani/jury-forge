@@ -763,7 +763,10 @@ focus 0, mobileNav 16. After the shell (screens still raw): 88 failing cells —
 focus 0, mobileNav 0. **Final, after the eight screens, re-run by the orchestrator with `--assert`
 on the branch tip: 112 cells measured, 0 failing** (overflow 0, tapTargets 0, contrast 0, focus 0,
 mobileNav 0), 51.4 s, browser and dev server both reaped. The numbers live in
-`docs/rework/baseline.json`, `shell.json` and `final.json`, with the sheets beside them.
+`docs/rework/baseline.json` and `final.json`, with the three sheets beside them (`shell.json`, the
+intermediate checkpoint, was dropped at PR time — `docs/rework/README.md` has the reasoning).
+Re-verified while opening the PR: the harness run at `a43497f` reported 112 cells and **0 failing**
+in 50.7 s with **0 per-cell numeric differences** against the committed `final.json`.
 
 **Rejected:** keeping `--color-text-muted` at neutral-500 (4.5:1 is the floor, not a target — a
 marginal pass breaks on any slightly different surface); a `:focus` outline instead of

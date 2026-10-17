@@ -24,6 +24,8 @@ for 112 cells. Per cell it records:
 - **Focus indicator** — the first three interactive elements are reached with a real **Tab**
   keypress and their outline and box-shadow are read while they are `:focus-visible`.
 - **Mobile nav** — at 390 px, whether a nav toggle exists and whether clicking it reveals a nav.
+  (The plan's wording said 360 px; the check is pinned to 390 px instead. All seven widths are still
+  measured as cells for overflow, tap targets, contrast and focus — only 390 asserts the nav.)
 
 ## Acceptance thresholds
 
@@ -92,14 +94,27 @@ output paths. The script uses only Node builtins — no dependency is added.
   and 2.58:1), focus 0 (the corrected check — the app's own `:focus-visible` ring), mobileNav 16.
   Slice B was rebased onto `77541fb` after slice A merged, so the baseline was measured there
   rather than on A's unreviewed head; the first capture and the re-capture agree cell for cell.
-- `shell.json` / `shell.md` / `screens-shell/` — the after-the-shell run (work items 1–3), still
-  before the eight screens are rewritten: 88 failing cells, overflow 4, tapTargets 64 (176
-  violations), contrast 56 (dark cells only — the light theme passes), focus 0, mobileNav 0.
+- `shell.md` / `screens-shell/` — the after-the-shell run (work items 1–3), still before the
+  eight screens are rewritten: 88 failing cells, overflow 4, tapTargets 64 (176 violations),
+  contrast 56 (dark cells only — the light theme passes), focus 0, mobileNav 0. The matching JSON
+  is not in the tree — see "Evidence kept, and what was dropped" below.
 - `final.json` / `final.md` / `screens-final/` — the branch tip after the eight screens were rebuilt
   on the primitives: **0 of 112 cells failing** (overflow 0, tapTargets 0, contrast 0, focus 0,
   mobileNav 0), captured with `--assert` so any failing cell would have failed the command. The
   delta against `baseline.json` is slice B's evidence.
 
-`shell.json` is the intermediate state — the shell had landed while the screens were still raw — and
-is kept rather than overwritten so the intermediate numbers stay readable. The `screens-*/` PNGs are
-regenerable and gitignored.
+The `screens-*/` PNGs are regenerable and gitignored.
+
+## Evidence kept, and what was dropped (2026-10-17)
+
+Both endpoint sheets stay in the tree, because they are the delta: `baseline.json` (112/112 cells
+failing, measured on `dev`'s source at `77541fb`) and `final.json` (**0 of 112 cells failing** on the
+branch tip, captured with `--assert`). All three `.md` sheets stay as well — they are the readable
+record, and `shell.md` carries the intermediate numbers in full.
+
+**Dropped: `shell.json` (435 KB, 15,431 lines).** It is the intermediate checkpoint — the shell had
+landed while the eight screens were still raw — and every number in it is in `shell.md`: 88 failing
+cells, overflow 4, tapTargets 64 (176 violations), contrast 56 (dark cells only), focus 0, mobileNav 0. It describes a state the branch no longer has, it is regenerable with the command above, and it
+stays retrievable from the commit that added it (`a43497f`). A third 112-cell grid for a superseded
+state says nothing the two endpoints and the three sheets do not already say, and the sheets are what
+the rework is reviewed against.

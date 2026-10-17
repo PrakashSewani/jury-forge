@@ -91,7 +91,8 @@ targets, and `Loading`/`LoadFailed` moved to theme-flipping tokens. `scripts/mea
 two methodological fixes — keyboard (`Tab`) focus instead of scripted `.focus()`, and the WCAG 2.5.5
 inline-link tap-target exemption — and the baseline was **re-captured** with the amended harness, on
 `dev`'s source at `77541fb`, so before/after share one rule and one base.
-`docs/rework/shell.json` is the after-shell run. At that point the eight screens were untouched:
+`docs/rework/shell.md` is the after-shell run (`shell.json` was dropped at PR time as the redundant
+intermediate sheet — `docs/rework/README.md` says why). At that point the eight screens were untouched:
 overflow remained only on the `/reviewers` toolbar at 320–360 px and contrast still failed on the
 dark theme, both deferred to run 3.
 
