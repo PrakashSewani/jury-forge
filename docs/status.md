@@ -34,8 +34,9 @@ toggle → runs list → run detail with findings, all against live local state.
 
 **Blocked by:** nothing. Phase 2 is code-complete; every slice is in review.
 
-**Next action:** review and merge the stack (#9 → #10 → #11 → #12, retargeting each in turn);
-phase 3 (the promo site) begins after per the phase tracker.
+**Next action:** review and merge the stack in order (#9 → #10 → #11 → #12, retargeting each in
+turn); the accepted post-phase-2 improvement slate is recorded in `docs/roadmap.md` (D-017) and
+its first slice (run hygiene) is next; phase 3 (the promo site) follows.
 
 ## Backlog (owner-owned, deferred)
 
