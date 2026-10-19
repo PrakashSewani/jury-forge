@@ -7,7 +7,7 @@ import type {
   RunSummary,
   SettingsResponse,
 } from '@jury-forge/shared';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -157,6 +157,15 @@ const REPO: Repository = {
   private: true,
   enabled: true,
 };
+
+const SITE: Repository = { ...REPO, repoId: 102, fullName: 'prakashsewani/site' };
+
+/** The worker's rule, mirrored: `full_name` contains the term, case-insensitively. */
+function matching(query: string, repositories: Repository[] = [REPO, SITE]): Repository[] {
+  return repositories.filter((repository) =>
+    repository.fullName.toLowerCase().includes(query.toLowerCase()),
+  );
+}
 
 const SETTINGS: SettingsResponse = {
   settings: {
@@ -393,6 +402,11 @@ describe('ReviewerEditorPage', () => {
 });
 
 describe('RepositoriesPage', () => {
+  // The term lives in the URL, so every case starts from a clean one.
+  beforeEach(() => {
+    window.history.replaceState(null, '', '/');
+  });
+
   it('shows a loading state', () => {
     listRepositoriesMock.mockReturnValue(pending());
     render(<RepositoriesPage />);
@@ -418,6 +432,105 @@ describe('RepositoriesPage', () => {
     expect(await screen.findByText('prakashsewani/jury-forge')).toBeTruthy();
     await user.click(screen.getByRole('button', { name: 'Manage reviewers' }));
     expect(await screen.findByRole('switch', { name: 'Security' })).toBeTruthy();
+  });
+
+  it('gives the search field an accessible name', async () => {
+    listRepositoriesMock.mockResolvedValue([REPO]);
+    render(<RepositoriesPage />);
+    const field = await screen.findByRole('searchbox', { name: 'Search repositories' });
+    expect(field.tagName).toBe('INPUT');
+    expect((field as HTMLInputElement).type).toBe('search');
+  });
+
+  it('filters the table as the term is typed, and clearing restores every row', async () => {
+    const user = userEvent.setup();
+    listRepositoriesMock.mockImplementation(async (_refresh, _signal, q = '') => matching(q));
+    render(<RepositoriesPage />);
+    expect(await screen.findByText('prakashsewani/jury-forge')).toBeTruthy();
+    expect(screen.getByText('prakashsewani/site')).toBeTruthy();
+
+    const field = screen.getByLabelText('Search repositories');
+    await user.type(field, 'site');
+    // The filter is the server's: the term leaves the dashboard as the query, not as a client filter.
+    await waitFor(() =>
+      expect(listRepositoriesMock).toHaveBeenLastCalledWith(false, expect.anything(), 'site'),
+    );
+    await waitFor(() => expect(screen.queryByText('prakashsewani/jury-forge')).toBeNull());
+    expect(screen.getByText('prakashsewani/site')).toBeTruthy();
+
+    await user.clear(field);
+    await waitFor(() => expect(screen.getByText('prakashsewani/jury-forge')).toBeTruthy());
+    expect(listRepositoriesMock).toHaveBeenLastCalledWith(false, expect.anything(), '');
+    expect(screen.getByText('prakashsewani/site')).toBeTruthy();
+  });
+
+  it('asks once per typing pause, not once per keystroke', async () => {
+    const user = userEvent.setup();
+    listRepositoriesMock.mockResolvedValue([REPO]);
+    render(<RepositoriesPage />);
+    await screen.findByText('prakashsewani/jury-forge');
+    expect(listRepositoriesMock).toHaveBeenCalledTimes(1);
+
+    await user.type(screen.getByLabelText('Search repositories'), 'jury');
+    await waitFor(() =>
+      expect(listRepositoriesMock).toHaveBeenLastCalledWith(false, expect.anything(), 'jury'),
+    );
+    expect(listRepositoriesMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('opens on the term the URL carries, and writes a typed one back in place', async () => {
+    window.history.replaceState(null, '', '/repositories?q=site');
+    const user = userEvent.setup();
+    listRepositoriesMock.mockImplementation(async (_refresh, _signal, q = '') => matching(q));
+    render(<RepositoriesPage />);
+
+    const field = (await screen.findByLabelText('Search repositories')) as HTMLInputElement;
+    expect(field.value).toBe('site');
+    // The URL's term is the first request's: the page does not wait for a keystroke to filter.
+    expect(listRepositoriesMock).toHaveBeenCalledWith(false, expect.anything(), 'site');
+    expect(screen.queryByText('prakashsewani/jury-forge')).toBeNull();
+
+    const entries = window.history.length;
+    await user.type(field, 'x');
+    await waitFor(() => expect(window.location.search).toBe('?q=sitex'));
+    // Rewritten in place: typing never adds a history entry to walk back through.
+    expect(window.history.length).toBe(entries);
+  });
+
+  it('shows the empty state for a term that matches nothing, with a way back', async () => {
+    const user = userEvent.setup();
+    listRepositoriesMock.mockImplementation(async (_refresh, _signal, q = '') => matching(q));
+    render(<RepositoriesPage />);
+    await screen.findByText('prakashsewani/jury-forge');
+
+    await user.type(screen.getByLabelText('Search repositories'), 'nope');
+    expect(await screen.findByText('No matching repositories')).toBeTruthy();
+    expect(screen.getByText(/Nothing matches “nope”/)).toBeTruthy();
+    expect(screen.queryByRole('table')).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: 'Clear search' }));
+    expect(await screen.findByText('prakashsewani/jury-forge')).toBeTruthy();
+    expect((screen.getByLabelText('Search repositories') as HTMLInputElement).value).toBe('');
+    await waitFor(() => expect(window.location.search).toBe(''));
+  });
+
+  it('keeps the rows and the field in place while the next query is in flight', async () => {
+    const user = userEvent.setup();
+    listRepositoriesMock.mockResolvedValueOnce([REPO]).mockReturnValueOnce(pending());
+    render(<RepositoriesPage />);
+    const field = (await screen.findByLabelText('Search repositories')) as HTMLInputElement;
+    expect(screen.getByText('prakashsewani/jury-forge')).toBeTruthy();
+
+    await user.type(field, 'jury');
+    await waitFor(() =>
+      expect(listRepositoriesMock).toHaveBeenLastCalledWith(false, expect.anything(), 'jury'),
+    );
+    // Nothing blanked out and nothing remounted under the field: the previous rows are still the
+    // table's, and the input kept both its focus and what was typed into it.
+    expect(screen.getByText('prakashsewani/jury-forge')).toBeTruthy();
+    expect(screen.queryByText('Loading…')).toBeNull();
+    expect(document.activeElement).toBe(field);
+    expect(field.value).toBe('jury');
   });
 });
 

@@ -303,6 +303,25 @@ and site builds, nothing skipped.
 (round 2, threshold 60); Prakash merges on its verdict. The rework plan in `docs/roadmap.md` is
 complete, and phase 3 (the promo site) starts after this item lands.
 
+**Repository search (2026-10-19):** `GET /api/repositories` takes an optional `q` and narrows the
+list to the rows whose `full_name` contains it — trimmed, matched case-insensitively, with `LIKE`'s
+`%` and `_` escaped first so a literal `_` in a name is not a wildcard and a literal `%` matches
+rather than everything — and the Repositories screen carries a labelled `<input type="search">`
+(300 ms debounce) whose applied term is written back into the URL in place, with an empty state and
+a way back when nothing matches. `refresh=1` and the enable/reviewer toggles are unchanged, and a
+refresh still imports the whole installation while returning only the matching rows. One PR against
+`dev` from `feat/repo-search-20261019`, branched from `dev` at `696189b`; no new dependency, no
+schema change, no migration, nothing deployed.
+
+**Verified on the Mac checkout of record (`npm run check` exit 0):** typecheck (three `tsc`
+programs plus `astro check`, 0 errors) · ESLint clean · Prettier `format:check` clean · workerd
+**302/302** (24 files) · UI **160/160** (14 files) · worker, client and site builds, nothing
+skipped. Measured against `dev`'s own test code, that is +4 worker and +6 UI cases: 5 → 9 in
+`product/test/repositories.test.ts`, 33 → 39 in `product/test-ui/screens.test.tsx`.
+
+**Next action:** sentry reviews `feat/repo-search-20261019` against `dev` (round 1, threshold 60),
+and Prakash merges on its verdict — the merge to `dev` is the deployment (D-030), not this branch.
+
 ## Backlog (owner-owned, deferred)
 
 - **Before the first release (phase 4):** create a repo-admin token with `contents: write` and

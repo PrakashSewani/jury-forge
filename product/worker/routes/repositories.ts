@@ -40,6 +40,9 @@ export const repositoryRoutes = new Hono<AppEnv>();
 repositoryRoutes.use('*', requireSession(), sameOrigin());
 
 repositoryRoutes.get('/', async (c) => {
+  // The term the list is narrowed by. The escape happens where the pattern is built; here it is only
+  // read, so an absent `q` and an empty one behave the same way: no filter.
+  const search = c.req.query('q') ?? '';
   const refresh = c.req.query('refresh');
   if (refresh === '1' || refresh === 'true') {
     const values = keyRingValues(c.env);
@@ -66,7 +69,7 @@ repositoryRoutes.get('/', async (c) => {
     }
     await syncRepositories(c.env.DB, rows);
   }
-  return respond(z.array(RepositorySchema), await listRepositories(c.env.DB));
+  return respond(z.array(RepositorySchema), await listRepositories(c.env.DB, search));
 });
 
 repositoryRoutes.patch('/:repoId', async (c) => {

@@ -418,7 +418,9 @@ screen prints a machine code such as `request_failed` at the user — the shared
   template_ as two explicit choices — the seven starters appear only once a template is asked for,
   and nothing is prefilled until one is picked.
 - **Repositories** — a table with an enabled toggle and per-repo reviewer toggles expanded inside
-  the row, instead of a second screen.
+  the row, instead of a second screen; a labelled search field (300 ms debounce, the term written
+  back into the URL) narrows the list on the Worker, so the toggles keep acting on what the query
+  returned.
 - **Runs** — a table with status and repository filters, relative times and running rows badged; the
   list is a snapshot, because live updating is slice D.
 - **Run detail** — findings grouped per reviewer with a severity filter, a token-usage strip, and

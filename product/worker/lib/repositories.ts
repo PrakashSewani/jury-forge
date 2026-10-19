@@ -22,12 +22,31 @@ function fromRow(row: RepositoryRow): Repository {
   };
 }
 
-export async function listRepositories(db: D1Database): Promise<Repository[]> {
-  const result = await db
-    .prepare(
-      'SELECT repo_id, full_name, private, enabled FROM repositories ORDER BY full_name COLLATE NOCASE, repo_id',
-    )
-    .all<RepositoryRow>();
+/**
+ * A contains-pattern for `LIKE`. The term's own `%`, `_` and `\` are escaped — a repository name can
+ * carry a literal `_`, and an unescaped `%` in the term would match every row — so the only wildcards
+ * left in the pattern are the two this function adds.
+ */
+function containsPattern(term: string): string {
+  return `%${term.replace(/[\\%_]/g, (character) => `\\${character}`)}%`;
+}
+
+/**
+ * The repository list, optionally narrowed to the rows whose `full_name` contains `term`. `term` is
+ * trimmed (a blank one is no filter at all) and matched case-insensitively: both sides are folded
+ * with `LOWER`, so the match does not depend on the connection's `case_sensitive_like` setting.
+ */
+export async function listRepositories(db: D1Database, term = ''): Promise<Repository[]> {
+  const search = term.trim();
+  const columns = 'SELECT repo_id, full_name, private, enabled FROM repositories';
+  const order = 'ORDER BY full_name COLLATE NOCASE, repo_id';
+  const statement =
+    search === ''
+      ? db.prepare(`${columns} ${order}`)
+      : db
+          .prepare(`${columns} WHERE LOWER(full_name) LIKE ? ESCAPE '\\' ${order}`)
+          .bind(containsPattern(search.toLowerCase()));
+  const result = await statement.all<RepositoryRow>();
   return result.results.map(fromRow);
 }
 

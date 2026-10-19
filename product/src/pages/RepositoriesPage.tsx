@@ -1,6 +1,6 @@
 import type { Repository, RepositoryReviewer } from '@jury-forge/shared';
 import { RepositorySchema } from '@jury-forge/shared';
-import { Fragment, useCallback, useState } from 'react';
+import { Fragment, useCallback, useEffect, useState } from 'react';
 import { z } from 'zod';
 import {
   getRepositoryReviewers,
@@ -8,18 +8,53 @@ import {
   saveRepositoryReviewers,
   setRepositoryEnabled,
 } from '../lib/api';
+import { navigate } from '../lib/router';
 import { useResource } from '../lib/use-resource';
-import { Badge, Button, Card, EmptyState, Notice, Row, Switch, Table } from '../ui';
+import { Badge, Button, Card, EmptyState, Field, Input, Notice, Row, Switch, Table } from '../ui';
 import { errorMessage } from './messages';
 import { PageError, PageLoading } from './screen-state';
 
 const RepositoriesSchema = z.array(RepositorySchema);
 
+/** How long the field waits after the last keystroke before the list is asked again. */
+const SEARCH_DEBOUNCE_MS = 300;
+
+/** The term the page was opened with, so a filtered view survives a reload and can be shared. */
+function termFromUrl(): string {
+  return new URLSearchParams(window.location.search).get('q') ?? '';
+}
+
 export default function RepositoriesPage() {
-  const load = useCallback((signal: AbortSignal) => listRepositories(false, signal), []);
+  // `term` is what the field shows; `query` is what the list was asked for. They differ for the
+  // debounce window, and only `query` reaches the request and the URL — never a keystroke.
+  const [term, setTerm] = useState(termFromUrl);
+  const [query, setQuery] = useState(termFromUrl);
+  const load = useCallback(
+    (signal: AbortSignal) => listRepositories(false, signal, query),
+    [query],
+  );
   const { data, failed, reload } = useResource(RepositoriesSchema, load);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (term === query) {
+      return;
+    }
+    const timer = setTimeout(() => setQuery(term), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [term, query]);
+
+  // The applied term is the URL's, written with `replace` so a typing spree leaves no history behind.
+  // `navigate` keeps the read of the pathname the app already does — the path itself does not change.
+  useEffect(() => {
+    const applied = query.trim();
+    navigate(applied === '' ? '/repositories' : `/repositories?q=${encodeURIComponent(applied)}`, {
+      replace: true,
+    });
+  }, [query]);
+
+  const search = query.trim();
 
   async function handleRefresh() {
     setRefreshing(true);
@@ -39,6 +74,11 @@ export default function RepositoriesPage() {
     }
   }
 
+  function clearSearch() {
+    setTerm('');
+    setQuery('');
+  }
+
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
@@ -47,6 +87,21 @@ export default function RepositoriesPage() {
           {refreshing ? 'Refreshing…' : 'Refresh from GitHub'}
         </Button>
       </header>
+      {/*
+        The field is mounted for as long as there is a list to filter and never unmounts while a
+        query is in flight, so typing moves nothing: the rows below stay until their replacement
+        arrives.
+      */}
+      {data === null ? null : (
+        <Field className="max-w-xs" label="Search repositories">
+          <Input
+            onChange={(event) => setTerm(event.target.value)}
+            placeholder="owner/name"
+            type="search"
+            value={term}
+          />
+        </Field>
+      )}
       {refreshError ? <Notice tone="error">{refreshError}</Notice> : null}
       {failed ? (
         <PageError
@@ -55,6 +110,16 @@ export default function RepositoriesPage() {
         />
       ) : data === null ? (
         <PageLoading />
+      ) : data.length === 0 && search !== '' ? (
+        <EmptyState
+          action={
+            <Button onClick={clearSearch} variant="secondary">
+              Clear search
+            </Button>
+          }
+          description={`Nothing matches “${search}”. Clear the search to see every repository.`}
+          title="No matching repositories"
+        />
       ) : data.length === 0 ? (
         <EmptyState
           action={
