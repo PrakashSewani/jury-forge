@@ -6,7 +6,7 @@ import { getRun, listReviewers } from '../lib/api';
 import { formatTime, runStatusTone, severityTone, shortSha } from '../lib/format';
 import { usePoll } from '../lib/use-poll';
 import { useResource } from '../lib/use-resource';
-import { Badge, Card, cx, EmptyState, focusRing, Notice, Row, Table, Tabs, tapTarget } from '../ui';
+import { Badge, Card, EmptyState, ExternalLink, Notice, Row, Table, Tabs } from '../ui';
 import type { TabItem } from '../ui';
 import { reviewerFailureMessage } from './messages';
 import { PageError, PageLoading } from './screen-state';
@@ -96,16 +96,12 @@ export default function RunDetailPage({ id }: { id: string }) {
           </h1>
           <Badge tone={runStatusTone(run.status)}>{run.status}</Badge>
           {run.reviewUrl ? (
-            <a
-              className={cx(
-                'inline-flex items-center text-sm text-text-muted underline underline-offset-4 hover:text-text',
-                tapTarget,
-                focusRing,
-              )}
+            <ExternalLink
+              className="inline-flex items-center text-sm text-text-muted underline underline-offset-4 hover:text-text"
               href={run.reviewUrl}
             >
               View on GitHub
-            </a>
+            </ExternalLink>
           ) : null}
         </div>
         <p className="text-xs text-text-muted">

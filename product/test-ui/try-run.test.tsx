@@ -75,14 +75,28 @@ beforeEach(() => {
   vi.resetAllMocks();
 });
 
-describe('new reviewer template picker', () => {
-  it('renders Blank reviewer and every built-in template name', () => {
+describe('new reviewer starter choice', () => {
+  it('offers a blank reviewer or a template as two explicit choices, with blank as the default', async () => {
+    const user = userEvent.setup();
     render(<ReviewerEditorPage />);
-    expect(screen.getByRole('heading', { name: 'Start from a template' })).toBeTruthy();
-    const select = screen.getByLabelText('Template', { exact: false });
-    expect(within(select).getByRole('option', { name: 'Blank reviewer' })).toBeTruthy();
-    for (const template of REVIEWER_TEMPLATES) {
-      expect(within(select).getByRole('option', { name: template.name })).toBeTruthy();
+
+    expect(screen.getByRole('heading', { name: 'Start from' })).toBeTruthy();
+    const blank = screen.getByRole('radio', { name: 'Blank reviewer' }) as HTMLInputElement;
+    const fromTemplate = screen.getByRole('radio', {
+      name: 'Start from a template',
+    }) as HTMLInputElement;
+    expect(blank.checked).toBe(true);
+    expect(fromTemplate.checked).toBe(false);
+    // No template is chosen and none is applied until the operator picks one.
+    expect(screen.queryByLabelText('Template', { exact: false, selector: 'select' })).toBeNull();
+    expect(screen.queryByText(/Applied the .* template/)).toBeNull();
+
+    await user.click(fromTemplate);
+
+    const select = screen.getByLabelText('Template', { exact: false, selector: 'select' });
+    expect(within(select).getByRole('option', { name: 'Choose a template…' })).toBeTruthy();
+    for (const starter of REVIEWER_TEMPLATES) {
+      expect(within(select).getByRole('option', { name: starter.name })).toBeTruthy();
     }
     expect(within(select).getAllByRole('option')).toHaveLength(REVIEWER_TEMPLATES.length + 1);
   });
@@ -92,7 +106,11 @@ describe('new reviewer template picker', () => {
     render(<ReviewerEditorPage />);
     const template = REVIEWER_TEMPLATES[0];
 
-    await user.selectOptions(screen.getByLabelText('Template', { exact: false }), template.key);
+    await user.click(screen.getByRole('radio', { name: 'Start from a template' }));
+    await user.selectOptions(
+      screen.getByLabelText('Template', { exact: false, selector: 'select' }),
+      template.key,
+    );
 
     expect((screen.getByLabelText('Name') as HTMLInputElement).value).toBe(template.name);
     expect(
@@ -112,7 +130,11 @@ describe('new reviewer template picker', () => {
     const user = userEvent.setup();
     render(<ReviewerEditorPage />);
     const template = REVIEWER_TEMPLATES[0];
-    await user.selectOptions(screen.getByLabelText('Template', { exact: false }), template.key);
+    await user.click(screen.getByRole('radio', { name: 'Start from a template' }));
+    await user.selectOptions(
+      screen.getByLabelText('Template', { exact: false, selector: 'select' }),
+      template.key,
+    );
 
     const name = screen.getByLabelText('Name') as HTMLInputElement;
     await user.clear(name);
@@ -124,13 +146,31 @@ describe('new reviewer template picker', () => {
     ).toBe(template.instructions);
   });
 
-  it('does not render the picker on the edit screen', async () => {
+  it('leaves every prefilled field editable, so a template is never a lock-in', async () => {
+    const user = userEvent.setup();
+    render(<ReviewerEditorPage />);
+    await user.click(screen.getByRole('radio', { name: 'Start from a template' }));
+    await user.selectOptions(
+      screen.getByLabelText('Template', { exact: false, selector: 'select' }),
+      REVIEWER_TEMPLATES[0].key,
+    );
+
+    const rules = screen.getByLabelText('Rules', { exact: false }) as HTMLTextAreaElement;
+    await user.clear(rules);
+    await user.type(rules, 'Only my rule.');
+
+    expect(rules.value).toBe('Only my rule.');
+    expect(screen.getByRole('button', { name: 'Create reviewer' })).toBeTruthy();
+  });
+
+  it('does not render the starter choice on the edit screen', async () => {
     getReviewerMock.mockResolvedValue(READY_REVIEWER);
     render(<ReviewerEditorPage id="rev-security" />);
 
     expect(await screen.findByDisplayValue('Security')).toBeTruthy();
-    expect(screen.queryByRole('heading', { name: 'Start from a template' })).toBeNull();
-    expect(screen.queryByLabelText('Template', { exact: false })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Start from' })).toBeNull();
+    expect(screen.queryByLabelText('Template', { exact: false, selector: 'select' })).toBeNull();
+    expect(screen.queryByRole('radio', { name: 'Blank reviewer' })).toBeNull();
   });
 });
 

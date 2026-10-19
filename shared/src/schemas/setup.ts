@@ -6,6 +6,9 @@ export const AppManifestSchema = z.object({
   url: z.string(),
   hook_attributes: z.object({ url: z.string(), active: z.boolean() }),
   redirect_url: z.string(),
+  // Where GitHub sends the operator after they install the app: the wizard posts its manifest with
+  // this set, so the install round trip ends back on `/setup` instead of GitHub's own app page.
+  setup_url: z.string(),
   callback_urls: z.array(z.string()),
   public: z.boolean(),
   default_permissions: z.record(z.string(), z.string()),

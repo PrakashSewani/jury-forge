@@ -6,6 +6,7 @@ export { Card, Panel } from './Card';
 export { cx, focusRing, tapTarget } from './class-names';
 export { Dialog } from './Dialog';
 export { EmptyState } from './EmptyState';
+export { ExternalLink } from './ExternalLink';
 export { Field } from './Field';
 export { Input, inputClass } from './Input';
 export { Notice } from './Notice';

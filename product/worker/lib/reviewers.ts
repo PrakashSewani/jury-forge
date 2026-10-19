@@ -26,29 +26,43 @@ const baseUrl = z
     }
   }, 'must be a URL');
 
-export const reviewerCreate = z.object({
-  name: z.string().min(1).max(120),
-  instructions: z.string().max(20_000).default(''),
-  rules: z.string().max(20_000).default(''),
-  flavor: z.enum(['openai', 'anthropic']),
-  baseUrl,
-  model: z.string().min(1).max(200),
-  apiKey: z.string().min(1).max(4_000).optional(),
-  params: z.record(z.string(), z.unknown()).default({}),
-  enabled: z.boolean().default(true),
-});
+/** One of the two ways to set a model key; never sent together with `apiKey`. */
+const apiKeyFromReviewerId = z.string().min(1).max(200).optional();
 
-export const reviewerUpdate = z.object({
-  name: z.string().min(1).max(120).optional(),
-  instructions: z.string().max(20_000).optional(),
-  rules: z.string().max(20_000).optional(),
-  flavor: z.enum(['openai', 'anthropic']).optional(),
-  baseUrl: baseUrl.optional(),
-  model: z.string().min(1).max(200).optional(),
-  apiKey: z.string().min(1).max(4_000).nullable().optional(),
-  params: z.record(z.string(), z.unknown()).optional(),
-  enabled: z.boolean().optional(),
-});
+/** A key is either pasted or copied from another reviewer — sending both is a request error. */
+function oneKeySourceAtMost(value: { apiKey?: unknown; apiKeyFromReviewerId?: unknown }): boolean {
+  return value.apiKey === undefined || value.apiKeyFromReviewerId === undefined;
+}
+
+export const reviewerCreate = z
+  .object({
+    name: z.string().min(1).max(120),
+    instructions: z.string().max(20_000).default(''),
+    rules: z.string().max(20_000).default(''),
+    flavor: z.enum(['openai', 'anthropic']),
+    baseUrl,
+    model: z.string().min(1).max(200),
+    apiKey: z.string().min(1).max(4_000).optional(),
+    apiKeyFromReviewerId,
+    params: z.record(z.string(), z.unknown()).default({}),
+    enabled: z.boolean().default(true),
+  })
+  .refine(oneKeySourceAtMost);
+
+export const reviewerUpdate = z
+  .object({
+    name: z.string().min(1).max(120).optional(),
+    instructions: z.string().max(20_000).optional(),
+    rules: z.string().max(20_000).optional(),
+    flavor: z.enum(['openai', 'anthropic']).optional(),
+    baseUrl: baseUrl.optional(),
+    model: z.string().min(1).max(200).optional(),
+    apiKey: z.string().min(1).max(4_000).nullable().optional(),
+    apiKeyFromReviewerId,
+    params: z.record(z.string(), z.unknown()).optional(),
+    enabled: z.boolean().optional(),
+  })
+  .refine(oneKeySourceAtMost);
 
 export type ReviewerCreate = z.infer<typeof reviewerCreate>;
 export type ReviewerUpdate = z.infer<typeof reviewerUpdate>;
@@ -187,13 +201,31 @@ export async function getReviewer(db: D1Database, id: string): Promise<Reviewer 
   return fromRow(row, grouped.get(id) ?? []);
 }
 
+/**
+ * The stored ciphertext of a reviewer's key, or `null` when that reviewer does not exist or holds
+ * no key. Deliberately the raw ciphertext: a reuse copies it verbatim and never decrypts it.
+ */
+export async function storedApiKeyCiphertext(db: D1Database, id: string): Promise<string | null> {
+  const row = await db
+    .prepare('SELECT api_key_enc FROM reviewers WHERE id = ?')
+    .bind(id)
+    .first<{ api_key_enc: string }>();
+  const stored = row?.api_key_enc ?? '';
+  return stored === '' ? null : stored;
+}
+
 export async function insertReviewer(
   db: D1Database,
   id: string,
   ring: EncryptionKeyRing | null,
   input: ReviewerCreate,
+  copiedCiphertext?: string,
 ): Promise<void> {
-  const apiKeyEnc = input.apiKey === undefined ? '' : await encryptKeyValue(ring, input.apiKey);
+  // A reused key is the source reviewer's ciphertext, byte for byte: this never decrypts it and
+  // never sees the plaintext. Lazy rotation (D-023) re-wraps it the next time the row is written.
+  const apiKeyEnc =
+    copiedCiphertext ??
+    (input.apiKey === undefined ? '' : await encryptKeyValue(ring, input.apiKey));
   await db
     .prepare(
       'INSERT INTO reviewers (id, name, instructions, rules, flavor, base_url, api_key_enc, model, params_json, enabled) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
@@ -218,6 +250,7 @@ export async function updateReviewerRow(
   id: string,
   ring: EncryptionKeyRing | null,
   patch: ReviewerUpdate,
+  copiedCiphertext?: string,
 ): Promise<{ apiKeyReencrypted: boolean }> {
   const assignments: string[] = [];
   const values: (string | number)[] = [];
@@ -254,7 +287,10 @@ export async function updateReviewerRow(
     assignments.push('enabled = ?');
     values.push(patch.enabled ? 1 : 0);
   }
-  if (patch.apiKey !== undefined) {
+  if (copiedCiphertext !== undefined) {
+    assignments.push('api_key_enc = ?');
+    values.push(copiedCiphertext);
+  } else if (patch.apiKey !== undefined) {
     assignments.push('api_key_enc = ?');
     values.push(patch.apiKey === null ? '' : await encryptKeyValue(ring, patch.apiKey));
   } else if (ring !== null) {
