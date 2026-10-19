@@ -271,11 +271,37 @@ for the two-choice UI, and `setup-flow.test.ts`, `contracts.test.ts` and `wizard
 manifest assertion and `setup_url` fixtures. No raw palette utility class in the new UI (grepped:
 none), and the 44 px targets and focus rings come from `tapTarget` / `focusRing` as everywhere else.
 
+**Round 1 of the review debate (PR #21, sentry, merge confidence 55%) — answered in `bd26c9f` plus
+this tracker commit: 4 findings, 4 resolved / 0 rejected**, one reply per comment thread on the PR;
+all four were minor/nit and none asked for a design change. (1) Choosing **Blank reviewer** after
+previewing a template left the template's name, instructions and rules in the fields while the card
+promised "start from a blank reviewer and fill in everything yourself": the editor now keeps what
+those three fields held before the first template was applied and restores it, with the "Applied the
+… template" notice cleared and the picker back on its placeholder — a template is a preview, not a
+lock-in. (2) The reuse picker labelled each option with `source.name` alone while `reviewers.name`
+has no unique constraint: an option now reads _name — model_, and only a name that two sources share
+also carries its short id (8 characters), so the operator can tell which stored key they are about
+to copy. (3) A reuse still answers `encryption_key_unset` 500 on an instance with no
+`ENCRYPTION_KEY` although it copies ciphertext verbatim: that refusal is now documented at the
+create guard as deliberate symmetry with the paste path, keeping the contract
+`product/test/reviewers-key-reuse.test.ts` pins instead of weakening it for one branch. (4) The edit
+screen's reuse save had no UI case; `reviewer-key-reuse.test.tsx` now asserts that `updateReviewer`
+receives `apiKeyFromReviewerId` and no key value.
+
+Numbers after the round: workerd **298/298** (24 files, unchanged — the route edit is a comment) and
+UI **154/154** (14 files, +3: the duplicate-name picker, the edit-screen reuse save, and the
+blank-after-template reset, the last of them in `try-run.test.tsx`).
+
+**Verified at `bd26c9f` on the Mac checkout of record (Node 24.21.0, `npm run check` **exit 0**):**
+typecheck (three `tsc` programs plus `astro check`, 0 errors) · ESLint clean · Prettier
+`format:check` clean · workerd **298/298** (24 files) · UI **154/154** (14 files) · worker, client
+and site builds, nothing skipped.
+
 **Blocked by:** nothing.
 
-**Next action:** sentry reviews `feat/onboarding-ux-20261019` against `dev` (round 1); Prakash
-merges on its verdict. The rework plan in `docs/roadmap.md` is complete, and phase 3 (the promo
-site) starts after this item lands.
+**Next action:** sentry re-reviews the answered head of `feat/onboarding-ux-20261019` against `dev`
+(round 2, threshold 60); Prakash merges on its verdict. The rework plan in `docs/roadmap.md` is
+complete, and phase 3 (the promo site) starts after this item lands.
 
 ## Backlog (owner-owned, deferred)
 
