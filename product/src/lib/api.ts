@@ -157,10 +157,14 @@ export interface ReviewerDraft {
 
 export interface ReviewerCreateInput extends ReviewerDraft {
   apiKey?: string;
+  /** Copy the key already stored on another reviewer instead of pasting it again. */
+  apiKeyFromReviewerId?: string;
 }
 
 export interface ReviewerUpdateInput extends Partial<ReviewerDraft> {
   apiKey?: string | null;
+  /** Copy the key already stored on another reviewer instead of pasting it again. */
+  apiKeyFromReviewerId?: string;
 }
 
 export function listReviewers(signal?: AbortSignal): Promise<Reviewer[]> {

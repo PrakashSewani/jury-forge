@@ -192,6 +192,10 @@ function manifestFor(origin: string): AppManifest {
     url: origin,
     hook_attributes: { url: `${origin}/api/webhooks/github`, active: true },
     redirect_url: `${origin}/api/setup/manifest/callback`,
+    // GitHub sends the operator back to the wizard once the app is installed, so the install step
+    // does not end on GitHub's own app page (the setting is only editable without the UI paying for
+    // it: an App created before this line landed keeps GitHub's default until it is recreated).
+    setup_url: `${origin}/setup`,
     callback_urls: [`${origin}/api/auth/github/callback`],
     public: false,
     default_permissions: { contents: 'read', pull_requests: 'write' },

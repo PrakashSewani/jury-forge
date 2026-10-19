@@ -1,9 +1,15 @@
-import type { ProviderFlavor, ReviewerTemplate } from '@jury-forge/shared';
+import type { ProviderFlavor, Reviewer, ReviewerTemplate } from '@jury-forge/shared';
 import { REVIEWER_TEMPLATES } from '@jury-forge/shared';
 import type { FormEvent } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReviewerCreateInput, ReviewerUpdateInput } from '../lib/api';
-import { createReviewer, deleteReviewer, getReviewer, updateReviewer } from '../lib/api';
+import {
+  createReviewer,
+  deleteReviewer,
+  getReviewer,
+  listReviewers,
+  updateReviewer,
+} from '../lib/api';
 import { handleAppLink, navigate, registerNavigationBlocker } from '../lib/router';
 import {
   Button,
@@ -21,6 +27,8 @@ import {
 import { errorMessage } from './messages';
 import { PageError, PageLoading } from './screen-state';
 
+type KeySource = 'paste' | 'reuse';
+
 interface FormState {
   name: string;
   flavor: ProviderFlavor;
@@ -33,6 +41,9 @@ interface FormState {
   apiKeyText: string;
   clearApiKey: boolean;
   hasApiKey: boolean;
+  /** Where the stored key comes from on save: one typed in, or another reviewer's stored one. */
+  keySource: KeySource;
+  reuseFrom: string;
 }
 
 interface FormErrors {
@@ -42,8 +53,23 @@ interface FormErrors {
   params?: string;
 }
 
+/** The three fields a starter prefills. The values held before a template was applied are kept as
+ * the snapshot "Blank reviewer" restores. */
+interface StarterFields {
+  name: string;
+  instructions: string;
+  rules: string;
+}
+
 function findTemplate(key: string): ReviewerTemplate | undefined {
   return REVIEWER_TEMPLATES.find((template) => template.key === key);
+}
+
+/** `reviewers.name` has no unique constraint, so a name two sources share gets a short id appended:
+ * the operator has to be able to tell which stored key the option is about to copy. */
+function reuseSourceLabel(source: Reviewer, duplicateName: boolean): string {
+  const label = `${source.name} — ${source.model}`;
+  return duplicateName ? `${label} (${source.id.slice(0, 8)})` : label;
 }
 
 const NEW_REVIEWER: FormState = {
@@ -58,6 +84,8 @@ const NEW_REVIEWER: FormState = {
   apiKeyText: '',
   clearApiKey: false,
   hasApiKey: false,
+  keySource: 'paste',
+  reuseFrom: '',
 };
 
 function parseParams(text: string): Record<string, unknown> | null {
@@ -104,8 +132,13 @@ export default function ReviewerEditorPage({ id }: { id?: string }) {
   const [loadFailed, setLoadFailed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [templateKey, setTemplateKey] = useState('blank');
+  const [startFrom, setStartFrom] = useState<'blank' | 'template'>('blank');
+  const [templateKey, setTemplateKey] = useState('');
   const [appliedTemplate, setAppliedTemplate] = useState<string | null>(null);
+  // What name, instructions and rules held before a template was applied, so that choosing "Blank
+  // reviewer" after previewing one returns the operator to a genuinely blank form.
+  const [beforeTemplate, setBeforeTemplate] = useState<StarterFields | null>(null);
+  const [keySources, setKeySources] = useState<Reviewer[]>([]);
 
   // Set once a save or a delete has landed. The navigation that follows is a client route change,
   // so the `beforeunload` handler reads this ref rather than waiting for React to flush the state
@@ -131,6 +164,8 @@ export default function ReviewerEditorPage({ id }: { id?: string }) {
         apiKeyText: '',
         clearApiKey: false,
         hasApiKey: reviewer.hasApiKey,
+        keySource: 'paste',
+        reuseFrom: '',
       };
       setForm(loaded);
       setBaseline(loaded);
@@ -142,6 +177,26 @@ export default function ReviewerEditorPage({ id }: { id?: string }) {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // The reuse offer comes from the reviewers that already hold a key. It is an offer, not a
+  // requirement: when the list cannot be read the key section simply falls back to pasting a key,
+  // which is the only path that ever holds one.
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const reviewers = await listReviewers();
+        if (!cancelled) {
+          setKeySources(reviewers.filter((reviewer) => reviewer.hasApiKey && reviewer.id !== id));
+        }
+      } catch {
+        // Nothing to offer; the paste path still works.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
 
   const dirty =
     form !== null && baseline !== null && JSON.stringify(form) !== JSON.stringify(baseline);
@@ -188,34 +243,70 @@ export default function ReviewerEditorPage({ id }: { id?: string }) {
     });
   }
 
-  function handleTemplateChange(key: string) {
-    setTemplateKey(key);
-    const template = findTemplate(key);
-    if (template === undefined) {
-      setAppliedTemplate(null);
-      return;
-    }
-    // One update replaces exactly the three prefilled fields; the model, base URL, params and key
-    // inputs are left to the operator and are never touched here.
-    setForm((current) =>
-      current === null
-        ? current
-        : {
-            ...current,
-            name: template.name,
-            instructions: template.instructions,
-            rules: template.rules,
-          },
-    );
+  /** Choosing "reuse" drops anything typed: only one key source may ever be sent. */
+  function chooseKeySource(next: KeySource) {
+    setForm((current) => {
+      if (current === null) {
+        return current;
+      }
+      if (next === 'reuse') {
+        return {
+          ...current,
+          apiKeyText: '',
+          clearApiKey: false,
+          keySource: 'reuse',
+          reuseFrom: current.reuseFrom === '' ? (keySources[0]?.id ?? '') : current.reuseFrom,
+        };
+      }
+      return { ...current, keySource: 'paste' };
+    });
+  }
+
+  /** One update replaces exactly the three prefilled fields; the model, base URL, params and key
+   * inputs are left to the operator and are never touched here. */
+  function applyStarterFields(fields: StarterFields) {
+    setForm((current) => (current === null ? current : { ...current, ...fields }));
     setErrors((current) => {
-      if (current.name === undefined) {
+      if (current.name === undefined || fields.name.trim() === '') {
         return current;
       }
       const next = { ...current };
       delete next.name;
       return next;
     });
+  }
+
+  function handleTemplateChange(key: string) {
+    setTemplateKey(key);
+    const template = findTemplate(key);
+    if (template === undefined) {
+      // The placeholder option: nothing is applied yet, and nothing already applied is forgotten.
+      return;
+    }
+    if (form !== null && beforeTemplate === null) {
+      // Remembered once, on the first template: "Blank reviewer" restores exactly these values, not
+      // whatever a template has since written over them.
+      setBeforeTemplate({ name: form.name, instructions: form.instructions, rules: form.rules });
+    }
+    applyStarterFields({
+      name: template.name,
+      instructions: template.instructions,
+      rules: template.rules,
+    });
     setAppliedTemplate(template.name);
+  }
+
+  /** Going back to blank undoes what a template prefilled: the radio's copy promises a reviewer the
+   * operator fills in themselves, so a template has to be a preview and not a lock-in. */
+  function chooseBlankStarter() {
+    setStartFrom('blank');
+    setAppliedTemplate(null);
+    setTemplateKey('');
+    if (beforeTemplate === null) {
+      return;
+    }
+    applyStarterFields(beforeTemplate);
+    setBeforeTemplate(null);
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -245,15 +336,22 @@ export default function ReviewerEditorPage({ id }: { id?: string }) {
         params,
         enabled: form.enabled,
       };
+      // One key source per save: the API refuses `apiKey` and `apiKeyFromReviewerId` together, so
+      // the form sends the choice, and a reused key is an id — never a value.
+      const reusing = form.keySource === 'reuse' && form.reuseFrom !== '';
       if (id === undefined) {
         const input: ReviewerCreateInput = { ...draft };
-        if (form.apiKeyText !== '') {
+        if (reusing) {
+          input.apiKeyFromReviewerId = form.reuseFrom;
+        } else if (form.apiKeyText !== '') {
           input.apiKey = form.apiKeyText;
         }
         await createReviewer(input);
       } else {
         const input: ReviewerUpdateInput = { ...draft };
-        if (form.apiKeyText !== '') {
+        if (reusing) {
+          input.apiKeyFromReviewerId = form.reuseFrom;
+        } else if (form.apiKeyText !== '') {
           input.apiKey = form.apiKeyText;
         } else if (form.clearApiKey) {
           input.apiKey = null;
@@ -292,6 +390,13 @@ export default function ReviewerEditorPage({ id }: { id?: string }) {
     }
   }
 
+  // A name two sources share is ambiguous in the picker, so it alone gets the id suffix.
+  const duplicateNames = new Set(
+    keySources
+      .map((source) => source.name)
+      .filter((name, index, names) => names.indexOf(name) !== index),
+  );
+
   if (form === null) {
     return (
       <div className="space-y-6">
@@ -313,23 +418,58 @@ export default function ReviewerEditorPage({ id }: { id?: string }) {
       <EditorHeader id={id} />
       <form className="space-y-6" onSubmit={(event) => void handleSubmit(event)}>
         {id === undefined ? (
-          <Card title="Start from a template">
-            <Field
-              hint={findTemplate(templateKey)?.summary ?? 'Start from an empty reviewer.'}
-              label="Template"
-            >
-              <Select
-                onChange={(event) => handleTemplateChange(event.target.value)}
-                value={templateKey}
+          <Card title="Start from">
+            <p className="text-sm text-text-muted">
+              A template is optional: start from a blank reviewer and fill in everything yourself,
+              or pick one of the seven built-in starters to prefill three fields. Every field stays
+              editable either way.
+            </p>
+            <fieldset className="space-y-1">
+              <legend className="sr-only">Start from</legend>
+              <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm">
+                <input
+                  checked={startFrom === 'blank'}
+                  className={cx('h-4 w-4 accent-accent', focusRing)}
+                  name="start-from"
+                  onChange={chooseBlankStarter}
+                  type="radio"
+                  value="blank"
+                />
+                Blank reviewer
+              </label>
+              <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm">
+                <input
+                  checked={startFrom === 'template'}
+                  className={cx('h-4 w-4 accent-accent', focusRing)}
+                  name="start-from"
+                  onChange={() => setStartFrom('template')}
+                  type="radio"
+                  value="template"
+                />
+                Start from a template
+              </label>
+            </fieldset>
+            {startFrom === 'template' ? (
+              <Field
+                hint={
+                  findTemplate(templateKey)?.summary ??
+                  'Pick a starter — nothing is prefilled until then.'
+                }
+                label="Template"
               >
-                <option value="blank">Blank reviewer</option>
-                {REVIEWER_TEMPLATES.map((template) => (
-                  <option key={template.key} value={template.key}>
-                    {template.name}
-                  </option>
-                ))}
-              </Select>
-            </Field>
+                <Select
+                  onChange={(event) => handleTemplateChange(event.target.value)}
+                  value={templateKey}
+                >
+                  <option value="">Choose a template…</option>
+                  {REVIEWER_TEMPLATES.map((template) => (
+                    <option key={template.key} value={template.key}>
+                      {template.name}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            ) : null}
             {appliedTemplate !== null ? (
               <Notice tone="info">
                 {`Applied the ${appliedTemplate} template. Name, instructions and rules were replaced — everything can still be edited before saving.`}
@@ -393,28 +533,73 @@ export default function ReviewerEditorPage({ id }: { id?: string }) {
         </Card>
 
         <Card title="API key">
-          <Field
-            hint={
-              form.hasApiKey
-                ? 'A key is set — type a new one to replace it.'
-                : 'Stored encrypted; never shown again after saving.'
-            }
-            label="API key"
-          >
-            <Input
-              autoComplete="off"
-              onChange={(event) => {
-                update('apiKeyText', event.target.value);
-                if (event.target.value !== '') {
-                  update('clearApiKey', false);
-                }
-              }}
-              placeholder={form.hasApiKey ? '••••••••' : 'sk-…'}
-              type="password"
-              value={form.apiKeyText}
-            />
-          </Field>
-          {id !== undefined && form.hasApiKey ? (
+          {keySources.length > 0 ? (
+            <fieldset className="space-y-1">
+              <legend className="text-sm font-medium">Model key</legend>
+              <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm">
+                <input
+                  checked={form.keySource === 'paste'}
+                  className={cx('h-4 w-4 accent-accent', focusRing)}
+                  name="key-source"
+                  onChange={() => chooseKeySource('paste')}
+                  type="radio"
+                  value="paste"
+                />
+                Paste a new key
+              </label>
+              <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm">
+                <input
+                  checked={form.keySource === 'reuse'}
+                  className={cx('h-4 w-4 accent-accent', focusRing)}
+                  name="key-source"
+                  onChange={() => chooseKeySource('reuse')}
+                  type="radio"
+                  value="reuse"
+                />
+                Reuse a stored key
+              </label>
+            </fieldset>
+          ) : null}
+          {form.keySource === 'reuse' && keySources.length > 0 ? (
+            <Field
+              hint="The stored key is copied to this reviewer as it is. It is never shown, never typed again, and never logged."
+              label="Reuse the key stored on"
+            >
+              <Select
+                onChange={(event) => update('reuseFrom', event.target.value)}
+                value={form.reuseFrom}
+              >
+                {keySources.map((source) => (
+                  <option key={source.id} value={source.id}>
+                    {reuseSourceLabel(source, duplicateNames.has(source.name))}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          ) : (
+            <Field
+              hint={
+                form.hasApiKey
+                  ? 'A key is set — type a new one to replace it.'
+                  : 'Stored encrypted; never shown again after saving.'
+              }
+              label="API key"
+            >
+              <Input
+                autoComplete="off"
+                onChange={(event) => {
+                  update('apiKeyText', event.target.value);
+                  if (event.target.value !== '') {
+                    update('clearApiKey', false);
+                  }
+                }}
+                placeholder={form.hasApiKey ? '••••••••' : 'sk-…'}
+                type="password"
+                value={form.apiKeyText}
+              />
+            </Field>
+          )}
+          {id !== undefined && form.hasApiKey && form.keySource === 'paste' ? (
             form.clearApiKey ? (
               <p className="text-sm text-text-muted">
                 The stored key will be removed on save.{' '}

@@ -109,6 +109,8 @@ describe('setup flow', () => {
     expect(body.manifest.public).toBe(false);
     expect(body.manifest.hook_attributes.url).toBe(`${ORIGIN}/api/webhooks/github`);
     expect(body.manifest.redirect_url).toBe(`${ORIGIN}/api/setup/manifest/callback`);
+    // The install round trip ends on the wizard, not on GitHub's own app page.
+    expect(body.manifest.setup_url).toBe(`${ORIGIN}/setup`);
     expect(body.manifest.callback_urls).toEqual([`${ORIGIN}/api/auth/github/callback`]);
     expect(body.manifest.default_events).toEqual(['pull_request']);
     expect(cookie).not.toBe('');

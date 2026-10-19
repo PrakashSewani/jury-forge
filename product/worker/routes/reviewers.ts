@@ -18,6 +18,7 @@ import {
   reviewerCreate,
   reviewersImportDocument,
   reviewerUpdate,
+  storedApiKeyCiphertext,
   updateReviewerRow,
   type ReviewerUpdate,
 } from '../lib/reviewers';
@@ -63,14 +64,30 @@ reviewerRoutes.post('/', async (c) => {
   if (!parsed.success) {
     return errorResponse('invalid_request', 400);
   }
-  if (parsed.data.apiKey !== undefined && !c.env.ENCRYPTION_KEY) {
+  // Deliberate symmetry with the PATCH guard below, pinned by `product/test/reviewers-key-reuse.test.ts`:
+  // a reuse copies the source ciphertext verbatim and needs no key material of its own, but every
+  // request that writes a key is refused on an instance that cannot hold keys at all.
+  if (
+    (parsed.data.apiKey !== undefined || parsed.data.apiKeyFromReviewerId !== undefined) &&
+    !c.env.ENCRYPTION_KEY
+  ) {
     return errorResponse('encryption_key_unset', 500);
   }
   const values = keyRingValues(c.env);
   const ring = values ? await loadKeyRing(values) : null;
+  // Same reuse rule as PATCH: copy the source ciphertext verbatim, or refuse with a defined 400 when
+  // there is no key to copy.
+  let copied: string | undefined;
+  if (parsed.data.apiKeyFromReviewerId !== undefined) {
+    const stored = await storedApiKeyCiphertext(c.env.DB, parsed.data.apiKeyFromReviewerId);
+    if (stored === null) {
+      return errorResponse('invalid_request', 400);
+    }
+    copied = stored;
+  }
 
   const id = crypto.randomUUID();
-  await insertReviewer(c.env.DB, id, ring, parsed.data);
+  await insertReviewer(c.env.DB, id, ring, parsed.data, copied);
   const reviewer = await getReviewer(c.env.DB, id);
   if (!reviewer) {
     // The row that was just written did not read back. Answer with the taxonomy's own code instead
@@ -103,12 +120,25 @@ reviewerRoutes.patch('/:id', async (c) => {
   if (!(await getReviewer(c.env.DB, id))) {
     return errorResponse('not_found', 404);
   }
-  if (typeof parsed.data.apiKey === 'string' && !c.env.ENCRYPTION_KEY) {
+  if (
+    (typeof parsed.data.apiKey === 'string' || parsed.data.apiKeyFromReviewerId !== undefined) &&
+    !c.env.ENCRYPTION_KEY
+  ) {
     return errorResponse('encryption_key_unset', 500);
   }
   const values = keyRingValues(c.env);
   const ring = values ? await loadKeyRing(values) : null;
-  const { apiKeyReencrypted } = await updateReviewerRow(c.env.DB, id, ring, parsed.data);
+  // A reuse copies the source row's ciphertext verbatim. A source that does not exist, or holds
+  // no key, has nothing to copy: that is a request error, not a silently keyless reviewer.
+  let copied: string | undefined;
+  if (parsed.data.apiKeyFromReviewerId !== undefined) {
+    const stored = await storedApiKeyCiphertext(c.env.DB, parsed.data.apiKeyFromReviewerId);
+    if (stored === null) {
+      return errorResponse('invalid_request', 400);
+    }
+    copied = stored;
+  }
+  const { apiKeyReencrypted } = await updateReviewerRow(c.env.DB, id, ring, parsed.data, copied);
   const reviewer = await getReviewer(c.env.DB, id);
   if (!reviewer) {
     // Same as the create above: the row existed at the check and is gone after the update, so this
@@ -148,8 +178,12 @@ reviewerRoutes.delete('/:id', async (c) => {
 });
 
 function reviewerUpdateDetail(patch: ReviewerUpdate, apiKeyReencrypted: boolean): string | null {
-  const parts = Object.keys(patch).filter((key) => key !== 'apiKey');
-  if (patch.apiKey === null) {
+  const parts = Object.keys(patch).filter(
+    (key) => key !== 'apiKey' && key !== 'apiKeyFromReviewerId',
+  );
+  if (patch.apiKeyFromReviewerId !== undefined) {
+    parts.push('api_key: reused from another reviewer');
+  } else if (patch.apiKey === null) {
     parts.push('api_key: cleared');
   } else if (patch.apiKey !== undefined) {
     parts.push('api_key: set');

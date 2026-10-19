@@ -52,16 +52,16 @@ change deploys anything.
 **Rework (2026-10-17):** the post-phase-2 rework is four stacked slices. Slice A merged to `dev` as
 **#17** (`77541fbb`; reviewed head `33b0a50`) on `feat/rework-a-design-system-20261017`; slice B
 merged to `dev` as **#18** (`c48e825e1b`); slice C merged to `dev` as **#19** (`b93d2f04b1`), and
-post-merge canary verification passed on each merged tree. Slice D is complete on
-`feat/rework-d-architecture-20261017` (branched from `b93d2f04b1`, plan recorded in D-029) and is
-open for review against `dev`.
+post-merge canary verification passed on each merged tree. Slice D merged to `dev` as **#20**
+(`bd344c4`) on 2026-10-19, branched from `b93d2f04b1` with its plan recorded in D-029; sentry's
+round-1 findings were answered in `635e74b`.
 
 | Slice | Branch                                 | Status                               |
 | ----- | -------------------------------------- | ------------------------------------ |
 | A     | `feat/rework-a-design-system-20261017` | merged to `dev` (`77541fbb`) (#17)   |
 | B     | `feat/rework-b-shell-screens-20261017` | merged to `dev` (`c48e825e1b`) (#18) |
 | C     | `feat/rework-c-product-shape-20261017` | merged to `dev` (`b93d2f04b1`) (#19) |
-| D     | `feat/rework-d-architecture-20261017`  | complete, in review against `dev`    |
+| D     | `feat/rework-d-architecture-20261017`  | merged to `dev` (`bd344c4`) (#20)    |
 
 Slice A is the design-system vocabulary and UI harness (D-026): a token layer in
 `product/src/styles.css`, the `product/src/ui/` primitives, a dependency-free
@@ -229,10 +229,79 @@ ESLint clean · typecheck (three `tsc` programs + `astro check`, 0 errors) · wo
 files) · UI **141/141** (12 files) · worker + client + site builds, nothing skipped. That is the CI
 Node's suite plus the Node ≥26 storage bug the round found, which the pinned Node 24 cannot see.
 
+**Onboarding UX (2026-10-19), on `feat/onboarding-ux-20261019` (base `bd344c4`): docs `436d5da`,
+implementation `6af6094`, plus this tracker commit.** Five parts in one pull request against `dev`,
+with no migration, no new dependency and no engine change:
+
+1. `setup_url` — `manifestFor()` in `product/worker/routes/setup.ts` posts
+   `setup_url: ${origin}/setup`, and `AppManifestSchema` in `shared/src/schemas/setup.ts` requires it,
+   so GitHub returns the operator to the step with the "verify" button after an install instead of
+   leaving them on its own app page. It applies to Apps created after it is in the manifest; patching
+   a live App is an operator action outside this repository.
+2. `product/src/ui/ExternalLink.tsx` — `target="_blank"` and `rel="noopener noreferrer"`, neither
+   overridable by a caller, with the shared focus ring and 44 px target. The wizard's
+   "Install … on GitHub" link and the run detail's "View on GitHub" link use it; the OAuth sign-in
+   anchor and the manifest form POST stay same-tab, because GitHub answers both with a redirect into
+   the instance.
+3. The create screen presents **Blank reviewer** and **Start from a template** as two explicit radio
+   choices, with all seven starters unchanged, the picker shown only once a template is asked for, and
+   nothing prefilled until one is picked (was: a `<select>` defaulted to blank inside a card titled
+   "Start from a template", which read as if a template were required).
+4. Reuse a stored model key — `POST` and `PATCH /api/reviewers` accept an optional
+   `apiKeyFromReviewerId` and copy that row's `api_key_enc` verbatim: never decrypted, never read as
+   plaintext, and the response shape is unchanged. A missing or keyless source answers
+   `invalid_request` 400, both fields together answer the same 400, and an unset `ENCRYPTION_KEY`
+   still answers `encryption_key_unset` 500. The editor's key section offers _Reuse the key stored
+   on …_ beside pasting a key, listing only reviewers that hold one, rendering no value and sending
+   only the id.
+5. `docs/design.md` records the manifest's `setup_url`, the new-tab rule and the reuse contract, and
+   its key paragraph's literal that had been mangled to an asterisk placeholder since `a8f3ba2` reads
+   correctly again.
+
+**Verified on the Mac checkout of record (`~/Projects/jury-forge`) at `6af6094`:** `npm run check`
+**exit 0** — typecheck (three `tsc` programs plus `astro check`, 0 errors), ESLint, Prettier
+`format:check`, workerd **298/298** (24 files) · UI **151/151** (14 files), both builds, clean tree
+afterwards. The suite it replaces on `dev` is 292/292 (23 files) and 141/141 (12 files): the new
+cases are six in `product/test/reviewers-key-reuse.test.ts` (verbatim copy on create and on update,
+unknown source, keyless source, both fields together, `ENCRYPTION_KEY` unset), four in
+`product/test-ui/external-links.test.tsx` (the primitive, the install link, the sign-in anchor that
+must stay same-tab, the run's review link) and five in
+`product/test-ui/reviewer-key-reuse.test.tsx`; `try-run.test.tsx`'s four picker tests became five
+for the two-choice UI, and `setup-flow.test.ts`, `contracts.test.ts` and `wizard.test.ts` carry the
+manifest assertion and `setup_url` fixtures. No raw palette utility class in the new UI (grepped:
+none), and the 44 px targets and focus rings come from `tapTarget` / `focusRing` as everywhere else.
+
+**Round 1 of the review debate (PR #21, sentry, merge confidence 55%) — answered in `bd26c9f` plus
+this tracker commit: 4 findings, 4 resolved / 0 rejected**, one reply per comment thread on the PR;
+all four were minor/nit and none asked for a design change. (1) Choosing **Blank reviewer** after
+previewing a template left the template's name, instructions and rules in the fields while the card
+promised "start from a blank reviewer and fill in everything yourself": the editor now keeps what
+those three fields held before the first template was applied and restores it, with the "Applied the
+… template" notice cleared and the picker back on its placeholder — a template is a preview, not a
+lock-in. (2) The reuse picker labelled each option with `source.name` alone while `reviewers.name`
+has no unique constraint: an option now reads _name — model_, and only a name that two sources share
+also carries its short id (8 characters), so the operator can tell which stored key they are about
+to copy. (3) A reuse still answers `encryption_key_unset` 500 on an instance with no
+`ENCRYPTION_KEY` although it copies ciphertext verbatim: that refusal is now documented at the
+create guard as deliberate symmetry with the paste path, keeping the contract
+`product/test/reviewers-key-reuse.test.ts` pins instead of weakening it for one branch. (4) The edit
+screen's reuse save had no UI case; `reviewer-key-reuse.test.tsx` now asserts that `updateReviewer`
+receives `apiKeyFromReviewerId` and no key value.
+
+Numbers after the round: workerd **298/298** (24 files, unchanged — the route edit is a comment) and
+UI **154/154** (14 files, +3: the duplicate-name picker, the edit-screen reuse save, and the
+blank-after-template reset, the last of them in `try-run.test.tsx`).
+
+**Verified at `bd26c9f` on the Mac checkout of record (Node 24.21.0, `npm run check` **exit 0**):**
+typecheck (three `tsc` programs plus `astro check`, 0 errors) · ESLint clean · Prettier
+`format:check` clean · workerd **298/298** (24 files) · UI **154/154** (14 files) · worker, client
+and site builds, nothing skipped.
+
 **Blocked by:** nothing.
 
-**Next action:** sentry re-reviews the answered head (round 2); Prakash merges on its verdict; the
-rework plan in `docs/roadmap.md` is then complete, and phase 3 (the promo site) starts after it.
+**Next action:** sentry re-reviews the answered head of `feat/onboarding-ux-20261019` against `dev`
+(round 2, threshold 60); Prakash merges on its verdict. The rework plan in `docs/roadmap.md` is
+complete, and phase 3 (the promo site) starts after this item lands.
 
 ## Backlog (owner-owned, deferred)
 

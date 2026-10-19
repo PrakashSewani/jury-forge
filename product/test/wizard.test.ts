@@ -72,6 +72,7 @@ describe('manifest form', () => {
       url: 'https://jury-forge.test',
       hook_attributes: { url: 'https://jury-forge.test/api/webhooks/github', active: true },
       redirect_url: 'https://jury-forge.test/api/setup/manifest/callback',
+      setup_url: 'https://jury-forge.test/setup',
       callback_urls: ['https://jury-forge.test/api/auth/github/callback'],
       public: false,
       default_permissions: { contents: 'read', pull_requests: 'write' },

@@ -6,7 +6,16 @@ import { submitManifestForm } from '../lib/manifest';
 import { handleAppLink } from '../lib/router';
 import type { WizardStepView } from '../lib/wizard';
 import { installUrl, setupErrorMessage, wizardStep, wizardSteps } from '../lib/wizard';
-import { Button, buttonClass, Card, Field, Input, Notice, secondaryButtonClass } from '../ui';
+import {
+  Button,
+  buttonClass,
+  Card,
+  ExternalLink,
+  Field,
+  Input,
+  Notice,
+  secondaryButtonClass,
+} from '../ui';
 import { PageLoading } from './screen-state';
 
 export default function SetupPage() {
@@ -167,11 +176,13 @@ function InstallStep({ state, onRefresh }: { state: SetupState; onRefresh: () =>
       </p>
       <div className="flex flex-wrap items-center gap-3">
         {state.appSlug ? (
-          // An absolute GitHub URL: the router's `handleAppLink` only takes same-origin `/` paths, so
-          // there is nothing to intercept here and the browser owns the click.
-          <a className={buttonClass} href={installUrl(state.appSlug)}>
+          // An absolute GitHub URL: the router's `handleAppLink` only takes same-origin `/` paths,
+          // so nothing intercepts this click. It leaves the app, so it is an `ExternalLink` —
+          // GitHub's install page opens beside the wizard, and the way back is the manifest's
+          // `setup_url` plus the "verify" button below.
+          <ExternalLink className={buttonClass} href={installUrl(state.appSlug)}>
             Install {state.appSlug} on GitHub
-          </a>
+          </ExternalLink>
         ) : (
           <Notice tone="error">The app slug is missing. Restart setup from the code step.</Notice>
         )}
