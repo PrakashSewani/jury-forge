@@ -321,3 +321,15 @@ complete, and phase 3 (the promo site) starts after this item lands.
 - **Verified:** <what was run, what was observed — not "it works">
 - **Blocked by:** <nothing, or the exact question waiting on the human>
 - **Next action:** <the single first thing to do next>
+
+## Hosting (2026-10-19)
+
+The product is live at `https://jury.prakashsewani.com` — a Worker custom domain on the Worker
+`jury-forge`, backed by its own D1 database (`7eeae477-07f6-41e0-89f8-e891eba8979d`, migrations
+`0001`–`0006` applied remotely) and two secrets (`ENCRYPTION_KEY`, `SETUP_CODE`). Cloudflare Access
+allows the owner's email only, with one path-scoped application that bypasses
+`/api/webhooks/github`. A merge to `dev` now deploys (D-030) and `main` no longer exists.
+
+The instance is claimed (`2026-10-19`), its GitHub App `jury-forge` is installed on the owner's
+account with 47 repositories synced, and no reviewer exists yet — the first review on the deployed
+instance has not run.

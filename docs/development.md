@@ -87,12 +87,12 @@ the previous key, delete the two `*_PREVIOUS*` secrets.
 ## Releases and deploys
 
 Create release PRs from `dev` to `main` and apply exactly one label: `release:patch`,
-`release:minor`, or `release:major`. After merge, the release workflow (only from `main`) bumps
-the root `package.json` — syncing `package-lock.json` and `CHANGELOG.md` — tags `v<version>`,
-and publishes a GitHub release. A merge without a release label publishes nothing. The full
-procedure, including the yank/rollback path, is in the `ship-release` skill.
+`release:minor`, or `release:major`. There is no release branch and no `release:` label any more (D-030): a merge
+to `dev` is the shipping event. The root `package.json` version is no longer bumped by CI — cut it by
+hand when a version is worth cutting, and tag it from `dev`. The `ship-release` skill still holds the
+yank/rollback procedure.
 
-Deployments are manual and always target the owner's own Cloudflare account. Verified locally on
+Deployments target the owner's own Cloudflare account. Verified locally on
 2026-10-02: the build produces the deployable output and `npx wrangler deploy --dry-run` resolves
 the build-output configuration and lists the D1 binding. The remote deploy steps themselves have
 not been exercised yet — exact commands live in the `ship-release` skill.
@@ -102,6 +102,13 @@ auth check, D1 create and wiring of its id, the two instance secrets, remote mig
 deploy — and prints the instance's `/setup` URL when it is done. `npm run deploy:guided --
 --dry-run` prints every step it would run and changes nothing. It skips steps that already exist,
 so it is safe to re-run.
+
+**Automated deploy (D-030).** A push to `dev` runs `.github/workflows/deploy.yml`: `npm ci`, the
+repository's own `npm run check`, the remote D1 migrations, then the product deploy. It needs the
+repository secrets `CLOUDFLARE_API_TOKEN` (Workers Scripts + D1) and `CLOUDFLARE_ACCOUNT_ID`.
+Migrations run before the deploy, so a schema change reaches the database first, and a failing check
+stops the run before either happens. `wrangler versions list` then `wrangler versions deploy <id>`
+rolls the Worker back — code only; a migration is not rewound.
 
 ## Troubleshooting
 

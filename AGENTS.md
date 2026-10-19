@@ -85,25 +85,28 @@ the actual work completed, checks run and their observed result, blockers, and o
 - Configure `dev` as the default branch and use it as the integration target. For repository
   changes, create a feature branch and open a pull request targeting `dev`; never commit or push
   directly to `dev` or `main`.
-- Release changes flow through a pull request from `dev` to `main`. A release PR must have exactly
-  one `release:patch`, `release:minor`, or `release:major` label.
-- Release-related workflows run only after a merge to `main`. The release workflow updates the
-  selected stack's version source, creates the matching `v<version>` tag, and publishes a GitHub
-  release. A merge without a release label does not publish a release.
-- Deployments of the product or promo site remain manual. Do not deploy unless asked.
+- `main` is retired (2026-10-19, D-030). `dev` is the only long-lived branch: there is no release
+  branch and no `release:` label.
+- A merge to `dev` deploys the product. `.github/workflows/deploy.yml` runs the repository's own
+  `npm run check`, applies the remote D1 migrations, then deploys the Worker that serves
+  `jury.prakashsewani.com`. A red check stops the run before the migrations run.
+- Deploying anything else — a second instance, a preview version, the promo site — is manual and
+  still needs to be asked for.
 
-## Deployments are manual
+## Deployments
 
-Store submissions, registry publishing, and site deployments happen only when I ask for them.
+The product deploys itself when a change lands on `dev` (D-030); the promo site does not deploy yet.
+Store submissions, registry publishing, and any other environment happen only when I ask for them.
 The project-specific procedures live in
 [`.commandcode/skills/ship-release`](./.commandcode/skills/ship-release/SKILL.md) — follow them
-literally, do not invent deploy pipelines.
+literally, and do not invent deploy pipelines beyond the one recorded in D-030.
 
 ## Working preferences (append as you learn)
 
 - 2026-09-26: Use `dev` as the default; agent changes go through PRs to `dev`, and labeled releases run only from `main`.
 - 2026-09-26: Use subagents only for sequential read-only discovery; the primary agent owns architecture and code generation.
 - 2026-10-02: Never commit secrets — configure via env reference files (`.dev.vars.example` locally, `wrangler secret put` when deployed).
+- 2026-10-19: `main` and the label-driven release are gone — a merge to `dev` deploys the product (D-030).
 
 <!-- One line per learned preference, dated. Examples:
 - 2026-09-18: Wants exact deploy commands, not auto-deploy pipelines.

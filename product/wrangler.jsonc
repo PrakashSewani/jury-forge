@@ -1,6 +1,7 @@
 {
   "$schema": "../node_modules/wrangler/config-schema.json",
   "name": "jury-forge",
+  "routes": [{ "pattern": "jury.prakashsewani.com", "custom_domain": true }],
   "main": "worker/index.ts",
   "compatibility_date": "2026-10-02",
   "assets": {
@@ -15,8 +16,9 @@
     {
       "binding": "DB",
       "database_name": "jury-forge",
-      // Replace with the id from `wrangler d1 create jury-forge` before deploying.
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      // This deployment's database id (`npx wrangler d1 create jury-forge`). The guided deploy
+      // writes an id here for a new instance; the deploy workflow reads it from the repository.
+      "database_id": "7eeae477-07f6-41e0-89f8-e891eba8979d",
     },
   ],
 }

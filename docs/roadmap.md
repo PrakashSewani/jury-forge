@@ -75,4 +75,5 @@ all eight screens rebuilt on the primitives) merged to `dev` from
 tree. Slice D (D-029) makes the Worker↔dashboard boundary real — zod schemas as the contract source,
 one error taxonomy, validated responses on both sides, real client-side routing and a polling data
 layer — and stacks on C's merge (`b93d2f04b1`). The rework is product work, not a phase — phase
-3 (promo site) still starts after it. **Nothing deploys: the hold stands.**
+3 (promo site) still starts after it. The hold is lifted (D-030): the product is live at `jury.prakashsewani.com`, and a merge to `dev`
+deploys it. `main` is retired, so the release path is now the deploy path.
