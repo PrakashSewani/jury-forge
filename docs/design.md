@@ -229,9 +229,13 @@ are never included. Steps, in order:
    are ordinary logins.
 
 Manifest contents: name, `url` = instance origin, hook = `origin/api/webhooks/github`,
-`redirect_url` = `origin/api/setup/manifest/callback`, callback =
+`redirect_url` = `origin/api/setup/manifest/callback`, `setup_url` = `origin/setup`, callback =
 `origin/api/auth/github/callback`, `public: false`, permissions `contents: read` +
-`pull_requests: write`, events `pull_request`.
+`pull_requests: write`, events `pull_request`. `setup_url` is the half of the round trip that
+belongs to this app rather than to GitHub: after the operator installs, GitHub returns them to
+`/setup` — the step with the "verify" button — instead of leaving them on its own app page. It
+takes effect for Apps created after it is in the manifest, because GitHub reads it at creation
+time.
 
 Once claimed, the setup endpoints return 409 — there is no reset endpoint; resetting means a
 fresh deploy or clearing D1.
@@ -350,7 +354,11 @@ Token `usage` is captured from the response envelope when present — OpenAI's
 is not an error. `params_json` merges extra body parameters (for example temperature); the
 `anthropic` flavor defaults `max_tokens` to 4096 unless `params_json` sets it. API keys are
 decrypted only for the call, and a stored key is write-only: responses expose only whether one is
-set, and `PATCH` with `apiKey: *** clears it.
+set, and `PATCH` with a null `apiKey` clears it. A create or update may instead name another
+reviewer with `apiKeyFromReviewerId`, which copies that row's ciphertext verbatim — never
+decrypted, never returned, never re-wrapped under a fresh nonce. A request carrying both `apiKey`
+and `apiKeyFromReviewerId` is `invalid_request`, as is a source reviewer that does not exist or
+holds no key.
 
 ## Audit trail (D-023)
 
@@ -404,7 +412,11 @@ screen prints a machine code such as `request_failed` at the user — the shared
   `repositories` field (D-028).
 - **Reviewer editor** — a sectioned form (identity, model, key, instructions, rules, parameters)
   with per-field validation, a sticky save bar, a `beforeunload` unsaved-changes guard, and the API
-  key shown only as set / replace, never as a value.
+  key shown only as set / replace, never as a value. When another reviewer already holds a key, the
+  key section also offers _Reuse the key stored on …_ beside pasting one: the dashboard sends that
+  reviewer's id and nothing else. Creating a reviewer asks _Blank reviewer_ or _Start from a
+  template_ as two explicit choices — the seven starters appear only once a template is asked for,
+  and nothing is prefilled until one is picked.
 - **Repositories** — a table with an enabled toggle and per-repo reviewer toggles expanded inside
   the row, instead of a second screen.
 - **Runs** — a table with status and repository filters, relative times and running rows badged; the
@@ -424,6 +436,9 @@ then done. Errors redirected back from the claim callback (`?error=installation_
 `?error=access_denied`) render as messages on `/setup`. A repositories refresh imports the
 installation's repositories; newly discovered ones arrive disabled — enabling one is an explicit
 dashboard action (D-016).
+The install link opens in a new tab (it is an `ExternalLink`), so the wizard the operator is
+working in stays where it is; the "Sign in with GitHub" anchor and the manifest form POST stay
+same-tab on purpose, because GitHub answers both with a redirect back into the instance.
 
 ## Design system (D-026)
 
@@ -574,16 +589,18 @@ each:
 
 ### Primitives
 
-`product/src/ui/` holds 15 primitives — one module each:
+`product/src/ui/` holds 16 primitives — one module each:
 
 `Badge` · `Button` (plus `buttonClass` and `secondaryButtonClass`) · `Card` (plus `Panel`) ·
-`Dialog` · `EmptyState` · `Field` · `Input` (plus `inputClass`) · `Notice` · `Select` · `Skeleton` ·
-`Switch` · `Table` (plus `Row`) · `Tabs` · `Textarea` · `Toolbar`.
+`Dialog` · `EmptyState` · `ExternalLink` · `Field` · `Input` (plus `inputClass`) · `Notice` ·
+`Select` · `Skeleton` · `Switch` · `Table` (plus `Row`) · `Tabs` · `Textarea` · `Toolbar`.
+`ExternalLink` is the one anchor that leaves the app: `target="_blank"` with
+`rel="noopener noreferrer"`, neither overridable by a caller.
 
 Two support modules sit alongside them: `class-names.ts` exports `cx` (a tiny class-name joiner)
 plus the shared `focusRing` and `tapTarget` class strings, and `index.ts` is the barrel that
-re-exports the public surface. Every interactive primitive (`Button`, `Input`, `Select`,
-`Textarea`, `Switch`, `Tabs` triggers) and every nav/menu link carries
+Every interactive primitive (`Button`, `Input`, `Select`,
+`Textarea`, `Switch`, `Tabs` triggers, the `ExternalLink` anchor) and every nav/menu link carries
 `focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent` and a
 `min-h-11 min-w-11` (44 px) target — 44 px controls are the intended look, not a mobile-only
 rule (D-027). `Badge`'s neutral tone is `bg-surface-muted text-text-body`, which flips surface and
