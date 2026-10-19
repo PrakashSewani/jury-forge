@@ -947,3 +947,42 @@ of one taxonomy is how `setup_session_required` went missing in the first place.
 
 **Not in this slice:** no new runtime dependency (zod was already resolved in the repo), no migration,
 no change to the engine, no deploy — the `dev`-only hold stands.
+
+## D-030 — Auto-deploy on `dev`; `main` is retired
+
+**Decision:** (2026-10-19) A merge to `dev` deploys the product. `.github/workflows/deploy.yml`
+runs `npm ci`, the repository's own `npm run check`, `npx wrangler d1 migrations apply jury-forge
+--remote`, then `npm run deploy --workspace @jury-forge/product`. `main` is deleted and
+`.github/workflows/release.yml` with it; `dev` is the only long-lived branch. Production is
+`https://jury.prakashsewani.com`, a Worker custom domain on the Worker `jury-forge`, gated by a
+Cloudflare Access application that allows the owner's email only, plus one path-scoped Access
+application that bypasses `/api/webhooks/github` — GitHub cannot authenticate to Access, and every
+review run arrives on that path. This change retires the `deployments are manual` rule in
+`AGENTS.md` for the product and keeps it for everything else.
+
+The instance's `database_id` and the `routes` entry are committed in `product/wrangler.jsonc`. The
+guided deploy writes an id into that file for a new instance; the automated one reads it from the
+repository, so the file carries this deployment's values rather than the placeholder.
+
+**Why:** the owner asked for the merge to be the whole shipping story ("once it is merged into dev
+autodeploy") and for the release branch to go. Two long-lived branches plus a label-driven release
+put a choice in front of every change — which branch does this belong to, and when does a human
+promote it — and the release workflow's only effect was a version bump and a tag, so a merge could
+sit on `dev` while the deployed Worker quietly lagged behind it. With one integration branch and a
+deploy that follows it, the merge gate _is_ the release gate, and the same `npm run check` that
+reviewed the pull request runs again against the exact tree being shipped.
+
+**Rejected:** keeping `main` and deploying from a tag — nothing consumes a version here (one
+deployment, one operator), so the tag would be ceremony plus a branch to maintain; `wrangler
+versions upload` followed by a manual promote for every change — it buys a staging gate nobody asked
+for, and the same control is still available on demand through `wrangler versions list` /
+`versions deploy` and an instant rollback; a Cloudflare Workers Build instead of GitHub Actions —
+the build logic would then live outside this repository, while the migration step needs its
+toolchain; deleting the duplicated check from the deploy job because `ci.yml` already ran it —
+deliberate: `ci.yml` reports on the pull request, the deploy re-runs it on the tree it is about to
+ship, and the duplicate is what keeps a red check from reaching the database.
+
+**Not in this change:** no new dependency, no schema change, no migration, no change to the Worker's
+behaviour or to the Access policy. The deploys authenticate with a Cloudflare API token scoped to
+Workers Scripts and D1, held in the repository's Actions secrets; the account id is stored there too,
+for tidiness rather than secrecy.

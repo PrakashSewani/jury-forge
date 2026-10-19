@@ -26,13 +26,13 @@ export const THE_STEPS = [
     id: 'database',
     description:
       'Find the D1 database "jury-forge" (create it when missing: npx wrangler d1 create jury-forge)',
-    command: 'npx wrangler d1 list --format json',
+    command: 'npx wrangler d1 list --json',
   },
   {
     id: 'secrets',
     description:
       'Set any missing ENCRYPTION_KEY and SETUP_CODE secrets (npx wrangler secret put <NAME>)',
-    command: 'npx wrangler secret list --format json',
+    command: 'npx wrangler secret list --json',
     cwd: 'product',
   },
   {
@@ -231,7 +231,7 @@ async function stepAuth() {
 
 async function stepDatabase() {
   console.log('\n2/6 Ensuring the D1 database…');
-  const listOutput = await runStep('npx wrangler d1 list --format json');
+  const listOutput = await runStep('npx wrangler d1 list --json');
   if (databaseExists(listOutput)) {
     console.log(`D1 database "${DATABASE_NAME}" already exists — leaving wrangler.jsonc as-is.`);
     return;
@@ -246,7 +246,7 @@ async function stepDatabase() {
 
 async function stepSecrets() {
   console.log('\n3/6 Ensuring the instance secrets…');
-  const listed = await runCommand('npx wrangler secret list --format json', { cwd: productDir });
+  const listed = await runCommand('npx wrangler secret list --json', { cwd: productDir });
   if (listed.code !== 0) {
     console.log('\nCould not list the instance secrets — nothing was changed.');
     console.log('An existing secret must never be overwritten. Set any missing ones manually:');
