@@ -30,6 +30,22 @@ async function seedReviewer(id: string, name: string): Promise<void> {
     .run();
 }
 
+/** A session'd `GET /api/repositories?q=` read; asserts the 200 that every search case expects. */
+async function listMatching(q: string, cookie: string) {
+  const response = await app.request(
+    `${ORIGIN}/api/repositories?q=${encodeURIComponent(q)}`,
+    { headers: { Cookie: cookie } },
+    env,
+  );
+  expect(response.status).toBe(200);
+  return (await response.json()) as {
+    repoId: number;
+    fullName: string;
+    private: boolean;
+    enabled: boolean;
+  }[];
+}
+
 describe('repositories api', () => {
   it('requires a session', async () => {
     const response = await app.request(`${ORIGIN}/api/repositories`, {}, env);
@@ -213,5 +229,87 @@ describe('repositories api', () => {
       env,
     );
     expect(missingRepo.status).toBe(404);
+  });
+
+  it('matches a substring of the name, case-insensitively', async () => {
+    await seedRepo(101, 'octocat/hello', false);
+    await seedRepo(202, 'octocat/zeta', true);
+    await seedRepo(303, 'AwesomeNPC/HelloWorld', false);
+    const cookie = await session();
+    const names = async (q: string) => (await listMatching(q, cookie)).map((row) => row.fullName);
+
+    // A substring, not a prefix — and the case of the term and of the stored name both stop mattering.
+    await expect(names('hello')).resolves.toEqual(['AwesomeNPC/HelloWorld', 'octocat/hello']);
+    await expect(names('HelloWor')).resolves.toEqual(['AwesomeNPC/HelloWorld']);
+    await expect(names('OCTOCAT')).resolves.toEqual(['octocat/hello', 'octocat/zeta']);
+    // The term narrows the list; each surviving row keeps the flags it was stored with.
+    await expect(listMatching('zeta', cookie)).resolves.toMatchObject([
+      { repoId: 202, fullName: 'octocat/zeta', enabled: true },
+    ]);
+    // A blank term is no filter at all, exactly like an absent one.
+    await expect(names('   ')).resolves.toEqual([
+      'AwesomeNPC/HelloWorld',
+      'octocat/hello',
+      'octocat/zeta',
+    ]);
+  });
+
+  it('treats % and _ in the term as literal characters', async () => {
+    await seedRepo(101, 'octocat/my_repo', false);
+    await seedRepo(202, 'octocat/myXrepo', true);
+    const cookie = await session();
+    const names = async (q: string) => (await listMatching(q, cookie)).map((row) => row.fullName);
+
+    // `_` is LIKE's one-character wildcard: unescaped, `my_repo` would also answer `myXrepo`.
+    await expect(names('my_repo')).resolves.toEqual(['octocat/my_repo']);
+    // `%` matches anything: unescaped, each of these would return both rows instead of none.
+    await expect(names('%')).resolves.toEqual([]);
+    await expect(names('%repo')).resolves.toEqual([]);
+    await expect(names('my%repo')).resolves.toEqual([]);
+  });
+
+  it('answers an empty list when nothing matches', async () => {
+    await seedRepo(101, 'octocat/hello', false);
+    const cookie = await session();
+
+    const repositories = await listMatching('nothing-like-this', cookie);
+    expect(repositories).toEqual([]);
+  });
+
+  it('refreshes from GitHub and narrows what it returns', async () => {
+    await seedGitHubApp();
+    await env.DB.prepare(
+      "INSERT INTO instance_meta (key, value) VALUES ('installation_id', '4242')",
+    ).run();
+    const cookie = await session();
+
+    network.use(
+      http.post('https://api.github.com/app/installations/4242/access_tokens', () =>
+        HttpResponse.json({ token: 'ghs_test', expires_at: '2099-01-01T00:00:00Z' }),
+      ),
+      http.get('https://api.github.com/installation/repositories', () =>
+        HttpResponse.json({
+          total_count: 2,
+          repositories: [
+            { id: 101, full_name: 'octocat/hello', private: false },
+            { id: 303, full_name: 'octocat/fresh', private: true },
+          ],
+        }),
+      ),
+    );
+
+    const response = await app.request(
+      `${ORIGIN}/api/repositories?refresh=1&q=fresh`,
+      { headers: { Cookie: cookie } },
+      env,
+    );
+    expect(response.status).toBe(200);
+    const repositories = (await response.json()) as { fullName: string }[];
+    // The sync still imports the whole installation; only the response is narrowed.
+    expect(repositories.map((repository) => repository.fullName)).toEqual(['octocat/fresh']);
+    const stored = await env.DB.prepare('SELECT COUNT(*) AS count FROM repositories').first<{
+      count: number;
+    }>();
+    expect(stored?.count).toBe(2);
   });
 });

@@ -245,8 +245,26 @@ export async function deleteReviewer(id: string, signal?: AbortSignal): Promise<
   }
 }
 
-export function listRepositories(refresh = false, signal?: AbortSignal): Promise<Repository[]> {
-  return request(RepositoryListSchema, `/api/repositories${refresh ? '?refresh=1' : ''}`, {
+/**
+ * The repository list, narrowed server-side when `q` is set: the worker matches `full_name` and the
+ * term travels in the URL, so the enabled/reviewer toggles keep working on what the query returned.
+ * `q` is appended after `signal` on purpose — the three existing callers stay as they are.
+ */
+export function listRepositories(
+  refresh = false,
+  signal?: AbortSignal,
+  q = '',
+): Promise<Repository[]> {
+  const params = new URLSearchParams();
+  if (refresh) {
+    params.set('refresh', '1');
+  }
+  const term = q.trim();
+  if (term !== '') {
+    params.set('q', term);
+  }
+  const query = params.toString();
+  return request(RepositoryListSchema, `/api/repositories${query === '' ? '' : `?${query}`}`, {
     signal,
   });
 }
