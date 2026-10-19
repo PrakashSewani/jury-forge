@@ -15,12 +15,13 @@ vi.mock('../src/lib/api', async (importOriginal) => {
   };
 });
 
-import { createReviewer, getReviewer, listReviewers } from '../src/lib/api';
+import { createReviewer, getReviewer, listReviewers, updateReviewer } from '../src/lib/api';
 import ReviewerEditorPage from '../src/pages/ReviewerEditorPage';
 
 const createReviewerMock = vi.mocked(createReviewer);
 const getReviewerMock = vi.mocked(getReviewer);
 const listReviewersMock = vi.mocked(listReviewers);
+const updateReviewerMock = vi.mocked(updateReviewer);
 
 function reviewer(overrides: Partial<Reviewer> = {}): Reviewer {
   return {
@@ -64,7 +65,7 @@ describe('reusing a stored model key in the reviewer editor', () => {
     await user.click(reuse);
 
     const select = screen.getByLabelText('Reuse the key stored on', { exact: false });
-    expect(within(select).getByRole('option', { name: 'Security' })).toBeTruthy();
+    expect(within(select).getByRole('option', { name: 'Security — gpt-5' })).toBeTruthy();
     // Only reviewers that actually hold a key can be a source.
     expect(within(select).getAllByRole('option')).toHaveLength(1);
     // The value is never rendered: the paste input is gone, not merely disabled.
@@ -108,8 +109,46 @@ describe('reusing a stored model key in the reviewer editor', () => {
     await user.click(screen.getByRole('radio', { name: 'Reuse a stored key' }));
 
     const select = screen.getByLabelText('Reuse the key stored on', { exact: false });
-    expect(within(select).getByRole('option', { name: 'Security' })).toBeTruthy();
+    expect(within(select).getByRole('option', { name: 'Security — gpt-5' })).toBeTruthy();
     expect(within(select).queryByRole('option', { name: 'Self' })).toBeNull();
+  });
+
+  it('tells two sources with the same name apart in the picker', async () => {
+    const user = userEvent.setup();
+    listReviewersMock.mockResolvedValue([
+      reviewer({ id: '3f7a1c20-1111-4a11-9a11-aaaa11112222', name: 'Security' }),
+      reviewer({ id: '9b8c7d60-2222-4b22-9b22-bbbb22223333', name: 'Security' }),
+    ]);
+
+    render(<ReviewerEditorPage />);
+    await user.click(await screen.findByRole('radio', { name: 'Reuse a stored key' }));
+
+    const select = screen.getByLabelText('Reuse the key stored on', { exact: false });
+    const labels = within(select)
+      .getAllByRole('option')
+      .map((option) => option.textContent);
+    // `reviewers.name` is not unique, so a repeated name carries its short id — the operator can
+    // tell which stored key they are copying.
+    expect(labels).toEqual(['Security — gpt-5 (3f7a1c20)', 'Security — gpt-5 (9b8c7d60)']);
+  });
+
+  it('sends the source reviewer id when the edit screen is saved with reuse selected', async () => {
+    const user = userEvent.setup();
+    const edited = reviewer({ id: 'rev-edit', name: 'Edited' });
+    getReviewerMock.mockResolvedValue(edited);
+    listReviewersMock.mockResolvedValue([edited, KEYED]);
+    updateReviewerMock.mockResolvedValue(edited);
+
+    render(<ReviewerEditorPage id="rev-edit" />);
+    await screen.findByDisplayValue('Edited');
+    await user.click(await screen.findByRole('radio', { name: 'Reuse a stored key' }));
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+
+    await waitFor(() => expect(updateReviewerMock).toHaveBeenCalledTimes(1));
+    expect(updateReviewerMock.mock.calls[0][0]).toBe('rev-edit');
+    const input = updateReviewerMock.mock.calls[0][1];
+    expect(input.apiKeyFromReviewerId).toBe('rev-security');
+    expect('apiKey' in input).toBe(false);
   });
 
   it('goes back to sending a typed key when pasting is chosen again', async () => {

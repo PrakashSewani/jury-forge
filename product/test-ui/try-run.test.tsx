@@ -163,6 +163,42 @@ describe('new reviewer starter choice', () => {
     expect(screen.getByRole('button', { name: 'Create reviewer' })).toBeTruthy();
   });
 
+  it('restores the pre-template values when blank is chosen after a template', async () => {
+    const user = userEvent.setup();
+    render(<ReviewerEditorPage />);
+    const template = REVIEWER_TEMPLATES[0];
+
+    await user.type(screen.getByLabelText('Name'), 'Hand written');
+    await user.click(screen.getByRole('radio', { name: 'Start from a template' }));
+    await user.selectOptions(
+      screen.getByLabelText('Template', { exact: false, selector: 'select' }),
+      template.key,
+    );
+    expect((screen.getByLabelText('Name') as HTMLInputElement).value).toBe(template.name);
+
+    await user.click(screen.getByRole('radio', { name: 'Blank reviewer' }));
+
+    // The radio's copy promises a reviewer the operator fills in themselves: the template is undone,
+    // never left standing under a blank label.
+    expect((screen.getByLabelText('Name') as HTMLInputElement).value).toBe('Hand written');
+    expect(
+      (screen.getByLabelText('Instructions', { exact: false }) as HTMLTextAreaElement).value,
+    ).toBe('');
+    expect((screen.getByLabelText('Rules', { exact: false }) as HTMLTextAreaElement).value).toBe(
+      '',
+    );
+    expect(screen.queryByText(/Applied the .* template/)).toBeNull();
+    expect(screen.queryByLabelText('Template', { exact: false, selector: 'select' })).toBeNull();
+
+    // Coming back to the starter choice starts from the placeholder again, not from the undone template.
+    await user.click(screen.getByRole('radio', { name: 'Start from a template' }));
+    const select = screen.getByLabelText('Template', {
+      exact: false,
+      selector: 'select',
+    }) as HTMLSelectElement;
+    expect(select.value).toBe('');
+  });
+
   it('does not render the starter choice on the edit screen', async () => {
     getReviewerMock.mockResolvedValue(READY_REVIEWER);
     render(<ReviewerEditorPage id="rev-security" />);

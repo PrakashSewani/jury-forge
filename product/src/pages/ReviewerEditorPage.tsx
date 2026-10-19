@@ -53,8 +53,23 @@ interface FormErrors {
   params?: string;
 }
 
+/** The three fields a starter prefills. The values held before a template was applied are kept as
+ * the snapshot "Blank reviewer" restores. */
+interface StarterFields {
+  name: string;
+  instructions: string;
+  rules: string;
+}
+
 function findTemplate(key: string): ReviewerTemplate | undefined {
   return REVIEWER_TEMPLATES.find((template) => template.key === key);
+}
+
+/** `reviewers.name` has no unique constraint, so a name two sources share gets a short id appended:
+ * the operator has to be able to tell which stored key the option is about to copy. */
+function reuseSourceLabel(source: Reviewer, duplicateName: boolean): string {
+  const label = `${source.name} — ${source.model}`;
+  return duplicateName ? `${label} (${source.id.slice(0, 8)})` : label;
 }
 
 const NEW_REVIEWER: FormState = {
@@ -120,6 +135,9 @@ export default function ReviewerEditorPage({ id }: { id?: string }) {
   const [startFrom, setStartFrom] = useState<'blank' | 'template'>('blank');
   const [templateKey, setTemplateKey] = useState('');
   const [appliedTemplate, setAppliedTemplate] = useState<string | null>(null);
+  // What name, instructions and rules held before a template was applied, so that choosing "Blank
+  // reviewer" after previewing one returns the operator to a genuinely blank form.
+  const [beforeTemplate, setBeforeTemplate] = useState<StarterFields | null>(null);
   const [keySources, setKeySources] = useState<Reviewer[]>([]);
 
   // Set once a save or a delete has landed. The navigation that follows is a client route change,
@@ -244,6 +262,20 @@ export default function ReviewerEditorPage({ id }: { id?: string }) {
     });
   }
 
+  /** One update replaces exactly the three prefilled fields; the model, base URL, params and key
+   * inputs are left to the operator and are never touched here. */
+  function applyStarterFields(fields: StarterFields) {
+    setForm((current) => (current === null ? current : { ...current, ...fields }));
+    setErrors((current) => {
+      if (current.name === undefined || fields.name.trim() === '') {
+        return current;
+      }
+      const next = { ...current };
+      delete next.name;
+      return next;
+    });
+  }
+
   function handleTemplateChange(key: string) {
     setTemplateKey(key);
     const template = findTemplate(key);
@@ -251,27 +283,30 @@ export default function ReviewerEditorPage({ id }: { id?: string }) {
       // The placeholder option: nothing is applied yet, and nothing already applied is forgotten.
       return;
     }
-    // One update replaces exactly the three prefilled fields; the model, base URL, params and key
-    // inputs are left to the operator and are never touched here.
-    setForm((current) =>
-      current === null
-        ? current
-        : {
-            ...current,
-            name: template.name,
-            instructions: template.instructions,
-            rules: template.rules,
-          },
-    );
-    setErrors((current) => {
-      if (current.name === undefined) {
-        return current;
-      }
-      const next = { ...current };
-      delete next.name;
-      return next;
+    if (form !== null && beforeTemplate === null) {
+      // Remembered once, on the first template: "Blank reviewer" restores exactly these values, not
+      // whatever a template has since written over them.
+      setBeforeTemplate({ name: form.name, instructions: form.instructions, rules: form.rules });
+    }
+    applyStarterFields({
+      name: template.name,
+      instructions: template.instructions,
+      rules: template.rules,
     });
     setAppliedTemplate(template.name);
+  }
+
+  /** Going back to blank undoes what a template prefilled: the radio's copy promises a reviewer the
+   * operator fills in themselves, so a template has to be a preview and not a lock-in. */
+  function chooseBlankStarter() {
+    setStartFrom('blank');
+    setAppliedTemplate(null);
+    setTemplateKey('');
+    if (beforeTemplate === null) {
+      return;
+    }
+    applyStarterFields(beforeTemplate);
+    setBeforeTemplate(null);
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -355,6 +390,13 @@ export default function ReviewerEditorPage({ id }: { id?: string }) {
     }
   }
 
+  // A name two sources share is ambiguous in the picker, so it alone gets the id suffix.
+  const duplicateNames = new Set(
+    keySources
+      .map((source) => source.name)
+      .filter((name, index, names) => names.indexOf(name) !== index),
+  );
+
   if (form === null) {
     return (
       <div className="space-y-6">
@@ -389,7 +431,7 @@ export default function ReviewerEditorPage({ id }: { id?: string }) {
                   checked={startFrom === 'blank'}
                   className={cx('h-4 w-4 accent-accent', focusRing)}
                   name="start-from"
-                  onChange={() => setStartFrom('blank')}
+                  onChange={chooseBlankStarter}
                   type="radio"
                   value="blank"
                 />
@@ -529,7 +571,7 @@ export default function ReviewerEditorPage({ id }: { id?: string }) {
               >
                 {keySources.map((source) => (
                   <option key={source.id} value={source.id}>
-                    {source.name}
+                    {reuseSourceLabel(source, duplicateNames.has(source.name))}
                   </option>
                 ))}
               </Select>

@@ -64,6 +64,9 @@ reviewerRoutes.post('/', async (c) => {
   if (!parsed.success) {
     return errorResponse('invalid_request', 400);
   }
+  // Deliberate symmetry with the PATCH guard below, pinned by `product/test/reviewers-key-reuse.test.ts`:
+  // a reuse copies the source ciphertext verbatim and needs no key material of its own, but every
+  // request that writes a key is refused on an instance that cannot hold keys at all.
   if (
     (parsed.data.apiKey !== undefined || parsed.data.apiKeyFromReviewerId !== undefined) &&
     !c.env.ENCRYPTION_KEY
