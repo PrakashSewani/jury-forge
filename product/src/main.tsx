@@ -4,9 +4,9 @@ import App from './App';
 import { applyTheme, readStoredTheme } from './lib/theme';
 import './styles.css';
 
-// Resolve the stored preference (defaulting to the system preference) before the first render,
-// so `data-theme` is set from the start and the dark overrides apply immediately.
-applyTheme(readStoredTheme() ?? 'system');
+// The dark forge palette is the default for every visitor (D-033). A stored choice wins; "system"
+// is an explicit choice, never the default. `data-theme` is set before the first render.
+applyTheme(readStoredTheme() ?? 'dark');
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

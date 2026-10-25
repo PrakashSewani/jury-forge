@@ -1,3 +1,5 @@
+export { CommandPalette } from './CommandPalette';
+export type { PaletteAction } from './CommandPalette';
 export { Shell } from './Shell';
 export type { ShellProps } from './Shell';
 export { Nav, NAV_ITEMS, isActive } from './Nav';

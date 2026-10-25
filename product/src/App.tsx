@@ -1,5 +1,6 @@
 import type { SessionUser, SetupState } from '@jury-forge/shared';
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
+import { Toaster } from 'sonner';
 import { fetchSession, fetchSetupState, logOut } from './lib/api';
 import type { Route } from './lib/router';
 import { routeFromPath, subscribeRoute } from './lib/router';
@@ -60,15 +61,18 @@ export default function App() {
   }
 
   return (
-    <Shell
-      busy={busy}
-      onLogout={() => void handleLogout()}
-      route={route}
-      setup={shell?.setup ?? null}
-      user={shell?.user ?? null}
-    >
-      <Content failed={failed} onReload={load} route={route} shell={shell} />
-    </Shell>
+    <>
+      <Shell
+        busy={busy}
+        onLogout={() => void handleLogout()}
+        route={route}
+        setup={shell?.setup ?? null}
+        user={shell?.user ?? null}
+      >
+        <Content failed={failed} onReload={load} route={route} shell={shell} />
+      </Shell>
+      <Toaster closeButton position="bottom-right" richColors theme="dark" />
+    </>
   );
 }
 

@@ -1,0 +1,5842 @@
+{
+  "label": "ui-rework-20261025",
+  "generatedAt": "2026-10-25T12:58:14.196Z",
+  "durationSeconds": 56.5,
+  "git": {
+    "branch": "feat/ui-rework-20261025",
+    "sha": "5739299"
+  },
+  "browser": {
+    "path": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+    "product": "Edg/156.0.4314.42"
+  },
+  "baseUrl": "http://127.0.0.1:5173",
+  "spawnedDevServer": true,
+  "runId": "101:12:9f2c1a7e4b8d0f3a6c5e2b1d4a7f0c3e8b6d9a2f:dev-seed-delivery-12",
+  "routes": [
+    {
+      "slug": "home",
+      "path": "/"
+    },
+    {
+      "slug": "reviewers",
+      "path": "/reviewers"
+    },
+    {
+      "slug": "reviewers-new",
+      "path": "/reviewers/new"
+    },
+    {
+      "slug": "repositories",
+      "path": "/repositories"
+    },
+    {
+      "slug": "runs",
+      "path": "/runs"
+    },
+    {
+      "slug": "run-detail",
+      "path": "/runs/101%3A12%3A9f2c1a7e4b8d0f3a6c5e2b1d4a7f0c3e8b6d9a2f%3Adev-seed-delivery-12"
+    },
+    {
+      "slug": "settings",
+      "path": "/settings"
+    },
+    {
+      "slug": "activity",
+      "path": "/activity"
+    }
+  ],
+  "widths": [320, 360, 390, 414, 768, 1024, 1440],
+  "height": 900,
+  "themes": ["light", "dark"],
+  "cells": [
+    {
+      "route": "home",
+      "path": "/",
+      "width": 320,
+      "height": 900,
+      "theme": "light",
+      "mobile": true,
+      "screenshot": null,
+      "scrollWidth": 320,
+      "clientWidth": 320,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: light",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "home",
+      "path": "/",
+      "width": 360,
+      "height": 900,
+      "theme": "light",
+      "mobile": true,
+      "screenshot": null,
+      "scrollWidth": 360,
+      "clientWidth": 360,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: light",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "home",
+      "path": "/",
+      "width": 390,
+      "height": 900,
+      "theme": "light",
+      "mobile": true,
+      "screenshot": "home-390-light.png",
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: light",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": {
+        "opened": true,
+        "label": "Close menu",
+        "element": "button.inline-flex.items-center.justify-center"
+      },
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "home",
+      "path": "/",
+      "width": 414,
+      "height": 900,
+      "theme": "light",
+      "mobile": true,
+      "screenshot": null,
+      "scrollWidth": 414,
+      "clientWidth": 414,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: light",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "home",
+      "path": "/",
+      "width": 768,
+      "height": 900,
+      "theme": "light",
+      "mobile": false,
+      "screenshot": null,
+      "scrollWidth": 753,
+      "clientWidth": 753,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: light",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "home",
+      "path": "/",
+      "width": 1024,
+      "height": 900,
+      "theme": "light",
+      "mobile": false,
+      "screenshot": null,
+      "scrollWidth": 1009,
+      "clientWidth": 1009,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "a.inline-flex.items-center.text-base",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Overview",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Reviewers",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.439 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "home",
+      "path": "/",
+      "width": 1440,
+      "height": 900,
+      "theme": "light",
+      "mobile": false,
+      "screenshot": "home-1440-light.png",
+      "scrollWidth": 1425,
+      "clientWidth": 1425,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "a.inline-flex.items-center.text-base",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Overview",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Reviewers",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.439 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "reviewers",
+      "path": "/reviewers",
+      "width": 320,
+      "height": 900,
+      "theme": "light",
+      "mobile": true,
+      "screenshot": null,
+      "scrollWidth": 320,
+      "clientWidth": 320,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: light",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "reviewers",
+      "path": "/reviewers",
+      "width": 360,
+      "height": 900,
+      "theme": "light",
+      "mobile": true,
+      "screenshot": null,
+      "scrollWidth": 360,
+      "clientWidth": 360,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: light",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "reviewers",
+      "path": "/reviewers",
+      "width": 390,
+      "height": 900,
+      "theme": "light",
+      "mobile": true,
+      "screenshot": "reviewers-390-light.png",
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: light",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": {
+        "opened": true,
+        "label": "Close menu",
+        "element": "button.inline-flex.items-center.justify-center"
+      },
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "reviewers",
+      "path": "/reviewers",
+      "width": 414,
+      "height": 900,
+      "theme": "light",
+      "mobile": true,
+      "screenshot": null,
+      "scrollWidth": 414,
+      "clientWidth": 414,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: light",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "reviewers",
+      "path": "/reviewers",
+      "width": 768,
+      "height": 900,
+      "theme": "light",
+      "mobile": false,
+      "screenshot": null,
+      "scrollWidth": 768,
+      "clientWidth": 768,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: light",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "reviewers",
+      "path": "/reviewers",
+      "width": 1024,
+      "height": 900,
+      "theme": "light",
+      "mobile": false,
+      "screenshot": null,
+      "scrollWidth": 1024,
+      "clientWidth": 1024,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "a.inline-flex.items-center.text-base",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Overview",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.439 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Reviewers",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "reviewers",
+      "path": "/reviewers",
+      "width": 1440,
+      "height": 900,
+      "theme": "light",
+      "mobile": false,
+      "screenshot": "reviewers-1440-light.png",
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "a.inline-flex.items-center.text-base",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Overview",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.439 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Reviewers",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "reviewers-new",
+      "path": "/reviewers/new",
+      "width": 320,
+      "height": 900,
+      "theme": "light",
+      "mobile": true,
+      "screenshot": null,
+      "scrollWidth": 320,
+      "clientWidth": 320,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: light",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "reviewers-new",
+      "path": "/reviewers/new",
+      "width": 360,
+      "height": 900,
+      "theme": "light",
+      "mobile": true,
+      "screenshot": null,
+      "scrollWidth": 360,
+      "clientWidth": 360,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: light",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "reviewers-new",
+      "path": "/reviewers/new",
+      "width": 390,
+      "height": 900,
+      "theme": "light",
+      "mobile": true,
+      "screenshot": "reviewers-new-390-light.png",
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: light",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": {
+        "opened": true,
+        "label": "Close menu",
+        "element": "button.inline-flex.items-center.justify-center"
+      },
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "reviewers-new",
+      "path": "/reviewers/new",
+      "width": 414,
+      "height": 900,
+      "theme": "light",
+      "mobile": true,
+      "screenshot": null,
+      "scrollWidth": 414,
+      "clientWidth": 414,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: light",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "reviewers-new",
+      "path": "/reviewers/new",
+      "width": 768,
+      "height": 900,
+      "theme": "light",
+      "mobile": false,
+      "screenshot": null,
+      "scrollWidth": 753,
+      "clientWidth": 753,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: light",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "reviewers-new",
+      "path": "/reviewers/new",
+      "width": 1024,
+      "height": 900,
+      "theme": "light",
+      "mobile": false,
+      "screenshot": null,
+      "scrollWidth": 1009,
+      "clientWidth": 1009,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "a.inline-flex.items-center.text-base",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Overview",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.439 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Reviewers",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "reviewers-new",
+      "path": "/reviewers/new",
+      "width": 1440,
+      "height": 900,
+      "theme": "light",
+      "mobile": false,
+      "screenshot": "reviewers-new-1440-light.png",
+      "scrollWidth": 1425,
+      "clientWidth": 1425,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "a.inline-flex.items-center.text-base",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Overview",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.439 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Reviewers",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "repositories",
+      "path": "/repositories",
+      "width": 320,
+      "height": 900,
+      "theme": "light",
+      "mobile": true,
+      "screenshot": null,
+      "scrollWidth": 320,
+      "clientWidth": 320,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: light",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "repositories",
+      "path": "/repositories",
+      "width": 360,
+      "height": 900,
+      "theme": "light",
+      "mobile": true,
+      "screenshot": null,
+      "scrollWidth": 360,
+      "clientWidth": 360,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: light",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "repositories",
+      "path": "/repositories",
+      "width": 390,
+      "height": 900,
+      "theme": "light",
+      "mobile": true,
+      "screenshot": "repositories-390-light.png",
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: light",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": {
+        "opened": true,
+        "label": "Close menu",
+        "element": "button.inline-flex.items-center.justify-center"
+      },
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "repositories",
+      "path": "/repositories",
+      "width": 414,
+      "height": 900,
+      "theme": "light",
+      "mobile": true,
+      "screenshot": null,
+      "scrollWidth": 414,
+      "clientWidth": 414,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: light",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "repositories",
+      "path": "/repositories",
+      "width": 768,
+      "height": 900,
+      "theme": "light",
+      "mobile": false,
+      "screenshot": null,
+      "scrollWidth": 768,
+      "clientWidth": 768,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: light",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "repositories",
+      "path": "/repositories",
+      "width": 1024,
+      "height": 900,
+      "theme": "light",
+      "mobile": false,
+      "screenshot": null,
+      "scrollWidth": 1024,
+      "clientWidth": 1024,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "a.inline-flex.items-center.text-base",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Overview",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.439 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Reviewers",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.439 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "repositories",
+      "path": "/repositories",
+      "width": 1440,
+      "height": 900,
+      "theme": "light",
+      "mobile": false,
+      "screenshot": "repositories-1440-light.png",
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "a.inline-flex.items-center.text-base",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Overview",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.439 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Reviewers",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.439 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "runs",
+      "path": "/runs",
+      "width": 320,
+      "height": 900,
+      "theme": "light",
+      "mobile": true,
+      "screenshot": null,
+      "scrollWidth": 320,
+      "clientWidth": 320,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: light",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "runs",
+      "path": "/runs",
+      "width": 360,
+      "height": 900,
+      "theme": "light",
+      "mobile": true,
+      "screenshot": null,
+      "scrollWidth": 360,
+      "clientWidth": 360,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: light",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "runs",
+      "path": "/runs",
+      "width": 390,
+      "height": 900,
+      "theme": "light",
+      "mobile": true,
+      "screenshot": "runs-390-light.png",
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: light",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": {
+        "opened": true,
+        "label": "Close menu",
+        "element": "button.inline-flex.items-center.justify-center"
+      },
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "runs",
+      "path": "/runs",
+      "width": 414,
+      "height": 900,
+      "theme": "light",
+      "mobile": true,
+      "screenshot": null,
+      "scrollWidth": 414,
+      "clientWidth": 414,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: light",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "runs",
+      "path": "/runs",
+      "width": 768,
+      "height": 900,
+      "theme": "light",
+      "mobile": false,
+      "screenshot": null,
+      "scrollWidth": 753,
+      "clientWidth": 753,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: light",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "runs",
+      "path": "/runs",
+      "width": 1024,
+      "height": 900,
+      "theme": "light",
+      "mobile": false,
+      "screenshot": null,
+      "scrollWidth": 1009,
+      "clientWidth": 1009,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "a.inline-flex.items-center.text-base",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Overview",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.439 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Reviewers",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.439 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "runs",
+      "path": "/runs",
+      "width": 1440,
+      "height": 900,
+      "theme": "light",
+      "mobile": false,
+      "screenshot": "runs-1440-light.png",
+      "scrollWidth": 1425,
+      "clientWidth": 1425,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "a.inline-flex.items-center.text-base",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Overview",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.439 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Reviewers",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.439 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "run-detail",
+      "path": "/runs/101%3A12%3A9f2c1a7e4b8d0f3a6c5e2b1d4a7f0c3e8b6d9a2f%3Adev-seed-delivery-12",
+      "width": 320,
+      "height": 900,
+      "theme": "light",
+      "mobile": true,
+      "screenshot": null,
+      "scrollWidth": 320,
+      "clientWidth": 320,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: light",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "run-detail",
+      "path": "/runs/101%3A12%3A9f2c1a7e4b8d0f3a6c5e2b1d4a7f0c3e8b6d9a2f%3Adev-seed-delivery-12",
+      "width": 360,
+      "height": 900,
+      "theme": "light",
+      "mobile": true,
+      "screenshot": null,
+      "scrollWidth": 360,
+      "clientWidth": 360,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: light",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "run-detail",
+      "path": "/runs/101%3A12%3A9f2c1a7e4b8d0f3a6c5e2b1d4a7f0c3e8b6d9a2f%3Adev-seed-delivery-12",
+      "width": 390,
+      "height": 900,
+      "theme": "light",
+      "mobile": true,
+      "screenshot": "run-detail-390-light.png",
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: light",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": {
+        "opened": true,
+        "label": "Close menu",
+        "element": "button.inline-flex.items-center.justify-center"
+      },
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "run-detail",
+      "path": "/runs/101%3A12%3A9f2c1a7e4b8d0f3a6c5e2b1d4a7f0c3e8b6d9a2f%3Adev-seed-delivery-12",
+      "width": 414,
+      "height": 900,
+      "theme": "light",
+      "mobile": true,
+      "screenshot": null,
+      "scrollWidth": 414,
+      "clientWidth": 414,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: light",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "run-detail",
+      "path": "/runs/101%3A12%3A9f2c1a7e4b8d0f3a6c5e2b1d4a7f0c3e8b6d9a2f%3Adev-seed-delivery-12",
+      "width": 768,
+      "height": 900,
+      "theme": "light",
+      "mobile": false,
+      "screenshot": null,
+      "scrollWidth": 753,
+      "clientWidth": 753,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: light",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "run-detail",
+      "path": "/runs/101%3A12%3A9f2c1a7e4b8d0f3a6c5e2b1d4a7f0c3e8b6d9a2f%3Adev-seed-delivery-12",
+      "width": 1024,
+      "height": 900,
+      "theme": "light",
+      "mobile": false,
+      "screenshot": null,
+      "scrollWidth": 1009,
+      "clientWidth": 1009,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "a.inline-flex.items-center.text-base",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Overview",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.439 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Reviewers",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.439 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "run-detail",
+      "path": "/runs/101%3A12%3A9f2c1a7e4b8d0f3a6c5e2b1d4a7f0c3e8b6d9a2f%3Adev-seed-delivery-12",
+      "width": 1440,
+      "height": 900,
+      "theme": "light",
+      "mobile": false,
+      "screenshot": "run-detail-1440-light.png",
+      "scrollWidth": 1425,
+      "clientWidth": 1425,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "a.inline-flex.items-center.text-base",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Overview",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.439 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Reviewers",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.439 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "settings",
+      "path": "/settings",
+      "width": 320,
+      "height": 900,
+      "theme": "light",
+      "mobile": true,
+      "screenshot": null,
+      "scrollWidth": 320,
+      "clientWidth": 320,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: light",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "settings",
+      "path": "/settings",
+      "width": 360,
+      "height": 900,
+      "theme": "light",
+      "mobile": true,
+      "screenshot": null,
+      "scrollWidth": 360,
+      "clientWidth": 360,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: light",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "settings",
+      "path": "/settings",
+      "width": 390,
+      "height": 900,
+      "theme": "light",
+      "mobile": true,
+      "screenshot": "settings-390-light.png",
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: light",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": {
+        "opened": true,
+        "label": "Close menu",
+        "element": "button.inline-flex.items-center.justify-center"
+      },
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "settings",
+      "path": "/settings",
+      "width": 414,
+      "height": 900,
+      "theme": "light",
+      "mobile": true,
+      "screenshot": null,
+      "scrollWidth": 414,
+      "clientWidth": 414,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: light",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "settings",
+      "path": "/settings",
+      "width": 768,
+      "height": 900,
+      "theme": "light",
+      "mobile": false,
+      "screenshot": null,
+      "scrollWidth": 753,
+      "clientWidth": 753,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: light",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "settings",
+      "path": "/settings",
+      "width": 1024,
+      "height": 900,
+      "theme": "light",
+      "mobile": false,
+      "screenshot": null,
+      "scrollWidth": 1009,
+      "clientWidth": 1009,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "a.inline-flex.items-center.text-base",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Overview",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.439 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Reviewers",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.439 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "settings",
+      "path": "/settings",
+      "width": 1440,
+      "height": 900,
+      "theme": "light",
+      "mobile": false,
+      "screenshot": "settings-1440-light.png",
+      "scrollWidth": 1425,
+      "clientWidth": 1425,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "a.inline-flex.items-center.text-base",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Overview",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.439 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Reviewers",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.439 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "activity",
+      "path": "/activity",
+      "width": 320,
+      "height": 900,
+      "theme": "light",
+      "mobile": true,
+      "screenshot": null,
+      "scrollWidth": 320,
+      "clientWidth": 320,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: light",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "activity",
+      "path": "/activity",
+      "width": 360,
+      "height": 900,
+      "theme": "light",
+      "mobile": true,
+      "screenshot": null,
+      "scrollWidth": 360,
+      "clientWidth": 360,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: light",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "activity",
+      "path": "/activity",
+      "width": 390,
+      "height": 900,
+      "theme": "light",
+      "mobile": true,
+      "screenshot": "activity-390-light.png",
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: light",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": {
+        "opened": true,
+        "label": "Close menu",
+        "element": "button.inline-flex.items-center.justify-center"
+      },
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "activity",
+      "path": "/activity",
+      "width": 414,
+      "height": 900,
+      "theme": "light",
+      "mobile": true,
+      "screenshot": null,
+      "scrollWidth": 414,
+      "clientWidth": 414,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: light",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "activity",
+      "path": "/activity",
+      "width": 768,
+      "height": 900,
+      "theme": "light",
+      "mobile": false,
+      "screenshot": null,
+      "scrollWidth": 768,
+      "clientWidth": 768,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: light",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.87 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "activity",
+      "path": "/activity",
+      "width": 1024,
+      "height": 900,
+      "theme": "light",
+      "mobile": false,
+      "screenshot": null,
+      "scrollWidth": 1024,
+      "clientWidth": 1024,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "a.inline-flex.items-center.text-base",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Overview",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.439 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Reviewers",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.439 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "activity",
+      "path": "/activity",
+      "width": 1440,
+      "height": 900,
+      "theme": "light",
+      "mobile": false,
+      "screenshot": "activity-1440-light.png",
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "a.inline-flex.items-center.text-base",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.205 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Overview",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.439 0 none)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Reviewers",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.439 0 none)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "home",
+      "path": "/",
+      "width": 320,
+      "height": 900,
+      "theme": "dark",
+      "mobile": true,
+      "screenshot": null,
+      "scrollWidth": 320,
+      "clientWidth": 320,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: dark",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "home",
+      "path": "/",
+      "width": 360,
+      "height": 900,
+      "theme": "dark",
+      "mobile": true,
+      "screenshot": null,
+      "scrollWidth": 360,
+      "clientWidth": 360,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: dark",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "home",
+      "path": "/",
+      "width": 390,
+      "height": 900,
+      "theme": "dark",
+      "mobile": true,
+      "screenshot": "home-390-dark.png",
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: dark",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": {
+        "opened": true,
+        "label": "Close menu",
+        "element": "button.inline-flex.items-center.justify-center"
+      },
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "home",
+      "path": "/",
+      "width": 414,
+      "height": 900,
+      "theme": "dark",
+      "mobile": true,
+      "screenshot": null,
+      "scrollWidth": 414,
+      "clientWidth": 414,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: dark",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "home",
+      "path": "/",
+      "width": 768,
+      "height": 900,
+      "theme": "dark",
+      "mobile": false,
+      "screenshot": null,
+      "scrollWidth": 753,
+      "clientWidth": 753,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: dark",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "home",
+      "path": "/",
+      "width": 1024,
+      "height": 900,
+      "theme": "dark",
+      "mobile": false,
+      "screenshot": null,
+      "scrollWidth": 1009,
+      "clientWidth": 1009,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "a.inline-flex.items-center.text-base",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Overview",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Reviewers",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.78 0.008 75)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "home",
+      "path": "/",
+      "width": 1440,
+      "height": 900,
+      "theme": "dark",
+      "mobile": false,
+      "screenshot": "home-1440-dark.png",
+      "scrollWidth": 1425,
+      "clientWidth": 1425,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "a.inline-flex.items-center.text-base",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Overview",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Reviewers",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.78 0.008 75)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "reviewers",
+      "path": "/reviewers",
+      "width": 320,
+      "height": 900,
+      "theme": "dark",
+      "mobile": true,
+      "screenshot": null,
+      "scrollWidth": 320,
+      "clientWidth": 320,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: dark",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "reviewers",
+      "path": "/reviewers",
+      "width": 360,
+      "height": 900,
+      "theme": "dark",
+      "mobile": true,
+      "screenshot": null,
+      "scrollWidth": 360,
+      "clientWidth": 360,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: dark",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "reviewers",
+      "path": "/reviewers",
+      "width": 390,
+      "height": 900,
+      "theme": "dark",
+      "mobile": true,
+      "screenshot": "reviewers-390-dark.png",
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: dark",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": {
+        "opened": true,
+        "label": "Close menu",
+        "element": "button.inline-flex.items-center.justify-center"
+      },
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "reviewers",
+      "path": "/reviewers",
+      "width": 414,
+      "height": 900,
+      "theme": "dark",
+      "mobile": true,
+      "screenshot": null,
+      "scrollWidth": 414,
+      "clientWidth": 414,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: dark",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "reviewers",
+      "path": "/reviewers",
+      "width": 768,
+      "height": 900,
+      "theme": "dark",
+      "mobile": false,
+      "screenshot": null,
+      "scrollWidth": 768,
+      "clientWidth": 768,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: dark",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "reviewers",
+      "path": "/reviewers",
+      "width": 1024,
+      "height": 900,
+      "theme": "dark",
+      "mobile": false,
+      "screenshot": null,
+      "scrollWidth": 1024,
+      "clientWidth": 1024,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "a.inline-flex.items-center.text-base",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Overview",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.78 0.008 75)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Reviewers",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "reviewers",
+      "path": "/reviewers",
+      "width": 1440,
+      "height": 900,
+      "theme": "dark",
+      "mobile": false,
+      "screenshot": "reviewers-1440-dark.png",
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "a.inline-flex.items-center.text-base",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Overview",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.78 0.008 75)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Reviewers",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "reviewers-new",
+      "path": "/reviewers/new",
+      "width": 320,
+      "height": 900,
+      "theme": "dark",
+      "mobile": true,
+      "screenshot": null,
+      "scrollWidth": 320,
+      "clientWidth": 320,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: dark",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "reviewers-new",
+      "path": "/reviewers/new",
+      "width": 360,
+      "height": 900,
+      "theme": "dark",
+      "mobile": true,
+      "screenshot": null,
+      "scrollWidth": 360,
+      "clientWidth": 360,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: dark",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "reviewers-new",
+      "path": "/reviewers/new",
+      "width": 390,
+      "height": 900,
+      "theme": "dark",
+      "mobile": true,
+      "screenshot": "reviewers-new-390-dark.png",
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: dark",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": {
+        "opened": true,
+        "label": "Close menu",
+        "element": "button.inline-flex.items-center.justify-center"
+      },
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "reviewers-new",
+      "path": "/reviewers/new",
+      "width": 414,
+      "height": 900,
+      "theme": "dark",
+      "mobile": true,
+      "screenshot": null,
+      "scrollWidth": 414,
+      "clientWidth": 414,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: dark",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "reviewers-new",
+      "path": "/reviewers/new",
+      "width": 768,
+      "height": 900,
+      "theme": "dark",
+      "mobile": false,
+      "screenshot": null,
+      "scrollWidth": 753,
+      "clientWidth": 753,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: dark",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "reviewers-new",
+      "path": "/reviewers/new",
+      "width": 1024,
+      "height": 900,
+      "theme": "dark",
+      "mobile": false,
+      "screenshot": null,
+      "scrollWidth": 1009,
+      "clientWidth": 1009,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "a.inline-flex.items-center.text-base",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Overview",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.78 0.008 75)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Reviewers",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "reviewers-new",
+      "path": "/reviewers/new",
+      "width": 1440,
+      "height": 900,
+      "theme": "dark",
+      "mobile": false,
+      "screenshot": "reviewers-new-1440-dark.png",
+      "scrollWidth": 1425,
+      "clientWidth": 1425,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "a.inline-flex.items-center.text-base",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Overview",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.78 0.008 75)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Reviewers",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "repositories",
+      "path": "/repositories",
+      "width": 320,
+      "height": 900,
+      "theme": "dark",
+      "mobile": true,
+      "screenshot": null,
+      "scrollWidth": 320,
+      "clientWidth": 320,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: dark",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "repositories",
+      "path": "/repositories",
+      "width": 360,
+      "height": 900,
+      "theme": "dark",
+      "mobile": true,
+      "screenshot": null,
+      "scrollWidth": 360,
+      "clientWidth": 360,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: dark",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "repositories",
+      "path": "/repositories",
+      "width": 390,
+      "height": 900,
+      "theme": "dark",
+      "mobile": true,
+      "screenshot": "repositories-390-dark.png",
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: dark",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": {
+        "opened": true,
+        "label": "Close menu",
+        "element": "button.inline-flex.items-center.justify-center"
+      },
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "repositories",
+      "path": "/repositories",
+      "width": 414,
+      "height": 900,
+      "theme": "dark",
+      "mobile": true,
+      "screenshot": null,
+      "scrollWidth": 414,
+      "clientWidth": 414,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: dark",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "repositories",
+      "path": "/repositories",
+      "width": 768,
+      "height": 900,
+      "theme": "dark",
+      "mobile": false,
+      "screenshot": null,
+      "scrollWidth": 768,
+      "clientWidth": 768,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: dark",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "repositories",
+      "path": "/repositories",
+      "width": 1024,
+      "height": 900,
+      "theme": "dark",
+      "mobile": false,
+      "screenshot": null,
+      "scrollWidth": 1024,
+      "clientWidth": 1024,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "a.inline-flex.items-center.text-base",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Overview",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.78 0.008 75)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Reviewers",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.78 0.008 75)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "repositories",
+      "path": "/repositories",
+      "width": 1440,
+      "height": 900,
+      "theme": "dark",
+      "mobile": false,
+      "screenshot": "repositories-1440-dark.png",
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "a.inline-flex.items-center.text-base",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Overview",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.78 0.008 75)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Reviewers",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.78 0.008 75)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "runs",
+      "path": "/runs",
+      "width": 320,
+      "height": 900,
+      "theme": "dark",
+      "mobile": true,
+      "screenshot": null,
+      "scrollWidth": 320,
+      "clientWidth": 320,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: dark",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "runs",
+      "path": "/runs",
+      "width": 360,
+      "height": 900,
+      "theme": "dark",
+      "mobile": true,
+      "screenshot": null,
+      "scrollWidth": 360,
+      "clientWidth": 360,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: dark",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "runs",
+      "path": "/runs",
+      "width": 390,
+      "height": 900,
+      "theme": "dark",
+      "mobile": true,
+      "screenshot": "runs-390-dark.png",
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: dark",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": {
+        "opened": true,
+        "label": "Close menu",
+        "element": "button.inline-flex.items-center.justify-center"
+      },
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "runs",
+      "path": "/runs",
+      "width": 414,
+      "height": 900,
+      "theme": "dark",
+      "mobile": true,
+      "screenshot": null,
+      "scrollWidth": 414,
+      "clientWidth": 414,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: dark",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "runs",
+      "path": "/runs",
+      "width": 768,
+      "height": 900,
+      "theme": "dark",
+      "mobile": false,
+      "screenshot": null,
+      "scrollWidth": 753,
+      "clientWidth": 753,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: dark",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "runs",
+      "path": "/runs",
+      "width": 1024,
+      "height": 900,
+      "theme": "dark",
+      "mobile": false,
+      "screenshot": null,
+      "scrollWidth": 1009,
+      "clientWidth": 1009,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "a.inline-flex.items-center.text-base",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Overview",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.78 0.008 75)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Reviewers",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.78 0.008 75)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "runs",
+      "path": "/runs",
+      "width": 1440,
+      "height": 900,
+      "theme": "dark",
+      "mobile": false,
+      "screenshot": "runs-1440-dark.png",
+      "scrollWidth": 1425,
+      "clientWidth": 1425,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "a.inline-flex.items-center.text-base",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Overview",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.78 0.008 75)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Reviewers",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.78 0.008 75)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "run-detail",
+      "path": "/runs/101%3A12%3A9f2c1a7e4b8d0f3a6c5e2b1d4a7f0c3e8b6d9a2f%3Adev-seed-delivery-12",
+      "width": 320,
+      "height": 900,
+      "theme": "dark",
+      "mobile": true,
+      "screenshot": null,
+      "scrollWidth": 320,
+      "clientWidth": 320,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: dark",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "run-detail",
+      "path": "/runs/101%3A12%3A9f2c1a7e4b8d0f3a6c5e2b1d4a7f0c3e8b6d9a2f%3Adev-seed-delivery-12",
+      "width": 360,
+      "height": 900,
+      "theme": "dark",
+      "mobile": true,
+      "screenshot": null,
+      "scrollWidth": 360,
+      "clientWidth": 360,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: dark",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "run-detail",
+      "path": "/runs/101%3A12%3A9f2c1a7e4b8d0f3a6c5e2b1d4a7f0c3e8b6d9a2f%3Adev-seed-delivery-12",
+      "width": 390,
+      "height": 900,
+      "theme": "dark",
+      "mobile": true,
+      "screenshot": "run-detail-390-dark.png",
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: dark",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": {
+        "opened": true,
+        "label": "Close menu",
+        "element": "button.inline-flex.items-center.justify-center"
+      },
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "run-detail",
+      "path": "/runs/101%3A12%3A9f2c1a7e4b8d0f3a6c5e2b1d4a7f0c3e8b6d9a2f%3Adev-seed-delivery-12",
+      "width": 414,
+      "height": 900,
+      "theme": "dark",
+      "mobile": true,
+      "screenshot": null,
+      "scrollWidth": 414,
+      "clientWidth": 414,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: dark",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "run-detail",
+      "path": "/runs/101%3A12%3A9f2c1a7e4b8d0f3a6c5e2b1d4a7f0c3e8b6d9a2f%3Adev-seed-delivery-12",
+      "width": 768,
+      "height": 900,
+      "theme": "dark",
+      "mobile": false,
+      "screenshot": null,
+      "scrollWidth": 753,
+      "clientWidth": 753,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: dark",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "run-detail",
+      "path": "/runs/101%3A12%3A9f2c1a7e4b8d0f3a6c5e2b1d4a7f0c3e8b6d9a2f%3Adev-seed-delivery-12",
+      "width": 1024,
+      "height": 900,
+      "theme": "dark",
+      "mobile": false,
+      "screenshot": null,
+      "scrollWidth": 1009,
+      "clientWidth": 1009,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "a.inline-flex.items-center.text-base",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Overview",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.78 0.008 75)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Reviewers",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.78 0.008 75)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "run-detail",
+      "path": "/runs/101%3A12%3A9f2c1a7e4b8d0f3a6c5e2b1d4a7f0c3e8b6d9a2f%3Adev-seed-delivery-12",
+      "width": 1440,
+      "height": 900,
+      "theme": "dark",
+      "mobile": false,
+      "screenshot": "run-detail-1440-dark.png",
+      "scrollWidth": 1425,
+      "clientWidth": 1425,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "a.inline-flex.items-center.text-base",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Overview",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.78 0.008 75)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Reviewers",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.78 0.008 75)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "settings",
+      "path": "/settings",
+      "width": 320,
+      "height": 900,
+      "theme": "dark",
+      "mobile": true,
+      "screenshot": null,
+      "scrollWidth": 320,
+      "clientWidth": 320,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: dark",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "settings",
+      "path": "/settings",
+      "width": 360,
+      "height": 900,
+      "theme": "dark",
+      "mobile": true,
+      "screenshot": null,
+      "scrollWidth": 360,
+      "clientWidth": 360,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: dark",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "settings",
+      "path": "/settings",
+      "width": 390,
+      "height": 900,
+      "theme": "dark",
+      "mobile": true,
+      "screenshot": "settings-390-dark.png",
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: dark",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": {
+        "opened": true,
+        "label": "Close menu",
+        "element": "button.inline-flex.items-center.justify-center"
+      },
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "settings",
+      "path": "/settings",
+      "width": 414,
+      "height": 900,
+      "theme": "dark",
+      "mobile": true,
+      "screenshot": null,
+      "scrollWidth": 414,
+      "clientWidth": 414,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: dark",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "settings",
+      "path": "/settings",
+      "width": 768,
+      "height": 900,
+      "theme": "dark",
+      "mobile": false,
+      "screenshot": null,
+      "scrollWidth": 753,
+      "clientWidth": 753,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: dark",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "settings",
+      "path": "/settings",
+      "width": 1024,
+      "height": 900,
+      "theme": "dark",
+      "mobile": false,
+      "screenshot": null,
+      "scrollWidth": 1009,
+      "clientWidth": 1009,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "a.inline-flex.items-center.text-base",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Overview",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.78 0.008 75)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Reviewers",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.78 0.008 75)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "settings",
+      "path": "/settings",
+      "width": 1440,
+      "height": 900,
+      "theme": "dark",
+      "mobile": false,
+      "screenshot": "settings-1440-dark.png",
+      "scrollWidth": 1425,
+      "clientWidth": 1425,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "a.inline-flex.items-center.text-base",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Overview",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.78 0.008 75)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Reviewers",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.78 0.008 75)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "activity",
+      "path": "/activity",
+      "width": 320,
+      "height": 900,
+      "theme": "dark",
+      "mobile": true,
+      "screenshot": null,
+      "scrollWidth": 320,
+      "clientWidth": 320,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: dark",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "activity",
+      "path": "/activity",
+      "width": 360,
+      "height": 900,
+      "theme": "dark",
+      "mobile": true,
+      "screenshot": null,
+      "scrollWidth": 360,
+      "clientWidth": 360,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: dark",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "activity",
+      "path": "/activity",
+      "width": 390,
+      "height": 900,
+      "theme": "dark",
+      "mobile": true,
+      "screenshot": "activity-390-dark.png",
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: dark",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": {
+        "opened": true,
+        "label": "Close menu",
+        "element": "button.inline-flex.items-center.justify-center"
+      },
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "activity",
+      "path": "/activity",
+      "width": 414,
+      "height": 900,
+      "theme": "dark",
+      "mobile": true,
+      "screenshot": null,
+      "scrollWidth": 414,
+      "clientWidth": 414,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: dark",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "activity",
+      "path": "/activity",
+      "width": 768,
+      "height": 900,
+      "theme": "dark",
+      "mobile": false,
+      "screenshot": null,
+      "scrollWidth": 768,
+      "clientWidth": 768,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Open menu",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        },
+        {
+          "element": "a.inline-flex.min-w-0.items-center",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "button.inline-flex.items-center.justify-center",
+          "label": "Theme: dark",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.36 0.01 60)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "activity",
+      "path": "/activity",
+      "width": 1024,
+      "height": 900,
+      "theme": "dark",
+      "mobile": false,
+      "screenshot": null,
+      "scrollWidth": 1024,
+      "clientWidth": 1024,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "a.inline-flex.items-center.text-base",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Overview",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.78 0.008 75)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Reviewers",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.78 0.008 75)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    },
+    {
+      "route": "activity",
+      "path": "/activity",
+      "width": 1440,
+      "height": 900,
+      "theme": "dark",
+      "mobile": false,
+      "screenshot": "activity-1440-dark.png",
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "overflow": [],
+      "tapTargets": [],
+      "tapTargetsInlineExempt": 0,
+      "contrastFailures": [],
+      "focusChecks": [
+        {
+          "element": "a.inline-flex.items-center.text-base",
+          "label": "Jury Forge",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.96 0.004 80)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Overview",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.78 0.008 75)",
+          "passes": true
+        },
+        {
+          "element": "a.flex.min-h-11.items-center",
+          "label": "Reviewers",
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px",
+          "boxShadow": "none",
+          "borderColor": "oklch(0.78 0.008 75)",
+          "passes": true
+        }
+      ],
+      "focusMethod": "Tab",
+      "navToggle": "not-applicable",
+      "failingChecks": [],
+      "failingCount": 0
+    }
+  ],
+  "totals": {
+    "cells": 112,
+    "failingCells": 0,
+    "failingCellsByCheck": {
+      "overflow": 0,
+      "tapTargets": 0,
+      "contrast": 0,
+      "focus": 0,
+      "mobileNav": 0
+    }
+  }
+}

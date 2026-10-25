@@ -364,10 +364,25 @@ out-of-scope demotion, the preview endpoint) and +2 UI cases (run detail's scope
 Repositories preview action). Run with `NODE_ENV=test` for the same Windows-shell reason as above.
 Migration `0008` applies automatically on the next merge to `dev`, after `0007`.
 
+**UI rework (2026-10-25), on `feat/ui-rework-20261025`, D-033.** The dashboard on a dark-first
+forge theme with an ember accent (dark is the default; light and system stay one toggle away). The
+install state is a status pill with the app slug. Runs gets search and URL-backed filters; the
+Cmd/Ctrl+K command palette, toasts, and run-detail grouping by file with per-finding copy all ship.
+Components: Radix (dialog, switch, tabs) and cmdk, sonner, lucide-react; no web font, no
+dependency beyond the four approved runtime packages. The UI is verified against the accessibility
+harness: 112 cells, 0 failing (`docs/rework/layout-ui-rework.json`).
+
+**Verified on `feat/ui-rework-20261025` with `npm run check` exit 0:** typecheck (three `tsc`
+programs plus `astro check`, 0 errors) · ESLint clean · Prettier `format:check` clean · workerd
+**326/326** (25 files) · UI **178/178** (16 files) · worker, client and site builds, nothing skipped.
+Run with `NODE_ENV=test` (this Windows shell exports `NODE_ENV=production`, which breaks React's test
+build). The client bundle is about 763 kB (218 kB gzip): Vite warns on size and the chunks are not
+split. The dev-seed and layout-harness scripts now spawn `npx` without a shell on Windows.
+
 **Blocked by:** nothing.
 
-**Next action:** sentry reviews the `feat/reviewer-scope-20261025` PR against `dev`; the merge is
-the deployment (D-030) and applies migrations `0007` and `0008` before the Worker ships.
+**Next action:** the owner merges `feat/ui-rework-20261025` into `dev` and tests in production; the
+merge is the deployment (D-030) and applies no new migrations.
 
 ## Backlog (owner-owned, deferred)
 

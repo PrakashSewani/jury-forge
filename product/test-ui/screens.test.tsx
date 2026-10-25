@@ -267,6 +267,8 @@ const ACTIVITY_TWO: ActivityEntry = {
 
 beforeEach(() => {
   vi.resetAllMocks();
+  // A query left by one test (the repository search, the run filters) must not narrow the next.
+  window.history.replaceState(null, '', '/');
 });
 
 describe('HomePage', () => {

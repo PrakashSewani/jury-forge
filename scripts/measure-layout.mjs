@@ -1223,15 +1223,29 @@ async function main() {
       const port = options.port ?? (await pickPort(5173));
       baseUrl = `http://127.0.0.1:${port}`;
       console.log(`Starting dev server: npx vite dev --port ${port} --strictPort --host 127.0.0.1`);
-      server = spawn(
-        'npx',
-        ['vite', 'dev', '--port', String(port), '--strictPort', '--host', '127.0.0.1'],
-        {
-          cwd: join(repoRoot, 'product'),
-          detached: true,
-          stdio: ['ignore', 'pipe', 'pipe'],
-        },
-      );
+      // On Windows `npx` is `npx.cmd`, which cannot be spawned without a shell: run npm's npx entry
+      // point through the same Node binary instead, as seed-dev.mjs does.
+      const viteArgs = [
+        'vite',
+        'dev',
+        '--port',
+        String(port),
+        '--strictPort',
+        '--host',
+        '127.0.0.1',
+      ];
+      const npxCommand =
+        process.platform === 'win32'
+          ? [
+              process.execPath,
+              join(dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npx-cli.js'),
+            ]
+          : ['npx'];
+      server = spawn(npxCommand[0], [...npxCommand.slice(1), ...viteArgs], {
+        cwd: join(repoRoot, 'product'),
+        detached: true,
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
       attachServerLogs(server, serverLog);
       spawnedDevServer = true;
       await waitForHealth(baseUrl, serverLog);

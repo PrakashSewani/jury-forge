@@ -78,10 +78,55 @@ describe('Shell mobile nav', () => {
   });
 });
 
+describe('install status', () => {
+  it('shows an installed app with its slug as one labelled status', () => {
+    render(
+      <Shell onLogout={() => {}} route={{ name: 'home' }} setup={CLAIMED} user={null}>
+        <p>x</p>
+      </Shell>,
+    );
+    const pills = screen.getAllByRole('status', { name: 'GitHub App installed: jury-forge-local' });
+    expect(pills.length).toBeGreaterThan(0);
+    expect(pills[0].textContent).toContain('GitHub App installed');
+    expect(pills[0].textContent).toContain('jury-forge-local');
+  });
+
+  it('reports a claimed instance whose app is not installed yet', () => {
+    render(
+      <Shell
+        onLogout={() => {}}
+        route={{ name: 'home' }}
+        setup={{ ...CLAIMED, installed: false }}
+        user={null}
+      >
+        <p>x</p>
+      </Shell>,
+    );
+    expect(
+      screen.getAllByRole('status', { name: 'Installation pending: jury-forge-local' }).length,
+    ).toBeGreaterThan(0);
+  });
+});
+
 describe('ThemeToggle', () => {
-  it('cycles system to light and applies the theme', async () => {
+  it('starts on dark for a visitor with no stored choice', () => {
+    render(<ThemeToggle />);
+    expect(screen.getByRole('button', { name: /theme: dark/i })).toBeTruthy();
+  });
+
+  it('cycles dark to system and applies the theme', async () => {
     const user = userEvent.setup();
     render(<ThemeToggle />);
+    await user.click(screen.getByRole('button', { name: /theme: dark/i }));
+    expect(store.getItem(THEME_STORAGE_KEY)).toBeNull();
+    expect(screen.getByRole('button', { name: /theme: system/i })).toBeTruthy();
+  });
+
+  it('cycles system to light and applies the theme', async () => {
+    store.setItem(THEME_STORAGE_KEY, 'dark');
+    const user = userEvent.setup();
+    render(<ThemeToggle />);
+    await user.click(screen.getByRole('button', { name: /theme: dark/i }));
     await user.click(screen.getByRole('button', { name: /theme: system/i }));
     expect(document.documentElement.dataset.theme).toBe('light');
     expect(store.getItem(THEME_STORAGE_KEY)).toBe('light');
