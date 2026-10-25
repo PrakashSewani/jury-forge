@@ -789,17 +789,55 @@ describe('ActivityPage', () => {
     expect(await screen.findByText('No activity yet')).toBeTruthy();
   });
 
-  it('filters the trail by actor without changing the table', async () => {
+  it('shows each action as a human label with its code kept for reference', async () => {
+    listActivityMock.mockResolvedValue({
+      activity: [ACTIVITY_ONE, ACTIVITY_TWO],
+      nextCursor: null,
+    });
+    render(<ActivityPage />);
+    const list = await screen.findByRole('list');
+    expect(within(list).getByText('Signed in')).toBeTruthy();
+    expect(within(list).getByText('Enabled repository')).toBeTruthy();
+  });
+
+  it('filters the trail by actor and keeps the rest', async () => {
     const user = userEvent.setup();
     listActivityMock.mockResolvedValue({
       activity: [ACTIVITY_ONE, ACTIVITY_TWO],
       nextCursor: null,
     });
     render(<ActivityPage />);
-    const table = await screen.findByRole('table');
-    expect(await within(table).findByText('sign_in')).toBeTruthy();
+    const list = await screen.findByRole('list');
+    expect(await within(list).findByText('Signed in')).toBeTruthy();
     await user.selectOptions(screen.getByLabelText('Actor'), 'webhook');
-    expect(within(table).queryByText('sign_in')).toBeNull();
-    expect(within(table).getByText('repository.enable')).toBeTruthy();
+    expect(within(list).queryByText('Signed in')).toBeNull();
+    expect(within(list).getByText('Enabled repository')).toBeTruthy();
+  });
+
+  it('searches across actor, action label, target and detail', async () => {
+    const user = userEvent.setup();
+    listActivityMock.mockResolvedValue({
+      activity: [ACTIVITY_ONE, ACTIVITY_TWO],
+      nextCursor: null,
+    });
+    render(<ActivityPage />);
+    const list = await screen.findByRole('list');
+    await user.type(screen.getByRole('searchbox'), 'enabled');
+    expect(within(list).queryByText('Signed in')).toBeNull();
+    expect(within(list).getByText('Enabled repository')).toBeTruthy();
+  });
+
+  it('offers a way back when the filters match nothing', async () => {
+    const user = userEvent.setup();
+    listActivityMock.mockResolvedValue({
+      activity: [ACTIVITY_ONE, ACTIVITY_TWO],
+      nextCursor: null,
+    });
+    render(<ActivityPage />);
+    await screen.findByRole('list');
+    await user.type(screen.getByRole('searchbox'), 'zzz-no-match');
+    expect(await screen.findByText('No matching activity')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Clear filters' }));
+    expect(screen.getByRole('list')).toBeTruthy();
   });
 });
