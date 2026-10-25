@@ -176,8 +176,18 @@ describe('RunsPage polling', () => {
 
 describe('RunDetailPage polling', () => {
   it('polls a running run and stops at the terminal status', async () => {
-    const running: RunDetail = { run: RUNNING_RUN, reviewers: [] };
-    const completed: RunDetail = { run: COMPLETED_RUN, reviewers: [] };
+    const running: RunDetail = {
+      run: RUNNING_RUN,
+      reviewers: [],
+      skippedReviewers: [],
+      changedFiles: 0,
+    };
+    const completed: RunDetail = {
+      run: COMPLETED_RUN,
+      reviewers: [],
+      skippedReviewers: [],
+      changedFiles: 0,
+    };
     getRunMock.mockResolvedValueOnce(running).mockResolvedValue(completed);
     listReviewersMock.mockResolvedValue([REVIEWER]);
 

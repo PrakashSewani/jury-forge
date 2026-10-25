@@ -21,10 +21,14 @@ import {
   ReviewerSchema,
   ReviewersExportDocumentSchema,
   ReviewersImportResultSchema,
+  ScopePreviewRequestSchema,
+  ScopePreviewResponseSchema,
   RunDetailSchema,
   RunModeSchema,
   RunReviewerOutcomeSchema,
+  RunReviewerScopeSchema,
   RunReviewerStatusSchema,
+  RunSkippedReviewerSchema,
   RunStatusSchema,
   RunSummarySchema,
   RunsPageSchema,
@@ -74,6 +78,10 @@ export type RepositoryReviewer = z.infer<typeof RepositoryReviewerSchema>;
 
 export type RepositoryReviewerUpdate = z.infer<typeof RepositoryReviewerUpdateSchema>;
 
+export type ScopePreviewRequest = z.infer<typeof ScopePreviewRequestSchema>;
+
+export type ScopePreviewResponse = z.infer<typeof ScopePreviewResponseSchema>;
+
 export type RunStatus = z.infer<typeof RunStatusSchema>;
 
 export type RunMode = z.infer<typeof RunModeSchema>;
@@ -89,6 +97,10 @@ export type TryRunResponse = z.infer<typeof TryRunResponseSchema>;
 export type RunReviewerStatus = z.infer<typeof RunReviewerStatusSchema>;
 
 export type RunReviewerOutcome = z.infer<typeof RunReviewerOutcomeSchema>;
+
+export type RunReviewerScope = z.infer<typeof RunReviewerScopeSchema>;
+
+export type RunSkippedReviewer = z.infer<typeof RunSkippedReviewerSchema>;
 
 export type RunsPage = z.infer<typeof RunsPageSchema>;
 

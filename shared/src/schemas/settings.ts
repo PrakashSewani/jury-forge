@@ -11,6 +11,9 @@ export const InstanceSettingsSchema = z.object({
   blockingErrorThreshold: z.number(),
   repoInstructions: z.boolean(),
   repoInstructionsMaxBytes: z.number(),
+  referenceContextFiles: z.number(),
+  referenceContextFileBytes: z.number(),
+  referenceContextTotalBytes: z.number(),
 });
 
 /** `GET`/`PATCH /api/settings`. */

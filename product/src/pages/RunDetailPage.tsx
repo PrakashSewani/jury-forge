@@ -1,4 +1,10 @@
-import type { Finding, FindingSeverity, ProviderUsage, RunDetail } from '@jury-forge/shared';
+import type {
+  Finding,
+  FindingSeverity,
+  ProviderUsage,
+  RunDetail,
+  RunReviewerScope,
+} from '@jury-forge/shared';
 import { ReviewerSchema, RunDetailSchema, message } from '@jury-forge/shared';
 import { useCallback, useMemo, useState } from 'react';
 import { z } from 'zod';
@@ -37,6 +43,32 @@ function findingLocation(finding: Finding): string {
 
 function formatTokens(value: number | null): string {
   return value === null ? '—' : value.toLocaleString();
+}
+
+/** D-032: the patterns that dropped a reviewer, as one clause. */
+function filtersText(scope: { pathsInclude: string[]; pathsExclude: string[] }): string {
+  const parts: string[] = [];
+  if (scope.pathsInclude.length > 0) {
+    parts.push(`include ${scope.pathsInclude.join(', ')}`);
+  }
+  if (scope.pathsExclude.length > 0) {
+    parts.push(`exclude ${scope.pathsExclude.join(', ')}`);
+  }
+  return parts.length > 0 ? parts.join('; ') : 'its path filters';
+}
+
+function scopeText(scope: RunReviewerScope): string {
+  const parts = [`${scope.visibleFiles} changed file(s) in scope`];
+  if (scope.pathsInclude.length > 0) {
+    parts.push(`include ${scope.pathsInclude.join(', ')}`);
+  }
+  if (scope.pathsExclude.length > 0) {
+    parts.push(`exclude ${scope.pathsExclude.join(', ')}`);
+  }
+  if (scope.referenceFiles.length > 0) {
+    parts.push(`reference ${scope.referenceFiles.length} file(s)`);
+  }
+  return parts.join(' · ');
 }
 
 function totalUsage(outcomes: RunDetail['reviewers']): ProviderUsage | null {
@@ -105,8 +137,8 @@ export default function RunDetailPage({ id }: { id: string }) {
           ) : null}
         </div>
         <p className="text-xs text-text-muted">
-          repo {run.repoId} · {run.event} · started {formatTime(run.createdAt)} · finished{' '}
-          {formatTime(run.finishedAt)}
+          repo {run.repoId} · {run.event} · {detail.changedFiles} changed file(s) · started{' '}
+          {formatTime(run.createdAt)} · finished {formatTime(run.finishedAt)}
         </p>
       </header>
 
@@ -136,6 +168,21 @@ export default function RunDetailPage({ id }: { id: string }) {
               <dd className="text-lg font-semibold">{formatTokens(usage.totalTokens)}</dd>
             </div>
           </dl>
+        </Card>
+      ) : null}
+
+      {detail.skippedReviewers.length > 0 ? (
+        <Card title="Not run">
+          <ul className="space-y-1 text-sm text-text-body">
+            {detail.skippedReviewers.map((reviewer) => (
+              <li key={reviewer.reviewerId}>
+                <span className="font-medium">
+                  {names.get(reviewer.reviewerId) ?? reviewer.name}
+                </span>{' '}
+                — no changed file matched {filtersText(reviewer)}.
+              </li>
+            ))}
+          </ul>
         </Card>
       ) : null}
 
@@ -175,6 +222,9 @@ export default function RunDetailPage({ id }: { id: string }) {
                     </Badge>
                     <span className="text-xs text-text-muted">{findings.length} finding(s)</span>
                   </div>
+                  {outcome.scope ? (
+                    <p className="text-xs text-text-muted">{scopeText(outcome.scope)}</p>
+                  ) : null}
                   {outcome.status === 'failed' ? (
                     <Notice tone="error">{reviewerFailureMessage(outcome.error)}</Notice>
                   ) : outcome.status === 'pending' ? (

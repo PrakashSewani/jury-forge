@@ -24,6 +24,23 @@ export const RunsPageSchema = z.object({
 
 export const RunReviewerStatusSchema = z.enum(['pending', 'completed', 'failed']);
 
+/** D-032: the scope record a run keeps for one reviewer. */
+export const RunReviewerScopeSchema = z.object({
+  pathsInclude: z.array(z.string()),
+  pathsExclude: z.array(z.string()),
+  contextPaths: z.array(z.string()),
+  visibleFiles: z.number(),
+  referenceFiles: z.array(z.string()),
+});
+
+/** D-032: a reviewer a run's path filters dropped, and the patterns that dropped it. */
+export const RunSkippedReviewerSchema = z.object({
+  reviewerId: z.string(),
+  name: z.string(),
+  pathsInclude: z.array(z.string()),
+  pathsExclude: z.array(z.string()),
+});
+
 /** One reviewer's outcome within a run. */
 export const RunReviewerOutcomeSchema = z.object({
   reviewerId: z.string(),
@@ -31,6 +48,7 @@ export const RunReviewerOutcomeSchema = z.object({
   findings: z.array(FindingSchema).nullable(),
   summary: z.string().nullable(),
   usage: ProviderUsageSchema.nullable(),
+  scope: RunReviewerScopeSchema.nullable(),
   error: z.string().nullable(),
 });
 
@@ -38,6 +56,8 @@ export const RunReviewerOutcomeSchema = z.object({
 export const RunDetailSchema = z.object({
   run: RunSummarySchema,
   reviewers: z.array(RunReviewerOutcomeSchema),
+  skippedReviewers: z.array(RunSkippedReviewerSchema),
+  changedFiles: z.number(),
 });
 
 /** The body of `POST /api/runs/try`. */

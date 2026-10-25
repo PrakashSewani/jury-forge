@@ -636,6 +636,253 @@ describe('run engine', () => {
     expect(mocks.reviewCalls()).toBe(1);
   });
 
+  it('scopes a reviewer to its paths and gives it bounded reference context', async () => {
+    await seedGitHubApp();
+    await env.DB.prepare(
+      "INSERT INTO repositories (repo_id, full_name, private, enabled) VALUES (101, 'octocat/hello', 0, 1)",
+    ).run();
+    const values = keyRingValues(env);
+    if (!values) {
+      throw new Error('ENCRYPTION_KEY missing');
+    }
+    const ring = await loadKeyRing(values);
+    const apiKeyEnc = await encryptSecret(ring, 'sk-test');
+    const insertReviewer = (id: string, name: string, instructions: string) =>
+      env.DB.prepare(
+        'INSERT INTO reviewers (id, name, instructions, rules, flavor, base_url, api_key_enc, model, params_json, enabled) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)',
+      ).bind(
+        id,
+        name,
+        instructions,
+        '',
+        'openai',
+        'https://providers.test/v1',
+        apiKeyEnc,
+        'model-x',
+        '{}',
+      );
+    await env.DB.batch([
+      insertReviewer('rev-docs', 'Documentation', 'Review the documentation.'),
+      insertReviewer('rev-sec', 'Security', 'Hunt for bugs.'),
+      env.DB.prepare(
+        "INSERT INTO reviewer_repositories (reviewer_id, repo_id, enabled, paths_include, paths_exclude, context_paths) VALUES ('rev-docs', 101, 1, '[\"docs/**\"]', '[]', '[\"docs/\"]')",
+      ),
+    ]);
+
+    const mocks = mockGitHubRun();
+    network.use(
+      http.get('https://api.github.com/repos/octocat/hello/pulls/1/files', () =>
+        HttpResponse.json([
+          {
+            filename: 'docs/guide.md',
+            status: 'modified',
+            patch: '@@ -1,2 +1,3 @@\n # Guide\n+More detail\n Closing line',
+          },
+          {
+            filename: 'src/app.ts',
+            status: 'modified',
+            patch: '@@ -1,2 +1,3 @@\n line1\n+line2\n line3',
+          },
+        ]),
+      ),
+      // D-032: the tree is read per context root, and its entries are relative to that root.
+      http.get('https://api.github.com/repos/octocat/hello/git/trees/abc123def456:docs', () =>
+        HttpResponse.json({
+          tree: [
+            { path: 'guide.md', type: 'blob' },
+            { path: 'styles.md', type: 'blob' },
+            { path: 'legacy/old.md', type: 'blob' },
+            { path: 'legacy/logo.png', type: 'blob' },
+          ],
+          truncated: false,
+        }),
+      ),
+      http.get('https://api.github.com/repos/octocat/hello/contents/docs/styles.md', () =>
+        HttpResponse.text('Style guide text.'),
+      ),
+      http.get('https://api.github.com/repos/octocat/hello/contents/docs/legacy/old.md', () =>
+        HttpResponse.text('Old doc.'),
+      ),
+    );
+
+    const captured: { system: string; user: string }[] = [];
+    network.use(
+      http.post('https://providers.test/v1/chat/completions', async ({ request }) => {
+        const body = (await request.json()) as {
+          messages?: { role: string; content: string }[];
+        };
+        const system = body.messages?.find((message) => message.role === 'system')?.content ?? '';
+        const user = body.messages?.find((message) => message.role === 'user')?.content ?? '';
+        captured.push({ system, user });
+        const content = system.includes('Documentation')
+          ? JSON.stringify({
+              findings: [
+                {
+                  file: 'docs/guide.md',
+                  line: 3,
+                  severity: 'warning',
+                  title: 'Thin guide',
+                  body: 'Add examples.',
+                },
+                {
+                  file: 'docs/styles.md',
+                  line: 12,
+                  severity: 'info',
+                  title: 'Stale term',
+                  body: 'Rename it.',
+                },
+                {
+                  file: 'src/app.ts',
+                  line: 2,
+                  severity: 'error',
+                  title: 'Out of scope',
+                  body: 'This file is not in the reviewer scope.',
+                },
+              ],
+            })
+          : '{"findings":[]}';
+        return HttpResponse.json({ choices: [{ message: { content } }] });
+      }),
+    );
+
+    await postWebhook(pullRequestEvent(), { deliveryId: 'delivery-1' });
+    await driveRun(RUN_ID);
+
+    expect(captured).toHaveLength(2);
+    const docsPrompt = captured.find((entry) => entry.system.includes('Documentation'));
+    const securityPrompt = captured.find((entry) => entry.system.includes('Security'));
+    expect(docsPrompt?.user).toContain('### docs/guide.md');
+    expect(docsPrompt?.user).not.toContain('### src/app.ts');
+    expect(docsPrompt?.user).toContain('Reference files (read-only');
+    expect(docsPrompt?.user).toContain('### docs/styles.md');
+    expect(docsPrompt?.user).toContain('Style guide text.');
+    expect(docsPrompt?.system).toContain('read-only reference files');
+    expect(securityPrompt?.user).toContain('### src/app.ts');
+    expect(securityPrompt?.user).not.toContain('Reference files');
+    expect(securityPrompt?.system).not.toContain('read-only reference files');
+
+    const review = mocks.lastReview();
+    expect(review?.body).toContain(
+      '_Scope: 1 of 2 changed file(s) in scope; include docs/**; reference 2 file(s)._',
+    );
+    expect(review?.body).toContain('docs/styles.md:12');
+    expect(review?.body).toContain('src/app.ts:2');
+    expect(review?.body).toContain('outside a reviewer’s path scope');
+    // src/app.ts:2 is a commentable diff line, but the docs reviewer may not comment on it.
+    expect(review?.comments).toMatchObject([{ path: 'docs/guide.md', line: 3 }]);
+
+    const runRow = await env.DB.prepare('SELECT files_json FROM runs WHERE id = ?')
+      .bind(RUN_ID)
+      .first<{ files_json: string }>();
+    expect(JSON.parse(runRow?.files_json ?? '[]')).toEqual(['docs/guide.md', 'src/app.ts']);
+
+    const scopeRows = await env.DB.prepare(
+      'SELECT reviewer_id, scope_json FROM run_reviewers WHERE run_id = ? ORDER BY reviewer_id',
+    )
+      .bind(RUN_ID)
+      .all<{ reviewer_id: string; scope_json: string | null }>();
+    const docsScope = scopeRows.results.find((row) => row.reviewer_id === 'rev-docs');
+    expect(JSON.parse(docsScope?.scope_json ?? 'null')).toEqual({
+      pathsInclude: ['docs/**'],
+      pathsExclude: [],
+      contextPaths: ['docs/'],
+      visibleFiles: 1,
+      referenceFiles: ['docs/styles.md', 'docs/legacy/old.md'],
+    });
+
+    const rows = await env.DB.prepare(
+      'SELECT COUNT(*) AS count FROM run_reviewers WHERE run_id = ?',
+    )
+      .bind(RUN_ID)
+      .first<{ count: number }>();
+    expect(rows?.count).toBe(2);
+  });
+
+  it('drops a reviewer whose filter misses the diff and keeps the rest', async () => {
+    await seedGitHubApp();
+    await seedRepositoryAndReviewers(['openai']);
+    await env.DB.prepare(
+      'INSERT INTO reviewers (id, name, instructions, rules, flavor, base_url, api_key_enc, model, params_json, enabled) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)',
+    )
+      .bind(
+        'rev-docs',
+        'Documentation',
+        'Review the docs.',
+        '',
+        'openai',
+        'https://providers.test/v1',
+        'unused-ciphertext',
+        'model-x',
+        '{}',
+      )
+      .run();
+    await env.DB.prepare(
+      "INSERT INTO reviewer_repositories (reviewer_id, repo_id, enabled, paths_include) VALUES ('rev-docs', 101, 1, '[\"docs/**\"]')",
+    ).run();
+    const mocks = mockGitHubRun();
+    const provider = mockOpenAiReviewSequence(['{"findings":[]}']);
+
+    await postWebhook(pullRequestEvent(), { deliveryId: 'delivery-1' });
+    await driveRun(RUN_ID);
+
+    expect(provider.prompts).toHaveLength(1);
+    expect(provider.prompts[0]).toContain('### src/app.ts');
+    expect(provider.prompts[0]).not.toContain('### docs/');
+    expect(mocks.reviewCalls()).toBe(1);
+
+    const rows = await env.DB.prepare('SELECT reviewer_id FROM run_reviewers WHERE run_id = ?')
+      .bind(RUN_ID)
+      .all<{ reviewer_id: string }>();
+    expect(rows.results.map((row) => row.reviewer_id)).toEqual(['rev-0']);
+
+    // D-032: the dropped reviewer is recorded with the patterns that dropped it.
+    const runRow = await env.DB.prepare('SELECT scope_skip_json FROM runs WHERE id = ?')
+      .bind(RUN_ID)
+      .first<{ scope_skip_json: string }>();
+    expect(JSON.parse(runRow?.scope_skip_json ?? '[]')).toEqual([
+      {
+        reviewerId: 'rev-docs',
+        name: 'Documentation',
+        pathsInclude: ['docs/**'],
+        pathsExclude: [],
+      },
+    ]);
+  });
+
+  it('skips the run when every reviewer filter misses the diff', async () => {
+    await seedGitHubApp();
+    await seedRepositoryAndReviewers(['openai']);
+    await env.DB.prepare(
+      "INSERT INTO reviewer_repositories (reviewer_id, repo_id, enabled, paths_include) VALUES ('rev-0', 101, 1, '[\"site/**\"]')",
+    ).run();
+    const mocks = mockGitHubRun();
+    const provider = mockOpenAiReviewSequence([]);
+
+    await postWebhook(pullRequestEvent(), { deliveryId: 'delivery-1' });
+    await driveRun(RUN_ID);
+
+    const finished = await env.DB.prepare('SELECT status, error FROM runs WHERE id = ?')
+      .bind(RUN_ID)
+      .first<{ status: string; error: string | null }>();
+    expect(finished).toEqual({ status: 'skipped', error: null });
+    expect(provider.prompts).toHaveLength(0);
+    expect(mocks.reviewCalls()).toBe(0);
+    const rows = await env.DB.prepare(
+      'SELECT COUNT(*) AS count FROM run_reviewers WHERE run_id = ?',
+    )
+      .bind(RUN_ID)
+      .first<{ count: number }>();
+    expect(rows?.count).toBe(0);
+
+    const runRow = await env.DB.prepare('SELECT files_json, scope_skip_json FROM runs WHERE id = ?')
+      .bind(RUN_ID)
+      .first<{ files_json: string; scope_skip_json: string }>();
+    expect(JSON.parse(runRow?.files_json ?? '[]')).toEqual(['src/app.ts', 'package-lock.json']);
+    expect(JSON.parse(runRow?.scope_skip_json ?? '[]')).toMatchObject([
+      { reviewerId: 'rev-0', pathsInclude: ['site/**'] },
+    ]);
+  });
+
   it('skips a repository instruction file that returns 404 without failing the run', async () => {
     await seedGitHubApp();
     await seedRepositoryAndReviewers(['openai']);
@@ -910,12 +1157,28 @@ describe('runs api', () => {
 
   it('returns run detail with reviewer outcomes', async () => {
     await insertRun('run-d', 400);
+    const scope = {
+      pathsInclude: ['src/**'],
+      pathsExclude: [],
+      contextPaths: [],
+      visibleFiles: 1,
+      referenceFiles: [],
+    };
+    await env.DB.prepare("UPDATE runs SET files_json = ?, scope_skip_json = ? WHERE id = 'run-d'")
+      .bind(
+        JSON.stringify(['a.ts', 'b.ts']),
+        JSON.stringify([
+          { reviewerId: 'rev-docs', name: 'Docs', pathsInclude: ['docs/**'], pathsExclude: [] },
+        ]),
+      )
+      .run();
     await env.DB.prepare(
-      "INSERT INTO run_reviewers (run_id, reviewer_id, status, findings_json, summary, usage_json, error) VALUES ('run-d', 'rev-0', 'completed', ?, 'Looks good.', ?, NULL)",
+      "INSERT INTO run_reviewers (run_id, reviewer_id, status, findings_json, summary, usage_json, scope_json, error) VALUES ('run-d', 'rev-0', 'completed', ?, 'Looks good.', ?, ?, NULL)",
     )
       .bind(
         JSON.stringify([{ file: 'a.ts', severity: 'info', title: 't', body: 'b' }]),
         JSON.stringify({ promptTokens: 10, completionTokens: 5, totalTokens: 15 }),
+        JSON.stringify(scope),
       )
       .run();
     await env.DB.prepare(
@@ -941,6 +1204,7 @@ describe('runs api', () => {
         findings: [{ file: 'a.ts', severity: 'info', title: 't', body: 'b' }],
         summary: 'Looks good.',
         usage: { promptTokens: 10, completionTokens: 5, totalTokens: 15 },
+        scope,
         error: null,
       },
       {
@@ -949,9 +1213,16 @@ describe('runs api', () => {
         findings: null,
         summary: null,
         usage: null,
+        scope: null,
         error: 'boom',
       },
     ]);
+    expect(detail).toMatchObject({
+      changedFiles: 2,
+      skippedReviewers: [
+        { reviewerId: 'rev-docs', name: 'Docs', pathsInclude: ['docs/**'], pathsExclude: [] },
+      ],
+    });
 
     const missing = await app.request(
       `${ORIGIN}/api/runs/nope`,

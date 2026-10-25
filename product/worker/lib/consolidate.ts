@@ -94,6 +94,8 @@ export function newFileLines(patch: string): Set<number> {
 export interface ReviewerFindings {
   reviewerId: string;
   findings: Finding[];
+  /** D-032: the reviewer's filtered file set; a finding outside it is summary-only. */
+  visible?: string[];
 }
 
 export interface InlineCommentSelection {
@@ -134,6 +136,11 @@ export function consolidateReview(
     const overflowed: Finding[] = [];
     let inlined = 0;
     for (const finding of reviewer.findings) {
+      // D-032: scope is enforced here, not only in the prompt.
+      if (reviewer.visible !== undefined && !reviewer.visible.includes(finding.file)) {
+        overflowed.push(finding);
+        continue;
+      }
       const line = finding.line;
       const lines = linesOf(finding.file);
       const commentable = line !== undefined && lines !== null && lines.has(line);

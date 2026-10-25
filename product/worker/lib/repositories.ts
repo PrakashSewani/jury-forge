@@ -1,4 +1,5 @@
 import type { Repository, RepositoryReviewer, RepositoryReviewerUpdate } from '@jury-forge/shared';
+import { parsePatternList } from './scope';
 
 interface RepositoryRow {
   repo_id: number;
@@ -89,26 +90,45 @@ export async function syncRepositories(db: D1Database, rows: RepositorySyncRow[]
   );
 }
 
+interface ReviewerRepositoryRow {
+  reviewer_id: string;
+  name: string;
+  enabled: number;
+  paths_include: string;
+  paths_exclude: string;
+  context_paths: string;
+}
+
 export async function listRepositoryReviewers(
   db: D1Database,
   repoId: number,
 ): Promise<RepositoryReviewer[]> {
   const result = await db
     .prepare(
-      `SELECT r.id AS reviewer_id, r.name, COALESCE(rr.enabled, 1) AS enabled
+      `SELECT r.id AS reviewer_id, r.name, COALESCE(rr.enabled, 1) AS enabled,
+              COALESCE(rr.paths_include, '[]') AS paths_include,
+              COALESCE(rr.paths_exclude, '[]') AS paths_exclude,
+              COALESCE(rr.context_paths, '[]') AS context_paths
        FROM reviewers r
        LEFT JOIN reviewer_repositories rr ON rr.reviewer_id = r.id AND rr.repo_id = ?
        ORDER BY r.name COLLATE NOCASE, r.id`,
     )
     .bind(repoId)
-    .all<{ reviewer_id: string; name: string; enabled: number }>();
+    .all<ReviewerRepositoryRow>();
   return result.results.map((row) => ({
     reviewerId: row.reviewer_id,
     name: row.name,
     enabled: row.enabled === 1,
+    pathsInclude: parsePatternList(row.paths_include),
+    pathsExclude: parsePatternList(row.paths_exclude),
+    contextPaths: parsePatternList(row.context_paths),
   }));
 }
 
+/**
+ * D-031: a pair's scope is replaced only by the fields the caller sends — an update that leaves
+ * them out keeps what is stored, which is what the toggle-only callers rely on.
+ */
 export async function setRepositoryReviewers(
   db: D1Database,
   repoId: number,
@@ -117,13 +137,51 @@ export async function setRepositoryReviewers(
   if (updates.length === 0) {
     return;
   }
+  const stored = await db
+    .prepare(
+      'SELECT reviewer_id, paths_include, paths_exclude, context_paths FROM reviewer_repositories WHERE repo_id = ?',
+    )
+    .bind(repoId)
+    .all<{
+      reviewer_id: string;
+      paths_include: string;
+      paths_exclude: string;
+      context_paths: string;
+    }>();
+  const existing = new Map(stored.results.map((row) => [row.reviewer_id, row]));
   await db.batch(
-    updates.map((update) =>
-      db
+    updates.map((update) => {
+      const current = existing.get(update.reviewerId);
+      const pathsInclude =
+        update.pathsInclude === undefined
+          ? (current?.paths_include ?? '[]')
+          : JSON.stringify(update.pathsInclude);
+      const pathsExclude =
+        update.pathsExclude === undefined
+          ? (current?.paths_exclude ?? '[]')
+          : JSON.stringify(update.pathsExclude);
+      const contextPaths =
+        update.contextPaths === undefined
+          ? (current?.context_paths ?? '[]')
+          : JSON.stringify(update.contextPaths);
+      return db
         .prepare(
-          'INSERT INTO reviewer_repositories (reviewer_id, repo_id, enabled) VALUES (?, ?, ?) ON CONFLICT (reviewer_id, repo_id) DO UPDATE SET enabled = excluded.enabled',
+          `INSERT INTO reviewer_repositories (reviewer_id, repo_id, enabled, paths_include, paths_exclude, context_paths)
+           VALUES (?, ?, ?, ?, ?, ?)
+           ON CONFLICT (reviewer_id, repo_id) DO UPDATE SET
+             enabled = excluded.enabled,
+             paths_include = excluded.paths_include,
+             paths_exclude = excluded.paths_exclude,
+             context_paths = excluded.context_paths`,
         )
-        .bind(update.reviewerId, repoId, update.enabled ? 1 : 0),
-    ),
+        .bind(
+          update.reviewerId,
+          repoId,
+          update.enabled ? 1 : 0,
+          pathsInclude,
+          pathsExclude,
+          contextPaths,
+        );
+    }),
   );
 }

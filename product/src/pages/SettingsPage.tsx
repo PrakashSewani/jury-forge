@@ -14,7 +14,10 @@ type NumberKey =
   | 'contextFileBytes'
   | 'descriptionLimit'
   | 'blockingErrorThreshold'
-  | 'repoInstructionsMaxBytes';
+  | 'repoInstructionsMaxBytes'
+  | 'referenceContextFiles'
+  | 'referenceContextFileBytes'
+  | 'referenceContextTotalBytes';
 
 interface NumberField {
   key: NumberKey;
@@ -62,6 +65,30 @@ const CONTEXT_FIELDS: NumberField[] = [
     hint: 'How much of the pull request description reaches the prompt.',
     min: 500,
     max: 20_000,
+  },
+];
+
+const REFERENCE_FIELDS: NumberField[] = [
+  {
+    key: 'referenceContextFiles',
+    label: 'Reference files per run',
+    hint: 'The most repository files a run fetches for reviewers that name reference paths.',
+    min: 1,
+    max: 100,
+  },
+  {
+    key: 'referenceContextFileBytes',
+    label: 'Reference file bytes',
+    hint: 'The most text kept from one reference file.',
+    min: 1_000,
+    max: 100_000,
+  },
+  {
+    key: 'referenceContextTotalBytes',
+    label: 'Reference block bytes',
+    hint: 'The most reference text added to one reviewer prompt.',
+    min: 10_000,
+    max: 1_000_000,
   },
 ];
 
@@ -178,6 +205,25 @@ export default function SettingsPage() {
                 />
               ))}
             </div>
+          </Card>
+
+          <Card title="Reference context">
+            <div className="space-y-5">
+              {REFERENCE_FIELDS.map((field) => (
+                <NumberSetting
+                  current={current}
+                  draft={draft}
+                  field={field}
+                  key={field.key}
+                  onChange={updateNumber}
+                  onReset={resetField}
+                />
+              ))}
+            </div>
+            <p className="mt-3 text-xs text-text-muted">
+              These bound the read-only files a reviewer adds from its reference paths. A pair with
+              no reference paths costs nothing.
+            </p>
           </Card>
 
           <Card title="Blocking mode">

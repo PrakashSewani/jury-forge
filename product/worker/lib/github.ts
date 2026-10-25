@@ -272,6 +272,42 @@ export async function fetchRepoFileText(
   return response.text();
 }
 
+export interface RepoTree {
+  paths: string[];
+  truncated: boolean;
+}
+
+/**
+ * D-031/D-032: the blobs under `root` at `ref`, as repository-relative paths. One subrequest; the
+ * root's entries come back relative to that tree, so they are prefixed here. GitHub caps the
+ * recursive listing, and `truncated` says whether that cap was hit.
+ */
+export async function fetchRepoTree(
+  token: string,
+  fullName: string,
+  ref: string,
+  root = '',
+): Promise<RepoTree> {
+  const treeRef =
+    root === ''
+      ? encodeURIComponent(ref)
+      : `${encodeURIComponent(ref)}:${root.split('/').map(encodeURIComponent).join('/')}`;
+  const response = await fetch(`${API_BASE}/repos/${fullName}/git/trees/${treeRef}?recursive=1`, {
+    headers: bearerHeaders(token),
+  });
+  const payload = await readJsonStrict<{
+    tree: { path: string; type: string }[];
+    truncated?: boolean;
+  }>(response);
+  const prefix = root === '' ? '' : `${root}/`;
+  return {
+    paths: payload.tree
+      .filter((entry) => entry.type === 'blob')
+      .map((entry) => `${prefix}${entry.path}`),
+    truncated: payload.truncated === true,
+  };
+}
+
 export type PullReviewEvent = 'COMMENT' | 'REQUEST_CHANGES';
 
 export interface PullReviewRequest {

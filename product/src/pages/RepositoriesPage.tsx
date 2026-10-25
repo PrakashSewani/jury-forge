@@ -5,6 +5,7 @@ import { z } from 'zod';
 import {
   getRepositoryReviewers,
   listRepositories,
+  previewScope,
   saveRepositoryReviewers,
   setRepositoryEnabled,
 } from '../lib/api';
@@ -22,6 +23,34 @@ const SEARCH_DEBOUNCE_MS = 300;
 /** The term the page was opened with, so a filtered view survives a reload and can be shared. */
 function termFromUrl(): string {
   return new URLSearchParams(window.location.search).get('q') ?? '';
+}
+
+/** D-031: one reviewer's editable scope, with each pattern list kept as the typed text. */
+interface ScopeDraft {
+  enabled: boolean;
+  pathsInclude: string;
+  pathsExclude: string;
+  contextPaths: string;
+}
+
+function draftFor(reviewer: RepositoryReviewer): ScopeDraft {
+  return {
+    enabled: reviewer.enabled,
+    pathsInclude: reviewer.pathsInclude.join(', '),
+    pathsExclude: reviewer.pathsExclude.join(', '),
+    contextPaths: reviewer.contextPaths.join(', '),
+  };
+}
+
+function draftFrom(reviewers: RepositoryReviewer[]): Record<string, ScopeDraft> {
+  return Object.fromEntries(reviewers.map((reviewer) => [reviewer.reviewerId, draftFor(reviewer)]));
+}
+
+function splitPatterns(value: string): string[] {
+  return value
+    .split(',')
+    .map((pattern) => pattern.trim())
+    .filter((pattern) => pattern !== '');
 }
 
 export default function RepositoriesPage() {
@@ -167,9 +196,11 @@ function RepositoryRows({
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [reviewers, setReviewers] = useState<RepositoryReviewer[] | null>(null);
-  const [draft, setDraft] = useState<Record<string, boolean>>({});
+  const [draft, setDraft] = useState<Record<string, ScopeDraft>>({});
   const [reviewersError, setReviewersError] = useState<string | null>(null);
   const [savingReviewers, setSavingReviewers] = useState(false);
+  const [previewing, setPreviewing] = useState<string | null>(null);
+  const [previews, setPreviews] = useState<Record<string, string>>({});
 
   async function toggleEnabled(enabled: boolean) {
     setSaving(true);
@@ -191,10 +222,40 @@ function RepositoryRows({
       try {
         const list = await getRepositoryReviewers(repository.repoId);
         setReviewers(list);
-        setDraft(Object.fromEntries(list.map((entry) => [entry.reviewerId, entry.enabled])));
+        setDraft(draftFrom(list));
       } catch (caught) {
         setReviewersError(errorMessage(caught, 'Could not load the reviewer toggles. Try again.'));
       }
+    }
+  }
+
+  /** D-032: check typed patterns against the newest run's changed files, before saving. */
+  async function preview(reviewerId: string, value: ScopeDraft) {
+    setPreviewing(reviewerId);
+    setPreviews((current) => ({ ...current, [reviewerId]: '' }));
+    try {
+      const result = await previewScope(repository.repoId, {
+        pathsInclude: splitPatterns(value.pathsInclude),
+        pathsExclude: splitPatterns(value.pathsExclude),
+      });
+      const message =
+        result.runId === null
+          ? 'No review run has recorded changed files yet — run one, then preview.'
+          : `Matches ${result.matched.length} of ${result.total} changed file(s)${
+              result.matched.length === 0
+                ? '.'
+                : `: ${result.matched.slice(0, 5).join(', ')}${
+                    result.matched.length > 5 ? ' …' : ''
+                  }`
+            }`;
+      setPreviews((current) => ({ ...current, [reviewerId]: message }));
+    } catch (caught) {
+      setPreviews((current) => ({
+        ...current,
+        [reviewerId]: errorMessage(caught, 'Could not preview the scope. Try again.'),
+      }));
+    } finally {
+      setPreviewing(null);
     }
   }
 
@@ -207,13 +268,19 @@ function RepositoryRows({
     try {
       const updated = await saveRepositoryReviewers(
         repository.repoId,
-        reviewers.map((entry) => ({
-          reviewerId: entry.reviewerId,
-          enabled: draft[entry.reviewerId] ?? entry.enabled,
-        })),
+        reviewers.map((entry) => {
+          const current = draft[entry.reviewerId] ?? draftFor(entry);
+          return {
+            reviewerId: entry.reviewerId,
+            enabled: current.enabled,
+            pathsInclude: splitPatterns(current.pathsInclude),
+            pathsExclude: splitPatterns(current.pathsExclude),
+            contextPaths: splitPatterns(current.contextPaths),
+          };
+        }),
       );
       setReviewers(updated);
-      setDraft(Object.fromEntries(updated.map((entry) => [entry.reviewerId, entry.enabled])));
+      setDraft(draftFrom(updated));
     } catch (caught) {
       setReviewersError(errorMessage(caught, 'Could not save the reviewer toggles. Try again.'));
     } finally {
@@ -270,28 +337,75 @@ function RepositoryRows({
                 </p>
               ) : (
                 <>
-                  <ul className="grid gap-2 sm:grid-cols-2">
-                    {reviewers.map((entry) => (
-                      <li key={entry.reviewerId}>
-                        <Switch
-                          checked={draft[entry.reviewerId] ?? entry.enabled}
-                          label={entry.name}
-                          onCheckedChange={(checked) =>
-                            setDraft((current) => ({
-                              ...current,
-                              [entry.reviewerId]: checked,
-                            }))
-                          }
-                        />
-                      </li>
-                    ))}
+                  <ul className="grid gap-3">
+                    {reviewers.map((entry) => {
+                      const value = draft[entry.reviewerId] ?? draftFor(entry);
+                      const update = (patch: Partial<ScopeDraft>) =>
+                        setDraft((previous) => ({
+                          ...previous,
+                          [entry.reviewerId]: { ...value, ...patch },
+                        }));
+                      return (
+                        <li
+                          className="space-y-3 rounded-md border border-border p-3"
+                          key={entry.reviewerId}
+                        >
+                          <Switch
+                            checked={value.enabled}
+                            label={entry.name}
+                            onCheckedChange={(enabled) => update({ enabled })}
+                          />
+                          <div className="grid gap-2 sm:grid-cols-3">
+                            <Field hint="Empty = every changed file." label="Include paths">
+                              <Input
+                                onChange={(event) => update({ pathsInclude: event.target.value })}
+                                placeholder="docs/**, *.md"
+                                value={value.pathsInclude}
+                              />
+                            </Field>
+                            <Field hint="Applied after the include list." label="Exclude paths">
+                              <Input
+                                onChange={(event) => update({ pathsExclude: event.target.value })}
+                                placeholder="docs/legacy/**"
+                                value={value.pathsExclude}
+                              />
+                            </Field>
+                            <Field
+                              hint="Read-only files added to this reviewer's prompt."
+                              label="Reference paths"
+                            >
+                              <Input
+                                onChange={(event) => update({ contextPaths: event.target.value })}
+                                placeholder="docs/"
+                                value={value.contextPaths}
+                              />
+                            </Field>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Button
+                              busy={previewing === entry.reviewerId}
+                              onClick={() => void preview(entry.reviewerId, value)}
+                              size="sm"
+                              variant="secondary"
+                            >
+                              Preview scope
+                            </Button>
+                            {previews[entry.reviewerId] ? (
+                              <p className="text-xs text-text-muted">
+                                {previews[entry.reviewerId]}
+                              </p>
+                            ) : null}
+                          </div>
+                        </li>
+                      );
+                    })}
                   </ul>
                   <Button
                     busy={savingReviewers}
                     onClick={() => void saveReviewers()}
                     variant="secondary"
                   >
-                    {savingReviewers ? 'Saving…' : 'Save reviewer toggles'}
+                    {savingReviewers ? 'Saving…' : 'Save reviewers'}
                   </Button>
                 </>
               )}

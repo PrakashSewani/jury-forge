@@ -4,17 +4,22 @@ import type {
   ProviderFlavor,
   ProviderUsage,
   RunMode,
+  RunReviewerScope,
+  RunSkippedReviewer,
 } from '@jury-forge/shared';
 import { DurableObject } from 'cloudflare:workers';
 import { consolidateReview, parseReviewerOutput, type ReviewerFindings } from './lib/consolidate';
 import {
+  buildReferenceContextBlock,
   buildRepoInstructionsBlock,
   buildReviewContext,
   buildReviewPrompt,
   buildSystemPrompt,
   contextNotes,
+  isSkippedName,
   prioritizedOrder,
   REPO_INSTRUCTION_FILES,
+  truncateToBytes,
   type PullFile,
   type RepoInstructionFile,
   type ReviewContext,
@@ -27,6 +32,7 @@ import {
   fetchPullFiles,
   fetchPullRequest,
   fetchRepoFileText,
+  fetchRepoTree,
   listPullReviews,
   minimizeComment,
   type PullFileEntry,
@@ -35,10 +41,20 @@ import {
 import { loadGitHubApp } from './lib/github-app';
 import { callProvider } from './lib/providers';
 import { compareFindings, findingKey } from './lib/resolution';
+import {
+  contextRoot,
+  hasPathFilters,
+  parsePatternList,
+  referenceCandidates,
+  scopedFiles,
+} from './lib/scope';
 import { DEFAULT_SETTINGS, loadSettings } from './lib/settings';
 
 const FILES_CAP = 300;
 const CONTEXT_BATCH_SIZE = 25;
+// D-031: reference contents are fetched in small batches so a segment stays inside the free
+// plan's 50-subrequest-per-invocation limit (the tree listing costs one more).
+const REFERENCE_BATCH_SIZE = 8;
 const RETRY_BACKOFF_SECONDS = [10, 60, 300];
 const MAX_RETRIES = RETRY_BACKOFF_SECONDS.length;
 
@@ -55,7 +71,16 @@ export interface RunPayload {
   reviewerIds?: string[];
 }
 
-type Step = 'config' | 'files' | 'context' | 'prepare' | 'review' | 'consolidate' | 'post';
+type Step =
+  | 'config'
+  | 'files'
+  | 'scope'
+  | 'context'
+  | 'reference'
+  | 'prepare'
+  | 'review'
+  | 'consolidate'
+  | 'post';
 
 type TerminalStatus = 'completed' | 'failed' | 'skipped';
 
@@ -69,6 +94,10 @@ interface StoredReviewer {
   model: string;
   params: Record<string, unknown>;
   apiKeyEnc: string;
+  /** D-031 — this reviewer's scope on the run's repository. */
+  pathsInclude: string[];
+  pathsExclude: string[];
+  contextPaths: string[];
 }
 
 interface ReviewerOutcome {
@@ -95,6 +124,9 @@ interface ReviewerRow {
   api_key_enc: string;
   model: string;
   params_json: string;
+  paths_include: string;
+  paths_exclude: string;
+  context_paths: string;
 }
 
 function runIdFor(payload: RunPayload): string {
@@ -116,6 +148,32 @@ function bucketLine(label: string, findings: Finding[]): string {
     shown.push(`… and ${findings.length - 20} more`);
   }
   return `- **${label}** (${findings.length}): ${shown.join('; ')}`;
+}
+
+/** D-032: the patterns that decide a reviewer's scope, as one readable clause. */
+function scopeFilters(scope: { pathsInclude: string[]; pathsExclude: string[] }): string {
+  const parts: string[] = [];
+  if (scope.pathsInclude.length > 0) {
+    parts.push(`include ${scope.pathsInclude.join(', ')}`);
+  }
+  if (scope.pathsExclude.length > 0) {
+    parts.push(`exclude ${scope.pathsExclude.join(', ')}`);
+  }
+  return parts.length > 0 ? parts.join('; ') : 'its path filters';
+}
+
+function scopeSummary(scope: RunReviewerScope, changedFiles: number): string {
+  const parts = [`${scope.visibleFiles} of ${changedFiles} changed file(s) in scope`];
+  if (scope.pathsInclude.length > 0) {
+    parts.push(`include ${scope.pathsInclude.join(', ')}`);
+  }
+  if (scope.pathsExclude.length > 0) {
+    parts.push(`exclude ${scope.pathsExclude.join(', ')}`);
+  }
+  if (scope.contextPaths.length > 0) {
+    parts.push(`reference ${scope.referenceFiles.length} file(s)`);
+  }
+  return parts.join('; ');
 }
 
 function errorMessage(error: unknown): string {
@@ -197,8 +255,12 @@ export class RunEngine extends DurableObject<Env> {
         return this.stepConfig(payload);
       case 'files':
         return this.stepFiles(payload);
+      case 'scope':
+        return this.stepScope(payload);
       case 'context':
         return this.stepContext();
+      case 'reference':
+        return this.stepReference(payload);
       case 'prepare':
         return this.stepPrepare();
       case 'review':
@@ -262,25 +324,30 @@ export class RunEngine extends DurableObject<Env> {
       const placeholders = reviewerIds.map(() => '?').join(', ');
       rows = await db
         .prepare(
-          `SELECT r.id, r.name, r.instructions, r.rules, r.flavor, r.base_url, r.api_key_enc, r.model, r.params_json
+          `SELECT r.id, r.name, r.instructions, r.rules, r.flavor, r.base_url, r.api_key_enc, r.model, r.params_json,
+                  COALESCE(rr.paths_include, '[]') AS paths_include,
+                  COALESCE(rr.paths_exclude, '[]') AS paths_exclude,
+                  COALESCE(rr.context_paths, '[]') AS context_paths
            FROM reviewers r
+           LEFT JOIN reviewer_repositories rr ON rr.reviewer_id = r.id AND rr.repo_id = ?
            WHERE r.id IN (${placeholders})
              AND r.enabled = 1
              AND r.api_key_enc != ''
            ORDER BY r.name COLLATE NOCASE, r.id`,
         )
-        .bind(...reviewerIds)
+        .bind(payload.repoId, ...reviewerIds)
         .all<ReviewerRow>();
     } else {
       rows = await db
         .prepare(
-          `SELECT r.id, r.name, r.instructions, r.rules, r.flavor, r.base_url, r.api_key_enc, r.model, r.params_json
+          `SELECT r.id, r.name, r.instructions, r.rules, r.flavor, r.base_url, r.api_key_enc, r.model, r.params_json,
+                  COALESCE(rr.paths_include, '[]') AS paths_include,
+                  COALESCE(rr.paths_exclude, '[]') AS paths_exclude,
+                  COALESCE(rr.context_paths, '[]') AS context_paths
            FROM reviewers r
+           LEFT JOIN reviewer_repositories rr ON rr.reviewer_id = r.id AND rr.repo_id = ?
            WHERE r.enabled = 1
-             AND NOT EXISTS (
-               SELECT 1 FROM reviewer_repositories rr
-               WHERE rr.reviewer_id = r.id AND rr.repo_id = ? AND rr.enabled = 0
-             )
+             AND COALESCE(rr.enabled, 1) = 1
            ORDER BY r.name COLLATE NOCASE, r.id`,
         )
         .bind(payload.repoId)
@@ -304,6 +371,9 @@ export class RunEngine extends DurableObject<Env> {
       model: row.model,
       params: JSON.parse(row.params_json) as Record<string, unknown>,
       apiKeyEnc: row.api_key_enc,
+      pathsInclude: parsePatternList(row.paths_include),
+      pathsExclude: parsePatternList(row.paths_exclude),
+      contextPaths: parsePatternList(row.context_paths),
     }));
     await this.ctx.storage.put('reviewers', reviewers);
     const settings = await loadSettings(db);
@@ -410,10 +480,94 @@ export class RunEngine extends DurableObject<Env> {
 
     if (page.done || total >= FILES_CAP) {
       await this.ctx.storage.put('cursor', 0);
-      return 'context';
+      // D-032: the run keeps the changed-file names so it can explain its scope later.
+      await this.ctx.storage.put('changedFiles', await this.changedFileNames());
+      return 'scope';
     }
     await this.ctx.storage.put('cursor', cursor + 1);
     return 'files';
+  }
+
+  /**
+   * D-031: the changed-file names decide which reviewers survive their path filters. A filtered
+   * reviewer's visible files are kept for its own context; an unfiltered reviewer keeps the union
+   * context built next. Manual runs never filter (D-028).
+   */
+  private async stepScope(payload: RunPayload): Promise<Step | 'finished'> {
+    if (payload.mode === 'manual') {
+      return 'context';
+    }
+    const reviewers = await this.require<StoredReviewer[]>('reviewers');
+    const files = await this.changedFileNames();
+    const active: StoredReviewer[] = [];
+    const visible: Record<string, string[]> = {};
+    const skipped: RunSkippedReviewer[] = [];
+    for (const reviewer of reviewers) {
+      if (!hasPathFilters(reviewer)) {
+        active.push(reviewer);
+        continue;
+      }
+      const keep = scopedFiles(files, reviewer);
+      if (keep.length === 0) {
+        skipped.push({
+          reviewerId: reviewer.id,
+          name: reviewer.name,
+          pathsInclude: reviewer.pathsInclude,
+          pathsExclude: reviewer.pathsExclude,
+        });
+        continue;
+      }
+      visible[`visible:${reviewer.id}`] = keep;
+      active.push(reviewer);
+    }
+    if (Object.keys(visible).length > 0) {
+      await this.ctx.storage.put(visible);
+    }
+    // D-032: a dropped reviewer is recorded, never silently absent.
+    await this.ctx.storage.put('skippedReviewers', skipped);
+    // Replace the list before finishing so a skipped run writes no `run_reviewers` rows.
+    await this.ctx.storage.put('reviewers', active);
+    if (active.length === 0) {
+      await this.finishRun(payload, 'skipped', null, null);
+      return 'finished';
+    }
+    return 'context';
+  }
+
+  /** Every textual patch the run fetched, for consolidation's commentable-line check. */
+  private async allPatches(): Promise<Map<string, string>> {
+    const fileCount = (await this.ctx.storage.get<number>('fileCount')) ?? 0;
+    const keys = Array.from({ length: fileCount }, (_, index) => `file:${index}`);
+    const patches = new Map<string, string>();
+    if (keys.length === 0) {
+      return patches;
+    }
+    const entries = await this.ctx.storage.get<PullFileEntry>(keys);
+    for (const key of keys) {
+      const entry = entries.get(key);
+      // Skipped names stay non-commentable, exactly as the context builder left them.
+      if (entry?.patch && !isSkippedName(entry.filename)) {
+        patches.set(entry.filename, entry.patch);
+      }
+    }
+    return patches;
+  }
+
+  private async changedFileNames(): Promise<string[]> {
+    const fileCount = (await this.ctx.storage.get<number>('fileCount')) ?? 0;
+    const keys = Array.from({ length: fileCount }, (_, index) => `file:${index}`);
+    if (keys.length === 0) {
+      return [];
+    }
+    const entries = await this.ctx.storage.get<PullFileEntry>(keys);
+    const names: string[] = [];
+    for (const key of keys) {
+      const entry = entries.get(key);
+      if (entry) {
+        names.push(entry.filename);
+      }
+    }
+    return names;
   }
 
   private async stepContext(): Promise<Step | 'finished'> {
@@ -452,6 +606,109 @@ export class RunEngine extends DurableObject<Env> {
       return 'context';
     }
     await this.ctx.storage.put('cursor', 0);
+    return 'reference';
+  }
+
+  /**
+   * D-031: read the files a reviewer's `context_paths` name, at the reviewed revision. The tree is
+   * listed once; contents arrive in small batches so each segment stays inside the subrequest
+   * limit. A failure here never fails the run — the reviewers simply lose that context.
+   */
+  private async stepReference(payload: RunPayload): Promise<Step | 'finished'> {
+    const reviewers = await this.require<StoredReviewer[]>('reviewers');
+    const scoped = reviewers.filter((reviewer) => reviewer.contextPaths.length > 0);
+    if (scoped.length === 0) {
+      return 'prepare';
+    }
+    const settings = (await this.ctx.storage.get<InstanceSettings>('settings')) ?? DEFAULT_SETTINGS;
+    let queue = await this.ctx.storage.get<string[]>('refQueue');
+    if (!queue) {
+      const token = await this.require<string>('token');
+      // D-032: one listing per distinct literal root, not the whole repository.
+      const roots = [
+        ...new Set(
+          scoped
+            .flatMap((reviewer) => reviewer.contextPaths.map((path) => contextRoot(path)))
+            .filter((root): root is string => root !== null),
+        ),
+      ];
+      const candidates = new Set<string>();
+      const failedRoots: string[] = [];
+      let truncated = false;
+      for (const root of roots) {
+        try {
+          const tree = await fetchRepoTree(token, payload.repoFullName, payload.headSha, root);
+          truncated = truncated || tree.truncated;
+          for (const path of tree.paths) {
+            if (!isSkippedName(path)) {
+              candidates.add(path);
+            }
+          }
+        } catch (error) {
+          failedRoots.push(root === '' ? '/' : root);
+          console.error(`run ${runIdFor(payload)} reference tree failed (${root || '/'}):`, error);
+        }
+      }
+      if (failedRoots.length > 0) {
+        await this.ctx.storage.put('refRootFailures', failedRoots);
+      }
+      if (candidates.size === 0 && failedRoots.length > 0) {
+        await this.ctx.storage.put('refError', true);
+        return 'prepare';
+      }
+      const candidateList = [...candidates];
+      const share = Math.max(1, Math.floor(settings.referenceContextFiles / scoped.length));
+      const perReviewer: Record<string, string[]> = {};
+      const union: string[] = [];
+      const seen = new Set<string>();
+      for (const reviewer of scoped) {
+        const visible = new Set(
+          (await this.ctx.storage.get<string[]>(`visible:${reviewer.id}`)) ?? [],
+        );
+        const matched = referenceCandidates(candidateList, reviewer.contextPaths)
+          .filter((path) => !visible.has(path))
+          .slice(0, share);
+        perReviewer[`refPaths:${reviewer.id}`] = matched;
+        for (const path of matched) {
+          if (!seen.has(path)) {
+            seen.add(path);
+            union.push(path);
+          }
+        }
+      }
+      queue = union.slice(0, settings.referenceContextFiles);
+      await this.ctx.storage.put(perReviewer);
+      await this.ctx.storage.put('refQueue', queue);
+      await this.ctx.storage.put('refCursor', 0);
+      if (truncated) {
+        await this.ctx.storage.put('refTreeTruncated', true);
+      }
+    }
+    const cursor = (await this.ctx.storage.get<number>('refCursor')) ?? 0;
+    const batch = queue.slice(cursor, cursor + REFERENCE_BATCH_SIZE);
+    if (batch.length === 0) {
+      return 'prepare';
+    }
+    const token = await this.require<string>('token');
+    const texts: Record<string, string> = {};
+    for (const path of batch) {
+      try {
+        const text = await fetchRepoFileText(token, payload.repoFullName, path, payload.headSha);
+        if (text !== null) {
+          texts[`ref:${path}`] = truncateToBytes(text, settings.referenceContextFileBytes);
+        }
+      } catch (error) {
+        console.error(`run ${runIdFor(payload)} reference file failed (${path}):`, error);
+      }
+    }
+    if (Object.keys(texts).length > 0) {
+      await this.ctx.storage.put(texts);
+    }
+    const next = cursor + batch.length;
+    if (next < queue.length) {
+      await this.ctx.storage.put('refCursor', next);
+      return 'reference';
+    }
     return 'prepare';
   }
 
@@ -472,6 +729,65 @@ export class RunEngine extends DurableObject<Env> {
     });
   }
 
+  /** D-031: a filtered reviewer is prompted with its own file set, ordered and budgeted. */
+  private async contextForReviewer(
+    reviewer: StoredReviewer,
+    union: ReviewContext,
+    settings: InstanceSettings,
+  ): Promise<ReviewContext> {
+    const visible = await this.ctx.storage.get<string[]>(`visible:${reviewer.id}`);
+    if (!visible) {
+      return union;
+    }
+    const fileCount = (await this.ctx.storage.get<number>('fileCount')) ?? 0;
+    const keys = Array.from({ length: fileCount }, (_, index) => `file:${index}`);
+    if (keys.length === 0) {
+      return union;
+    }
+    const entries = await this.ctx.storage.get<PullFileEntry>(keys);
+    const wanted = new Set(visible);
+    const present: PullFileEntry[] = [];
+    for (const key of keys) {
+      const entry = entries.get(key);
+      if (entry && wanted.has(entry.filename)) {
+        present.push(entry);
+      }
+    }
+    const ordered = prioritizedOrder(present).map((local) => present[local]);
+    const files: PullFile[] = [];
+    for (const entry of ordered) {
+      if (entry) {
+        files.push({ filename: entry.filename, patch: entry.patch });
+      }
+    }
+    return buildReviewContext(files, undefined, {
+      totalBytes: settings.contextTotalBytes,
+      fileBytes: settings.contextFileBytes,
+    });
+  }
+
+  /** D-031: the bounded reference block for a reviewer, or `null` when it has none. */
+  private async referenceBlockFor(
+    reviewer: StoredReviewer,
+    settings: InstanceSettings,
+  ): Promise<string | null> {
+    const paths = (await this.ctx.storage.get<string[]>(`refPaths:${reviewer.id}`)) ?? [];
+    if (paths.length === 0) {
+      return null;
+    }
+    const texts = await this.ctx.storage.get<string>(paths.map((path) => `ref:${path}`));
+    const files: RepoInstructionFile[] = [];
+    for (const path of paths) {
+      const text = texts.get(`ref:${path}`);
+      if (text !== undefined) {
+        files.push({ path, text });
+      }
+    }
+    return files.length === 0
+      ? null
+      : buildReferenceContextBlock(files, settings.referenceContextTotalBytes);
+  }
+
   private async stepPrepare(): Promise<Step | 'finished'> {
     const reviewers = await this.require<StoredReviewer[]>('reviewers');
     const pullRequest = await this.require<PullRequestInfo>('pr');
@@ -486,12 +802,15 @@ export class RunEngine extends DurableObject<Env> {
       (await this.ctx.storage.get<Record<string, Finding[]>>('previousByReviewer')) ?? {};
     const settings = (await this.ctx.storage.get<InstanceSettings>('settings')) ?? DEFAULT_SETTINGS;
     const repoInstructions = await this.ctx.storage.get<string | null>('repoInstructions');
+    const reviewerContext = await this.contextForReviewer(reviewer, context, settings);
+    const reference = await this.referenceBlockFor(reviewer, settings);
     await this.ctx.storage.put(`prompt:${reviewer.id}`, {
-      system: buildSystemPrompt(reviewer),
-      user: buildReviewPrompt(pullRequest, context, {
+      system: buildSystemPrompt(reviewer, { allowOutOfDiff: reference !== null }),
+      user: buildReviewPrompt(pullRequest, reviewerContext, {
         previousFindings: previousByReviewer[reviewer.id] ?? [],
         descriptionLimit: settings.descriptionLimit,
         repoInstructions,
+        reference,
       }),
     });
 
@@ -575,14 +894,29 @@ export class RunEngine extends DurableObject<Env> {
       return 'finished';
     }
 
+    const visibleByReviewer = new Map<string, string[]>();
+    for (const reviewer of reviewers) {
+      const visible = await this.ctx.storage.get<string[]>(`visible:${reviewer.id}`);
+      if (visible) {
+        visibleByReviewer.set(reviewer.id, visible);
+      }
+    }
     const withFindings: ReviewerFindings[] = [];
     for (const reviewer of reviewers) {
       const outcome = outcomes.get(`outcome:${reviewer.id}`);
       if (outcome?.status === 'completed' && outcome.findings) {
-        withFindings.push({ reviewerId: reviewer.id, findings: outcome.findings });
+        const visible = visibleByReviewer.get(reviewer.id);
+        withFindings.push({
+          reviewerId: reviewer.id,
+          findings: outcome.findings,
+          ...(visible ? { visible } : {}),
+        });
       }
     }
-    const patches = new Map(context.files.map((file) => [file.filename, file.patch]));
+    // D-031: commentable lines come from every file fetched for the pull request, not only the
+    // trimmed union context, so a scoped reviewer's file is still eligible after another
+    // reviewer's budget dropped it from the union.
+    const patches = await this.allPatches();
     const consolidated = consolidateReview(withFindings, patches, {
       perReviewer: settings.inlineCommentsPerReviewer,
       perRun: settings.inlineCommentsPerRun,
@@ -612,6 +946,31 @@ export class RunEngine extends DurableObject<Env> {
       .filter((reviewer) => outcomes.get(`outcome:${reviewer.id}`)?.status === 'failed')
       .map((reviewer) => reviewer.name);
 
+    const changedFiles = (await this.ctx.storage.get<string[]>('changedFiles')) ?? [];
+    const scopeRecords: Record<string, RunReviewerScope> = {};
+    let referenceRequested = 0;
+    for (const reviewer of reviewers) {
+      const paths = (await this.ctx.storage.get<string[]>(`refPaths:${reviewer.id}`)) ?? [];
+      referenceRequested += paths.length;
+      const referenceFiles: string[] = [];
+      if (paths.length > 0) {
+        const texts = await this.ctx.storage.get<string>(paths.map((path) => `ref:${path}`));
+        for (const path of paths) {
+          if (texts.get(`ref:${path}`) !== undefined) {
+            referenceFiles.push(path);
+          }
+        }
+      }
+      scopeRecords[reviewer.id] = {
+        pathsInclude: reviewer.pathsInclude,
+        pathsExclude: reviewer.pathsExclude,
+        contextPaths: reviewer.contextPaths,
+        visibleFiles: (visibleByReviewer.get(reviewer.id) ?? changedFiles).length,
+        referenceFiles,
+      };
+    }
+    await this.ctx.storage.put('scopeRecords', scopeRecords);
+
     const sections: string[] = ['## Jury Forge review', ''];
     sections.push(
       `**${reviewers.length}** reviewer(s) ran on \`${payload.headSha.slice(0, 7)}\` — **${totalFindings}** finding(s): ${consolidated.inline.length} inline, ${overflowCount} in this summary.`,
@@ -630,6 +989,10 @@ export class RunEngine extends DurableObject<Env> {
       if (outcome.summary) {
         sections.push('', outcome.summary, '');
       }
+      const record = scopeRecords[reviewer.id];
+      if (record) {
+        sections.push(`_Scope: ${scopeSummary(record, changedFiles.length)}._`);
+      }
       const findings = outcome.findings ?? [];
       const overflow = overflowByReviewer.get(reviewer.id) ?? [];
       const inlineCount = inlineByReviewer.get(reviewer.id) ?? 0;
@@ -645,6 +1008,17 @@ export class RunEngine extends DurableObject<Env> {
           finding.line !== undefined ? `${finding.file}:${finding.line}` : finding.file;
         sections.push('', `- \`${location}\` — **${finding.severity}** — ${finding.title}`);
         sections.push(`  > ${finding.body.split('\n').join('\n  > ')}`);
+      }
+    }
+
+    const skippedReviewers =
+      (await this.ctx.storage.get<RunSkippedReviewer[]>('skippedReviewers')) ?? [];
+    if (skippedReviewers.length > 0) {
+      sections.push('', '### Not run');
+      for (const reviewer of skippedReviewers) {
+        sections.push(
+          `- **${reviewer.name}** — no changed file matched ${scopeFilters(reviewer)}.`,
+        );
       }
     }
 
@@ -688,6 +1062,40 @@ export class RunEngine extends DurableObject<Env> {
     }
     if (failedNames.length > 0) {
       notes.push(`Failed reviewer(s): ${failedNames.join(', ')}.`);
+    }
+    const outsideDiff = consolidated.overflow.some((group) =>
+      group.findings.some((finding) => !patches.has(finding.file)),
+    );
+    const outOfScope = withFindings.some((group) => {
+      const visible = group.visible;
+      return (
+        visible !== undefined && group.findings.some((finding) => !visible.includes(finding.file))
+      );
+    });
+    if (outsideDiff || outOfScope) {
+      notes.push(
+        'Findings on files outside the diff, or outside a reviewer’s path scope, are listed above; inline comments stay on changed lines inside that scope (D-032).',
+      );
+    }
+    const referenceQueue = (await this.ctx.storage.get<string[]>('refQueue')) ?? [];
+    if (referenceRequested > referenceQueue.length) {
+      notes.push(
+        `Reference context is capped at ${settings.referenceContextFiles} file(s) per run (D-031); ${referenceRequested - referenceQueue.length} matching file(s) were not fetched.`,
+      );
+    }
+    if (await this.ctx.storage.get<boolean>('refError')) {
+      notes.push('Reference context could not be listed for this run; the reviews ran without it.');
+    }
+    const failedRoots = (await this.ctx.storage.get<string[]>('refRootFailures')) ?? [];
+    if (failedRoots.length > 0) {
+      notes.push(
+        `Reference context could not be listed for ${failedRoots.join(', ')}; those files were not included.`,
+      );
+    }
+    if (await this.ctx.storage.get<boolean>('refTreeTruncated')) {
+      notes.push(
+        "GitHub's repository listing was truncated, so reference context may be incomplete.",
+      );
     }
     if (notes.length > 0) {
       sections.push('', '---', '_Notes:_', ...notes.map((note) => `- ${note}`));
@@ -773,18 +1181,33 @@ export class RunEngine extends DurableObject<Env> {
             reviewers.map((reviewer) => `outcome:${reviewer.id}`),
           )
         : new Map<string, ReviewerOutcome>();
+    // D-032: the run record explains its own scope — the files, the reviewers it dropped, and
+    // what each survivor saw.
+    const changedFiles = (await this.ctx.storage.get<string[]>('changedFiles')) ?? [];
+    const skippedReviewers =
+      (await this.ctx.storage.get<RunSkippedReviewer[]>('skippedReviewers')) ?? [];
+    const scopeRecords =
+      (await this.ctx.storage.get<Record<string, RunReviewerScope>>('scopeRecords')) ?? {};
 
     const statements = [
       this.env.DB.prepare(
-        'UPDATE runs SET status = ?, error = ?, review_url = ?, finished_at = unixepoch() WHERE id = ?',
-      ).bind(status, error, reviewUrl, runIdFor(payload)),
+        'UPDATE runs SET status = ?, error = ?, review_url = ?, files_json = ?, scope_skip_json = ?, finished_at = unixepoch() WHERE id = ?',
+      ).bind(
+        status,
+        error,
+        reviewUrl,
+        JSON.stringify(changedFiles),
+        JSON.stringify(skippedReviewers),
+        runIdFor(payload),
+      ),
     ];
     if (reviewers.length > 0) {
       for (const reviewer of reviewers) {
         const outcome = outcomes.get(`outcome:${reviewer.id}`);
+        const scope = scopeRecords[reviewer.id];
         statements.push(
           this.env.DB.prepare(
-            'INSERT OR REPLACE INTO run_reviewers (run_id, reviewer_id, status, findings_json, summary, usage_json, error) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            'INSERT OR REPLACE INTO run_reviewers (run_id, reviewer_id, status, findings_json, summary, usage_json, scope_json, error) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
           ).bind(
             runIdFor(payload),
             reviewer.id,
@@ -792,6 +1215,7 @@ export class RunEngine extends DurableObject<Env> {
             outcome?.findings ? JSON.stringify(outcome.findings) : null,
             outcome?.summary ?? null,
             outcome?.usage ? JSON.stringify(outcome.usage) : null,
+            scope ? JSON.stringify(scope) : null,
             outcome?.error ?? (outcome ? null : (error ?? 'run failed before this reviewer ran')),
           ),
         );

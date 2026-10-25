@@ -20,6 +20,8 @@ import {
   listRepositories,
   listReviewers,
   listRuns,
+  previewScope,
+  saveRepositoryReviewers,
   updateSettings,
 } from '../src/lib/api';
 import ActivityPage from '../src/pages/ActivityPage';
@@ -41,6 +43,7 @@ vi.mock('../src/lib/api', () => ({
   deleteReviewer: vi.fn(),
   getRepositoryReviewers: vi.fn(),
   saveRepositoryReviewers: vi.fn(),
+  previewScope: vi.fn(),
   setRepositoryEnabled: vi.fn(),
   getRun: vi.fn(),
   getReadiness: vi.fn(),
@@ -58,6 +61,8 @@ const listRunsMock = vi.mocked(listRuns);
 const listRepositoriesMock = vi.mocked(listRepositories);
 const listReviewersMock = vi.mocked(listReviewers);
 const getRepositoryReviewersMock = vi.mocked(getRepositoryReviewers);
+const saveRepositoryReviewersMock = vi.mocked(saveRepositoryReviewers);
+const previewScopeMock = vi.mocked(previewScope);
 const getReviewerMock = vi.mocked(getReviewer);
 const getRunMock = vi.mocked(getRun);
 const getReadinessMock = vi.mocked(getReadiness);
@@ -178,6 +183,9 @@ const SETTINGS: SettingsResponse = {
     blockingErrorThreshold: 1,
     repoInstructions: false,
     repoInstructionsMaxBytes: 8_000,
+    referenceContextFiles: 50,
+    referenceContextFileBytes: 32_000,
+    referenceContextTotalBytes: 100_000,
   },
   defaults: {
     inlineCommentsPerReviewer: 10,
@@ -189,11 +197,23 @@ const SETTINGS: SettingsResponse = {
     blockingErrorThreshold: 1,
     repoInstructions: false,
     repoInstructionsMaxBytes: 8_000,
+    referenceContextFiles: 50,
+    referenceContextFileBytes: 32_000,
+    referenceContextTotalBytes: 100_000,
   },
 };
 
 const RUN_DETAIL: RunDetail = {
   run: COMPLETED_RUN,
+  skippedReviewers: [
+    {
+      reviewerId: 'rev-docs',
+      name: 'Documentation',
+      pathsInclude: ['docs/**'],
+      pathsExclude: [],
+    },
+  ],
+  changedFiles: 4,
   reviewers: [
     {
       reviewerId: 'rev-security',
@@ -210,6 +230,13 @@ const RUN_DETAIL: RunDetail = {
       ],
       summary: 'One blocking issue.',
       usage: { promptTokens: 100, completionTokens: 20, totalTokens: 120 },
+      scope: {
+        pathsInclude: ['src/**'],
+        pathsExclude: [],
+        contextPaths: [],
+        visibleFiles: 2,
+        referenceFiles: [],
+      },
       error: null,
     },
   ],
@@ -426,12 +453,91 @@ describe('RepositoriesPage', () => {
     const user = userEvent.setup();
     listRepositoriesMock.mockResolvedValue([REPO]);
     getRepositoryReviewersMock.mockResolvedValue([
-      { reviewerId: 'rev-security', name: 'Security', enabled: true },
+      {
+        reviewerId: 'rev-security',
+        name: 'Security',
+        enabled: true,
+        pathsInclude: [],
+        pathsExclude: [],
+        contextPaths: [],
+      },
     ]);
     render(<RepositoriesPage />);
     expect(await screen.findByText('prakashsewani/jury-forge')).toBeTruthy();
     await user.click(screen.getByRole('button', { name: 'Manage reviewers' }));
     expect(await screen.findByRole('switch', { name: 'Security' })).toBeTruthy();
+    expect(screen.getByPlaceholderText('docs/**, *.md')).toBeTruthy();
+    expect(screen.getByPlaceholderText('docs/legacy/**')).toBeTruthy();
+    expect(screen.getByPlaceholderText('docs/')).toBeTruthy();
+  });
+
+  it('previews a reviewer scope against the newest run', async () => {
+    const user = userEvent.setup();
+    listRepositoriesMock.mockResolvedValue([REPO]);
+    const reviewer = {
+      reviewerId: 'rev-docs',
+      name: 'Documentation',
+      enabled: true,
+      pathsInclude: [],
+      pathsExclude: [],
+      contextPaths: [],
+    };
+    getRepositoryReviewersMock.mockResolvedValue([reviewer]);
+    previewScopeMock.mockResolvedValue({
+      runId: '101:1:x:delivery',
+      headSha: 'x',
+      total: 4,
+      matched: ['docs/a.md'],
+    });
+    render(<RepositoriesPage />);
+    await screen.findByText('prakashsewani/jury-forge');
+    await user.click(screen.getByRole('button', { name: 'Manage reviewers' }));
+    await screen.findByRole('switch', { name: 'Documentation' });
+
+    await user.type(screen.getByPlaceholderText('docs/**, *.md'), 'docs/**');
+    await user.click(screen.getByRole('button', { name: 'Preview scope' }));
+
+    expect(await screen.findByText(/Matches 1 of 4 changed file/)).toBeTruthy();
+    expect(previewScopeMock).toHaveBeenCalledWith(101, {
+      pathsInclude: ['docs/**'],
+      pathsExclude: [],
+    });
+  });
+
+  it('saves a reviewer path scope as comma-separated lists', async () => {
+    const user = userEvent.setup();
+    listRepositoriesMock.mockResolvedValue([REPO]);
+    const reviewer = {
+      reviewerId: 'rev-docs',
+      name: 'Documentation',
+      enabled: true,
+      pathsInclude: [],
+      pathsExclude: [],
+      contextPaths: [],
+    };
+    getRepositoryReviewersMock.mockResolvedValue([reviewer]);
+    saveRepositoryReviewersMock.mockResolvedValue([reviewer]);
+    render(<RepositoriesPage />);
+    await screen.findByText('prakashsewani/jury-forge');
+    await user.click(screen.getByRole('button', { name: 'Manage reviewers' }));
+    await screen.findByRole('switch', { name: 'Documentation' });
+
+    await user.type(screen.getByPlaceholderText('docs/**, *.md'), 'docs/**, *.md');
+    await user.type(screen.getByPlaceholderText('docs/legacy/**'), 'docs/legacy/**');
+    await user.type(screen.getByPlaceholderText('docs/'), 'docs/');
+    await user.click(screen.getByRole('button', { name: 'Save reviewers' }));
+
+    await waitFor(() =>
+      expect(saveRepositoryReviewersMock).toHaveBeenCalledWith(101, [
+        {
+          reviewerId: 'rev-docs',
+          enabled: true,
+          pathsInclude: ['docs/**', '*.md'],
+          pathsExclude: ['docs/legacy/**'],
+          contextPaths: ['docs/'],
+        },
+      ]),
+    );
   });
 
   it('gives the search field an accessible name', async () => {
@@ -609,6 +715,17 @@ describe('RunDetailPage', () => {
     await user.click(screen.getByRole('tab', { name: 'Errors' }));
     expect(screen.getByText('Leaked secret')).toBeTruthy();
     expect(screen.queryByText('Wrong layer')).toBeNull();
+  });
+
+  it('shows the scope record and the reviewers its filters dropped', async () => {
+    getRunMock.mockResolvedValue(RUN_DETAIL);
+    listReviewersMock.mockResolvedValue([REVIEWER]);
+    render(<RunDetailPage id="run-1" />);
+    expect(await screen.findByText(/2 changed file\(s\) in scope/)).toBeTruthy();
+    expect(screen.getByText(/include src\/\*\*/)).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Not run' })).toBeTruthy();
+    expect(screen.getByText(/no changed file matched include docs\/\*\*\./)).toBeTruthy();
+    expect(screen.getByText(/4 changed file\(s\)/)).toBeTruthy();
   });
 
   it('says a manual run was not posted to GitHub', async () => {
