@@ -322,6 +322,53 @@ skipped. Measured against `dev`'s own test code, that is +4 worker and +6 UI cas
 **Next action:** sentry reviews `feat/repo-search-20261019` against `dev` (round 1, threshold 60),
 and Prakash merges on its verdict — the merge to `dev` is the deployment (D-030), not this branch.
 
+**Reviewer scope (2026-10-25, D-031):** a reviewer↔repository pair can now carry path filters and a
+bounded reference-folder list. `reviewer_repositories` gained `paths_include`, `paths_exclude` and
+`context_paths` (JSON arrays, migration `0007_reviewer_scope.sql`); the automatic run filters each
+reviewer to the changed files its globs keep, drops a reviewer that keeps none (`skipped` when all
+drop), and builds that reviewer's own budgeted diff from the full patch list. A reviewer with
+reference paths gets the repository tree listed once, the matching files fetched in batches of
+eight at the head SHA, and a read-only block in its prompt; findings outside the diff land in the
+summary with `file:line` (inline comments stay diff-only). Three instance settings bound it —
+`referenceContextFiles` (default 50), `referenceContextFileBytes` (32,000) and
+`referenceContextTotalBytes` (100,000) — exposed on the Settings screen. The Repositories screen's
+expanded reviewer rows carry the three comma-separated pattern fields. Manual try runs ignore path
+filters (D-028) but keep their reference context. No new dependency.
+
+**Verified on `feat/reviewer-scope-20261025` with `npm run check` exit 0:** typecheck
+(three `tsc` programs plus `astro check`, 0 errors) · ESLint clean · Prettier `format:check` clean ·
+workerd **323/323** (25 files) · UI **161/161** (14 files) · worker, client and site builds, nothing
+skipped. That is +21 worker cases (11 in the new `product/test/scope.test.ts`, 5 in
+`context.test.ts`, 2 in `repositories.test.ts`, 3 in `run-engine.test.ts`) and +1 UI case in
+`screens.test.tsx`. This Windows shell exports `NODE_ENV=production`, which makes React load its
+production build and breaks every UI test on `act`; the suite was therefore run with
+`NODE_ENV=test`, which is what vitest sets on CI. The migration applies automatically on the next
+merge to `dev` (D-030), before the Worker deploys.
+
+**Scope follow-up (2026-10-25, D-032):** seven changes on top of D-031. Consolidation now
+**enforces** scope — a finding outside a reviewer's filtered files is demoted to the summary even
+when its diff line is commentable. Runs record their scope: migration `0008_scope_record.sql` adds
+`runs.files_json`, `runs.scope_skip_json` and `run_reviewers.scope_json`; run detail returns
+`changedFiles`, `skippedReviewers` and each reviewer's `scope`, and the screen shows them. The
+Repositories screen has a **Preview scope** action backed by
+`POST /api/repositories/:repoId/scope-preview`, which matches patterns against the newest run's
+changed files without touching GitHub. Reference trees are read per literal context root
+(`git/trees/{sha}:{root}`) instead of one whole-repo listing, the per-run file cap is shared fairly
+across reviewers, and patterns are stored exactly as typed (`docs/` no longer becomes `docs/**`).
+
+**Verified on `feat/reviewer-scope-20261025` with `npm run check` exit 0:** typecheck
+(three `tsc` programs plus `astro check`, 0 errors) · ESLint clean · Prettier `format:check` clean ·
+workerd **326/326** (25 files) · UI **163/163** (14 files) · worker, client and site builds, nothing
+skipped. That is +3 worker cases over the D-031 numbers (context-root derivation, consolidation's
+out-of-scope demotion, the preview endpoint) and +2 UI cases (run detail's scope record, the
+Repositories preview action). Run with `NODE_ENV=test` for the same Windows-shell reason as above.
+Migration `0008` applies automatically on the next merge to `dev`, after `0007`.
+
+**Blocked by:** nothing.
+
+**Next action:** sentry reviews the `feat/reviewer-scope-20261025` PR against `dev`; the merge is
+the deployment (D-030) and applies migrations `0007` and `0008` before the Worker ships.
+
 ## Backlog (owner-owned, deferred)
 
 - **Before the first release (phase 4):** create a repo-admin token with `contents: write` and

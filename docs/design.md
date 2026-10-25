@@ -24,20 +24,20 @@ the decision it implements.
 Migrations continue in `product/migrations/` (`0002_*` onward). Timestamps are unix seconds
 (`INTEGER`, `unixepoch()`). All SQL uses prepared statements.
 
-| Table                   | Purpose                              | Key columns                                                                                                                                                                                                                     |
-| ----------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `instance_meta`         | existing singleton key/value         | `key`, `value` — holds `claimed_at`, `owner_login`, `owner_id`, `owner_type`, `installation_id`, `app_slug`                                                                                                                     |
-| `github_app`            | the instance's private app (one row) | `app_id`, `slug`, `client_id`, `private_key_enc`, `webhook_secret_enc`, `client_secret_enc`                                                                                                                                     |
-| `reviewers`             | reviewer definitions                 | `id`, `name`, `instructions`, `rules`, `flavor` (`openai`/`anthropic`), `base_url`, `api_key_enc`, `model`, `params_json`, `enabled`                                                                                            |
-| `repositories`          | installed repositories               | `repo_id` (GitHub numeric id), `full_name`, `private`, `enabled`                                                                                                                                                                |
-| `reviewer_repositories` | per-repo reviewer enablement         | `reviewer_id`, `repo_id`, `enabled`                                                                                                                                                                                             |
-| `runs`                  | one row per review run               | `id`, `delivery_id`, `repo_id`, `pr_number`, `head_sha`, `event`, `mode` (`auto`/`manual`, `0006_run_mode.sql`, D-028), `status` (`running`/`completed`/`failed`/`skipped`), `error`, `review_url`, `created_at`, `finished_at` |
-| `run_reviewers`         | per-reviewer outcome                 | `run_id`, `reviewer_id`, `status`, `findings_json`, `summary` (D-020), `usage_json` (D-020), `error`                                                                                                                            |
-| `sessions`              | dashboard sessions                   | `token_hash`, `login`, `avatar_url`, `created_at`, `expires_at`                                                                                                                                                                 |
-| `oauth_states`          | single-use OAuth/manifest states     | `state`, `kind` (`login`/`claim`/`manifest`), `created_at`, `expires_at`                                                                                                                                                        |
-| `webhook_deliveries`    | delivery de-duplication              | `delivery_id`, `received_at`                                                                                                                                                                                                    |
-| `instance_settings`     | tunable instance numbers (D-021)     | `key`, `value` (TEXT, validated per key), `updated_at` — see "Instance settings"                                                                                                                                                |
-| `activity_log`          | the dashboard activity trail (D-023) | `id`, `at`, `actor`, `action`, `target`, `detail`                                                                                                                                                                               |
+| Table                   | Purpose                              | Key columns                                                                                                                                                                                                                                                                                        |
+| ----------------------- | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `instance_meta`         | existing singleton key/value         | `key`, `value` — holds `claimed_at`, `owner_login`, `owner_id`, `owner_type`, `installation_id`, `app_slug`                                                                                                                                                                                        |
+| `github_app`            | the instance's private app (one row) | `app_id`, `slug`, `client_id`, `private_key_enc`, `webhook_secret_enc`, `client_secret_enc`                                                                                                                                                                                                        |
+| `reviewers`             | reviewer definitions                 | `id`, `name`, `instructions`, `rules`, `flavor` (`openai`/`anthropic`), `base_url`, `api_key_enc`, `model`, `params_json`, `enabled`                                                                                                                                                               |
+| `repositories`          | installed repositories               | `repo_id` (GitHub numeric id), `full_name`, `private`, `enabled`                                                                                                                                                                                                                                   |
+| `reviewer_repositories` | per-repo reviewer enablement + scope | `reviewer_id`, `repo_id`, `enabled`, `paths_include`, `paths_exclude`, `context_paths` (JSON arrays, D-031, `0007_reviewer_scope.sql`)                                                                                                                                                             |
+| `runs`                  | one row per review run               | `id`, `delivery_id`, `repo_id`, `pr_number`, `head_sha`, `event`, `mode` (`auto`/`manual`, `0006_run_mode.sql`, D-028), `status` (`running`/`completed`/`failed`/`skipped`), `error`, `review_url`, `files_json` / `scope_skip_json` (D-032, `0008_scope_record.sql`), `created_at`, `finished_at` |
+| `run_reviewers`         | per-reviewer outcome                 | `run_id`, `reviewer_id`, `status`, `findings_json`, `summary` (D-020), `usage_json` (D-020), `scope_json` (D-032), `error`                                                                                                                                                                         |
+| `sessions`              | dashboard sessions                   | `token_hash`, `login`, `avatar_url`, `created_at`, `expires_at`                                                                                                                                                                                                                                    |
+| `oauth_states`          | single-use OAuth/manifest states     | `state`, `kind` (`login`/`claim`/`manifest`), `created_at`, `expires_at`                                                                                                                                                                                                                           |
+| `webhook_deliveries`    | delivery de-duplication              | `delivery_id`, `received_at`                                                                                                                                                                                                                                                                       |
+| `instance_settings`     | tunable instance numbers (D-021)     | `key`, `value` (TEXT, validated per key), `updated_at` — see "Instance settings"                                                                                                                                                                                                                   |
+| `activity_log`          | the dashboard activity trail (D-023) | `id`, `at`, `actor`, `action`, `target`, `detail`                                                                                                                                                                                                                                                  |
 
 Notes: index `runs(repo_id, created_at desc)` and `sessions(expires_at)`; expired sessions and
 states are pruned on access; `webhook_deliveries` older than 7 days are pruned opportunistically.
@@ -78,17 +78,20 @@ key only after re-registering the app. The operator procedure is in `docs/develo
 and `loadSettings(db)` returns the effective settings, falling back to the default whenever a
 stored value is missing or fails validation (a hand-edited row must never break a run).
 
-| Key                         | Bounds           | Default | Used by                                         |
-| --------------------------- | ---------------- | ------- | ----------------------------------------------- |
-| `inlineCommentsPerReviewer` | 1–50             | 10      | consolidation's per-reviewer inline cap (D-009) |
-| `inlineCommentsPerRun`      | 1–100            | 25      | consolidation's per-run inline cap (D-009)      |
-| `contextTotalBytes`         | 20,000–1,000,000 | 200,000 | context builder total budget (D-010)            |
-| `contextFileBytes`          | 4,000–200,000    | 32,000  | context builder per-file budget (D-010)         |
-| `descriptionLimit`          | 500–20,000       | 4,096   | PR description excerpt in the prompt            |
-| `blockingMode`              | boolean          | `false` | review event selection (item 11, D-013 default) |
-| `blockingErrorThreshold`    | 1–50             | 1       | error findings needed for `REQUEST_CHANGES`     |
-| `repoInstructions`          | boolean          | `false` | repository instructions in prompts (D-022)      |
-| `repoInstructionsMaxBytes`  | 1,000–50,000     | 8,000   | excerpt budget for those instructions (D-022)   |
+| Key                          | Bounds           | Default | Used by                                             |
+| ---------------------------- | ---------------- | ------- | --------------------------------------------------- |
+| `inlineCommentsPerReviewer`  | 1–50             | 10      | consolidation's per-reviewer inline cap (D-009)     |
+| `inlineCommentsPerRun`       | 1–100            | 25      | consolidation's per-run inline cap (D-009)          |
+| `contextTotalBytes`          | 20,000–1,000,000 | 200,000 | context builder total budget (D-010)                |
+| `contextFileBytes`           | 4,000–200,000    | 32,000  | context builder per-file budget (D-010)             |
+| `descriptionLimit`           | 500–20,000       | 4,096   | PR description excerpt in the prompt                |
+| `blockingMode`               | boolean          | `false` | review event selection (item 11, D-013 default)     |
+| `blockingErrorThreshold`     | 1–50             | 1       | error findings needed for `REQUEST_CHANGES`         |
+| `repoInstructions`           | boolean          | `false` | repository instructions in prompts (D-022)          |
+| `repoInstructionsMaxBytes`   | 1,000–50,000     | 8,000   | excerpt budget for those instructions (D-022)       |
+| `referenceContextFiles`      | 1–100            | 50      | files fetched per run for reference context (D-031) |
+| `referenceContextFileBytes`  | 1,000–100,000    | 32,000  | per-file cap for a reference file (D-031)           |
+| `referenceContextTotalBytes` | 10,000–1,000,000 | 100,000 | per-reviewer reference block budget (D-031)         |
 
 `GET /api/settings` returns `{ settings, defaults }` — the effective values and the spec's
 defaults, so the dashboard can render "reset to defaults" without hard-coding them. `PATCH
@@ -278,6 +281,23 @@ Phases, one alarm segment at a time:
   instructions are enabled, the
   repository's `AGENTS.md` and `CONTRIBUTING.md` are read at the PR's head SHA here, bounded by
   the configured budget, and kept for the prompts (D-022).
+- `scope` — D-031. For an automatic run, the changed-file names decide which reviewers survive:
+  each pair's `paths_include` and `paths_exclude` filter the list, and a reviewer that carries
+  patterns but keeps no changed file is dropped from the run. A run whose reviewers all fall away
+  finishes `skipped` (D-016). Each survivor's filtered file list is stored under
+  `reviewerFiles:<id>`; a reviewer with no patterns keeps the union context. Manual runs (D-028)
+  skip this filter — the operator already named the reviewer. D-032 keeps the dropped reviewers
+  (name and patterns) so a finished run can say who did not run and why.
+- `reference` — D-031/D-032. When a survivor has `context_paths`, each distinct context root is
+  listed once (`git/trees/{sha}:{root}?recursive=1`, the whole repository for root `''`), the
+  returned paths are prefixed with the root, and the files that are not already in that reviewer's
+  diff are fetched in batches of 8 per segment (raw contents at the head SHA).
+  `referenceContextFiles`, `referenceContextFileBytes` and `referenceContextTotalBytes` bound the
+  set; the file cap is shared fairly — each reviewer gets
+  `max(1, floor(referenceContextFiles / reviewers with context paths))`, while the union fetched in
+  one run stays capped at the setting. Matches are kept per reviewer (`refPaths:<id>`), texts under
+  `ref:<path>`; a failed root or file fetch never fails the run — the omission becomes a summary
+  note, and a truncated root is noted. With no context paths the step is a pass-through.
 - `review` — for each enabled reviewer of the repository: prompts are prepared in their own
   segment; a single segment then fires all provider calls in parallel (the product requires
   parallel reviewers; waiting is I/O). Per-call timeout 120 s. One reviewer failing does not
@@ -324,8 +344,13 @@ Two adapters behind one interface, selected by the reviewer's `flavor`:
 
 Prompts: system = the reviewer's instructions + rules + the output contract; user = PR title,
 body (≤ the configured description limit — 4 KB by default, D-021), file list, the budgeted
-patches, and — when the setting is on — the bounded repository-instructions block (D-022). Output
-contract v2 (D-020) — strict JSON:
+patches, and — when the setting is on — the bounded repository-instructions block (D-022), then
+the reviewer's reference block (D-031) when its pair names context paths. A scoped reviewer's
+patch list is the filtered set from `scope`, built with the same D-010 budgets; an unscoped
+reviewer keeps the union context. The reference block is labelled read-only material from the
+reviewed revision — not part of the diff — and names files cut by a budget.
+
+Output contract v2 (D-020) — strict JSON:
 
 ```json
 {
@@ -348,6 +373,18 @@ oversized values are truncated, a missing or invalid `severity` falls back to `i
 `line` values are dropped. `startLine` (optional) marks a multi-line finding and is kept only when
 it precedes `line` and both lines are commentable in the diff. `summary` is optional. Parsing is
 tolerant (extract the JSON value), but a response that cannot be parsed fails that reviewer only.
+
+D-031 adds one conditional sentence to the system prompt: for a reviewer with reference context,
+it may report a finding in a reference file that is not in the diff, using that file's line. The
+sentence is absent otherwise, so unscoped reviewers keep the v2 contract unchanged. D-032 enforces
+scope at consolidation: a finding whose file is outside that reviewer's filtered set is demoted to
+the summary even when its line is commentable, because a prompt is not an enforcement boundary.
+Everything else is unchanged: a finding whose line is not commentable (outside the diff, or over an
+inline cap) lands in the summary with its `file:line`; the summary notes once that out-of-diff and
+out-of-scope findings cannot be inline. Consolidation validates commentable lines against every
+non-skipped file fetched for the pull request, not only the trimmed context, so a reviewer's
+filtered file is still eligible for an inline comment when it survived the budget of another
+reviewer but not the union one.
 Token `usage` is captured from the response envelope when present — OpenAI's
 `usage.prompt_tokens` / `completion_tokens` / `total_tokens`, Anthropic's `usage.input_tokens` /
 `output_tokens` (total summed) — normalized and stored per reviewer; a provider that reports none
@@ -417,14 +454,19 @@ screen prints a machine code such as `request_failed` at the user — the shared
   reviewer's id and nothing else. Creating a reviewer asks _Blank reviewer_ or _Start from a
   template_ as two explicit choices — the seven starters appear only once a template is asked for,
   and nothing is prefilled until one is picked.
-- **Repositories** — a table with an enabled toggle and per-repo reviewer toggles expanded inside
-  the row, instead of a second screen; a labelled search field (300 ms debounce, the term written
-  back into the URL) narrows the list on the Worker, so the toggles keep acting on what the query
-  returned.
+- **Repositories** — a table with an enabled toggle and per-repo reviewer settings expanded inside
+  the row, instead of a second screen; each reviewer row carries its switch plus three
+  comma-separated pattern fields (include, exclude, reference context — D-031), saved together by
+  the row's save action, and a **Preview scope** action that matches the typed include/exclude
+  lists against the newest run's changed files and says "N of M" plus a few names (D-032); a
+  labelled search field (300 ms debounce, the term written back into the URL) narrows the list on
+  the Worker, so the toggles keep acting on what the query returned.
 - **Runs** — a table with status and repository filters, relative times and running rows badged; the
   list is a snapshot, because live updating is slice D.
-- **Run detail** — findings grouped per reviewer with a severity filter, a token-usage strip, and
-  empty / pending / failed reviewer states that explain themselves.
+- **Run detail** — findings grouped per reviewer with a severity filter, a token-usage strip,
+  empty / pending / failed reviewer states that explain themselves, and the scope record (D-032):
+  the changed-file count, each reviewer's patterns / visible-file count / reference files, and the
+  reviewers the filters dropped, each with the patterns that dropped it.
 - **Settings** — the advanced numbers grouped with their defaults and a per-field reset.
 - **Activity** — the trail as a table with actor and action filters.
 
@@ -636,39 +678,44 @@ screen offers Export (download) and Import (file picker).
 
 ## API surface
 
-| Method           | Path                                  | Auth      | Purpose                                           |
-| ---------------- | ------------------------------------- | --------- | ------------------------------------------------- |
-| GET              | `/api/health`                         | —         | exists                                            |
-| GET              | `/api/setup/state`                    | —         | wizard step status                                |
-| POST             | `/api/setup/code`                     | code      | validate `SETUP_CODE`; returns manifest form      |
-| GET              | `/api/setup/manifest/callback`        | state     | exchange manifest code; store the app             |
-| POST             | `/api/setup/verify-installation`      | setup     | find and store the installation                   |
-| GET              | `/api/auth/github/start`              | —         | OAuth redirect (login or claim)                   |
-| GET              | `/api/auth/github/callback`           | state     | token exchange, access gate, session/claim        |
-| GET              | `/api/auth/session`                   | session   | current user                                      |
-| POST             | `/api/auth/logout`                    | session   | delete session                                    |
-| GET/POST         | `/api/reviewers`                      | session   | list / create                                     |
-| GET/PATCH/DELETE | `/api/reviewers/:id`                  | session   | read / update / delete                            |
-| GET              | `/api/repositories`                   | session   | list; `?refresh=1` syncs from GitHub              |
-| PATCH            | `/api/repositories/:repoId`           | session   | enable/disable                                    |
-| GET/PUT          | `/api/repositories/:repoId/reviewers` | session   | per-repo reviewer enablement                      |
-| GET              | `/api/instance/readiness`             | session   | readiness, computed from D1 (D-028)               |
-| GET              | `/api/repositories/:repoId/pulls`     | session   | open pull requests for the try picker (D-028)     |
-| POST             | `/api/runs/try`                       | session   | manual try run; posts nothing (D-028)             |
-| GET              | `/api/runs`                           | session   | history `{ runs, nextCursor }` (keyset)           |
-| GET              | `/api/runs/:id`                       | session   | run detail `{ run, reviewers }`                   |
-| GET/PATCH        | `/api/settings`                       | session   | `{ settings, defaults }` (D-021)                  |
-| GET              | `/api/activity`                       | session   | activity trail `{ activity, nextCursor }` (D-023) |
-| GET              | `/api/reviewers/export`               | session   | reviewer definitions as JSON (D-025)              |
-| POST             | `/api/reviewers/import`               | session   | merge an exported document (D-025)                |
-| POST             | `/api/webhooks/github`                | signature | GitHub deliveries                                 |
+| Method           | Path                                      | Auth      | Purpose                                                                 |
+| ---------------- | ----------------------------------------- | --------- | ----------------------------------------------------------------------- |
+| GET              | `/api/health`                             | —         | exists                                                                  |
+| GET              | `/api/setup/state`                        | —         | wizard step status                                                      |
+| POST             | `/api/setup/code`                         | code      | validate `SETUP_CODE`; returns manifest form                            |
+| GET              | `/api/setup/manifest/callback`            | state     | exchange manifest code; store the app                                   |
+| POST             | `/api/setup/verify-installation`          | setup     | find and store the installation                                         |
+| GET              | `/api/auth/github/start`                  | —         | OAuth redirect (login or claim)                                         |
+| GET              | `/api/auth/github/callback`               | state     | token exchange, access gate, session/claim                              |
+| GET              | `/api/auth/session`                       | session   | current user                                                            |
+| POST             | `/api/auth/logout`                        | session   | delete session                                                          |
+| GET/POST         | `/api/reviewers`                          | session   | list / create                                                           |
+| GET/PATCH/DELETE | `/api/reviewers/:id`                      | session   | read / update / delete                                                  |
+| GET              | `/api/repositories`                       | session   | list; `?refresh=1` syncs from GitHub                                    |
+| PATCH            | `/api/repositories/:repoId`               | session   | enable/disable                                                          |
+| GET/PUT          | `/api/repositories/:repoId/reviewers`     | session   | per-repo reviewer enablement and scope (D-031)                          |
+| POST             | `/api/repositories/:repoId/scope-preview` | session   | match patterns against the newest run's files (D-032)                   |
+| GET              | `/api/instance/readiness`                 | session   | readiness, computed from D1 (D-028)                                     |
+| GET              | `/api/repositories/:repoId/pulls`         | session   | open pull requests for the try picker (D-028)                           |
+| POST             | `/api/runs/try`                           | session   | manual try run; posts nothing (D-028)                                   |
+| GET              | `/api/runs`                               | session   | history `{ runs, nextCursor }` (keyset)                                 |
+| GET              | `/api/runs/:id`                           | session   | run detail `{ run, reviewers, skippedReviewers, changedFiles }` (D-032) |
+| GET/PATCH        | `/api/settings`                           | session   | `{ settings, defaults }` (D-021)                                        |
+| GET              | `/api/activity`                           | session   | activity trail `{ activity, nextCursor }` (D-023)                       |
+| GET              | `/api/reviewers/export`                   | session   | reviewer definitions as JSON (D-025)                                    |
+| POST             | `/api/reviewers/import`                   | session   | merge an exported document (D-025)                                      |
+| POST             | `/api/webhooks/github`                    | signature | GitHub deliveries                                                       |
 
 ## Security
 
 Prepared statements only; no secret in logs or API responses; timing-safe compares for the setup
 code and webhook signature; OAuth state single-use; the access gate above; the dashboard ships no
 third-party scripts. Cloudflare Access remains an optional hardening layer (D-008 covers
-first-run without it).
+first-run without it). Scope patterns are validated at write time (repo-relative, no leading `/`,
+no `.`/`..` segment, at most 20 patterns per field and 200 characters each) and parsed tolerantly
+at read time, so a hand-edited row degrades to no scope rather than breaking a run; they are only
+ever matched against GitHub-provided paths and can never select a path outside the repository
+(D-031).
 
 ## Testing
 
@@ -683,6 +730,13 @@ decryption (D-023, pure functions); the activity trail's best-effort writes and 
 flavors, timeouts, malformed output, usage envelopes); webhook verification and de-duplication;
 the setup state machine with mocked GitHub endpoints; Durable Object phases, retries, and run
 records via the Workers Vitest plugin with stubbed `fetch`. No test performs real network calls.
+D-031 adds the glob matcher and the filter/parse helpers (pure functions), the reference block's
+budgets, the scope round-trip on `PUT /api/repositories/:repoId/reviewers`, and a run-engine case
+for each rule: a reviewer whose patterns miss every changed file stays out of the run, a matching
+reviewer receives only its files and its reference block, and a finding on a reference line lands
+in the summary instead of an inline comment. D-032 adds the context-root derivation and pattern
+preservation (pure functions), consolidation's out-of-scope demotion, the scope record on run
+detail, the preview endpoint against a seeded run, and a per-root tree fetch case.
 
 Slice A adds a **second vitest project** for UI components. The workerd pool cannot render a
 component — there were zero UI tests before this — so `product/vitest.ui.config.ts` runs
