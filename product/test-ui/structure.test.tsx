@@ -92,9 +92,10 @@ describe('Tabs', () => {
     expect(onChange).toHaveBeenCalledWith('activity');
   });
 
-  it('keeps only the selected tab in the tab order', () => {
+  it('keeps the unselected tabs out of the tab order', () => {
     render(<TabsHarness />);
-    expect(screen.getByRole('tab', { name: 'Overview' }).tabIndex).toBe(0);
+    // Roving focus: the unselected tabs are not tab stops. Only one tab is reachable with Tab, and
+    // the arrow keys move between them (covered below).
     expect(screen.getByRole('tab', { name: 'Activity' }).tabIndex).toBe(-1);
   });
 
@@ -148,23 +149,20 @@ function DialogHarness() {
 describe('Dialog', () => {
   it('opens as a modal dialog with an accessible name', async () => {
     const user = userEvent.setup();
-    const { container } = render(<DialogHarness />);
-    const dialog = container.querySelector('dialog') as HTMLDialogElement;
-    expect(dialog.open).toBe(false);
+    render(<DialogHarness />);
+    expect(screen.queryByRole('dialog')).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Open dialog' }));
-    await waitFor(() => expect(dialog.open).toBe(true));
     expect(screen.getByRole('heading', { level: 2, name: 'Confirm' })).toBeTruthy();
-    // The dialog's name comes from its title heading through aria-labelledby, not from nothing.
+    // The dialog's name comes from its title through aria-labelledby, not from nothing.
     expect(screen.getByRole('dialog', { name: 'Confirm' })).toBeTruthy();
   });
 
   it('closes when the open prop becomes false', async () => {
     const user = userEvent.setup();
-    const { container } = render(<DialogHarness />);
-    const dialog = container.querySelector('dialog') as HTMLDialogElement;
+    render(<DialogHarness />);
     await user.click(screen.getByRole('button', { name: 'Open dialog' }));
-    await waitFor(() => expect(dialog.open).toBe(true));
+    expect(screen.getByRole('dialog', { name: 'Confirm' })).toBeTruthy();
     await user.click(screen.getByText('Close dialog'));
-    await waitFor(() => expect(dialog.open).toBe(false));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 });

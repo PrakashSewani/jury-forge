@@ -17,6 +17,7 @@ import {
 import { formatRelativeTime, runStatusTone, shortSha } from '../lib/format';
 import { handleAppLink, navigate } from '../lib/router';
 import { usePoll } from '../lib/use-poll';
+import { useQueryState } from '../lib/use-query-state';
 import {
   Badge,
   Button,
@@ -27,6 +28,7 @@ import {
   EmptyState,
   Field,
   focusRing,
+  Input,
   Notice,
   Row,
   Select,
@@ -248,8 +250,12 @@ export default function RunsPage() {
   const [data, setData] = useState<RunsData | null>(null);
   const [failed, setFailed] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [status, setStatus] = useState<'all' | RunStatus>('all');
-  const [repo, setRepo] = useState('all');
+  // The filters live in the URL, so a filtered view is a link (D-033).
+  const [statusParam, setStatusParam] = useQueryState('status', 'all');
+  const [repo, setRepo] = useQueryState('repo', 'all');
+  const status: 'all' | RunStatus = STATUS_OPTIONS.some((option) => option.value === statusParam)
+    ? (statusParam as 'all' | RunStatus)
+    : 'all';
   const [tryOpen, setTryOpen] = useState(false);
 
   const load = useCallback(async (signal?: AbortSignal) => {
@@ -322,6 +328,9 @@ export default function RunsPage() {
     }
   }
 
+  const [queryParam, setQueryParam] = useQueryState('runq', '');
+  const needle = queryParam.trim().toLowerCase();
+
   const filtered = useMemo(() => {
     if (data === null) {
       return [];
@@ -329,9 +338,13 @@ export default function RunsPage() {
     return data.runs.filter(
       (run) =>
         (status === 'all' || run.status === status) &&
-        (repo === 'all' || run.repoId === Number(repo)),
+        (repo === 'all' || run.repoId === Number(repo)) &&
+        (needle === '' ||
+          `#${run.prNumber}`.includes(needle) ||
+          run.headSha.toLowerCase().startsWith(needle) ||
+          (data.repos.get(run.repoId) ?? '').toLowerCase().includes(needle)),
     );
-  }, [data, status, repo]);
+  }, [data, status, repo, needle]);
 
   const repoIds = data === null ? [] : [...new Set(data.runs.map((run) => run.repoId))];
 
@@ -364,11 +377,16 @@ export default function RunsPage() {
         ) : (
           <>
             <Toolbar className="mb-4 flex-wrap">
+              <Field className="min-w-48 flex-[2] sm:max-w-72" label="Search">
+                <Input
+                  onChange={(event) => setQueryParam(event.target.value)}
+                  placeholder="PR #, commit, or repository"
+                  type="search"
+                  value={queryParam}
+                />
+              </Field>
               <Field className="min-w-40 flex-1 sm:max-w-56" label="Status">
-                <Select
-                  onChange={(event) => setStatus(event.target.value as 'all' | RunStatus)}
-                  value={status}
-                >
+                <Select onChange={(event) => setStatusParam(event.target.value)} value={status}>
                   {STATUS_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.label}
@@ -388,9 +406,20 @@ export default function RunsPage() {
               </Field>
             </Toolbar>
             {filtered.length === 0 ? (
-              <p className="py-6 text-center text-sm text-text-muted">
-                No runs match these filters.
-              </p>
+              <div className="flex flex-col items-center gap-3 py-8 text-center">
+                <p className="text-sm text-text-muted">No runs match these filters.</p>
+                <Button
+                  onClick={() => {
+                    setQueryParam('');
+                    setStatusParam('all');
+                    setRepo('all');
+                  }}
+                  size="sm"
+                  variant="secondary"
+                >
+                  Clear filters
+                </Button>
+              </div>
             ) : (
               <Table className="w-full text-left text-sm">
                 <thead>

@@ -1107,3 +1107,87 @@ glob matching in the dashboard (one matcher in the Worker stays the source of tr
 **Not in this change:** no new dependency; no change to the inline caps, resolution buckets, review
 event, or the D-031 deferred list (per-repo reviewer instructions, audit mode, glob braces/negation,
 reference caching).
+
+## D-033 — Dashboard UI rework: shadcn/ui on Radix, a dark-first theme, search and filters
+
+**Date:** 2026-10-25 (owner confirmed the four questions below in chat before this entry)
+
+**Decision:** The dashboard is reworked as one pull request on `feat/ui-rework-20261025`, with no
+change to the Worker's behaviour, the API contract, D1, the run engine, or `site/`.
+
+1. **Component layer: shadcn/ui style on Radix.** Components live in `product/src/ui/` as
+   repository-owned source written in the shadcn style (the shadcn model: no shadcn runtime
+   package, and the shadcn CLI is not run). They are built on Radix primitives where a component
+   has keyboard or focus semantics: the dialog (also the command palette's shell), the switch and
+   the tabs. Selects stay native `<select>` elements, styled through the same input class: native
+   pickers are the better control on mobile, and the existing tests and the reviewer/run/activity
+   filters already drive them. The Slice A token names stay as the semantic layer, so components
+   change without the palette being scattered across screens. This supersedes D-026's rejection of
+   component libraries for the dashboard only; its other rejections (no `jsdom`, no
+   `jest-dom`, no `prefers-color-scheme` default) stand.
+
+2. **Runtime dependencies added, versions resolved live on 2026-10-25 — four, and no more:**
+   - `radix-ui` 1.8.1 — dialog, switch and tabs primitives (tree-shaken per import).
+   - `cmdk` 1.1.1 — the command palette's list, keyboard model and filtering.
+   - `lucide-react` 1.61.0 — icons; SVG, no font download.
+   - `sonner` 2.0.8 — toast feedback for saves, copies and errors.
+     Not added, on purpose: `class-variance-authority`, `clsx` and `tailwind-merge` (the existing
+     `cx()` joins classes, and the primitives have two or three variants each, which plain
+     lookup tables already express). The bundle growth is measured and reported in the pull request.
+     No animation library: motion is CSS only and respects `prefers-reduced-motion`.
+
+3. **Theme: dark-first forge.** Dark is the default for every visitor. Light and "system" remain
+   selectable through the existing toggle and `jf:theme` storage. The default changes from the
+   D-027 system-resolved preference to dark, and that is the one behavioural change in the theme
+   layer. The accent is a single ember hue used for primary actions, focus and the active nav;
+   severities and statuses keep their existing semantic roles. Typography: the existing system
+   sans for prose and a system monospace stack (`ui-monospace`, `SFMono-Regular`, `Menlo`,
+   `Consolas`) for file paths, run ids, models and code. **No web font is loaded** — a webfont is a
+   third-party request from every dashboard page, which the no-central-service posture (D-004)
+   does not allow without a decision.
+
+4. **Accessibility bars do not move.** Every text pair in both themes stays AA (the D-027 measured
+   ladder is re-measured, not assumed). 44 px targets, the `:focus-visible` ring, and the
+   `measure-layout.mjs --assert` contract (zero failing cells across 8 routes × 7 widths × 2
+   themes) are the acceptance gate, unchanged.
+
+5. **Search and filters, state in the URL.** Runs filter by status, mode and repository (all
+   already in the list payload). Repositories, reviewers and activity get search and filters over
+   data their existing endpoints already return. Every filter writes to the query string, so a
+   filtered view is a link and survives reload and back/forward. A filter that needs a new query
+   parameter or a new column is a separate decision, not part of this rework — the reviewer filter
+   on runs is excluded for that reason unless the list payload already carries reviewer names.
+
+6. **Quality of life in scope.** A Cmd/Ctrl+K command palette (jump to any screen, reviewer,
+   repository or recent run, and toggle the theme); findings in run detail grouped by file, with
+   copy-to-clipboard per finding, a link to the pull request's Files tab for the file, and a
+   collapsible scope and usage panel; consistent skeleton loading, empty states that name the next
+   action, and toasts for saves, copies and failures. The palette's own shortcut (Cmd/Ctrl+K, and
+   Escape to close) is shown in its footer, and no other key is bound, so a focused input never
+   loses a keystroke. A per-line deep link into GitHub's diff is not built: its anchor format is
+   a hash of the path that the app would have to compute and keep correct, and the Files tab link
+   is the same destination without that dependency.
+
+**Why:** the owner's direction after reviewing the dashboard was that the spacing and visual
+hierarchy read as unfinished, and that the product should feel distinct rather than like a default
+Tailwind admin. The existing primitives are class-only wrappers, which means every Radix-grade
+behaviour (focus trapping, roving focus, typeahead, outside-click, portal layering) would be
+hand-rolled and tested in happy-dom — shadcn on Radix buys tested keyboard and focus behaviour for
+dialogs, selects and the palette, and the code stays in the repository, so there is no
+third-party theme runtime to outgrow. A dark-first default, with the palette as named tokens, is
+what the owner asked for; a web font was rejected because it would send each visitor's request to
+a third party from an instance that promises not to.
+
+**Rejected:** Mantine (its own theme and styling system would replace the Tailwind tokens already
+in use, and its runtime is the largest of the options); HeroUI (smaller ecosystem, and its
+keyboard and focus behaviour is less established than Radix's for the palette and dialogs);
+keeping the hand-built primitives and adding only tokens (every dialog, select and palette would
+be re-implemented and tested by hand); a web font such as Inter or JetBrains Mono (a third-party
+request from every page); a motion library (CSS transitions cover the required states); a
+filter that needs a new API parameter inside this rework (it changes the contract, so it is its
+own decision); a light-default theme (the owner asked for dark-first, and light stays one toggle
+away).
+
+**Not in this change:** no API change, no migration, no Worker or engine change, no `site/` change,
+no deploy (the merge to `dev` deploys, D-030, so this branch is merged only on the owner's
+instruction).

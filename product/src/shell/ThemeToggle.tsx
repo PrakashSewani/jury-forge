@@ -22,9 +22,7 @@ export function nextPreference(current: ThemePreference): ThemePreference {
 }
 
 export function ThemeToggle({ className }: { className?: string }) {
-  const [preference, setPreference] = useState<ThemePreference>(
-    () => readStoredTheme() ?? 'system',
-  );
+  const [preference, setPreference] = useState<ThemePreference>(() => readStoredTheme() ?? 'dark');
 
   function cycle() {
     const next = nextPreference(preference);

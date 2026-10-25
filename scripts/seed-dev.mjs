@@ -9,7 +9,7 @@ import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 
 const repoRoot = resolve(import.meta.dirname, '..');
 const productDir = join(repoRoot, 'product');
@@ -433,11 +433,18 @@ VALUES (${sqlString(DEV_SESSION_HASH)}, 'prakashsewani', NULL, unixepoch(), unix
 }
 
 function wrangler(args) {
-  return spawnSync('npx', ['wrangler', ...args], {
-    cwd: productDir,
-    shell: false,
-    stdio: 'inherit',
-  });
+  // On Windows `npx` is `npx.cmd`, which cannot be spawned without a shell. Run npm's npx entry
+  // point through the same Node binary instead: no shell, so no argument escaping to get wrong.
+  const npxArgs = ['wrangler', ...args];
+  if (process.platform === 'win32') {
+    const npxCli = join(dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npx-cli.js');
+    return spawnSync(process.execPath, [npxCli, ...npxArgs], {
+      cwd: productDir,
+      shell: false,
+      stdio: 'inherit',
+    });
+  }
+  return spawnSync('npx', npxArgs, { cwd: productDir, shell: false, stdio: 'inherit' });
 }
 
 function statusLine(label, result) {

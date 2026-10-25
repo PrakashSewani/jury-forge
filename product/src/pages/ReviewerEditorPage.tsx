@@ -61,6 +61,10 @@ interface StarterFields {
   rules: string;
 }
 
+/** A 44px hit box with the native dot drawn at its own size inside it, so the control is easy to
+ * hit on a touch screen without the radio looking any larger. */
+const radioClass = cx('m-0 size-11 shrink-0 cursor-pointer accent-accent', focusRing);
+
 function findTemplate(key: string): ReviewerTemplate | undefined {
   return REVIEWER_TEMPLATES.find((template) => template.key === key);
 }
@@ -429,7 +433,7 @@ export default function ReviewerEditorPage({ id }: { id?: string }) {
               <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm">
                 <input
                   checked={startFrom === 'blank'}
-                  className={cx('h-4 w-4 accent-accent', focusRing)}
+                  className={radioClass}
                   name="start-from"
                   onChange={chooseBlankStarter}
                   type="radio"
@@ -440,7 +444,7 @@ export default function ReviewerEditorPage({ id }: { id?: string }) {
               <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm">
                 <input
                   checked={startFrom === 'template'}
-                  className={cx('h-4 w-4 accent-accent', focusRing)}
+                  className={radioClass}
                   name="start-from"
                   onChange={() => setStartFrom('template')}
                   type="radio"
@@ -539,7 +543,7 @@ export default function ReviewerEditorPage({ id }: { id?: string }) {
               <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm">
                 <input
                   checked={form.keySource === 'paste'}
-                  className={cx('h-4 w-4 accent-accent', focusRing)}
+                  className={radioClass}
                   name="key-source"
                   onChange={() => chooseKeySource('paste')}
                   type="radio"
@@ -550,7 +554,7 @@ export default function ReviewerEditorPage({ id }: { id?: string }) {
               <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm">
                 <input
                   checked={form.keySource === 'reuse'}
-                  className={cx('h-4 w-4 accent-accent', focusRing)}
+                  className={radioClass}
                   name="key-source"
                   onChange={() => chooseKeySource('reuse')}
                   type="radio"

@@ -4,19 +4,63 @@ import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import type { Route } from '../lib/router';
 import { handleAppLink } from '../lib/router';
+import { applyTheme, readStoredTheme } from '../lib/theme';
 import type { BadgeTone } from '../ui';
-import { Badge, cx, focusRing, tapTarget } from '../ui';
+import { cx, focusRing, tapTarget } from '../ui';
+import { CommandPalette } from './CommandPalette';
+import type { PaletteAction } from './CommandPalette';
 import { Nav } from './Nav';
 import { ThemeToggle } from './ThemeToggle';
 import { UserMenu } from './UserMenu';
 
-function statusChip(setup: SetupState | null): { tone: BadgeTone; label: string } {
-  if (setup === null) return { tone: 'neutral', label: 'Loading' };
-  if (!setup.claimed) return { tone: 'neutral', label: 'Not set up' };
+interface StatusState {
+  tone: BadgeTone;
+  label: string;
+  detail: string | null;
+}
+
+function statusState(setup: SetupState | null): StatusState {
+  if (setup === null) return { tone: 'neutral', label: 'Checking', detail: null };
+  if (!setup.claimed) return { tone: 'neutral', label: 'Not set up', detail: null };
   if (setup.installed) {
-    return { tone: 'green', label: setup.appSlug ? `Installed · ${setup.appSlug}` : 'Installed' };
+    return { tone: 'green', label: 'GitHub App installed', detail: setup.appSlug };
   }
-  return { tone: 'amber', label: 'Claimed · not installed' };
+  return { tone: 'amber', label: 'Installation pending', detail: setup.appSlug };
+}
+
+const DOT_CLASS: Record<BadgeTone, string> = {
+  neutral: 'bg-text-subtle',
+  green: 'bg-status-completed-text',
+  red: 'bg-status-failed-text',
+  amber: 'bg-status-running-text',
+};
+
+/** The instance's install state: a dot that matches its tone, a plain label, and the app slug. */
+function StatusPill({ setup, className }: { setup: SetupState | null; className?: string }) {
+  const state = statusState(setup);
+  return (
+    <div
+      aria-label={state.detail ? `${state.label}: ${state.detail}` : state.label}
+      className={cx(
+        'flex min-w-0 items-center gap-2.5 rounded-control border border-border bg-surface-muted px-3 py-2',
+        className,
+      )}
+      role="status"
+    >
+      <span
+        aria-hidden="true"
+        className={cx('h-2 w-2 shrink-0 rounded-full', DOT_CLASS[state.tone])}
+      />
+      <span className="min-w-0">
+        <span className="block truncate text-xs font-medium text-text">{state.label}</span>
+        {state.detail ? (
+          <span className="block truncate font-mono text-[11px] text-text-muted">
+            {state.detail}
+          </span>
+        ) : null}
+      </span>
+    </div>
+  );
 }
 
 export interface ShellProps {
@@ -30,7 +74,23 @@ export interface ShellProps {
 
 export function Shell({ user, setup, route, onLogout, busy = false, children }: ShellProps) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const status = statusChip(setup);
+  const paletteActions: PaletteAction[] = [
+    {
+      id: 'theme',
+      label: 'Cycle theme (dark, system, light)',
+      keywords: ['dark', 'light', 'system', 'appearance'],
+      run: () => {
+        const current = readStoredTheme() ?? 'dark';
+        applyTheme(current === 'dark' ? 'system' : current === 'system' ? 'light' : 'dark');
+      },
+    },
+    {
+      id: 'logout',
+      label: 'Log out',
+      keywords: ['sign out', 'session'],
+      run: onLogout,
+    },
+  ].filter((action) => action.id !== 'logout' || user !== null);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -43,6 +103,7 @@ export function Shell({ user, setup, route, onLogout, busy = false, children }: 
 
   return (
     <div className="flex min-h-screen flex-col bg-surface-page text-text">
+      {setup?.claimed ? <CommandPalette actions={paletteActions} /> : null}
       {/* Top bar — below lg only. */}
       <header className="sticky top-0 z-30 border-b border-border bg-surface lg:hidden">
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
@@ -110,7 +171,7 @@ export function Shell({ user, setup, route, onLogout, busy = false, children }: 
               >
                 {PRODUCT_NAME}
               </a>
-              <Badge tone={status.tone}>{status.label}</Badge>
+              <StatusPill setup={setup} />
             </div>
             {/* Gated on `setup.claimed`, as the pre-shell App did (D-027: only the markup moved) —
                 before the instance is claimed every link lands on the same gate panel. */}
@@ -137,7 +198,7 @@ export function Shell({ user, setup, route, onLogout, busy = false, children }: 
             >
               {PRODUCT_NAME}
             </a>
-            <Badge tone={status.tone}>{status.label}</Badge>
+            <StatusPill setup={setup} />
           </div>
           {setup?.claimed ? <Nav route={route} /> : null}
           <div className="mt-auto flex flex-col gap-3 border-t border-border pt-4">
