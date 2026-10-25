@@ -40,7 +40,7 @@ function byteLength(value: string): number {
   return encoder.encode(value).length;
 }
 
-function truncateToBytes(value: string, maxBytes: number): string {
+export function truncateToBytes(value: string, maxBytes: number): string {
   const bytes = encoder.encode(value);
   if (bytes.length <= maxBytes) {
     return value;
@@ -48,7 +48,7 @@ function truncateToBytes(value: string, maxBytes: number): string {
   return new TextDecoder().decode(bytes.slice(0, maxBytes));
 }
 
-function isSkippedName(filename: string): boolean {
+export function isSkippedName(filename: string): boolean {
   return (
     BINARY_PATTERN.test(filename) || SKIPPED_PATTERNS.some((pattern) => pattern.test(filename))
   );
@@ -129,14 +129,21 @@ export const OUTPUT_CONTRACT = [
   'Use "line" only when it points at a specific changed line. Report nothing rather than guesses; use an empty findings array when the change is clean.',
 ].join('\n');
 
+/** D-031: the extra contract line a reviewer gets only when it carries reference context. */
+export const REFERENCE_FINDINGS_CONTRACT =
+  'You may also report findings in the read-only reference files even when they are not part of the diff. Those findings are published in the summary, never as inline comments; use the reference file\'s "line" when you can point at one.';
+
 export function buildSystemPrompt(
   reviewer: Pick<Reviewer, 'name' | 'instructions' | 'rules'>,
+  options: { allowOutOfDiff?: boolean } = {},
 ): string {
   const parts = [
     `You are ${reviewer.name}, a code reviewer in an automated review team.`,
     reviewer.instructions.trim(),
     reviewer.rules.trim() === '' ? '' : `Rules:\n${reviewer.rules.trim()}`,
-    OUTPUT_CONTRACT,
+    options.allowOutOfDiff === true
+      ? `${OUTPUT_CONTRACT}\n${REFERENCE_FINDINGS_CONTRACT}`
+      : OUTPUT_CONTRACT,
   ];
   return parts.filter((part) => part !== '').join('\n\n');
 }
@@ -193,6 +200,44 @@ export function buildRepoInstructionsBlock(
   return parts.join('\n');
 }
 
+/**
+ * D-031: the read-only reference block. Files arrive already capped per file; this applies the
+ * total budget in order, truncates the file that crosses it, and names what does not fit.
+ */
+export function buildReferenceContextBlock(
+  files: RepoInstructionFile[],
+  maxBytes: number,
+): string | null {
+  const present = files.filter((file) => file.text.trim() !== '');
+  if (present.length === 0) {
+    return null;
+  }
+  const parts: string[] = [
+    'Reference files (read-only, from the repository at the reviewed revision — not part of this diff; use them to judge the change, and report findings in them as summary items):',
+  ];
+  const omitted: string[] = [];
+  let used = 0;
+  for (const file of present) {
+    const remaining = maxBytes - used;
+    if (remaining <= 0) {
+      omitted.push(file.path);
+      continue;
+    }
+    const size = byteLength(file.text);
+    const truncated = size > remaining;
+    const text = truncated ? truncateToBytes(file.text, remaining) : file.text;
+    parts.push('', `### ${file.path}`, '', text);
+    if (truncated) {
+      parts.push(`… truncated at ${maxBytes} bytes.`);
+    }
+    used += Math.min(size, remaining);
+  }
+  if (omitted.length > 0) {
+    parts.push('', `Not included for the ${maxBytes} byte budget: ${omitted.join(', ')}.`);
+  }
+  return parts.join('\n');
+}
+
 export function buildReviewPrompt(
   pullRequest: PullRequestInfo,
   context: ReviewContext,
@@ -200,6 +245,7 @@ export function buildReviewPrompt(
     previousFindings?: Finding[];
     descriptionLimit?: number;
     repoInstructions?: string | null;
+    reference?: string | null;
   } = {},
 ): string {
   const body = pullRequest.body?.trim() ?? '';
@@ -225,6 +271,9 @@ export function buildReviewPrompt(
   );
   for (const file of context.files) {
     lines.push('', `### ${file.filename}`, '```diff', file.patch, '```');
+  }
+  if (options.reference) {
+    lines.push('', options.reference);
   }
   const notes = contextNotes(context);
   if (notes.length > 0) {

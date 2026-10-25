@@ -1,7 +1,11 @@
 import {
   RepositoryPullRequestSchema,
   RepositoryReviewerSchema,
+  RepositoryReviewerUpdateSchema,
   RepositorySchema,
+  ScopePreviewRequestSchema,
+  ScopePreviewResponseSchema,
+  type ScopePreviewResponse,
 } from '@jury-forge/shared';
 import { Hono } from 'hono';
 import { z } from 'zod';
@@ -25,6 +29,7 @@ import {
 } from '../lib/repositories';
 import { errorResponse, respond } from '../lib/respond';
 import { listReviewers } from '../lib/reviewers';
+import { scopedFiles } from '../lib/scope';
 import { requireSession, sameOrigin, type AppEnv } from '../middleware';
 
 const MAX_REPOSITORY_PAGES = 10;
@@ -32,7 +37,7 @@ const PAGE_SIZE = 100;
 
 const patchBody = z.object({ enabled: z.boolean() });
 const reviewersBody = z.object({
-  reviewers: z.array(z.object({ reviewerId: z.string().min(1), enabled: z.boolean() })),
+  reviewers: z.array(RepositoryReviewerUpdateSchema),
 });
 
 export const repositoryRoutes = new Hono<AppEnv>();
@@ -110,6 +115,43 @@ repositoryRoutes.get('/:repoId/reviewers', async (c) => {
     z.array(RepositoryReviewerSchema),
     await listRepositoryReviewers(c.env.DB, repoId),
   );
+});
+
+/**
+ * D-032: match typed patterns against the newest run's changed files for this repository. No
+ * GitHub call, nothing persisted — the last run already proves what the patterns see.
+ */
+repositoryRoutes.post('/:repoId/scope-preview', async (c) => {
+  const parsed = ScopePreviewRequestSchema.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) {
+    return errorResponse('invalid_request', 400);
+  }
+  const repoId = Number(c.req.param('repoId'));
+  if (!Number.isInteger(repoId)) {
+    return errorResponse('invalid_request', 400);
+  }
+  if (!(await getRepository(c.env.DB, repoId))) {
+    return errorResponse('not_found', 404);
+  }
+  const row = await c.env.DB.prepare(
+    "SELECT id, head_sha, files_json FROM runs WHERE repo_id = ? AND files_json != '[]' ORDER BY created_at DESC, id DESC LIMIT 1",
+  )
+    .bind(repoId)
+    .first<{ id: string; head_sha: string; files_json: string }>();
+  const body: ScopePreviewResponse =
+    row === null
+      ? { runId: null, headSha: null, total: 0, matched: [] }
+      : {
+          runId: row.id,
+          headSha: row.head_sha,
+          total: (JSON.parse(row.files_json) as string[]).length,
+          matched: scopedFiles(JSON.parse(row.files_json) as string[], {
+            pathsInclude: parsed.data.pathsInclude,
+            pathsExclude: parsed.data.pathsExclude,
+            contextPaths: [],
+          }),
+        };
+  return respond(ScopePreviewResponseSchema, body);
 });
 
 // D-028: the open pull requests the manual try-run picker offers.

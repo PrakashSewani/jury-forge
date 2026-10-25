@@ -1,0 +1,3 @@
+ALTER TABLE runs ADD COLUMN files_json TEXT NOT NULL DEFAULT '[]';
+ALTER TABLE runs ADD COLUMN scope_skip_json TEXT NOT NULL DEFAULT '[]';
+ALTER TABLE run_reviewers ADD COLUMN scope_json TEXT;

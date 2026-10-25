@@ -14,6 +14,8 @@ import type {
   ReviewersImportResult,
   RunDetail,
   RunsPage,
+  ScopePreviewRequest,
+  ScopePreviewResponse,
   SessionUser,
   SettingsResponse,
   SetupCodeResponse,
@@ -34,6 +36,7 @@ import {
   ReviewersImportResultSchema,
   RunDetailSchema,
   RunsPageSchema,
+  ScopePreviewResponseSchema,
   SessionUserSchema,
   SettingsResponseSchema,
   SetupCodeResponseSchema,
@@ -300,6 +303,20 @@ export function saveRepositoryReviewers(
     method: 'PUT',
     headers: jsonHeaders,
     body: JSON.stringify({ reviewers }),
+    signal,
+  });
+}
+
+/** D-032: match patterns against the newest run's changed files for this repository. */
+export function previewScope(
+  repoId: number,
+  input: ScopePreviewRequest,
+  signal?: AbortSignal,
+): Promise<ScopePreviewResponse> {
+  return request(ScopePreviewResponseSchema, `/api/repositories/${repoId}/scope-preview`, {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify(input),
     signal,
   });
 }

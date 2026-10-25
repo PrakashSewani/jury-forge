@@ -45,6 +45,19 @@ const SETTING_SPECS: { [K in keyof InstanceSettings]: SettingSpec<InstanceSettin
     schema: z.number().int().min(1_000).max(50_000),
     defaultValue: 8_000,
   },
+  referenceContextFiles: {
+    schema: z.number().int().min(1).max(100),
+    defaultValue: 50,
+  },
+  referenceContextFileBytes: {
+    // Capped at 100 KB to stay inside a Durable Object storage value (128 KiB).
+    schema: z.number().int().min(1_000).max(100_000),
+    defaultValue: 32_000,
+  },
+  referenceContextTotalBytes: {
+    schema: z.number().int().min(10_000).max(1_000_000),
+    defaultValue: 100_000,
+  },
 };
 
 export const DEFAULT_SETTINGS: InstanceSettings = {
@@ -57,6 +70,9 @@ export const DEFAULT_SETTINGS: InstanceSettings = {
   blockingErrorThreshold: SETTING_SPECS.blockingErrorThreshold.defaultValue,
   repoInstructions: SETTING_SPECS.repoInstructions.defaultValue,
   repoInstructionsMaxBytes: SETTING_SPECS.repoInstructionsMaxBytes.defaultValue,
+  referenceContextFiles: SETTING_SPECS.referenceContextFiles.defaultValue,
+  referenceContextFileBytes: SETTING_SPECS.referenceContextFileBytes.defaultValue,
+  referenceContextTotalBytes: SETTING_SPECS.referenceContextTotalBytes.defaultValue,
 };
 
 export type SettingsPatchResult =

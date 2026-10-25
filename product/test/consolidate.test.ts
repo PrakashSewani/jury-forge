@@ -133,6 +133,22 @@ describe('consolidateReview', () => {
     expect(result.overflow[0]?.findings).toHaveLength(3);
   });
 
+  it('demotes a finding outside the reviewer’s visible files even when its line is in the diff', () => {
+    const patches = new Map([['src/a.ts', patch]]);
+    const result = consolidateReview(
+      [
+        {
+          reviewerId: 'r1',
+          visible: ['docs/b.md'],
+          findings: [finding({ line: 5 })],
+        },
+      ],
+      patches,
+    );
+    expect(result.inline).toHaveLength(0);
+    expect(result.overflow[0]?.findings).toHaveLength(1);
+  });
+
   it('keeps a startLine only when it precedes line and both are commentable', () => {
     const patches = new Map([['src/a.ts', patch]]);
     const result = consolidateReview(

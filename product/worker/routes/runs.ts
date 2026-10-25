@@ -7,6 +7,8 @@ import {
   type RunDetail,
   type RunMode,
   type RunReviewerOutcome,
+  type RunReviewerScope,
+  type RunSkippedReviewer,
   type RunStatus,
   type RunSummary,
   type RunsPage,
@@ -33,7 +35,7 @@ export const runRoutes = new Hono<AppEnv>();
 runRoutes.use('*', requireSession(), sameOrigin());
 
 const RUN_COLUMNS =
-  'id, delivery_id, repo_id, pr_number, head_sha, event, status, mode, error, review_url, created_at, finished_at';
+  'id, delivery_id, repo_id, pr_number, head_sha, event, status, mode, error, review_url, files_json, scope_skip_json, created_at, finished_at';
 
 interface RunRow {
   id: string;
@@ -46,6 +48,8 @@ interface RunRow {
   mode: RunMode;
   error: string | null;
   review_url: string | null;
+  files_json: string;
+  scope_skip_json: string;
   created_at: number;
   finished_at: number | null;
 }
@@ -195,7 +199,7 @@ runRoutes.get('/:id', async (c) => {
     return errorResponse('not_found', 404);
   }
   const reviewerRows = await c.env.DB.prepare(
-    'SELECT reviewer_id, status, findings_json, summary, usage_json, error FROM run_reviewers WHERE run_id = ? ORDER BY reviewer_id',
+    'SELECT reviewer_id, status, findings_json, summary, usage_json, scope_json, error FROM run_reviewers WHERE run_id = ? ORDER BY reviewer_id',
   )
     .bind(row.id)
     .all<{
@@ -204,6 +208,7 @@ runRoutes.get('/:id', async (c) => {
       findings_json: string | null;
       summary: string | null;
       usage_json: string | null;
+      scope_json: string | null;
       error: string | null;
     }>();
   const reviewers: RunReviewerOutcome[] = reviewerRows.results.map((reviewer) => ({
@@ -212,8 +217,14 @@ runRoutes.get('/:id', async (c) => {
     findings: reviewer.findings_json ? (JSON.parse(reviewer.findings_json) as Finding[]) : null,
     summary: reviewer.summary,
     usage: reviewer.usage_json ? (JSON.parse(reviewer.usage_json) as ProviderUsage) : null,
+    scope: reviewer.scope_json ? (JSON.parse(reviewer.scope_json) as RunReviewerScope) : null,
     error: reviewer.error,
   }));
-  const body: RunDetail = { run: summaryFromRow(row), reviewers };
+  const body: RunDetail = {
+    run: summaryFromRow(row),
+    reviewers,
+    skippedReviewers: JSON.parse(row.scope_skip_json) as RunSkippedReviewer[],
+    changedFiles: (JSON.parse(row.files_json) as string[]).length,
+  };
   return respond(RunDetailSchema, body);
 });

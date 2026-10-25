@@ -95,6 +95,9 @@ const settings = {
   blockingErrorThreshold: 1,
   repoInstructions: false,
   repoInstructionsMaxBytes: 8_000,
+  referenceContextFiles: 50,
+  referenceContextFileBytes: 32_000,
+  referenceContextTotalBytes: 100_000,
 };
 
 const readinessStep = { key: 'claim', label: 'Instance claimed', href: '/setup', done: false };
@@ -230,7 +233,14 @@ const cases: Array<[string, Parseable, unknown, unknown]> = [
   [
     'RepositoryReviewerSchema',
     RepositoryReviewerSchema,
-    { reviewerId: 'rev-1', name: 'Security', enabled: true },
+    {
+      reviewerId: 'rev-1',
+      name: 'Security',
+      enabled: true,
+      pathsInclude: ['src/**'],
+      pathsExclude: [],
+      contextPaths: ['docs/'],
+    },
     { reviewerId: 'rev-1', enabled: true },
   ],
   [
@@ -278,6 +288,13 @@ const cases: Array<[string, Parseable, unknown, unknown]> = [
       findings: null,
       summary: null,
       usage: null,
+      scope: {
+        pathsInclude: ['src/**'],
+        pathsExclude: [],
+        contextPaths: ['docs/'],
+        visibleFiles: 2,
+        referenceFiles: ['docs/a.md'],
+      },
       error: null,
     },
     {
@@ -289,7 +306,12 @@ const cases: Array<[string, Parseable, unknown, unknown]> = [
       error: null,
     },
   ],
-  ['RunDetailSchema', RunDetailSchema, { run: runSummary, reviewers: [] }, { reviewers: [] }],
+  [
+    'RunDetailSchema',
+    RunDetailSchema,
+    { run: runSummary, reviewers: [], skippedReviewers: [], changedFiles: 0 },
+    { reviewers: [] },
+  ],
   [
     'TryRunRequestSchema',
     TryRunRequestSchema,

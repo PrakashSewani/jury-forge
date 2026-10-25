@@ -986,3 +986,124 @@ ship, and the duplicate is what keeps a red check from reaching the database.
 behaviour or to the Access policy. The deploys authenticate with a Cloudflare API token scoped to
 Workers Scripts and D1, held in the repository's Actions secrets; the account id is stored there too,
 for tidiness rather than secrecy.
+
+## D-031 — Reviewer scope: path filters and bounded reference context
+
+**Date:** 2026-10-25 (owner confirmed the three questions below before implementation)
+
+**Decision:** A reviewer↔repository pair carries three scope fields, stored as JSON-array TEXT
+columns on `reviewer_repositories` (`paths_include`, `paths_exclude`, `context_paths`, each
+`NOT NULL DEFAULT '[]'`, migration `0007`). They are edited per pair on the Repositories screen and
+travel in the existing `PUT /api/repositories/:repoId/reviewers` body.
+
+1. **Path filters decide what a reviewer reviews.** Patterns are repo-relative POSIX globs: `*`
+   stays inside one path segment, `**` crosses segments, `?` is one non-`/` character, and a
+   trailing `/` means the whole subtree (`docs/` is `docs/**`). No braces, no extglob, no negation —
+   exclusion is the second field. Matching is case-sensitive. An empty `paths_include` means every
+   changed file; `paths_exclude` is applied after it. The surviving files are the reviewer's diff
+   and the only files for which it can post inline comments. A reviewer with at least one pattern
+   runs only when at least one changed file survives both lists; otherwise it is not part of the
+   run. A run whose reviewers all fall away finishes `skipped`, exactly like a run with no
+   applicable reviewers (D-016). Manual try runs ignore path filters — the operator named the
+   reviewer (D-028).
+
+2. **Reference context is read-only material, not the review target.** `context_paths` names
+   repo-relative folders or globs whose contents are read at the PR's head SHA and appended to the
+   reviewer's prompt as reference files. The run lists the repository tree once
+   (`git/trees/{sha}?recursive=1`), matches the paths, drops files already in that reviewer's diff
+   and the existing skipped-name rules (binaries, lockfiles, generated files), and fetches the
+   remaining contents in batches. Three instance settings bound it: `referenceContextFiles`
+   (1–100, default 50), `referenceContextFileBytes` (1,000–100,000, default 32,000) and
+   `referenceContextTotalBytes` (10,000–1,000,000, default 100,000). The per-file ceiling is 100 KB
+   because each fetched text is a Durable Object storage value (128 KiB). Files past a budget are named
+   in the summary; a failed tree or content fetch never fails the run and is noted.
+
+3. **Findings outside the diff are summary-only.** When a reviewer has reference context, it may
+   report a finding in a reference file that is not part of the diff. GitHub accepts inline
+   comments only on diff lines, so those findings are published in the consolidated summary with a
+   `file:line` reference and never become inline comments. The system prompt states the allowance
+   only for reviewers that actually carry reference context, and the summary says once when such a
+   finding appears. Resolution buckets (D-020) are unchanged — the finding key is still file, line,
+   title.
+
+**Why:** the Architecture reviewer has no business reading a docs-only diff, and the Documentation
+reviewer cannot check TOC, link and structure consistency from a diff alone — the first half is a
+filter, the second half is reference context, and together they make a documentation review real
+without changing any other reviewer's behaviour. Scoping per pair rather than per reviewer or per
+repository is the only shape that survives different layouts: the same Documentation reviewer can
+target `docs/` in one repository and `site/content/` in another.
+
+**Rejected:** the literal whole-repo or whole-folder review on every push — `docs/` is already
+187 KB across seven files against a 200 KB diff budget (D-010), most of its findings could not be
+inline comments, and every push would re-report the folder's pre-existing issues; a per-reviewer or
+per-repository scope instead of per pair (wrong for the second layout); shell-style negation inside
+one pattern list (two fields are unambiguous); path filters on manual try runs (the operator already
+chose the reviewer); reading the reference folder without a file cap (the free plan allows 50
+subrequests per invocation, and one request per file does not scale); a scheduled whole-folder audit
+in this change — it is a separate product surface with different publishing and dedup semantics, and
+it stays unbuilt until it is asked for.
+
+**Not in this change:** no change to webhook intake, the published review event, inline caps,
+resolution buckets, the diff budget, or the D-028 manual-run contract. One migration adds three
+columns; no new dependency.
+
+## D-032 — Scope enforcement, run visibility, and scope tuning (follow-up to D-031)
+
+**Date:** 2026-10-25 (owner asked for the full follow-up list)
+
+**Decision:** Seven changes to D-031, none of which alters what a scope means:
+
+1. **Scope is enforced, not prompted.** Consolidation demotes a finding whose file is outside the
+   reviewer's filtered set to the summary. Prompt instructions alone let a model comment outside its
+   remit, and an inline comment is the one output a reviewer should never place outside its scope.
+   The summary notes once that findings outside a reviewer's path scope are listed, never inline.
+
+2. **Runs record their scope.** Migration `0008` adds `runs.files_json` (the changed file names,
+   capped like the diff), `runs.scope_skip_json` (reviewers dropped by their filters, name and
+   patterns) and `run_reviewers.scope_json` (`paths_include`, `paths_exclude`, `context_paths`,
+   `visibleFiles` count, `referenceFiles` names). `GET /api/runs/:id` returns `changedFiles`,
+   `skippedReviewers` and each outcome's `scope`; the run-detail screen shows them. A reviewer that
+   was filtered out is named in the summary and visible in run detail, because a silent drop is the
+   main way this feature confuses an operator.
+
+3. **Scope preview.** `POST /api/repositories/:repoId/scope-preview` matches submitted include and
+   exclude patterns against the newest run for that repository that recorded changed files and
+   returns `{ runId, headSha, total, matched }`. The Repositories screen offers it per reviewer
+   before saving, so comma-separated globs stop being trial and error. No GitHub call is made and
+   nothing is persisted.
+
+4. **Reference trees are read per root.** Instead of one whole-repository recursive listing, the run
+   derives each context path's root (the literal prefix before the first segment carrying `*` or
+   `?`; `''` means the whole repository), fetches each distinct root once with
+   `git/trees/{sha}:{root}?recursive=1`, and prefixes the returned paths. A monorepo therefore no
+   longer risks GitHub's 100k-entry truncation, and a shared root is fetched once. A failed root is
+   skipped, and a truncated root is noted; neither fails the run.
+
+5. **The reference file cap is shared fairly.** Each reviewer may keep
+   `max(1, floor(referenceContextFiles / active reviewers with context paths))` files, and the union
+   fetched in one run stays capped at the setting. Two scoped reviewers no longer starve each other
+   on one shared pool.
+
+6. **Patterns are stored as typed.** `parsePatternList` validates and trims but returns the original
+   form, so `docs/` no longer comes back as `docs/**`; normalization (a trailing `/` means `/**`,
+   `./` is dropped) happens in the matcher. The glob language is unchanged.
+
+7. **Skipped reviewers and reference omissions stay visible.** The summary names the reviewers its
+   filters dropped, the changed-file counts per reviewer, and the reference files actually included.
+
+**Why:** D-031 shipped the input side — filters and reference context — but the output side still
+trusted the model to stay in scope, and the run record could not explain why a reviewer did not run
+or what it saw. Enforcement closes a correctness gap; the record and the preview close the two
+places an operator has to guess. The per-root tree read is the difference between a docs scope that
+works on a monorepo and one that silently loses files at GitHub's listing cap.
+
+**Rejected:** dropping out-of-scope findings without listing them (the operator cannot tell a
+scoped-out report from a clean run); a preview that calls GitHub for a chosen pull request (the last
+run already proves what the patterns see, and no new token spend is justified); caching reference
+files between runs (runs are rare; state to invalidate for no measured win — the same reasoning as
+D-022); a per-reviewer reference cap as a new setting (the fair share needs no knob); client-side
+glob matching in the dashboard (one matcher in the Worker stays the source of truth).
+
+**Not in this change:** no new dependency; no change to the inline caps, resolution buckets, review
+event, or the D-031 deferred list (per-repo reviewer instructions, audit mode, glob braces/negation,
+reference caching).

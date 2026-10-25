@@ -1,6 +1,7 @@
 import type { Reviewer } from '@jury-forge/shared';
 import { describe, expect, it } from 'vitest';
 import {
+  buildReferenceContextBlock,
   buildRepoInstructionsBlock,
   buildReviewContext,
   buildReviewPrompt,
@@ -8,6 +9,7 @@ import {
   CONTEXT_LIMITS,
   contextNotes,
   prioritizedOrder,
+  REFERENCE_FINDINGS_CONTRACT,
   type PullFile,
 } from '../worker/lib/context';
 
@@ -123,6 +125,56 @@ describe('file priority order', () => {
   });
 });
 
+describe('reference context block', () => {
+  it('returns null with no files or only empty files', () => {
+    expect(buildReferenceContextBlock([], 10_000)).toBeNull();
+    expect(buildReferenceContextBlock([{ path: 'docs/a.md', text: '  \n ' }], 10_000)).toBeNull();
+  });
+
+  it('labels the files as read-only and not part of the diff', () => {
+    const block = buildReferenceContextBlock(
+      [
+        { path: 'docs/a.md', text: '# A' },
+        { path: 'docs/b.md', text: '# B' },
+      ],
+      10_000,
+    );
+    expect(block).toContain('Reference files (read-only');
+    expect(block).toContain('not part of this diff');
+    expect(block).toContain('### docs/a.md');
+    expect(block).toContain('### docs/b.md');
+    expect(block?.indexOf('### docs/a.md')).toBeLessThan(block?.indexOf('### docs/b.md') ?? 0);
+  });
+
+  it('truncates at the total budget and names what does not fit', () => {
+    const block = buildReferenceContextBlock(
+      [
+        { path: 'docs/a.md', text: 'a'.repeat(40) },
+        { path: 'docs/b.md', text: 'b'.repeat(200) },
+        { path: 'docs/c.md', text: 'c'.repeat(10) },
+      ],
+      100,
+    );
+    expect(block).toContain('a'.repeat(40));
+    expect(block).toContain('b'.repeat(60));
+    expect(block).not.toContain('b'.repeat(61));
+    expect(block).toContain('… truncated at 100 bytes.');
+    expect(block).toContain('Not included for the 100 byte budget: docs/c.md.');
+  });
+});
+
+describe('reference allowance', () => {
+  it('adds the out-of-diff contract only when asked', () => {
+    expect(buildSystemPrompt(REVIEWER)).not.toContain(REFERENCE_FINDINGS_CONTRACT);
+    expect(buildSystemPrompt(REVIEWER, { allowOutOfDiff: false })).not.toContain(
+      REFERENCE_FINDINGS_CONTRACT,
+    );
+    expect(buildSystemPrompt(REVIEWER, { allowOutOfDiff: true })).toContain(
+      REFERENCE_FINDINGS_CONTRACT,
+    );
+  });
+});
+
 describe('review prompt', () => {
   it('includes the title, a truncated description, the file list, and diffs', () => {
     const context = buildReviewContext([{ filename: 'src/app.ts', patch: '@@ -1 +1 @@\n-a\n+b' }]);
@@ -159,6 +211,21 @@ describe('review prompt', () => {
       buildReviewContext([{ filename: 'src/app.ts', patch: '@@ -1 +1 @@\n-a\n+b' }]),
     );
     expect(prompt).not.toContain('Repository instructions');
+  });
+
+  it('places the reference block after the diffs and before previous findings', () => {
+    const context = buildReviewContext([{ filename: 'src/app.ts', patch: '@@ -1 +1 @@\n-a\n+b' }]);
+    const reference = buildReferenceContextBlock([{ path: 'docs/a.md', text: '# A' }], 10_000);
+    const prompt = buildReviewPrompt({ title: 't', body: 'Body' }, context, {
+      reference,
+      previousFindings: [
+        { file: 'src/app.ts', line: 1, severity: 'info', title: 'Old', body: 'x' },
+      ],
+    });
+    expect(prompt.indexOf('```diff')).toBeLessThan(prompt.indexOf('### docs/a.md'));
+    expect(prompt.indexOf('### docs/a.md')).toBeLessThan(
+      prompt.indexOf('Previously reported findings'),
+    );
   });
 });
 

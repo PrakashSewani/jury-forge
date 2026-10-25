@@ -115,6 +115,15 @@ what the instance actually has.
 - Reviewers are defined once per instance and enabled per repository.
 - A reviewer's enabled repositories are part of the reviewer's record in the dashboard, shown
   without opening each repository in turn.
+- Each reviewer↔repository pair can carry a scope (D-031): include and exclude path globs decide
+  which changed files that reviewer reviews, and it runs only when at least one changed file
+  survives. An optional reference-folder list adds read-only repository files to that reviewer's
+  prompt, so a Documentation reviewer can check links and structure across `docs/` from a
+  one-file change. Reference findings outside the diff are published in the summary, never as
+  inline comments; inline comments stay limited to changed lines. Scope is enforced when the
+  review is assembled, not just asked for in the prompt, and the Repositories screen can preview a
+  pattern list against the newest run's changed files before saving (D-032). Scoping is off by
+  default — a pair with no patterns behaves exactly as before.
 - An operator can run one reviewer against a real open pull request as a trial from the dashboard;
   a trial run posts nothing to GitHub and is recorded as a manual run.
 - Cost posture: designed to run within Cloudflare's free plan for typical personal use;

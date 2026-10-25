@@ -193,8 +193,22 @@ describe('repositories api', () => {
     );
     expect(initial.status).toBe(200);
     await expect(initial.json()).resolves.toEqual([
-      { reviewerId: 'rev-2', name: 'Architecture', enabled: true },
-      { reviewerId: 'rev-1', name: 'Security', enabled: true },
+      {
+        reviewerId: 'rev-2',
+        name: 'Architecture',
+        enabled: true,
+        pathsInclude: [],
+        pathsExclude: [],
+        contextPaths: [],
+      },
+      {
+        reviewerId: 'rev-1',
+        name: 'Security',
+        enabled: true,
+        pathsInclude: [],
+        pathsExclude: [],
+        contextPaths: [],
+      },
     ]);
 
     const saved = await app.request(
@@ -208,8 +222,22 @@ describe('repositories api', () => {
     );
     expect(saved.status).toBe(200);
     await expect(saved.json()).resolves.toEqual([
-      { reviewerId: 'rev-2', name: 'Architecture', enabled: true },
-      { reviewerId: 'rev-1', name: 'Security', enabled: false },
+      {
+        reviewerId: 'rev-2',
+        name: 'Architecture',
+        enabled: true,
+        pathsInclude: [],
+        pathsExclude: [],
+        contextPaths: [],
+      },
+      {
+        reviewerId: 'rev-1',
+        name: 'Security',
+        enabled: false,
+        pathsInclude: [],
+        pathsExclude: [],
+        contextPaths: [],
+      },
     ]);
 
     const unknown = await app.request(
@@ -229,6 +257,135 @@ describe('repositories api', () => {
       env,
     );
     expect(missingRepo.status).toBe(404);
+  });
+
+  it('round-trips a reviewer scope and keeps it when only the toggle is sent', async () => {
+    await seedRepo(101, 'octocat/hello', true);
+    await seedReviewer('rev-1', 'Documentation');
+    const cookie = await session();
+
+    const saved = await app.request(
+      `${ORIGIN}/api/repositories/101/reviewers`,
+      {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Origin: ORIGIN, Cookie: cookie },
+        body: JSON.stringify({
+          reviewers: [
+            {
+              reviewerId: 'rev-1',
+              enabled: true,
+              pathsInclude: ['docs/**', '*.md'],
+              pathsExclude: ['docs/legacy/**'],
+              contextPaths: ['docs/'],
+            },
+          ],
+        }),
+      },
+      env,
+    );
+    expect(saved.status).toBe(200);
+    await expect(saved.json()).resolves.toEqual([
+      {
+        reviewerId: 'rev-1',
+        name: 'Documentation',
+        enabled: true,
+        pathsInclude: ['docs/**', '*.md'],
+        pathsExclude: ['docs/legacy/**'],
+        contextPaths: ['docs/'],
+      },
+    ]);
+
+    // The toggle-only caller must not erase the scope.
+    const toggled = await app.request(
+      `${ORIGIN}/api/repositories/101/reviewers`,
+      {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Origin: ORIGIN, Cookie: cookie },
+        body: JSON.stringify({ reviewers: [{ reviewerId: 'rev-1', enabled: false }] }),
+      },
+      env,
+    );
+    expect(toggled.status).toBe(200);
+    await expect(toggled.json()).resolves.toMatchObject([
+      {
+        reviewerId: 'rev-1',
+        enabled: false,
+        pathsInclude: ['docs/**', '*.md'],
+        pathsExclude: ['docs/legacy/**'],
+        contextPaths: ['docs/'],
+      },
+    ]);
+  });
+
+  it('previews patterns against the newest run that recorded changed files', async () => {
+    await seedRepo(101, 'octocat/hello', true);
+    const cookie = await session();
+    const preview = (body: unknown) =>
+      app.request(
+        `${ORIGIN}/api/repositories/101/scope-preview`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Origin: ORIGIN, Cookie: cookie },
+          body: JSON.stringify(body),
+        },
+        env,
+      );
+
+    const empty = await preview({ pathsInclude: ['docs/**'] });
+    expect(empty.status).toBe(200);
+    await expect(empty.json()).resolves.toEqual({
+      runId: null,
+      headSha: null,
+      total: 0,
+      matched: [],
+    });
+
+    await env.DB.prepare(
+      "INSERT INTO runs (id, delivery_id, repo_id, pr_number, head_sha, event, status, files_json, created_at) VALUES ('101:1:a:old', 'old', 101, 1, 'oldsha', 'synchronize', 'completed', ?, unixepoch() - 60)",
+    )
+      .bind(JSON.stringify(['README.md']))
+      .run();
+    await env.DB.prepare(
+      "INSERT INTO runs (id, delivery_id, repo_id, pr_number, head_sha, event, status, files_json) VALUES ('101:2:b:new', 'new', 101, 2, 'newsha', 'synchronize', 'completed', ?)",
+    )
+      .bind(JSON.stringify(['docs/a.md', 'docs/legacy/b.md', 'src/app.ts']))
+      .run();
+
+    const matched = await preview({
+      pathsInclude: ['docs/**'],
+      pathsExclude: ['docs/legacy/**'],
+    });
+    expect(matched.status).toBe(200);
+    await expect(matched.json()).resolves.toEqual({
+      runId: '101:2:b:new',
+      headSha: 'newsha',
+      total: 3,
+      matched: ['docs/a.md'],
+    });
+
+    const invalid = await preview({ pathsInclude: ['../outside/**'] });
+    expect(invalid.status).toBe(400);
+  });
+
+  it('rejects an absolute or traversing scope pattern', async () => {
+    await seedRepo(101, 'octocat/hello', true);
+    await seedReviewer('rev-1', 'Documentation');
+    const cookie = await session();
+
+    for (const pattern of ['/etc/passwd', '../outside/**', 'docs/../../outside']) {
+      const response = await app.request(
+        `${ORIGIN}/api/repositories/101/reviewers`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Origin: ORIGIN, Cookie: cookie },
+          body: JSON.stringify({
+            reviewers: [{ reviewerId: 'rev-1', enabled: true, pathsInclude: [pattern] }],
+          }),
+        },
+        env,
+      );
+      expect(response.status).toBe(400);
+    }
   });
 
   it('matches a substring of the name, case-insensitively', async () => {
