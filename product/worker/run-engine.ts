@@ -4,6 +4,8 @@ import type {
   ProviderFlavor,
   ProviderUsage,
   RunMode,
+  RunNotAppliedPack,
+  RunReviewerKnowledge,
   RunReviewerScope,
   RunSkippedReviewer,
 } from '@jury-forge/shared';
@@ -39,6 +41,8 @@ import {
   type PullRequestInfo,
 } from './lib/github';
 import { loadGitHubApp } from './lib/github-app';
+import { buildKnowledgeBlock, summarizeKnowledge, type ResolvedPack } from './lib/pack-format';
+import { getPackDocs, resolveKnowledge } from './lib/packs';
 import { callProvider } from './lib/providers';
 import { compareFindings, findingKey } from './lib/resolution';
 import {
@@ -77,6 +81,7 @@ type Step =
   | 'scope'
   | 'context'
   | 'reference'
+  | 'knowledge'
   | 'prepare'
   | 'review'
   | 'consolidate'
@@ -261,6 +266,8 @@ export class RunEngine extends DurableObject<Env> {
         return this.stepContext();
       case 'reference':
         return this.stepReference(payload);
+      case 'knowledge':
+        return this.stepKnowledge(payload);
       case 'prepare':
         return this.stepPrepare();
       case 'review':
@@ -618,7 +625,7 @@ export class RunEngine extends DurableObject<Env> {
     const reviewers = await this.require<StoredReviewer[]>('reviewers');
     const scoped = reviewers.filter((reviewer) => reviewer.contextPaths.length > 0);
     if (scoped.length === 0) {
-      return 'prepare';
+      return 'knowledge';
     }
     const settings = (await this.ctx.storage.get<InstanceSettings>('settings')) ?? DEFAULT_SETTINGS;
     let queue = await this.ctx.storage.get<string[]>('refQueue');
@@ -654,7 +661,7 @@ export class RunEngine extends DurableObject<Env> {
       }
       if (candidates.size === 0 && failedRoots.length > 0) {
         await this.ctx.storage.put('refError', true);
-        return 'prepare';
+        return 'knowledge';
       }
       const candidateList = [...candidates];
       const share = Math.max(1, Math.floor(settings.referenceContextFiles / scoped.length));
@@ -687,7 +694,7 @@ export class RunEngine extends DurableObject<Env> {
     const cursor = (await this.ctx.storage.get<number>('refCursor')) ?? 0;
     const batch = queue.slice(cursor, cursor + REFERENCE_BATCH_SIZE);
     if (batch.length === 0) {
-      return 'prepare';
+      return 'knowledge';
     }
     const token = await this.require<string>('token');
     const texts: Record<string, string> = {};
@@ -709,6 +716,33 @@ export class RunEngine extends DurableObject<Env> {
       await this.ctx.storage.put('refCursor', next);
       return 'reference';
     }
+    return 'knowledge';
+  }
+
+  /**
+   * D-034: resolve each surviving reviewer's grants to the latest pack versions. Only metadata is
+   * carried forward; doc texts are fetched per reviewer in `prepare`, which is already one segment
+   * per reviewer and keeps this step cheap.
+   */
+  private async stepKnowledge(payload: RunPayload): Promise<Step | 'finished'> {
+    const reviewers = await this.require<StoredReviewer[]>('reviewers');
+    const changedFiles = (await this.ctx.storage.get<string[]>('changedFiles')) ?? [];
+    const visibleByReviewer: Record<string, string[]> = {};
+    for (const reviewer of reviewers) {
+      const visible = await this.ctx.storage.get<string[]>(`visible:${reviewer.id}`);
+      if (visible) {
+        visibleByReviewer[reviewer.id] = visible;
+      }
+    }
+    const resolved = await resolveKnowledge(
+      this.env.DB,
+      payload.repoId,
+      reviewers,
+      visibleByReviewer,
+      changedFiles,
+    );
+    await this.ctx.storage.put('knowledgeResolved', resolved.byReviewer);
+    await this.ctx.storage.put('knowledgeNotApplied', resolved.notApplied);
     return 'prepare';
   }
 
@@ -804,6 +838,25 @@ export class RunEngine extends DurableObject<Env> {
     const repoInstructions = await this.ctx.storage.get<string | null>('repoInstructions');
     const reviewerContext = await this.contextForReviewer(reviewer, context, settings);
     const reference = await this.referenceBlockFor(reviewer, settings);
+    const resolved =
+      (await this.ctx.storage.get<Record<string, ResolvedPack[]>>('knowledgeResolved')) ?? {};
+    const notApplied =
+      (await this.ctx.storage.get<Record<string, RunNotAppliedPack[]>>('knowledgeNotApplied')) ??
+      {};
+    const reviewerPacks = resolved[reviewer.id] ?? [];
+    const reviewerSkipped = notApplied[reviewer.id] ?? [];
+    const knowledgeDocs =
+      reviewerPacks.length > 0
+        ? await getPackDocs(
+            this.env.DB,
+            reviewerPacks.map((pack) => pack.versionId),
+          )
+        : [];
+    const knowledge = buildKnowledgeBlock(reviewerPacks, reviewerSkipped, knowledgeDocs, settings);
+    if (reviewerPacks.length > 0 || reviewerSkipped.length > 0) {
+      await this.ctx.storage.put(`knowledgeRecord:${reviewer.id}`, knowledge.record);
+    }
+    await this.ctx.storage.put(`knowledgeBlock:${reviewer.id}`, knowledge.block);
     await this.ctx.storage.put(`prompt:${reviewer.id}`, {
       system: buildSystemPrompt(reviewer, { allowOutOfDiff: reference !== null }),
       user: buildReviewPrompt(pullRequest, reviewerContext, {
@@ -811,6 +864,7 @@ export class RunEngine extends DurableObject<Env> {
         descriptionLimit: settings.descriptionLimit,
         repoInstructions,
         reference,
+        knowledge: knowledge.block,
       }),
     });
 
@@ -1188,16 +1242,25 @@ export class RunEngine extends DurableObject<Env> {
       (await this.ctx.storage.get<RunSkippedReviewer[]>('skippedReviewers')) ?? [];
     const scopeRecords =
       (await this.ctx.storage.get<Record<string, RunReviewerScope>>('scopeRecords')) ?? {};
+    // D-034: what each reviewer actually knew, and the deduped set the run used.
+    const knowledgeRecords =
+      reviewers.length > 0
+        ? await this.ctx.storage.get<RunReviewerKnowledge>(
+            reviewers.map((reviewer) => `knowledgeRecord:${reviewer.id}`),
+          )
+        : new Map<string, RunReviewerKnowledge>();
+    const runKnowledge = summarizeKnowledge([...knowledgeRecords.values()]);
 
     const statements = [
       this.env.DB.prepare(
-        'UPDATE runs SET status = ?, error = ?, review_url = ?, files_json = ?, scope_skip_json = ?, finished_at = unixepoch() WHERE id = ?',
+        'UPDATE runs SET status = ?, error = ?, review_url = ?, files_json = ?, scope_skip_json = ?, knowledge_json = ?, finished_at = unixepoch() WHERE id = ?',
       ).bind(
         status,
         error,
         reviewUrl,
         JSON.stringify(changedFiles),
         JSON.stringify(skippedReviewers),
+        JSON.stringify(runKnowledge),
         runIdFor(payload),
       ),
     ];
@@ -1205,9 +1268,10 @@ export class RunEngine extends DurableObject<Env> {
       for (const reviewer of reviewers) {
         const outcome = outcomes.get(`outcome:${reviewer.id}`);
         const scope = scopeRecords[reviewer.id];
+        const knowledge = knowledgeRecords.get(`knowledgeRecord:${reviewer.id}`);
         statements.push(
           this.env.DB.prepare(
-            'INSERT OR REPLACE INTO run_reviewers (run_id, reviewer_id, status, findings_json, summary, usage_json, scope_json, error) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            'INSERT OR REPLACE INTO run_reviewers (run_id, reviewer_id, status, findings_json, summary, usage_json, scope_json, knowledge_json, error) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
           ).bind(
             runIdFor(payload),
             reviewer.id,
@@ -1216,6 +1280,7 @@ export class RunEngine extends DurableObject<Env> {
             outcome?.summary ?? null,
             outcome?.usage ? JSON.stringify(outcome.usage) : null,
             scope ? JSON.stringify(scope) : null,
+            knowledge ? JSON.stringify(knowledge) : null,
             outcome?.error ?? (outcome ? null : (error ?? 'run failed before this reviewer ran')),
           ),
         );

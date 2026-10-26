@@ -28,6 +28,7 @@ function setupState(overrides: Partial<SetupState> = {}): SetupState {
 const RUN_DETAIL: RunDetail = {
   skippedReviewers: [],
   changedFiles: 0,
+  knowledge: { packs: [], totalBytes: 0 },
   run: {
     id: '101:12:sha:delivery',
     repoId: 101,

@@ -17,3 +17,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
   GitHub release on merge.
 - Cloudflare Worker with a health API, a D1 binding with an initial migration, and
   Workers-runtime tests via the Cloudflare Vitest plugin.
+- Knowledge packs: upload a folder or zip containing a `SKILL.md` manifest plus `docs/` files,
+  store every distinct upload as an immutable content-hashed version, grant it globally / per
+  repository / per reviewer, inject it under a manifest-first budget where `never_quote` files
+  are withheld, and record each reviewer's `slug@hash` and injected bytes on every run (D-034).

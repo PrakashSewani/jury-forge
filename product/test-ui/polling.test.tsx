@@ -181,12 +181,14 @@ describe('RunDetailPage polling', () => {
       reviewers: [],
       skippedReviewers: [],
       changedFiles: 0,
+      knowledge: { packs: [], totalBytes: 0 },
     };
     const completed: RunDetail = {
       run: COMPLETED_RUN,
       reviewers: [],
       skippedReviewers: [],
       changedFiles: 0,
+      knowledge: { packs: [], totalBytes: 0 },
     };
     getRunMock.mockResolvedValueOnce(running).mockResolvedValue(completed);
     listReviewersMock.mockResolvedValue([REVIEWER]);

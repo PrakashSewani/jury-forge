@@ -246,6 +246,7 @@ export function buildReviewPrompt(
     descriptionLimit?: number;
     repoInstructions?: string | null;
     reference?: string | null;
+    knowledge?: string | null;
   } = {},
 ): string {
   const body = pullRequest.body?.trim() ?? '';
@@ -262,6 +263,9 @@ export function buildReviewPrompt(
   ];
   if (options.repoInstructions) {
     lines.push(options.repoInstructions, '');
+  }
+  if (options.knowledge) {
+    lines.push(options.knowledge, '');
   }
   lines.push(
     `Changed files (${context.files.length}):`,

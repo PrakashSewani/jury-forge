@@ -623,8 +623,26 @@ export default function ReviewerEditorPage({ id }: { id?: string }) {
           ) : null}
         </Card>
 
+        <Card title="Knowledge packs">
+          <p className="text-sm text-text-muted">
+            Shared team knowledge lives on the{' '}
+            <a
+              className={cx('underline', tapTarget, focusRing)}
+              href="/packs"
+              onClick={handleAppLink}
+            >
+              Knowledge
+            </a>{' '}
+            screen. This reviewer receives global packs, packs granted to it, and packs granted to
+            its repositories; its instructions and rules still take precedence over every pack.
+          </p>
+        </Card>
+
         <Card title="Instructions">
-          <Field hint="What this reviewer cares about." label="Instructions">
+          <Field
+            hint="What this reviewer cares about. Shared team knowledge belongs in a knowledge pack."
+            label="Instructions"
+          >
             <Textarea
               onChange={(event) => update('instructions', event.target.value)}
               placeholder="Hunt for injection, auth, and data-leak bugs."

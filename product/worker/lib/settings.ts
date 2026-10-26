@@ -58,6 +58,18 @@ const SETTING_SPECS: { [K in keyof InstanceSettings]: SettingSpec<InstanceSettin
     schema: z.number().int().min(10_000).max(1_000_000),
     defaultValue: 100_000,
   },
+  knowledgePackTotalBytes: {
+    schema: z.number().int().min(8_000).max(500_000),
+    defaultValue: 64_000,
+  },
+  knowledgePackFileBytes: {
+    schema: z.number().int().min(1_000).max(100_000),
+    defaultValue: 32_000,
+  },
+  knowledgePackFiles: {
+    schema: z.number().int().min(1).max(200),
+    defaultValue: 50,
+  },
 };
 
 export const DEFAULT_SETTINGS: InstanceSettings = {
@@ -73,6 +85,9 @@ export const DEFAULT_SETTINGS: InstanceSettings = {
   referenceContextFiles: SETTING_SPECS.referenceContextFiles.defaultValue,
   referenceContextFileBytes: SETTING_SPECS.referenceContextFileBytes.defaultValue,
   referenceContextTotalBytes: SETTING_SPECS.referenceContextTotalBytes.defaultValue,
+  knowledgePackTotalBytes: SETTING_SPECS.knowledgePackTotalBytes.defaultValue,
+  knowledgePackFileBytes: SETTING_SPECS.knowledgePackFileBytes.defaultValue,
+  knowledgePackFiles: SETTING_SPECS.knowledgePackFiles.defaultValue,
 };
 
 export type SettingsPatchResult =

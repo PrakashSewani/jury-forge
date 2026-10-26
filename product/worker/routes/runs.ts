@@ -5,7 +5,9 @@ import {
   type Finding,
   type ProviderUsage,
   type RunDetail,
+  type RunKnowledgeSummary,
   type RunMode,
+  type RunReviewerKnowledge,
   type RunReviewerOutcome,
   type RunReviewerScope,
   type RunSkippedReviewer,
@@ -35,7 +37,7 @@ export const runRoutes = new Hono<AppEnv>();
 runRoutes.use('*', requireSession(), sameOrigin());
 
 const RUN_COLUMNS =
-  'id, delivery_id, repo_id, pr_number, head_sha, event, status, mode, error, review_url, files_json, scope_skip_json, created_at, finished_at';
+  'id, delivery_id, repo_id, pr_number, head_sha, event, status, mode, error, review_url, files_json, scope_skip_json, knowledge_json, created_at, finished_at';
 
 interface RunRow {
   id: string;
@@ -50,6 +52,7 @@ interface RunRow {
   review_url: string | null;
   files_json: string;
   scope_skip_json: string;
+  knowledge_json: string;
   created_at: number;
   finished_at: number | null;
 }
@@ -199,7 +202,7 @@ runRoutes.get('/:id', async (c) => {
     return errorResponse('not_found', 404);
   }
   const reviewerRows = await c.env.DB.prepare(
-    'SELECT reviewer_id, status, findings_json, summary, usage_json, scope_json, error FROM run_reviewers WHERE run_id = ? ORDER BY reviewer_id',
+    'SELECT reviewer_id, status, findings_json, summary, usage_json, scope_json, knowledge_json, error FROM run_reviewers WHERE run_id = ? ORDER BY reviewer_id',
   )
     .bind(row.id)
     .all<{
@@ -209,6 +212,7 @@ runRoutes.get('/:id', async (c) => {
       summary: string | null;
       usage_json: string | null;
       scope_json: string | null;
+      knowledge_json: string | null;
       error: string | null;
     }>();
   const reviewers: RunReviewerOutcome[] = reviewerRows.results.map((reviewer) => ({
@@ -218,6 +222,9 @@ runRoutes.get('/:id', async (c) => {
     summary: reviewer.summary,
     usage: reviewer.usage_json ? (JSON.parse(reviewer.usage_json) as ProviderUsage) : null,
     scope: reviewer.scope_json ? (JSON.parse(reviewer.scope_json) as RunReviewerScope) : null,
+    knowledge: reviewer.knowledge_json
+      ? (JSON.parse(reviewer.knowledge_json) as RunReviewerKnowledge)
+      : null,
     error: reviewer.error,
   }));
   const body: RunDetail = {
@@ -225,6 +232,7 @@ runRoutes.get('/:id', async (c) => {
     reviewers,
     skippedReviewers: JSON.parse(row.scope_skip_json) as RunSkippedReviewer[],
     changedFiles: (JSON.parse(row.files_json) as string[]).length,
+    knowledge: JSON.parse(row.knowledge_json) as RunKnowledgeSummary,
   };
   return respond(RunDetailSchema, body);
 });

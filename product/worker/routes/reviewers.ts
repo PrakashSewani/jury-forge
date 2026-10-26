@@ -7,6 +7,7 @@ import {
 import { Hono } from 'hono';
 import { recordActivity } from '../lib/activity';
 import { keyRingValues, loadKeyRing } from '../lib/crypto';
+import { deleteReviewerGrants } from '../lib/packs';
 import { errorResponse, respond } from '../lib/respond';
 import {
   buildExportDocument,
@@ -169,6 +170,7 @@ reviewerRoutes.delete('/:id', async (c) => {
     return errorResponse('not_found', 404);
   }
   await deleteReviewerRow(c.env.DB, id);
+  await deleteReviewerGrants(c.env.DB, id);
   await recordActivity(c.env.DB, {
     actor: c.get('user').login,
     action: 'reviewer_delete',

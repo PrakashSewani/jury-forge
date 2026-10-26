@@ -14,6 +14,9 @@ export const InstanceSettingsSchema = z.object({
   referenceContextFiles: z.number(),
   referenceContextFileBytes: z.number(),
   referenceContextTotalBytes: z.number(),
+  knowledgePackTotalBytes: z.number(),
+  knowledgePackFileBytes: z.number(),
+  knowledgePackFiles: z.number(),
 });
 
 /** `GET`/`PATCH /api/settings`. */

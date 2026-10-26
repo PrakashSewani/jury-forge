@@ -364,6 +364,129 @@ function buildRunReviewerSql() {
   return lines.join(',\n');
 }
 
+function buildPackSql(now) {
+  const manifest = {
+    name: 'Docs style',
+    description: 'House documentation conventions, link checks and tone for the docs/ folder.',
+    kind: 'skill',
+    apply: 'paths',
+    paths: ['docs/**'],
+    neverQuote: ['docs/internal/**'],
+    owner: 'Docs team',
+  };
+  const body =
+    'Use sentence case for headings. Link every page from the index and keep one H1 per page.';
+  const rawManifest = `---\nname: ${manifest.name}\ndescription: ${manifest.description}\nkind: ${manifest.kind}\napply: paths\npaths:\n  - docs/**\nnever_quote:\n  - docs/internal/**\nowner: ${manifest.owner}\n---\n${body}`;
+  const v1Docs = [
+    {
+      path: 'docs/style.md',
+      text: 'Headings are sentence case. Every page links back to the index.',
+    },
+    { path: 'docs/links.md', text: 'Check every relative link before publishing.' },
+    { path: 'docs/internal/notes.md', text: 'Internal review notes that stay in the instance.' },
+  ];
+  const v2Docs = [
+    {
+      path: 'docs/style.md',
+      text: 'Headings are sentence case. Every page links back to the index. Keep one H1 per page.',
+    },
+    { path: 'docs/links.md', text: 'Check every relative link and anchor before publishing.' },
+    { path: 'docs/internal/notes.md', text: 'Internal review notes that stay in the instance.' },
+  ];
+  const bytes = (text) => Buffer.byteLength(text, 'utf8');
+  const versionRows = [
+    {
+      id: 'version-docs-style-1',
+      hash: 'a'.repeat(64),
+      createdAt: now - 2 * 24 * 60 * 60,
+      docs: v1Docs,
+    },
+    {
+      id: 'version-docs-style-2',
+      hash: 'b'.repeat(64),
+      createdAt: now - 60 * 60,
+      docs: v2Docs,
+    },
+  ];
+  const latest = versionRows[1];
+  const docBytes = latest.docs.reduce((sum, doc) => sum + bytes(doc.text), 0);
+  const manifestBytes = bytes(rawManifest);
+  const totalBytes = manifestBytes + docBytes;
+  const applied = {
+    slug: 'docs-style',
+    hash: latest.hash,
+    name: manifest.name,
+    scope: 'global',
+    precedence: 100,
+    bytes: totalBytes,
+    manifestBytes,
+    docBytes,
+    includedFiles: latest.docs
+      .filter((doc) => !doc.path.startsWith('docs/internal/'))
+      .map((doc) => doc.path),
+    droppedFiles: [],
+    withheldFiles: latest.docs
+      .filter((doc) => doc.path.startsWith('docs/internal/'))
+      .map((doc) => doc.path),
+  };
+  const runKnowledge = {
+    packs: [{ slug: applied.slug, hash: applied.hash, bytes: totalBytes, reviewers: 1 }],
+    totalBytes,
+  };
+  const reviewerKnowledge = {
+    applied: [applied],
+    notApplied: [],
+    totalBytes,
+    budgetBytes: 64_000,
+    overBudget: false,
+  };
+  const lines = [
+    "INSERT INTO packs (id, slug, name) VALUES ('pack-docs-style', 'docs-style', 'Docs style');",
+  ];
+  for (const version of versionRows) {
+    const versionDocBytes = version.docs.reduce((sum, doc) => sum + bytes(doc.text), 0);
+    lines.push(
+      `INSERT INTO pack_versions (id, pack_id, hash, manifest_path, manifest_json, body, raw_manifest, manifest_bytes, docs_bytes, total_bytes, file_count, created_at, created_by) VALUES (${[
+        sqlString(version.id),
+        sqlString('pack-docs-style'),
+        sqlString(version.hash),
+        "'SKILL.md'",
+        sqlString(JSON.stringify(manifest)),
+        sqlString(body),
+        sqlString(rawManifest),
+        manifestBytes,
+        versionDocBytes,
+        manifestBytes + versionDocBytes,
+        version.docs.length,
+        version.createdAt,
+        "'prakashsewani'",
+      ].join(', ')});`,
+    );
+    lines.push(
+      `INSERT INTO pack_files (version_id, path, bytes, text, never_quote) VALUES ${version.docs
+        .map(
+          (doc) =>
+            `(${[sqlString(version.id), sqlString(doc.path), bytes(doc.text), sqlString(doc.text), doc.path.startsWith('docs/internal/') ? 1 : 0].join(', ')})`,
+        )
+        .join(', ')};`,
+    );
+  }
+  lines.push(
+    `INSERT INTO pack_grants (id, pack_id, scope, target_id, precedence, enabled) VALUES
+  ('grant-docs-global', 'pack-docs-style', 'global', '', 100, 1),
+  ('grant-docs-repo', 'pack-docs-style', 'repository', '101', 200, 1),
+  ('grant-docs-security', 'pack-docs-style', 'reviewer', 'rev-security', 300, 1);`,
+  );
+  const firstRunId = runId(SEED_RUNS[0]);
+  lines.push(
+    `UPDATE runs SET knowledge_json = ${sqlString(JSON.stringify(runKnowledge))} WHERE id = ${sqlString(firstRunId)};`,
+  );
+  lines.push(
+    `UPDATE run_reviewers SET knowledge_json = ${sqlString(JSON.stringify(reviewerKnowledge))} WHERE run_id = ${sqlString(firstRunId)} AND reviewer_id = 'rev-security';`,
+  );
+  return lines.join('\n');
+}
+
 function buildActivitySql(now) {
   return SEED_ACTIVITY.map(
     (entry) =>
@@ -380,6 +503,10 @@ function buildActivitySql(now) {
 function buildSeedSql() {
   const now = Math.floor(Date.now() / 1000);
   return `-- Generated by scripts/seed-dev.mjs. Local-only: delete first so re-runs are idempotent.
+DELETE FROM pack_grants;
+DELETE FROM pack_files;
+DELETE FROM pack_versions;
+DELETE FROM packs;
 DELETE FROM run_reviewers;
 DELETE FROM runs;
 DELETE FROM reviewer_repositories;
@@ -423,6 +550,8 @@ ${buildRunRows(now)};
 
 INSERT INTO run_reviewers (run_id, reviewer_id, status, findings_json, summary, usage_json, error) VALUES
 ${buildRunReviewerSql()};
+
+${buildPackSql(now)}
 
 INSERT INTO activity_log (at, actor, action, target, detail) VALUES
 ${buildActivitySql(now)};
@@ -494,6 +623,10 @@ function main() {
   console.log(`  run_reviewers:   ${buildRunReviewerRows().length}`);
   console.log('  reviewers:       3');
   console.log('  repositories:    2');
+  console.log('  packs:           1');
+  console.log('  pack_versions:   2');
+  console.log('  pack_files:      6');
+  console.log('  pack_grants:     3');
   console.log(`  activity:        ${SEED_ACTIVITY.length}`);
   console.log(`  session cookie:  jf_session=${DEV_SESSION_ID}`);
   return 0;

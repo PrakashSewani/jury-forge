@@ -2,6 +2,10 @@ import { env } from 'cloudflare:workers';
 
 export async function resetInstanceState(): Promise<void> {
   await env.DB.batch([
+    env.DB.prepare('DELETE FROM pack_grants'),
+    env.DB.prepare('DELETE FROM pack_files'),
+    env.DB.prepare('DELETE FROM pack_versions'),
+    env.DB.prepare('DELETE FROM packs'),
     env.DB.prepare('DELETE FROM instance_meta'),
     env.DB.prepare('DELETE FROM instance_settings'),
     env.DB.prepare('DELETE FROM github_app'),

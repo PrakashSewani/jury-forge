@@ -379,10 +379,33 @@ Run with `NODE_ENV=test` (this Windows shell exports `NODE_ENV=production`, whic
 build). The client bundle is about 763 kB (218 kB gzip): Vite warns on size and the chunks are not
 split. The dev-seed and layout-harness scripts now spawn `npx` without a shell on Windows.
 
+**Knowledge packs (2026-10-26), on `feat/knowledge-packs-20261026`, D-034.** Implemented: migration
+`0009` (`packs`, `pack_versions`, `pack_files`, `pack_grants`, `runs.knowledge_json`,
+`run_reviewers.knowledge_json`); the shared encodings; the server-side `SKILL.md`/root-Markdown
+analyzer, SHA-256 versions, slug/`forceNew`, preview/create/version/grants routes and activity
+rows; browser folder/zip extraction with the in-repo zip reader and the `yaml` product dependency;
+the run-engine `knowledge` step, per-reviewer budgeted block in `prepare`, and per-run/per-reviewer
+provenance; the Packs list/detail/upload/grant screens, nav entry, settings fields, reviewer-editor
+card and run-detail Knowledge card; the sample pack in `npm run dev:seed`; and the 10-route layout
+harness.
+
+**Verified on `feat/knowledge-packs-20261026` with `NODE_ENV=test npm run check` exit 0:** typecheck
+(three `tsc` programs plus `astro check`, 0 errors) · ESLint clean · Prettier `format:check` clean ·
+workerd **386/386** (27 files) · UI **197/197** (18 files) · worker, client and site builds, nothing
+skipped. Run with `NODE_ENV=test` because this Windows shell exports `NODE_ENV=production`.
+
+**Also verified:** `npm run dev:seed` exit 0 — local D1 now holds 12 runs, 22 run-reviewer rows, 3
+reviewers, 2 repositories, 1 pack, 2 pack versions, 6 pack files, 3 pack grants and 8 activity rows
+(migration `0009` applied locally). `node scripts/measure-layout.mjs --label knowledge --browser
+"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --out docs/rework/knowledge.json
+--sheet docs/rework/knowledge.md --assert` exit 0 — **140 cells, 0 failing** (overflow 0,
+tapTargets 0, contrast 0, focus 0, mobileNav 0), 70.1 s; the sheet is `docs/rework/knowledge.md`.
+Nothing is deployed from this branch; the merge to `dev` deploys and applies `0009` (D-030).
+
 **Blocked by:** nothing.
 
-**Next action:** the owner merges `feat/ui-rework-20261025` into `dev` and tests in production; the
-merge is the deployment (D-030) and applies no new migrations.
+**Next action:** the owner reviews `feat/knowledge-packs-20261026` and merges it; the merge is the
+deployment (D-030) and applies migration `0009`.
 
 ## Backlog (owner-owned, deferred)
 

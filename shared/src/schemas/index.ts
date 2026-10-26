@@ -2,6 +2,7 @@ export * from './activity';
 export * from './auth';
 export * from './common';
 export * from './instance';
+export * from './packs';
 export * from './repositories';
 export * from './reviewers';
 export * from './runs';

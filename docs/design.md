@@ -12,10 +12,10 @@ the decision it implements.
 | Piece         | Where                          | What it holds                                                                                                               |
 | ------------- | ------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
 | Worker routes | `product/worker/routes/`       | Hono sub-apps: setup, auth, reviewers, repositories, runs, webhooks                                                         |
-| Worker lib    | `product/worker/lib/`          | crypto, sessions, access gate, context builder, consolidation, resolution, provider adapters                                |
+| Worker lib    | `product/worker/lib/`          | crypto, sessions, access gate, context builder, consolidation, resolution, provider adapters, pack analyzer/CRUD (D-034)    |
 | Run engine    | `product/worker/run-engine.ts` | the `RunEngine` Durable Object (binding `RUNS`)                                                                             |
 | Contracts     | `shared/src/`                  | API contracts (`contracts.ts`) and the built-in reviewer templates (`templates.ts`), shared by the Worker and the dashboard |
-| Dashboard     | `product/src/`                 | React screens: setup wizard, reviewers, repositories, runs                                                                  |
+| Dashboard     | `product/src/`                 | React screens: setup wizard, reviewers, knowledge packs (D-034), repositories, runs                                         |
 | Shell         | `product/src/shell/`           | `Shell`, `Nav`, `ThemeToggle`, `UserMenu`, `RouteGuard` — the chrome around the screens                                     |
 | UI primitives | `product/src/ui/`              | the D-026 design-system primitives, plus `cx` / `focusRing` / `tapTarget`                                                   |
 
@@ -24,20 +24,24 @@ the decision it implements.
 Migrations continue in `product/migrations/` (`0002_*` onward). Timestamps are unix seconds
 (`INTEGER`, `unixepoch()`). All SQL uses prepared statements.
 
-| Table                   | Purpose                              | Key columns                                                                                                                                                                                                                                                                                        |
-| ----------------------- | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `instance_meta`         | existing singleton key/value         | `key`, `value` — holds `claimed_at`, `owner_login`, `owner_id`, `owner_type`, `installation_id`, `app_slug`                                                                                                                                                                                        |
-| `github_app`            | the instance's private app (one row) | `app_id`, `slug`, `client_id`, `private_key_enc`, `webhook_secret_enc`, `client_secret_enc`                                                                                                                                                                                                        |
-| `reviewers`             | reviewer definitions                 | `id`, `name`, `instructions`, `rules`, `flavor` (`openai`/`anthropic`), `base_url`, `api_key_enc`, `model`, `params_json`, `enabled`                                                                                                                                                               |
-| `repositories`          | installed repositories               | `repo_id` (GitHub numeric id), `full_name`, `private`, `enabled`                                                                                                                                                                                                                                   |
-| `reviewer_repositories` | per-repo reviewer enablement + scope | `reviewer_id`, `repo_id`, `enabled`, `paths_include`, `paths_exclude`, `context_paths` (JSON arrays, D-031, `0007_reviewer_scope.sql`)                                                                                                                                                             |
-| `runs`                  | one row per review run               | `id`, `delivery_id`, `repo_id`, `pr_number`, `head_sha`, `event`, `mode` (`auto`/`manual`, `0006_run_mode.sql`, D-028), `status` (`running`/`completed`/`failed`/`skipped`), `error`, `review_url`, `files_json` / `scope_skip_json` (D-032, `0008_scope_record.sql`), `created_at`, `finished_at` |
-| `run_reviewers`         | per-reviewer outcome                 | `run_id`, `reviewer_id`, `status`, `findings_json`, `summary` (D-020), `usage_json` (D-020), `scope_json` (D-032), `error`                                                                                                                                                                         |
-| `sessions`              | dashboard sessions                   | `token_hash`, `login`, `avatar_url`, `created_at`, `expires_at`                                                                                                                                                                                                                                    |
-| `oauth_states`          | single-use OAuth/manifest states     | `state`, `kind` (`login`/`claim`/`manifest`), `created_at`, `expires_at`                                                                                                                                                                                                                           |
-| `webhook_deliveries`    | delivery de-duplication              | `delivery_id`, `received_at`                                                                                                                                                                                                                                                                       |
-| `instance_settings`     | tunable instance numbers (D-021)     | `key`, `value` (TEXT, validated per key), `updated_at` — see "Instance settings"                                                                                                                                                                                                                   |
-| `activity_log`          | the dashboard activity trail (D-023) | `id`, `at`, `actor`, `action`, `target`, `detail`                                                                                                                                                                                                                                                  |
+| Table                   | Purpose                              | Key columns                                                                                                                                                                                                                                                                                                                                              |
+| ----------------------- | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `instance_meta`         | existing singleton key/value         | `key`, `value` — holds `claimed_at`, `owner_login`, `owner_id`, `owner_type`, `installation_id`, `app_slug`                                                                                                                                                                                                                                              |
+| `github_app`            | the instance's private app (one row) | `app_id`, `slug`, `client_id`, `private_key_enc`, `webhook_secret_enc`, `client_secret_enc`                                                                                                                                                                                                                                                              |
+| `reviewers`             | reviewer definitions                 | `id`, `name`, `instructions`, `rules`, `flavor` (`openai`/`anthropic`), `base_url`, `api_key_enc`, `model`, `params_json`, `enabled`                                                                                                                                                                                                                     |
+| `repositories`          | installed repositories               | `repo_id` (GitHub numeric id), `full_name`, `private`, `enabled`                                                                                                                                                                                                                                                                                         |
+| `reviewer_repositories` | per-repo reviewer enablement + scope | `reviewer_id`, `repo_id`, `enabled`, `paths_include`, `paths_exclude`, `context_paths` (JSON arrays, D-031, `0007_reviewer_scope.sql`)                                                                                                                                                                                                                   |
+| `runs`                  | one row per review run               | `id`, `delivery_id`, `repo_id`, `pr_number`, `head_sha`, `event`, `mode` (`auto`/`manual`, `0006_run_mode.sql`, D-028), `status` (`running`/`completed`/`failed`/`skipped`), `error`, `review_url`, `files_json` / `scope_skip_json` (D-032, `0008_scope_record.sql`), `knowledge_json` (D-034, `0009_knowledge_packs.sql`), `created_at`, `finished_at` |
+| `run_reviewers`         | per-reviewer outcome                 | `run_id`, `reviewer_id`, `status`, `findings_json`, `summary` (D-020), `usage_json` (D-020), `scope_json` (D-032), `knowledge_json` (D-034), `error`                                                                                                                                                                                                     |
+| `sessions`              | dashboard sessions                   | `token_hash`, `login`, `avatar_url`, `created_at`, `expires_at`                                                                                                                                                                                                                                                                                          |
+| `oauth_states`          | single-use OAuth/manifest states     | `state`, `kind` (`login`/`claim`/`manifest`), `created_at`, `expires_at`                                                                                                                                                                                                                                                                                 |
+| `webhook_deliveries`    | delivery de-duplication              | `delivery_id`, `received_at`                                                                                                                                                                                                                                                                                                                             |
+| `instance_settings`     | tunable instance numbers (D-021)     | `key`, `value` (TEXT, validated per key), `updated_at` — see "Instance settings"                                                                                                                                                                                                                                                                         |
+| `activity_log`          | the dashboard activity trail (D-023) | `id`, `at`, `actor`, `action`, `target`, `detail`                                                                                                                                                                                                                                                                                                        |
+| `packs`                 | uploaded knowledge packs (D-034)     | `id`, `slug` (unique, stable), `name`, `created_at`, `updated_at`                                                                                                                                                                                                                                                                                        |
+| `pack_versions`         | immutable pack versions (D-034)      | `id`, `pack_id`, `hash`, `manifest_path`, `manifest_json`, `body`, `raw_manifest`, `manifest_bytes`, `docs_bytes`, `total_bytes`, `file_count`, `created_at`, `created_by`, unique `(pack_id, hash)`                                                                                                                                                     |
+| `pack_files`            | docs/ files of one version (D-034)   | `version_id`, `path`, `bytes`, `text`, `never_quote`, primary key `(version_id, path)`                                                                                                                                                                                                                                                                   |
+| `pack_grants`           | instance-level grants (D-034)        | `id`, `pack_id`, `scope` (`global`/`repository`/`reviewer`), `target_id` (empty for global), `precedence` (0–1000), `enabled`, unique `(pack_id, scope, target_id)`                                                                                                                                                                                      |
 
 Notes: index `runs(repo_id, created_at desc)` and `sessions(expires_at)`; expired sessions and
 states are pruned on access; `webhook_deliveries` older than 7 days are pruned opportunistically.
@@ -78,20 +82,23 @@ key only after re-registering the app. The operator procedure is in `docs/develo
 and `loadSettings(db)` returns the effective settings, falling back to the default whenever a
 stored value is missing or fails validation (a hand-edited row must never break a run).
 
-| Key                          | Bounds           | Default | Used by                                             |
-| ---------------------------- | ---------------- | ------- | --------------------------------------------------- |
-| `inlineCommentsPerReviewer`  | 1–50             | 10      | consolidation's per-reviewer inline cap (D-009)     |
-| `inlineCommentsPerRun`       | 1–100            | 25      | consolidation's per-run inline cap (D-009)          |
-| `contextTotalBytes`          | 20,000–1,000,000 | 200,000 | context builder total budget (D-010)                |
-| `contextFileBytes`           | 4,000–200,000    | 32,000  | context builder per-file budget (D-010)             |
-| `descriptionLimit`           | 500–20,000       | 4,096   | PR description excerpt in the prompt                |
-| `blockingMode`               | boolean          | `false` | review event selection (item 11, D-013 default)     |
-| `blockingErrorThreshold`     | 1–50             | 1       | error findings needed for `REQUEST_CHANGES`         |
-| `repoInstructions`           | boolean          | `false` | repository instructions in prompts (D-022)          |
-| `repoInstructionsMaxBytes`   | 1,000–50,000     | 8,000   | excerpt budget for those instructions (D-022)       |
-| `referenceContextFiles`      | 1–100            | 50      | files fetched per run for reference context (D-031) |
-| `referenceContextFileBytes`  | 1,000–100,000    | 32,000  | per-file cap for a reference file (D-031)           |
-| `referenceContextTotalBytes` | 10,000–1,000,000 | 100,000 | per-reviewer reference block budget (D-031)         |
+| Key                          | Bounds           | Default | Used by                                                     |
+| ---------------------------- | ---------------- | ------- | ----------------------------------------------------------- |
+| `inlineCommentsPerReviewer`  | 1–50             | 10      | consolidation's per-reviewer inline cap (D-009)             |
+| `inlineCommentsPerRun`       | 1–100            | 25      | consolidation's per-run inline cap (D-009)                  |
+| `contextTotalBytes`          | 20,000–1,000,000 | 200,000 | context builder total budget (D-010)                        |
+| `contextFileBytes`           | 4,000–200,000    | 32,000  | context builder per-file budget (D-010)                     |
+| `descriptionLimit`           | 500–20,000       | 4,096   | PR description excerpt in the prompt                        |
+| `blockingMode`               | boolean          | `false` | review event selection (item 11, D-013 default)             |
+| `blockingErrorThreshold`     | 1–50             | 1       | error findings needed for `REQUEST_CHANGES`                 |
+| `repoInstructions`           | boolean          | `false` | repository instructions in prompts (D-022)                  |
+| `repoInstructionsMaxBytes`   | 1,000–50,000     | 8,000   | excerpt budget for those instructions (D-022)               |
+| `referenceContextFiles`      | 1–100            | 50      | files fetched per run for reference context (D-031)         |
+| `referenceContextFileBytes`  | 1,000–100,000    | 32,000  | per-file cap for a reference file (D-031)                   |
+| `referenceContextTotalBytes` | 10,000–1,000,000 | 100,000 | per-reviewer reference block budget (D-031)                 |
+| `knowledgePackTotalBytes`    | 8,000–500,000    | 64,000  | injected pack text per reviewer, manifests included (D-034) |
+| `knowledgePackFileBytes`     | 1,000–100,000    | 32,000  | per-doc cap; a larger doc drops whole (D-034)               |
+| `knowledgePackFiles`         | 1–200            | 50      | max docs injected into one reviewer prompt (D-034)          |
 
 `GET /api/settings` returns `{ settings, defaults }` — the effective values and the spec's
 defaults, so the dashboard can render "reset to defaults" without hard-coding them. `PATCH
@@ -298,11 +305,18 @@ Phases, one alarm segment at a time:
   one run stays capped at the setting. Matches are kept per reviewer (`refPaths:<id>`), texts under
   `ref:<path>`; a failed root or file fetch never fails the run — the omission becomes a summary
   note, and a truncated root is noted. With no context paths the step is a pass-through.
+- `knowledge` — D-034. After the scope step has dropped filtered reviewers, resolve the enabled
+  grants matching global, the run's repository and the surviving reviewers to each pack's newest
+  version. Per reviewer, dedupe at the highest precedence, cap at 20 packs, apply the pack's
+  `apply: paths` globs to that reviewer's visible changed files, and store metadata only
+  (`knowledgeResolved:<id>`, `knowledgeNotApplied:<id>`). No doc text is loaded here.
 - `review` — for each enabled reviewer of the repository: prompts are prepared in their own
-  segment; a single segment then fires all provider calls in parallel (the product requires
-  parallel reviewers; waiting is I/O). Per-call timeout 120 s. One reviewer failing does not
-  cancel the others. Each call's parsed output carries the reviewer's optional `summary`, its
-  findings, and the provider's token `usage` when the response envelope reports it (D-020).
+  segment (the knowledge step's packs are fetched for that reviewer, budgeted into a manifest-
+  first block, and stored as `knowledgeBlock:<id>`/`knowledgeRecord:<id>`); a single segment then
+  fires all provider calls in parallel (the product requires parallel reviewers; waiting is I/O).
+  Per-call timeout 120 s. One reviewer failing does not cancel the others. Each call's parsed
+  output carries the reviewer's optional `summary`, its findings, and the provider's token `usage`
+  when the response envelope reports it (D-020).
 - `consolidate` — validate findings (schema below; stored cap 50 per reviewer), choose inline
   comments (only lines present in the diff's right side, from patch hunk ranges; a finding whose
   `startLine` precedes its `line` and both are commentable becomes a multi-line comment — D-020),
@@ -318,7 +332,8 @@ Phases, one alarm segment at a time:
   PR are minimized best-effort (`minimizeComment`, `OUTDATED` — D-018), so the thread rests on the
   latest verdict.
 - Finish — `runs.status` `completed` (or `failed` when nothing could be posted or every reviewer
-  failed), `run_reviewers` rows written, alarms stop.
+  failed), `run_reviewers` rows written (including each reviewer's `knowledge_json`), the deduped
+  `runs.knowledge_json` summary written, alarms stop.
 
 Retries: each phase gets ≤3 attempts with backoff alarms (10 s, 60 s, 300 s); 4xx errors that
 cannot succeed on retry fail the run. A repository with no enabled reviewers (or disabled in
@@ -332,6 +347,66 @@ Summary requirements: one review per run; per-reviewer attribution; each reviewe
 when it sent one (D-020); counts; `file:line` references for findings not posted inline; explicit
 notes for truncation (D-010), cap overflow (D-009), and failed reviewers; and the Resolved / Still
 present / New buckets when previous findings exist (D-020).
+
+## Knowledge packs (D-034)
+
+A pack is an uploaded bundle: a manifest (`SKILL.md`, or a single root `.md` with frontmatter for
+`.github/agents/` packs) plus its `docs/` subtree. The manifest's YAML frontmatter carries `name`,
+`description`, `kind`, `apply` (`always`/`paths`), `paths`, `never_quote` and `owner`; the Markdown
+body is the pack's primary knowledge. Only the manifest and `docs/` are stored and injected;
+everything else in the upload is ignored with a preview warning. Unknown frontmatter keys are
+accepted, so existing `.claude/skills/` files work unchanged.
+
+**Immutable versions.** A version is SHA-256 over the normalized manifest and docs (sorted by path,
+length-prefixed, LF-normalized). `pack_versions` has a unique `(pack_id, hash)`, no update/delete
+path, and stores the raw manifest, parsed `manifest_json`, body, doc rows, and byte counts. A pack
+slug is derived from the first manifest name, kept unique with `-2`, `-3`, … and stable; a renamed
+manifest uploaded with `packId` stays on the same pack. Grants point at packs, latest-always
+resolves the newest version (`created_at DESC, rowid DESC`, so two uploads in the same second still
+order by insertion), and every run records the hash it used.
+
+**Ingestion.** The dashboard reads a folder (`webkitdirectory`) or a zip in the browser
+(`product/src/lib/zip.ts`: stored/deflate entries, encrypted/ZIP64/multi-disk/traversal rejected,
+2,000-entry and 10 MB guards) and POSTs normalized JSON. The Worker never parses a binary zip;
+`product/worker/lib/pack-format.ts` re-analyzes every upload server-side (root selection, path
+safety, YAML/zod validation, caps, `never_quote` flags, hash, rendered manifest block). Hard caps:
+32,000-byte manifest, 64,000-byte doc, 512,000 bytes / 100 docs per version, 1,000 files /
+2,000,000 text bytes per upload. The `yaml` package is a direct product dependency for frontmatter
+parsing.
+
+**Grants and precedence.** `pack_grants` is instance configuration, never read from a manifest;
+importing a pack creates no grant. Scopes are `global`, `repository` (target `repo_id`) and
+`reviewer` (target reviewer id), each with `enabled` and a 0–1000 `precedence` (defaults 100/200/
+300). For each reviewer the run unions matching grants, keeps a pack once at its highest precedence
+(tie: reviewer > repository > global), caps at 20 packs (`notApplied: pack-limit`), and applies
+`apply: paths` against the reviewer's visible changed files (all changed files when it has no path
+filters) — a miss records `notApplied: paths`. A pack with no grant is never injected. Manual try
+runs use grants and the pack's path rule, but skip the reviewer's own filters (D-028).
+
+**Injection and budget.** The block is appended to the user prompt after repository instructions
+and before the changed files/diffs (`buildReviewPrompt`'s new `knowledge` option). Every applicable
+manifest block and body is included in full, never truncated. Docs are admitted whole, most-specific
+pack first (descending precedence, slug/path ascending), until `knowledgePackTotalBytes`,
+`knowledgePackFiles` or `knowledgePackFileBytes` is reached; the block is rendered broad-to-specific.
+A doc that does not fit is dropped whole with reason `budget`, `file-limit` or `too-large`; a later
+smaller doc may still fit. If the manifests alone exceed the total, they are still included and the
+run records `overBudget`. `never_quote` files are stored but never sent; the manifest field is
+rendered, not the matching contents or names. The block states that the reviewer's instructions and
+rules win over the pack, a pack wins over repository instructions, and pack files are not review
+targets. Dropped/withheld names appear in run detail only, never in the prompt or the posted review.
+
+**Run provenance.** `run_reviewers.knowledge_json` records each reviewer's applied packs (`slug`,
+`hash`, `name`, scope, precedence, injected `bytes`, `manifestBytes`, `docBytes`, included/dropped/
+withheld files) and `notApplied`; `runs.knowledge_json` records the deduped run summary (`packs`:
+`slug`, `hash`, largest `bytes`, reviewer count; `totalBytes`). `GET /api/runs/:id` returns both;
+the run-detail screen shows a Knowledge card. No pack data is cached between runs (same reasoning as
+D-022/D-032).
+
+**API.** `GET /api/packs`, `POST /api/packs/preview`, `POST /api/packs`,
+`GET /api/packs/:id`, `GET /api/packs/:id/versions/:versionId`, and
+`PUT /api/packs/:id/grants` (replace all grants atomically). The preview returns manifest, hash,
+docs, ignored files, warnings, root candidates and the existing pack; create returns
+`{ pack, version, createdVersion }`.
 
 ## Providers
 
@@ -678,33 +753,39 @@ screen offers Export (download) and Import (file picker).
 
 ## API surface
 
-| Method           | Path                                      | Auth      | Purpose                                                                 |
-| ---------------- | ----------------------------------------- | --------- | ----------------------------------------------------------------------- |
-| GET              | `/api/health`                             | —         | exists                                                                  |
-| GET              | `/api/setup/state`                        | —         | wizard step status                                                      |
-| POST             | `/api/setup/code`                         | code      | validate `SETUP_CODE`; returns manifest form                            |
-| GET              | `/api/setup/manifest/callback`            | state     | exchange manifest code; store the app                                   |
-| POST             | `/api/setup/verify-installation`          | setup     | find and store the installation                                         |
-| GET              | `/api/auth/github/start`                  | —         | OAuth redirect (login or claim)                                         |
-| GET              | `/api/auth/github/callback`               | state     | token exchange, access gate, session/claim                              |
-| GET              | `/api/auth/session`                       | session   | current user                                                            |
-| POST             | `/api/auth/logout`                        | session   | delete session                                                          |
-| GET/POST         | `/api/reviewers`                          | session   | list / create                                                           |
-| GET/PATCH/DELETE | `/api/reviewers/:id`                      | session   | read / update / delete                                                  |
-| GET              | `/api/repositories`                       | session   | list; `?refresh=1` syncs from GitHub                                    |
-| PATCH            | `/api/repositories/:repoId`               | session   | enable/disable                                                          |
-| GET/PUT          | `/api/repositories/:repoId/reviewers`     | session   | per-repo reviewer enablement and scope (D-031)                          |
-| POST             | `/api/repositories/:repoId/scope-preview` | session   | match patterns against the newest run's files (D-032)                   |
-| GET              | `/api/instance/readiness`                 | session   | readiness, computed from D1 (D-028)                                     |
-| GET              | `/api/repositories/:repoId/pulls`         | session   | open pull requests for the try picker (D-028)                           |
-| POST             | `/api/runs/try`                           | session   | manual try run; posts nothing (D-028)                                   |
-| GET              | `/api/runs`                               | session   | history `{ runs, nextCursor }` (keyset)                                 |
-| GET              | `/api/runs/:id`                           | session   | run detail `{ run, reviewers, skippedReviewers, changedFiles }` (D-032) |
-| GET/PATCH        | `/api/settings`                           | session   | `{ settings, defaults }` (D-021)                                        |
-| GET              | `/api/activity`                           | session   | activity trail `{ activity, nextCursor }` (D-023)                       |
-| GET              | `/api/reviewers/export`                   | session   | reviewer definitions as JSON (D-025)                                    |
-| POST             | `/api/reviewers/import`                   | session   | merge an exported document (D-025)                                      |
-| POST             | `/api/webhooks/github`                    | signature | GitHub deliveries                                                       |
+| Method           | Path                                      | Auth      | Purpose                                                                                   |
+| ---------------- | ----------------------------------------- | --------- | ----------------------------------------------------------------------------------------- |
+| GET              | `/api/health`                             | —         | exists                                                                                    |
+| GET              | `/api/setup/state`                        | —         | wizard step status                                                                        |
+| POST             | `/api/setup/code`                         | code      | validate `SETUP_CODE`; returns manifest form                                              |
+| GET              | `/api/setup/manifest/callback`            | state     | exchange manifest code; store the app                                                     |
+| POST             | `/api/setup/verify-installation`          | setup     | find and store the installation                                                           |
+| GET              | `/api/auth/github/start`                  | —         | OAuth redirect (login or claim)                                                           |
+| GET              | `/api/auth/github/callback`               | state     | token exchange, access gate, session/claim                                                |
+| GET              | `/api/auth/session`                       | session   | current user                                                                              |
+| POST             | `/api/auth/logout`                        | session   | delete session                                                                            |
+| GET/POST         | `/api/reviewers`                          | session   | list / create                                                                             |
+| GET/PATCH/DELETE | `/api/reviewers/:id`                      | session   | read / update / delete                                                                    |
+| GET              | `/api/repositories`                       | session   | list; `?refresh=1` syncs from GitHub                                                      |
+| PATCH            | `/api/repositories/:repoId`               | session   | enable/disable                                                                            |
+| GET/PUT          | `/api/repositories/:repoId/reviewers`     | session   | per-repo reviewer enablement and scope (D-031)                                            |
+| POST             | `/api/repositories/:repoId/scope-preview` | session   | match patterns against the newest run's files (D-032)                                     |
+| GET              | `/api/instance/readiness`                 | session   | readiness, computed from D1 (D-028)                                                       |
+| GET              | `/api/repositories/:repoId/pulls`         | session   | open pull requests for the try picker (D-028)                                             |
+| POST             | `/api/runs/try`                           | session   | manual try run; posts nothing (D-028)                                                     |
+| GET              | `/api/runs`                               | session   | history `{ runs, nextCursor }` (keyset)                                                   |
+| GET              | `/api/runs/:id`                           | session   | run detail `{ run, reviewers, skippedReviewers, changedFiles, knowledge }` (D-032, D-034) |
+| GET              | `/api/packs`                              | session   | pack summaries with latest version and grant count (D-034)                                |
+| POST             | `/api/packs/preview`                      | session   | validate an upload; returns manifest, hash, docs, warnings, roots (D-034)                 |
+| POST             | `/api/packs`                              | session   | create a pack or add an immutable version (D-034)                                         |
+| GET              | `/api/packs/:id`                          | session   | pack detail: versions, grants, latest manifest/body/docs (D-034)                          |
+| GET              | `/api/packs/:id/versions/:versionId`      | session   | one version including doc texts, for audit (D-034)                                        |
+| PUT              | `/api/packs/:id/grants`                   | session   | replace all grants atomically (D-034)                                                     |
+| GET/PATCH        | `/api/settings`                           | session   | `{ settings, defaults }` (D-021)                                                          |
+| GET              | `/api/activity`                           | session   | activity trail `{ activity, nextCursor }` (D-023)                                         |
+| GET              | `/api/reviewers/export`                   | session   | reviewer definitions as JSON (D-025)                                                      |
+| POST             | `/api/reviewers/import`                   | session   | merge an exported document (D-025)                                                        |
+| POST             | `/api/webhooks/github`                    | signature | GitHub deliveries                                                                         |
 
 ## Security
 
@@ -736,13 +817,19 @@ for each rule: a reviewer whose patterns miss every changed file stays out of th
 reviewer receives only its files and its reference block, and a finding on a reference line lands
 in the summary instead of an inline comment. D-032 adds the context-root derivation and pattern
 preservation (pure functions), consolidation's out-of-scope demotion, the scope record on run
-detail, the preview endpoint against a seeded run, and a per-root tree fetch case.
+detail, the preview endpoint against a seeded run, and a per-root tree fetch case. D-034 adds
+pack-format tests (frontmatter, root selection, path safety, caps, hashing, manifest rendering,
+the budget/drop algorithm), pack route tests (preview, create/version dedupe, grants, reviewer-
+delete cleanup, activity), engine cases (grant scopes and precedence, path-scoped apply,
+never_quote withholding, manifest-first over-budget, provenance on automatic and manual runs),
+and UI tests for the in-repo zip reader, the upload dialog, the pack screens, the run-detail
+knowledge card, the settings fields and the nav/palette entry.
 
 Slice A adds a **second vitest project** for UI components. The workerd pool cannot render a
 component — there were zero UI tests before this — so `product/vitest.ui.config.ts` runs
-`happy-dom` with `@testing-library/react`, collecting `product/test-ui/**/*.test.tsx` (95 tests
-across the theme helper, the primitives, the form controls, structure, the shell, and the eight
-screens). The workerd project's
+`happy-dom` with `@testing-library/react`, collecting `product/test-ui/**/*.test.{ts,tsx}` (the
+`.ts` glob was added for D-034's zip-reader tests; the suite covers the theme helper, the
+primitives, the form controls, structure, the shell, and every screen). The workerd project's
 test glob is now restricted to `./test/**/*.test.ts`, so the two projects can never collect each
 other's tests; `npm run test` runs `test:worker` then `test:ui`. Tests that need a `Storage` build
 one (`product/test-ui/memory-storage.ts`) instead of reading the ambient `window.localStorage`,

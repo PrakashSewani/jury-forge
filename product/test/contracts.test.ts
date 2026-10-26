@@ -12,6 +12,12 @@ import {
   InstanceReadinessStepKeySchema,
   InstanceReadinessStepSchema,
   InstanceSettingsSchema,
+  PackCreateResultSchema,
+  PackGrantSchema,
+  PackManifestSchema,
+  PackPreviewSchema,
+  PackSummarySchema,
+  PackVersionSummarySchema,
   ProviderFlavorSchema,
   ProviderUsageSchema,
   RepositoryPullRequestSchema,
@@ -23,7 +29,9 @@ import {
   ReviewersExportDocumentSchema,
   ReviewersImportResultSchema,
   RunDetailSchema,
+  RunKnowledgeSummarySchema,
   RunModeSchema,
+  RunReviewerKnowledgeSchema,
   RunReviewerOutcomeSchema,
   RunReviewerStatusSchema,
   RunStatusSchema,
@@ -98,6 +106,73 @@ const settings = {
   referenceContextFiles: 50,
   referenceContextFileBytes: 32_000,
   referenceContextTotalBytes: 100_000,
+  knowledgePackTotalBytes: 64_000,
+  knowledgePackFileBytes: 32_000,
+  knowledgePackFiles: 50,
+};
+
+const packManifest = {
+  name: 'Docs style',
+  description: 'House documentation conventions.',
+  kind: 'skill',
+  apply: 'paths',
+  paths: ['docs/**'],
+  neverQuote: ['docs/internal/**'],
+  owner: 'Docs team',
+};
+
+const packVersionSummary = {
+  id: 'version-1',
+  hash: 'a'.repeat(64),
+  manifestPath: 'SKILL.md',
+  createdAt: 1,
+  createdBy: 'octocat',
+  manifestBytes: 100,
+  docsBytes: 200,
+  totalBytes: 300,
+  fileCount: 1,
+};
+
+const packSummary = {
+  id: 'pack-1',
+  slug: 'docs-style',
+  name: 'Docs style',
+  createdAt: 1,
+  updatedAt: 1,
+  grantCount: 0,
+  latest: { ...packVersionSummary, manifest: packManifest },
+};
+
+const packGrant = {
+  id: 'grant-1',
+  scope: 'global',
+  targetId: null,
+  targetLabel: null,
+  precedence: 100,
+  enabled: true,
+};
+
+const reviewerKnowledge = {
+  applied: [],
+  notApplied: [],
+  totalBytes: 0,
+  budgetBytes: 64_000,
+  overBudget: false,
+};
+
+const runKnowledge = { packs: [], totalBytes: 0 };
+
+const packPreview = {
+  valid: false,
+  errors: ['not a pack'],
+  warnings: [],
+  manifest: null,
+  hash: null,
+  files: [],
+  ignoredFiles: [],
+  ignoredCount: 0,
+  candidates: [],
+  existingPack: null,
 };
 
 const readinessStep = { key: 'claim', label: 'Instance claimed', href: '/setup', done: false };
@@ -295,6 +370,7 @@ const cases: Array<[string, Parseable, unknown, unknown]> = [
         visibleFiles: 2,
         referenceFiles: ['docs/a.md'],
       },
+      knowledge: null,
       error: null,
     },
     {
@@ -309,7 +385,13 @@ const cases: Array<[string, Parseable, unknown, unknown]> = [
   [
     'RunDetailSchema',
     RunDetailSchema,
-    { run: runSummary, reviewers: [], skippedReviewers: [], changedFiles: 0 },
+    {
+      run: runSummary,
+      reviewers: [],
+      skippedReviewers: [],
+      changedFiles: 0,
+      knowledge: { packs: [], totalBytes: 0 },
+    },
     { reviewers: [] },
   ],
   [
@@ -319,6 +401,39 @@ const cases: Array<[string, Parseable, unknown, unknown]> = [
     { repoId: 1, prNumber: 2 },
   ],
   ['TryRunResponseSchema', TryRunResponseSchema, { runId: 'run-1' }, { run_id: 'run-1' }],
+  ['PackManifestSchema', PackManifestSchema, packManifest, { ...packManifest, name: '' }],
+  [
+    'PackVersionSummarySchema',
+    PackVersionSummarySchema,
+    packVersionSummary,
+    { ...packVersionSummary, hash: undefined },
+  ],
+  [
+    'PackSummarySchema',
+    PackSummarySchema,
+    packSummary,
+    { ...packSummary, latest: packVersionSummary },
+  ],
+  ['PackGrantSchema', PackGrantSchema, packGrant, { ...packGrant, scope: 'team' }],
+  ['PackPreviewSchema', PackPreviewSchema, packPreview, { ...packPreview, errors: undefined }],
+  [
+    'PackCreateResultSchema',
+    PackCreateResultSchema,
+    { pack: packSummary, version: packVersionSummary, createdVersion: true },
+    { pack: packSummary, version: packVersionSummary },
+  ],
+  [
+    'RunReviewerKnowledgeSchema',
+    RunReviewerKnowledgeSchema,
+    reviewerKnowledge,
+    { ...reviewerKnowledge, applied: undefined },
+  ],
+  [
+    'RunKnowledgeSummarySchema',
+    RunKnowledgeSummarySchema,
+    runKnowledge,
+    { ...runKnowledge, packs: undefined },
+  ],
   [
     'InstanceSettingsSchema',
     InstanceSettingsSchema,
