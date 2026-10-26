@@ -6,6 +6,8 @@ export type Route =
   | { name: 'reviewers' }
   | { name: 'reviewer-new' }
   | { name: 'reviewer-edit'; id: string }
+  | { name: 'packs' }
+  | { name: 'pack-detail'; id: string }
   | { name: 'repositories' }
   | { name: 'runs' }
   | { name: 'run-detail'; id: string }
@@ -25,6 +27,10 @@ export function routeFromPath(pathname: string): Route {
         return { name: 'reviewer-new' };
       }
       return { name: 'reviewer-edit', id: decodeURIComponent(second) };
+    case 'packs':
+      return second === ''
+        ? { name: 'packs' }
+        : { name: 'pack-detail', id: decodeURIComponent(second) };
     case 'repositories':
       return { name: 'repositories' };
     case 'settings':

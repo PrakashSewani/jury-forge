@@ -10,7 +10,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { getRun, listReviewers } from '../lib/api';
-import { formatTime, runStatusTone, severityTone, shortSha } from '../lib/format';
+import { formatBytes, formatTime, runStatusTone, severityTone, shortSha } from '../lib/format';
 import { usePoll } from '../lib/use-poll';
 import { useResource } from '../lib/use-resource';
 import { Badge, Button, Card, EmptyState, ExternalLink, Notice, Row, Table, Tabs } from '../ui';
@@ -221,6 +221,8 @@ export default function RunDetailPage({ id }: { id: string }) {
         </Card>
       ) : null}
 
+      <KnowledgeCard detail={detail} names={names} />
+
       {detail.skippedReviewers.length > 0 ? (
         <Card title="Not run">
           <ul className="space-y-1 text-sm text-text-body">
@@ -366,6 +368,104 @@ export default function RunDetailPage({ id }: { id: string }) {
         </>
       )}
     </div>
+  );
+}
+
+/** D-034: the run's immutable knowledge record — nothing here reaches the posted review. */
+function KnowledgeCard({ detail, names }: { detail: RunDetail; names: Map<string, string> }) {
+  const outcomes = detail.reviewers.filter((outcome) => outcome.knowledge !== null);
+  if (detail.knowledge.packs.length === 0 && outcomes.length === 0) {
+    return null;
+  }
+  return (
+    <Card title="Knowledge">
+      <p className="text-sm text-text-muted">
+        {detail.knowledge.packs.length === 0
+          ? 'No knowledge packs were applied to this run.'
+          : `${detail.knowledge.packs.length} pack(s) applied · ${formatBytes(detail.knowledge.totalBytes)} recorded across the run.`}
+      </p>
+      {outcomes.length > 0 ? (
+        <ul className="mt-3 space-y-3">
+          {outcomes.map((outcome) => {
+            const knowledge = outcome.knowledge;
+            if (knowledge === null) {
+              return null;
+            }
+            return (
+              <li className="rounded-control border border-border p-3" key={outcome.reviewerId}>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-medium">
+                    {names.get(outcome.reviewerId) ?? outcome.reviewerId}
+                  </span>
+                  <span className="text-xs text-text-muted">
+                    {knowledge.applied.length} applied · {formatBytes(knowledge.totalBytes)} of{' '}
+                    {formatBytes(knowledge.budgetBytes)}
+                  </span>
+                  {knowledge.overBudget ? <Badge tone="amber">manifest over budget</Badge> : null}
+                </div>
+                {knowledge.applied.length > 0 ? (
+                  <ul className="mt-2 space-y-2">
+                    {knowledge.applied.map((pack) => (
+                      <li key={`${pack.slug}@${pack.hash}`}>
+                        <div className="flex flex-wrap items-center gap-2 text-sm">
+                          <span className="font-mono text-xs">
+                            {pack.slug}@{shortSha(pack.hash)}
+                          </span>
+                          <Badge tone="neutral">{pack.scope}</Badge>
+                          <span className="text-xs text-text-muted">
+                            {formatBytes(pack.bytes)} · manifest {formatBytes(pack.manifestBytes)} +
+                            docs {formatBytes(pack.docBytes)}
+                          </span>
+                        </div>
+                        <details className="mt-1">
+                          <summary className="flex min-h-11 cursor-pointer items-center text-xs text-text-muted">
+                            {pack.includedFiles.length} included · {pack.droppedFiles.length}{' '}
+                            dropped · {pack.withheldFiles.length} withheld
+                          </summary>
+                          {pack.includedFiles.length > 0 ? (
+                            <p className="text-xs text-text-muted">
+                              Included: {pack.includedFiles.join(', ')}
+                            </p>
+                          ) : null}
+                          {pack.droppedFiles.length > 0 ? (
+                            <p className="text-xs text-text-muted">
+                              Dropped:{' '}
+                              {pack.droppedFiles
+                                .map((file) => `${file.path} (${file.reason})`)
+                                .join(', ')}
+                            </p>
+                          ) : null}
+                          {pack.withheldFiles.length > 0 ? (
+                            <p className="text-xs text-text-muted">
+                              Withheld by never_quote: {pack.withheldFiles.join(', ')}
+                            </p>
+                          ) : null}
+                        </details>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-2 text-sm text-text-muted">No packs were applied.</p>
+                )}
+                {knowledge.notApplied.length > 0 ? (
+                  <p className="mt-2 text-xs text-text-muted">
+                    Not applied:{' '}
+                    {knowledge.notApplied
+                      .map(
+                        (pack) =>
+                          `${pack.slug}@${shortSha(pack.hash)} (${
+                            pack.reason === 'paths' ? 'paths did not match' : 'pack limit'
+                          })`,
+                      )
+                      .join(', ')}
+                  </p>
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+    </Card>
   );
 }
 

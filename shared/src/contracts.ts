@@ -11,6 +11,18 @@ import {
   InstanceReadinessSchema,
   InstanceReadinessStepSchema,
   InstanceSettingsSchema,
+  PackCreateResultSchema,
+  PackDetailSchema,
+  PackGrantInputSchema,
+  PackGrantSchema,
+  PackGrantScopeSchema,
+  PackGrantsUpdateSchema,
+  PackManifestSchema,
+  PackPreviewRequestSchema,
+  PackPreviewSchema,
+  PackSummarySchema,
+  PackVersionDetailSchema,
+  PackVersionSummarySchema,
   ProviderFlavorSchema,
   ProviderUsageSchema,
   RepositoryPullRequestSchema,
@@ -23,8 +35,12 @@ import {
   ReviewersImportResultSchema,
   ScopePreviewRequestSchema,
   ScopePreviewResponseSchema,
+  RunAppliedPackSchema,
   RunDetailSchema,
+  RunKnowledgeSummarySchema,
   RunModeSchema,
+  RunNotAppliedPackSchema,
+  RunReviewerKnowledgeSchema,
   RunReviewerOutcomeSchema,
   RunReviewerScopeSchema,
   RunReviewerStatusSchema,
@@ -107,6 +123,38 @@ export type RunsPage = z.infer<typeof RunsPageSchema>;
 export type RunDetail = z.infer<typeof RunDetailSchema>;
 
 export type InstanceSettings = z.infer<typeof InstanceSettingsSchema>;
+
+export type PackManifest = z.infer<typeof PackManifestSchema>;
+
+export type PackVersionSummary = z.infer<typeof PackVersionSummarySchema>;
+
+export type PackVersionDetail = z.infer<typeof PackVersionDetailSchema>;
+
+export type PackSummary = z.infer<typeof PackSummarySchema>;
+
+export type PackDetail = z.infer<typeof PackDetailSchema>;
+
+export type PackGrant = z.infer<typeof PackGrantSchema>;
+
+export type PackGrantScope = z.infer<typeof PackGrantScopeSchema>;
+
+export type PackGrantInput = z.infer<typeof PackGrantInputSchema>;
+
+export type RunAppliedPack = z.infer<typeof RunAppliedPackSchema>;
+
+export type RunNotAppliedPack = z.infer<typeof RunNotAppliedPackSchema>;
+
+export type PackGrantsUpdate = z.infer<typeof PackGrantsUpdateSchema>;
+
+export type PackPreviewRequest = z.infer<typeof PackPreviewRequestSchema>;
+
+export type PackPreview = z.infer<typeof PackPreviewSchema>;
+
+export type PackCreateResult = z.infer<typeof PackCreateResultSchema>;
+
+export type RunReviewerKnowledge = z.infer<typeof RunReviewerKnowledgeSchema>;
+
+export type RunKnowledgeSummary = z.infer<typeof RunKnowledgeSummarySchema>;
 
 export type SettingsResponse = z.infer<typeof SettingsResponseSchema>;
 

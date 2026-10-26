@@ -855,11 +855,13 @@ async function collectFocusChecks(send) {
 // Sweep
 // ---------------------------------------------------------------------------
 
-function buildRoutes(runId) {
+function buildRoutes(runId, packId) {
   return [
     { slug: 'home', path: '/' },
     { slug: 'reviewers', path: '/reviewers' },
     { slug: 'reviewers-new', path: '/reviewers/new' },
+    { slug: 'packs', path: '/packs' },
+    { slug: 'pack-detail', path: `/packs/${encodeURIComponent(packId)}` },
     { slug: 'repositories', path: '/repositories' },
     { slug: 'runs', path: '/runs' },
     { slug: 'run-detail', path: `/runs/${encodeURIComponent(runId)}` },
@@ -1272,6 +1274,20 @@ async function main() {
     }
     console.log(`Run detail id: ${runId}`);
 
+    const packsResponse = await fetch(`${baseUrl}/api/packs`, {
+      headers: { cookie: `jf_session=${session}` },
+    });
+    if (!packsResponse.ok) {
+      throw new Error(`GET /api/packs returned HTTP ${packsResponse.status}.`);
+    }
+    const packs = await packsResponse.json();
+    const packId = packs?.[0]?.id;
+    if (typeof packId !== 'string' || packId === '') {
+      console.error('No seeded knowledge pack found — run: npm run dev:seed');
+      return 1;
+    }
+    console.log(`Pack detail id: ${packId}`);
+
     await send('Network.setCookie', {
       name: 'jf_session',
       value: session,
@@ -1282,7 +1298,7 @@ async function main() {
       sameSite: 'Lax',
     });
 
-    const routes = buildRoutes(runId);
+    const routes = buildRoutes(runId, packId);
     const git = readGit(repoRoot);
     mkdirSync(dirname(outPath), { recursive: true });
     mkdirSync(screenshotsDir, { recursive: true });
@@ -1318,6 +1334,7 @@ async function main() {
       baseUrl,
       spawnedDevServer,
       runId,
+      packId,
       routes,
       widths: WIDTHS,
       height: HEIGHT,

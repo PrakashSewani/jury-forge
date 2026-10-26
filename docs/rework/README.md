@@ -7,10 +7,12 @@ it is a delta against this baseline.
 
 ## What it measures
 
-Eight dashboard routes (`/`, `/reviewers`, `/reviewers/new`, `/repositories`, `/runs`,
-`/runs/<id>`, `/settings`, `/activity` — the `/setup` wizard is excluded) at seven widths
-(**320, 360, 390, 414, 768, 1024, 1440** px, height 900) in two themes (**light** and **dark**),
-for 112 cells. Per cell it records:
+Ten dashboard routes (`/`, `/reviewers`, `/reviewers/new`, `/packs`, `/packs/<id>`,
+`/repositories`, `/runs`, `/runs/<id>`, `/settings`, `/activity` — the `/setup` wizard is
+excluded) at seven widths (**320, 360, 390, 414, 768, 1024, 1440** px, height 900) in two themes
+(**light** and **dark**), for 140 cells. The two Knowledge routes arrived with D-034; the earlier
+eight-route sheets are historical snapshots of the same rule, not a like-for-like grid. Per cell
+it records:
 
 - **Horizontal overflow** — `documentElement.scrollWidth > clientWidth`, plus every offending
   element (`right > clientWidth + 1` or `left < -1`) with its rounded rect.
@@ -73,7 +75,9 @@ node scripts/measure-layout.mjs --label baseline \
 
 `npm run dev:seed` is a hard prerequisite: without it every cell would silently measure the
 sign-in screen. The harness verifies `GET /api/runs` with the seeded `jf_session` cookie and
-exits non-zero with `not authenticated — run: npm run dev:seed` if it is missing.
+exits non-zero with `not authenticated — run: npm run dev:seed` if it is missing. The seed also
+creates the `docs-style` pack used by `/packs` and `/packs/<id>`; the harness stops with
+`No seeded knowledge pack found — run: npm run dev:seed` if that pack is absent.
 
 It needs a Chromium-based browser. It takes `--browser <path>` or `$CHROME_PATH`, otherwise it
 uses the first of Chrome, Chromium or Brave in `/Applications`, then `chromium`,
@@ -102,6 +106,11 @@ output paths. The script uses only Node builtins — no dependency is added.
   on the primitives: **0 of 112 cells failing** (overflow 0, tapTargets 0, contrast 0, focus 0,
   mobileNav 0), captured with `--assert` so any failing cell would have failed the command. The
   delta against `baseline.json` is slice B's evidence.
+- `knowledge.json` / `knowledge.md` — the D-034 grid after the Knowledge screens landed: the ten
+  routes above, **0 of 140 cells failing** (overflow 0, tapTargets 0, contrast 0, focus 0,
+  mobileNav 0), captured with `--assert` on `feat/knowledge-packs-20261026` with the seeded
+  `docs-style` pack. It uses the same rule and widths as the eight-route sheets; the route set
+  differs, so it is evidence for this feature rather than a cell-for-cell delta.
 
 The `screens-*/` PNGs are regenerable and gitignored.
 

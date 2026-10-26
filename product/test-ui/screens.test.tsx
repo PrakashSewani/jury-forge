@@ -186,6 +186,9 @@ const SETTINGS: SettingsResponse = {
     referenceContextFiles: 50,
     referenceContextFileBytes: 32_000,
     referenceContextTotalBytes: 100_000,
+    knowledgePackTotalBytes: 64_000,
+    knowledgePackFileBytes: 32_000,
+    knowledgePackFiles: 50,
   },
   defaults: {
     inlineCommentsPerReviewer: 10,
@@ -200,10 +203,14 @@ const SETTINGS: SettingsResponse = {
     referenceContextFiles: 50,
     referenceContextFileBytes: 32_000,
     referenceContextTotalBytes: 100_000,
+    knowledgePackTotalBytes: 64_000,
+    knowledgePackFileBytes: 32_000,
+    knowledgePackFiles: 50,
   },
 };
 
 const RUN_DETAIL: RunDetail = {
+  knowledge: { packs: [], totalBytes: 0 },
   run: COMPLETED_RUN,
   skippedReviewers: [
     {
@@ -237,6 +244,7 @@ const RUN_DETAIL: RunDetail = {
         visibleFiles: 2,
         referenceFiles: [],
       },
+      knowledge: null,
       error: null,
     },
   ],
@@ -245,6 +253,40 @@ const RUN_DETAIL: RunDetail = {
 const MANUAL_RUN_DETAIL: RunDetail = {
   ...RUN_DETAIL,
   run: { ...COMPLETED_RUN, mode: 'manual', reviewUrl: null },
+};
+
+const REVIEWER_KNOWLEDGE = {
+  applied: [
+    {
+      slug: 'docs-style',
+      hash: 'a'.repeat(64),
+      name: 'Docs style',
+      scope: 'global' as const,
+      precedence: 100,
+      bytes: 1_234,
+      manifestBytes: 200,
+      docBytes: 1_034,
+      includedFiles: ['docs/a.md'],
+      droppedFiles: [{ path: 'docs/budget.md', reason: 'budget' as const }],
+      withheldFiles: ['docs/internal/secret.md'],
+    },
+  ],
+  notApplied: [],
+  totalBytes: 1_234,
+  budgetBytes: 64_000,
+  overBudget: false,
+};
+
+const RUN_DETAIL_WITH_KNOWLEDGE: RunDetail = {
+  ...RUN_DETAIL,
+  knowledge: {
+    packs: [{ slug: 'docs-style', hash: 'a'.repeat(64), bytes: 1_234, reviewers: 1 }],
+    totalBytes: 1_234,
+  },
+  reviewers: RUN_DETAIL.reviewers.map((outcome) => ({
+    ...outcome,
+    knowledge: REVIEWER_KNOWLEDGE,
+  })),
 };
 
 const ACTIVITY_ONE: ActivityEntry = {
@@ -413,6 +455,8 @@ describe('ReviewerEditorPage', () => {
     expect(screen.getByLabelText('API key', { exact: false })).toBeTruthy();
     expect(screen.getByLabelText('Instructions', { exact: false })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Create reviewer' })).toBeTruthy();
+    expect(screen.getByText('Knowledge packs')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Knowledge' }).getAttribute('href')).toBe('/packs');
   });
 
   it('shows a loading state while an existing reviewer loads', () => {
@@ -744,6 +788,27 @@ describe('RunDetailPage', () => {
     expect(await screen.findByRole('heading', { name: 'Security' })).toBeTruthy();
     expect(screen.queryByText(/not posted to GitHub/i)).toBeNull();
   });
+
+  it('shows the knowledge record with its dropped and withheld files', async () => {
+    const user = userEvent.setup();
+    getRunMock.mockResolvedValue(RUN_DETAIL_WITH_KNOWLEDGE);
+    listReviewersMock.mockResolvedValue([REVIEWER]);
+    render(<RunDetailPage id="run-1" />);
+    expect(await screen.findByRole('heading', { name: 'Knowledge' })).toBeTruthy();
+    expect(screen.getByText(/docs-style@aaaaaaa/)).toBeTruthy();
+    expect(screen.getByText(/1 pack\(s\) applied/)).toBeTruthy();
+    await user.click(screen.getByText(/1 included · 1 dropped · 1 withheld/));
+    expect(screen.getByText(/Dropped: docs\/budget\.md \(budget\)/)).toBeTruthy();
+    expect(screen.getByText(/Withheld by never_quote: docs\/internal\/secret\.md/)).toBeTruthy();
+  });
+
+  it('does not show the knowledge card for a run with no packs', async () => {
+    getRunMock.mockResolvedValue(RUN_DETAIL);
+    listReviewersMock.mockResolvedValue([REVIEWER]);
+    render(<RunDetailPage id="run-1" />);
+    await screen.findByRole('heading', { name: 'Security' });
+    expect(screen.queryByRole('heading', { name: 'Knowledge' })).toBeNull();
+  });
 });
 
 describe('SettingsPage', () => {
@@ -773,6 +838,15 @@ describe('SettingsPage', () => {
     await user.clear(input);
     await user.type(input, '12');
     expect(save.disabled).toBe(false);
+  });
+
+  it('shows the knowledge pack budget fields', async () => {
+    getSettingsMock.mockResolvedValue(SETTINGS);
+    render(<SettingsPage />);
+    expect(await screen.findByText('Knowledge packs')).toBeTruthy();
+    expect(screen.getByLabelText('Pack text per reviewer', { exact: false })).toBeTruthy();
+    expect(screen.getByLabelText('Pack file bytes', { exact: false })).toBeTruthy();
+    expect(screen.getByLabelText('Pack files per reviewer', { exact: false })).toBeTruthy();
   });
 });
 

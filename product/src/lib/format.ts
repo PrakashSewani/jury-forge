@@ -37,6 +37,17 @@ export function shortSha(sha: string): string {
   return sha.slice(0, 7);
 }
 
+/** Decimal byte sizes for pack sizes; the knowledge budget uses the same units. */
+export function formatBytes(bytes: number): string {
+  if (bytes < 1_000) {
+    return `${bytes} B`;
+  }
+  if (bytes < 1_000_000) {
+    return `${(bytes / 1_000).toFixed(bytes < 10_000 ? 1 : 0)} KB`;
+  }
+  return `${(bytes / 1_000_000).toFixed(1)} MB`;
+}
+
 /**
  * A coarse, human relative time for list screens ("3m ago", "2d ago"). It is computed at render
  * time only — no timer, because live updating is slice D.

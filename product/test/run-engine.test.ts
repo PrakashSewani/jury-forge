@@ -1,5 +1,6 @@
 import { runDurableObjectAlarm, runInDurableObject } from 'cloudflare:test';
 import { env } from 'cloudflare:workers';
+import type { PackGrantScope, PackManifest } from '@jury-forge/shared';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
 import app from '../worker';
@@ -61,6 +62,89 @@ async function seedRepositoryAndReviewers(flavors: ('openai' | 'anthropic')[]): 
       )
       .run();
   }
+}
+
+interface SeedPackOptions {
+  name?: string;
+  slug?: string;
+  body?: string;
+  manifest?: Partial<PackManifest>;
+  docs?: { path: string; text: string; neverQuote?: boolean }[];
+  grants?: { scope: PackGrantScope; targetId?: string; precedence?: number; enabled?: boolean }[];
+}
+
+async function seedPack(
+  options: SeedPackOptions = {},
+): Promise<{ packId: string; versionId: string; hash: string; slug: string }> {
+  const suffix = crypto.randomUUID().slice(0, 8);
+  const packId = `pack-${suffix}`;
+  const versionId = `version-${suffix}`;
+  const hash = `${suffix}${'a'.repeat(56)}`.slice(0, 64);
+  const slug = options.slug ?? `docs-${suffix}`;
+  const manifest: PackManifest = {
+    name: options.name ?? 'Docs style',
+    description: 'House docs.',
+    kind: 'skill',
+    apply: 'always',
+    paths: [],
+    neverQuote: [],
+    owner: 'Docs team',
+    ...options.manifest,
+  };
+  const body = options.body ?? 'Use sentence case.';
+  await env.DB.prepare('INSERT INTO packs (id, slug, name) VALUES (?, ?, ?)')
+    .bind(packId, slug, manifest.name)
+    .run();
+  await env.DB.prepare(
+    `INSERT INTO pack_versions
+      (id, pack_id, hash, manifest_path, manifest_json, body, raw_manifest, manifest_bytes, docs_bytes, total_bytes, file_count)
+     VALUES (?, ?, ?, 'SKILL.md', ?, ?, ?, 0, 0, 0, ?)`,
+  )
+    .bind(
+      versionId,
+      packId,
+      hash,
+      JSON.stringify(manifest),
+      body,
+      `---\nname: ${manifest.name}\n---\n${body}`,
+      options.docs?.length ?? 0,
+    )
+    .run();
+  for (const doc of options.docs ?? []) {
+    await env.DB.prepare(
+      'INSERT INTO pack_files (version_id, path, bytes, text, never_quote) VALUES (?, ?, ?, ?, ?)',
+    )
+      .bind(
+        versionId,
+        doc.path,
+        new TextEncoder().encode(doc.text).byteLength,
+        doc.text,
+        doc.neverQuote ? 1 : 0,
+      )
+      .run();
+  }
+  for (const grant of options.grants ?? []) {
+    const precedence =
+      grant.precedence ??
+      (grant.scope === 'global' ? 100 : grant.scope === 'repository' ? 200 : 300);
+    const targetId =
+      grant.scope === 'global'
+        ? ''
+        : (grant.targetId ?? (grant.scope === 'repository' ? '101' : ''));
+    await env.DB.prepare(
+      'INSERT INTO pack_grants (id, pack_id, scope, target_id, precedence, enabled) VALUES (?, ?, ?, ?, ?, ?)',
+    )
+      .bind(
+        `grant-${crypto.randomUUID()}`,
+        packId,
+        grant.scope,
+        targetId,
+        precedence,
+        grant.enabled === false ? 0 : 1,
+      )
+      .run();
+  }
+  return { packId, versionId, hash, slug };
 }
 
 interface CapturedReview {
@@ -911,6 +995,208 @@ describe('run engine', () => {
     expect(provider.prompts[0]).toContain('### CONTRIBUTING.md');
     expect(provider.prompts[0]).not.toContain('### AGENTS.md');
   });
+
+  it('injects a granted pack and records slug@hash, bytes and files', async () => {
+    await seedGitHubApp();
+    await seedRepositoryAndReviewers(['openai']);
+    const pack = await seedPack({
+      docs: [{ path: 'docs/a.md', text: 'Alpha docs.' }],
+      grants: [{ scope: 'global' }],
+    });
+    mockGitHubRun();
+    const provider = mockOpenAiReviewSequence(['{"findings":[]}']);
+
+    await postWebhook(pullRequestEvent(), { deliveryId: 'delivery-1' });
+    await driveRun(RUN_ID);
+
+    expect(provider.prompts[0]).toContain('## Team knowledge');
+    expect(provider.prompts[0]).toContain('### Docs style (skill)');
+    expect(provider.prompts[0]).toContain('Use sentence case.');
+    expect(provider.prompts[0]).toContain('#### docs/a.md');
+    expect(provider.prompts[0]).toContain('Alpha docs.');
+
+    const runRow = await env.DB.prepare('SELECT knowledge_json FROM runs WHERE id = ?')
+      .bind(RUN_ID)
+      .first<{ knowledge_json: string }>();
+    const summary = JSON.parse(runRow?.knowledge_json ?? '{}') as {
+      packs: { slug: string; hash: string; bytes: number; reviewers: number }[];
+      totalBytes: number;
+    };
+    expect(summary.packs).toHaveLength(1);
+    expect(summary.packs[0]?.slug).toBe(pack.slug);
+    expect(summary.packs[0]?.hash).toBe(pack.hash);
+    expect(summary.packs[0]?.reviewers).toBe(1);
+    expect(summary.packs[0]?.bytes).toBeGreaterThan(0);
+    expect(summary.totalBytes).toBeGreaterThan(0);
+
+    const outcome = await env.DB.prepare(
+      'SELECT knowledge_json FROM run_reviewers WHERE run_id = ? AND reviewer_id = ?',
+    )
+      .bind(RUN_ID, 'rev-0')
+      .first<{ knowledge_json: string }>();
+    const knowledge = JSON.parse(outcome?.knowledge_json ?? '{}') as {
+      applied: { includedFiles: string[]; bytes: number; withheldFiles: string[] }[];
+    };
+    expect(knowledge.applied[0]?.includedFiles).toEqual(['docs/a.md']);
+    expect(knowledge.applied[0]?.bytes).toBeGreaterThan(0);
+  });
+
+  it('grants a pack to one reviewer only', async () => {
+    await seedGitHubApp();
+    await seedRepositoryAndReviewers(['openai', 'openai']);
+    await seedPack({
+      docs: [{ path: 'docs/a.md', text: 'Only Security gets this.' }],
+      grants: [{ scope: 'reviewer', targetId: 'rev-0' }],
+    });
+    mockGitHubRun();
+    const provider = mockOpenAiReviewSequence(['{"findings":[]}', '{"findings":[]}']);
+
+    await postWebhook(pullRequestEvent(), { deliveryId: 'delivery-1' });
+    await driveRun(RUN_ID);
+
+    expect(provider.prompts).toHaveLength(2);
+    expect(
+      provider.prompts.filter((prompt) => prompt.includes('Only Security gets this.')),
+    ).toHaveLength(1);
+    const rows = await env.DB.prepare(
+      'SELECT reviewer_id, knowledge_json FROM run_reviewers WHERE run_id = ? ORDER BY reviewer_id',
+    )
+      .bind(RUN_ID)
+      .all<{ reviewer_id: string; knowledge_json: string | null }>();
+    expect(rows.results.find((row) => row.reviewer_id === 'rev-0')?.knowledge_json).not.toBeNull();
+    expect(rows.results.find((row) => row.reviewer_id === 'rev-1')?.knowledge_json).toBeNull();
+    const summary = JSON.parse(
+      (
+        await env.DB.prepare('SELECT knowledge_json FROM runs WHERE id = ?')
+          .bind(RUN_ID)
+          .first<{ knowledge_json: string }>()
+      )?.knowledge_json ?? '{}',
+    ) as { packs: { reviewers: number }[] };
+    expect(summary.packs[0]?.reviewers).toBe(1);
+  });
+
+  it('keeps the most specific docs under a tight budget and renders broad to specific', async () => {
+    await seedGitHubApp();
+    await seedRepositoryAndReviewers(['openai']);
+    await seedPack({
+      name: 'Broad',
+      slug: 'broad',
+      body: 'Broad body.',
+      manifest: { name: 'Broad' },
+      docs: [{ path: 'docs/broad.md', text: 'b'.repeat(4_000) }],
+      grants: [{ scope: 'global', precedence: 100 }],
+    });
+    await seedPack({
+      name: 'Specific',
+      slug: 'specific',
+      body: 'Specific body.',
+      manifest: { name: 'Specific' },
+      docs: [{ path: 'docs/specific.md', text: 's'.repeat(4_000) }],
+      grants: [{ scope: 'reviewer', targetId: 'rev-0', precedence: 300 }],
+    });
+    await env.DB.prepare(
+      "INSERT INTO instance_settings (key, value) VALUES ('knowledgePackTotalBytes', '8000')",
+    ).run();
+    mockGitHubRun();
+    const provider = mockOpenAiReviewSequence(['{"findings":[]}']);
+
+    await postWebhook(pullRequestEvent(), { deliveryId: 'delivery-1' });
+    await driveRun(RUN_ID);
+
+    const prompt = provider.prompts[0] ?? '';
+    expect(prompt).toContain('s'.repeat(4_000));
+    expect(prompt).not.toContain('b'.repeat(4_000));
+    expect(prompt.indexOf('### Broad')).toBeLessThan(prompt.indexOf('### Specific'));
+
+    const outcome = await env.DB.prepare(
+      'SELECT knowledge_json FROM run_reviewers WHERE run_id = ? AND reviewer_id = ?',
+    )
+      .bind(RUN_ID, 'rev-0')
+      .first<{ knowledge_json: string }>();
+    const knowledge = JSON.parse(outcome?.knowledge_json ?? '{}') as {
+      applied: {
+        slug: string;
+        includedFiles: string[];
+        droppedFiles: { path: string; reason: string }[];
+      }[];
+    };
+    const specific = knowledge.applied.find((pack) => pack.slug === 'specific');
+    const broad = knowledge.applied.find((pack) => pack.slug === 'broad');
+    expect(specific?.includedFiles).toEqual(['docs/specific.md']);
+    expect(broad?.droppedFiles).toEqual([{ path: 'docs/broad.md', reason: 'budget' }]);
+  });
+
+  it('applies a path-scoped pack only when a visible changed file matches', async () => {
+    await seedGitHubApp();
+    await seedRepositoryAndReviewers(['openai']);
+    await seedPack({
+      name: 'Docs only',
+      slug: 'docs-only',
+      manifest: { name: 'Docs only', apply: 'paths', paths: ['docs/**'] },
+      docs: [{ path: 'docs/docs-only.md', text: 'Docs only knowledge.' }],
+      grants: [{ scope: 'global' }],
+    });
+    await seedPack({
+      name: 'Source',
+      slug: 'source',
+      manifest: { name: 'Source', apply: 'paths', paths: ['src/**'] },
+      docs: [{ path: 'docs/source.md', text: 'Source knowledge.' }],
+      grants: [{ scope: 'global' }],
+    });
+    mockGitHubRun();
+    const provider = mockOpenAiReviewSequence(['{"findings":[]}']);
+
+    await postWebhook(pullRequestEvent(), { deliveryId: 'delivery-1' });
+    await driveRun(RUN_ID);
+
+    expect(provider.prompts[0]).not.toContain('Docs only knowledge.');
+    expect(provider.prompts[0]).toContain('Source knowledge.');
+    const outcome = await env.DB.prepare(
+      'SELECT knowledge_json FROM run_reviewers WHERE run_id = ? AND reviewer_id = ?',
+    )
+      .bind(RUN_ID, 'rev-0')
+      .first<{ knowledge_json: string }>();
+    const knowledge = JSON.parse(outcome?.knowledge_json ?? '{}') as {
+      applied: { slug: string }[];
+      notApplied: { slug: string; reason: string }[];
+    };
+    expect(knowledge.applied.map((pack) => pack.slug)).toEqual(['source']);
+    expect(knowledge.notApplied).toEqual([
+      expect.objectContaining({ slug: 'docs-only', reason: 'paths' }),
+    ]);
+  });
+
+  it('withholds never_quote files and records them', async () => {
+    await seedGitHubApp();
+    await seedRepositoryAndReviewers(['openai']);
+    await seedPack({
+      name: 'Policy',
+      slug: 'policy',
+      manifest: { name: 'Policy', neverQuote: ['docs/secret.md'] },
+      docs: [
+        { path: 'docs/secret.md', text: 'Do not send this.', neverQuote: true },
+        { path: 'docs/open.md', text: 'Open knowledge.' },
+      ],
+      grants: [{ scope: 'global' }],
+    });
+    mockGitHubRun();
+    const provider = mockOpenAiReviewSequence(['{"findings":[]}']);
+
+    await postWebhook(pullRequestEvent(), { deliveryId: 'delivery-1' });
+    await driveRun(RUN_ID);
+
+    expect(provider.prompts[0]).not.toContain('Do not send this.');
+    expect(provider.prompts[0]).toContain('Open knowledge.');
+    const outcome = await env.DB.prepare(
+      'SELECT knowledge_json FROM run_reviewers WHERE run_id = ? AND reviewer_id = ?',
+    )
+      .bind(RUN_ID, 'rev-0')
+      .first<{ knowledge_json: string }>();
+    const knowledge = JSON.parse(outcome?.knowledge_json ?? '{}') as {
+      applied: { withheldFiles: string[] }[];
+    };
+    expect(knowledge.applied[0]?.withheldFiles).toEqual(['docs/secret.md']);
+  });
 });
 
 describe('manual try run', () => {
@@ -927,6 +1213,40 @@ describe('manual try run', () => {
       ...overrides,
     };
   }
+
+  it('uses grants and records knowledge on a manual run', async () => {
+    await seedGitHubApp();
+    await seedRepositoryAndReviewers(['openai']);
+    const pack = await seedPack({
+      docs: [{ path: 'docs/a.md', text: 'Manual knowledge.' }],
+      grants: [{ scope: 'global' }],
+    });
+    mockGitHubRun();
+    const provider = mockOpenAiReviewSequence(['{"findings":[]}']);
+    const runId = '101:1:abc123def456:try-named';
+
+    await env.RUNS.getByName(runId).start(manualPayload('try-named', { reviewerIds: ['rev-0'] }));
+    await driveRun(runId);
+
+    expect(provider.prompts[0]).toContain('Manual knowledge.');
+    const runRow = await env.DB.prepare('SELECT knowledge_json, mode FROM runs WHERE id = ?')
+      .bind(runId)
+      .first<{ knowledge_json: string; mode: string }>();
+    expect(runRow?.mode).toBe('manual');
+    const summary = JSON.parse(runRow?.knowledge_json ?? '{}') as {
+      packs: { slug: string }[];
+    };
+    expect(summary.packs[0]?.slug).toBe(pack.slug);
+    const outcome = await env.DB.prepare(
+      'SELECT knowledge_json FROM run_reviewers WHERE run_id = ? AND reviewer_id = ?',
+    )
+      .bind(runId, 'rev-0')
+      .first<{ knowledge_json: string }>();
+    const knowledge = JSON.parse(outcome?.knowledge_json ?? '{}') as {
+      applied: { includedFiles: string[] }[];
+    };
+    expect(knowledge.applied[0]?.includedFiles).toEqual(['docs/a.md']);
+  });
 
   it('runs only the named reviewer and posts nothing to GitHub', async () => {
     await seedGitHubApp();
@@ -1205,6 +1525,7 @@ describe('runs api', () => {
         summary: 'Looks good.',
         usage: { promptTokens: 10, completionTokens: 5, totalTokens: 15 },
         scope,
+        knowledge: null,
         error: null,
       },
       {
@@ -1214,6 +1535,7 @@ describe('runs api', () => {
         summary: null,
         usage: null,
         scope: null,
+        knowledge: null,
         error: 'boom',
       },
     ]);

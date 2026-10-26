@@ -4,6 +4,14 @@ import type {
   InstallationInfo,
   InstanceReadiness,
   InstanceSettings,
+  PackCreateResult,
+  PackDetail,
+  PackGrant,
+  PackGrantInput,
+  PackPreview,
+  PackPreviewRequest,
+  PackSummary,
+  PackVersionDetail,
   ProviderFlavor,
   Repository,
   RepositoryPullRequest,
@@ -28,6 +36,12 @@ import {
   ApiErrorSchema,
   InstallationInfoSchema,
   InstanceReadinessSchema,
+  PackCreateResultSchema,
+  PackDetailSchema,
+  PackGrantSchema,
+  PackPreviewSchema,
+  PackSummarySchema,
+  PackVersionDetailSchema,
   RepositoryPullRequestSchema,
   RepositoryReviewerSchema,
   RepositorySchema,
@@ -58,6 +72,8 @@ export class ApiError extends Error {
 }
 
 const ReviewerListSchema = z.array(ReviewerSchema);
+const PackListSchema = z.array(PackSummarySchema);
+const PackGrantListSchema = z.array(PackGrantSchema);
 const RepositoryListSchema = z.array(RepositorySchema);
 const RepositoryReviewerListSchema = z.array(RepositoryReviewerSchema);
 const RepositoryPullRequestListSchema = z.array(RepositoryPullRequestSchema);
@@ -369,6 +385,60 @@ export function updateSettings(
     method: 'PATCH',
     headers: jsonHeaders,
     body: JSON.stringify(patch),
+    signal,
+  });
+}
+
+export function listPacks(signal?: AbortSignal): Promise<PackSummary[]> {
+  return request(PackListSchema, '/api/packs', { signal });
+}
+
+export function previewPack(input: PackPreviewRequest, signal?: AbortSignal): Promise<PackPreview> {
+  return request(PackPreviewSchema, '/api/packs/preview', {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify(input),
+    signal,
+  });
+}
+
+export function createPack(
+  input: PackPreviewRequest,
+  signal?: AbortSignal,
+): Promise<PackCreateResult> {
+  return request(PackCreateResultSchema, '/api/packs', {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify(input),
+    signal,
+  });
+}
+
+export function getPack(id: string, signal?: AbortSignal): Promise<PackDetail> {
+  return request(PackDetailSchema, `/api/packs/${encodeURIComponent(id)}`, { signal });
+}
+
+export function getPackVersion(
+  packId: string,
+  versionId: string,
+  signal?: AbortSignal,
+): Promise<PackVersionDetail> {
+  return request(
+    PackVersionDetailSchema,
+    `/api/packs/${encodeURIComponent(packId)}/versions/${encodeURIComponent(versionId)}`,
+    { signal },
+  );
+}
+
+export function savePackGrants(
+  packId: string,
+  grants: PackGrantInput[],
+  signal?: AbortSignal,
+): Promise<PackGrant[]> {
+  return request(PackGrantListSchema, `/api/packs/${encodeURIComponent(packId)}/grants`, {
+    method: 'PUT',
+    headers: jsonHeaders,
+    body: JSON.stringify({ grants }),
     signal,
   });
 }

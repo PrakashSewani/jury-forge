@@ -17,7 +17,10 @@ type NumberKey =
   | 'repoInstructionsMaxBytes'
   | 'referenceContextFiles'
   | 'referenceContextFileBytes'
-  | 'referenceContextTotalBytes';
+  | 'referenceContextTotalBytes'
+  | 'knowledgePackTotalBytes'
+  | 'knowledgePackFileBytes'
+  | 'knowledgePackFiles';
 
 interface NumberField {
   key: NumberKey;
@@ -65,6 +68,30 @@ const CONTEXT_FIELDS: NumberField[] = [
     hint: 'How much of the pull request description reaches the prompt.',
     min: 500,
     max: 20_000,
+  },
+];
+
+const KNOWLEDGE_FIELDS: NumberField[] = [
+  {
+    key: 'knowledgePackTotalBytes',
+    label: 'Pack text per reviewer',
+    hint: 'The most granted-pack text added to one prompt. Manifests are always included; docs drop when they do not fit.',
+    min: 8_000,
+    max: 500_000,
+  },
+  {
+    key: 'knowledgePackFileBytes',
+    label: 'Pack file bytes',
+    hint: 'A docs/ file larger than this is dropped whole.',
+    min: 1_000,
+    max: 100_000,
+  },
+  {
+    key: 'knowledgePackFiles',
+    label: 'Pack files per reviewer',
+    hint: 'The most docs/ files injected into one prompt.',
+    min: 1,
+    max: 200,
   },
 ];
 
@@ -223,6 +250,25 @@ export default function SettingsPage() {
             <p className="mt-3 text-xs text-text-muted">
               These bound the read-only files a reviewer adds from its reference paths. A pair with
               no reference paths costs nothing.
+            </p>
+          </Card>
+
+          <Card title="Knowledge packs">
+            <div className="space-y-5">
+              {KNOWLEDGE_FIELDS.map((field) => (
+                <NumberSetting
+                  current={current}
+                  draft={draft}
+                  field={field}
+                  key={field.key}
+                  onChange={updateNumber}
+                  onReset={resetField}
+                />
+              ))}
+            </div>
+            <p className="mt-3 text-xs text-text-muted">
+              These bound the text knowledge packs add to one reviewer prompt. The manifest is never
+              truncated; only whole docs/ files drop, and run detail names what dropped.
             </p>
           </Card>
 

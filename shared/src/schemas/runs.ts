@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { FindingSchema, ProviderUsageSchema, RunModeSchema, RunStatusSchema } from './common';
+import { RunKnowledgeSummarySchema, RunReviewerKnowledgeSchema } from './packs';
 
 /** The `runs` row as the list and detail endpoints expose it. */
 export const RunSummarySchema = z.object({
@@ -49,6 +50,7 @@ export const RunReviewerOutcomeSchema = z.object({
   summary: z.string().nullable(),
   usage: ProviderUsageSchema.nullable(),
   scope: RunReviewerScopeSchema.nullable(),
+  knowledge: RunReviewerKnowledgeSchema.nullable(),
   error: z.string().nullable(),
 });
 
@@ -58,6 +60,7 @@ export const RunDetailSchema = z.object({
   reviewers: z.array(RunReviewerOutcomeSchema),
   skippedReviewers: z.array(RunSkippedReviewerSchema),
   changedFiles: z.number(),
+  knowledge: RunKnowledgeSummarySchema,
 });
 
 /** The body of `POST /api/runs/try`. */

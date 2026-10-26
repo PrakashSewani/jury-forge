@@ -5,6 +5,7 @@ import { cx, focusRing } from '../ui';
 export const NAV_ITEMS = [
   { href: '/', label: 'Overview' },
   { href: '/reviewers', label: 'Reviewers' },
+  { href: '/packs', label: 'Knowledge' },
   { href: '/repositories', label: 'Repositories' },
   { href: '/runs', label: 'Runs' },
   { href: '/settings', label: 'Settings' },
@@ -22,6 +23,8 @@ export function isActive(route: Route, href: string): boolean {
         route.name === 'reviewer-new' ||
         route.name === 'reviewer-edit'
       );
+    case '/packs':
+      return route.name === 'packs' || route.name === 'pack-detail';
     case '/repositories':
       return route.name === 'repositories';
     case '/runs':

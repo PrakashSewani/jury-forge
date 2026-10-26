@@ -6,6 +6,8 @@ import type { Route } from './lib/router';
 import { routeFromPath, subscribeRoute } from './lib/router';
 import ActivityPage from './pages/ActivityPage';
 import HomePage from './pages/HomePage';
+import PackDetailPage from './pages/PackDetailPage';
+import PacksPage from './pages/PacksPage';
 import RepositoriesPage from './pages/RepositoriesPage';
 import ReviewerEditorPage from './pages/ReviewerEditorPage';
 import ReviewersPage from './pages/ReviewersPage';
@@ -112,6 +114,10 @@ function Screens({ route, user }: { route: Route; user: SessionUser | null }) {
       return <ReviewerEditorPage />;
     case 'reviewer-edit':
       return <ReviewerEditorPage id={route.id} />;
+    case 'packs':
+      return <PacksPage />;
+    case 'pack-detail':
+      return <PackDetailPage id={route.id} />;
     case 'repositories':
       return <RepositoriesPage />;
     case 'runs':
