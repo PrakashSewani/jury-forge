@@ -51,6 +51,9 @@ results that land in the GitHub workflow where the code already lives.
 - No automatic code fixes or auto-merge in v1 — the output is review feedback.
 - No preset reviewer marketplace in v1 — reviewers are user-defined. The seven built-in starter
   definitions ship with the product and are not a marketplace.
+- No knowledge-pack marketplace or cross-instance sharing in v1 — a pack is uploaded to, stored
+  in, and granted by one instance. There is no writing a pack back to a repository or a raw-zip
+  ingestion API (the dashboard extracts a folder or zip in the browser).
 - No metering or reselling of AI calls — users pay their providers directly.
 
 ## Success looks like
@@ -86,6 +89,11 @@ what the instance actually has.
   enabled/disabled state. Not a hard-coded review type.
 - **Reviewer template** — a built-in starter definition (name, instructions, rules) that prefills
   a new reviewer; the model, endpoint and key always come from the operator.
+- **Knowledge pack** — a bundle of shared team knowledge uploaded as a folder or zip: a `SKILL.md`
+  manifest (name, description, kind, apply, paths, never_quote, owner) plus `docs/` reference
+  files. Every distinct upload is an immutable, content-hashed version. A pack is granted
+  globally, per repository, or per reviewer; a run injects the granted packs under a size budget
+  where the manifest is never truncated, and records each `slug@hash` and its injected bytes.
 - **Provider binding** — a reviewer's model config: API flavor (OpenAI-compatible or
   Anthropic-compatible), base URL, API key (encrypted at rest), model name, and parameters.
 - **Review run** — one execution of the team against one PR revision, coordinated by a per-run
@@ -124,6 +132,18 @@ what the instance actually has.
   review is assembled, not just asked for in the prompt, and the Repositories screen can preview a
   pattern list against the newest run's changed files before saving (D-032). Scoping is off by
   default — a pair with no patterns behaves exactly as before.
+- Knowledge packs (D-034): upload a folder or zip containing a `SKILL.md` manifest and `docs/`
+  files; the manifest's YAML frontmatter carries name, description, kind, apply, paths,
+  never_quote and owner, and its Markdown body is injected with the manifest. Every distinct
+  upload is an immutable SHA-256 version; `(pack, hash)` is unique and latest-always resolves the
+  newest version. Grants are instance configuration — global, per repository, or per reviewer —
+  with a per-grant precedence (defaults global 100, repository 200, reviewer 300). `apply: paths`
+  limits a granted pack to runs where a visible changed file matches; `never_quote` files are
+  stored but never sent to the model. The manifest is never truncated; only whole `docs/` files
+  drop, and the run detail records `slug@hash`, injected bytes, and dropped/withheld names for
+  each reviewer. The posted GitHub review stays free of pack names, hashes and paths. The
+  reviewer's own instructions and rules still take precedence, and the existing textareas remain
+  for reviewer-specific identity and rules — shared knowledge belongs in packs.
 - An operator can run one reviewer against a real open pull request as a trial from the dashboard;
   a trial run posts nothing to GitHub and is recorded as a manual run.
 - Cost posture: designed to run within Cloudflare's free plan for typical personal use;

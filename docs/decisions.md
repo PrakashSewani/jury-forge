@@ -1191,3 +1191,119 @@ away).
 **Not in this change:** no API change, no migration, no Worker or engine change, no `site/` change,
 no deploy (the merge to `dev` deploys, D-030, so this branch is merged only on the owner's
 instruction).
+
+## D-034 — Knowledge packs: immutable versions, grants, budgeted prompt injection, and run provenance
+
+**Date:** 2026-10-26 (owner confirmed the seven choices below in chat before this entry)
+
+**Decision:** Jury Forge ingests a team knowledge pack as-is — a folder or zip containing a
+`SKILL.md` manifest and `docs/` reference files — and makes it a first-class, versioned review
+input. The pack is stored in the instance, never fetched from a repository at run time, and never
+shared between instances.
+
+1. **Input contract.** A pack is one manifest file plus its `docs/` subtree. `SKILL.md` is the
+   preferred manifest; when none exists, exactly one root-level `*.md` whose frontmatter has a
+   string `name` is accepted, so `.github/agents/<name>.md` packs work as-is. A single wrapper
+   directory (`.claude/skills/<name>/`, or a zip's top folder) is stripped; several candidate
+   manifests in one upload produce a picker and one pack per upload. The manifest is YAML
+   frontmatter with `name` (1–120), `description` (1–2,000), `kind` (a bounded display label,
+   default `reference`, no behaviour), `apply` (`always` | `paths`, default `always`), `paths`
+   (≤20 globs, required for `apply: paths`), `never_quote` (≤50 globs matched against `docs/`
+   paths), and `owner` (≤200, display only). Unknown frontmatter keys are accepted and ignored so
+   existing `.claude/skills/` files parse unchanged. The Markdown body below the frontmatter is
+   part of the never-truncated manifest block; only `docs/` files can be dropped. Hard caps:
+   32,000-byte manifest, 64,000-byte doc, 512,000 bytes / 100 docs per version, 1,000 files /
+   2,000,000 text bytes per upload. Oversized files are rejected, never silently truncated; binary
+   and NUL-containing files under `docs/` are ignored with a preview warning, and text is
+   normalized to LF before hashing.
+
+2. **Immutable versions, latest always.** A version's identity is SHA-256 over the normalized
+   manifest and docs, sorted by path with lengths and NUL separators. `(pack_id, hash)` is unique;
+   a repeat upload returns the existing version, and any content change creates a new one. There is
+   no update or delete path for a version. Grants point at a pack, not a version, and every run
+   resolves the newest version (`created_at DESC, rowid DESC` — insertion order breaks a
+   same-second tie), recording the hash it used. A pack
+   slug is derived from the first manifest name, made unique with `-2`, `-3`, …, and stays stable;
+   a renamed manifest uploaded with an explicit pack id remains a version of the same pack. The
+   owner chose latest-always over per-grant or per-pack pinning; the run record is the audit trail.
+
+3. **Grants live in instance config.** A new `pack_grants` table carries `scope`
+   (`global` | `repository` | `reviewer`), `target_id` (empty for global), `precedence` (0–1000;
+   defaults global 100, repository 200, reviewer 300), and `enabled`. Importing a pack creates no
+   grant and a manifest cannot grant itself. A pack granted at several scopes is injected once per
+   reviewer at the highest precedence (tie: reviewer > repository > global). At most 20 packs apply
+   to one reviewer; the rest are recorded as `notApplied: pack-limit`. `apply: paths` means a
+   granted pack is injected only when at least one of that reviewer's visible changed files matches
+   its globs; otherwise it is recorded as `notApplied: paths`. Manual try runs use grants and the
+   path rule, but skip the reviewer's own path filters (D-028).
+
+4. **`never_quote` withholds content.** Files matching `never_quote` are stored with the version —
+   so a later version can change the list — but their contents are never sent to the model
+   provider. Their names are recorded as withheld in run provenance. The owner chose an
+   enforceable withhold over a prompt instruction (advisory only) or output redaction (not
+   reliable). Pack text is stored in D1 in the clear, like reviewer instructions; the upload dialog
+   states that pack content is sent to the configured provider, and `never_quote` is the privacy
+   control.
+
+5. **Ingestion happens in the browser.** The dashboard reads a folder (`webkitdirectory`) or a zip
+   with an in-repo reader (stored and deflate entries; encrypted/ZIP64/multi-disk/unsafe entries
+   rejected; 2,000-entry and 10 MB guards) and POSTs normalized JSON. The Worker never parses a
+   binary zip and never handles archive decompression CPU — the free plan caps an invocation at
+   10 ms CPU, and the browser is the right place for that work. The same JSON endpoints are
+   scriptable; a raw-zip API endpoint is deferred. The server adds the `yaml` package (already in
+   the lockfile transitively) as a direct product dependency, resolved live at implementation, and
+   validates the manifest and paths again so a preview cannot be trusted. Pack data is stored in D1
+   with no R2 binding; the caps keep every doc inside a Durable Object value.
+
+6. **Budgeted injection.** The block goes in the user prompt after the PR description and
+   repository instructions (D-022) and before the changed files and diffs; the system prompt and
+   output contract are unchanged. Every applicable manifest block is included in full and is never
+   truncated. `docs/` files are admitted whole, most-specific pack first (descending precedence,
+   then slug/path), until `knowledgePackTotalBytes` (default 64,000), `knowledgePackFiles`
+   (default 50), or `knowledgePackFileBytes` (default 32,000 per doc) is reached; the block is
+   rendered broad-to-specific. A doc that does not fit is dropped whole with a recorded reason
+   (`budget`, `file-limit`, or `too-large`), and a later smaller doc may still fit. If the
+   manifests alone exceed the budget, they are still included and the run records `overBudget`.
+   Dropped and withheld names appear in run detail only, never in the prompt or the public review.
+   The stated hierarchy is: the reviewer's instructions/rules win over a pack; a pack wins over
+   repository instructions; pack files are not review targets, so no findings are reported against
+   them.
+
+7. **Provenance is recorded per run and per reviewer.** `run_reviewers.knowledge_json` stores each
+   reviewer's applied packs (`slug`, `hash`, scope, precedence, injected bytes, manifest/doc bytes,
+   included/dropped/withheld files) and `notApplied` reasons; `runs.knowledge_json` stores the
+   deduped run summary (`slug`, `hash`, largest bytes across reviewers, reviewer count) and its
+   total. `GET /api/runs/:id` exposes both, and the run-detail screen renders them. The posted
+   GitHub review is unchanged, so internal pack names and doc paths never reach PR readers. The
+   owner chose run detail only over a review-body line or full public detail.
+
+**Why:** teams already ship reusable knowledge as `.claude/skills/` and `.github/agents/` packs,
+but the only way into a Jury Forge reviewer was to paste it into a textarea, which duplicates it,
+loses its version, and makes "what did the reviewer know when it flagged this?" unanswerable.
+Uploading the pack as-is, hashing it into immutable versions, granting it in instance config, and
+recording `slug@hash` plus injected bytes on every run turns knowledge into a review input with a
+history. Keeping grants out of the pack means an imported pack cannot attach itself; keeping
+provenance out of the posted review keeps internal material internal; and keeping zip extraction
+in the browser keeps the free-plan Worker out of binary parsing.
+
+**Rejected:** server-side zip ingestion (binary parsing and decompression CPU in the Worker, plus a
+second parser and request-body surface; the browser already has the files); pinning each grant to a
+version or promoting a pack version explicitly (more state and UI for a single-owner tool; latest-
+always plus the recorded hash answers the audit question); encrypting pack content (it is sent to
+the provider by definition, and instructions are stored the same way — `never_quote` is the real
+control); reading grants or precedence from the manifest (a pack would grant itself; the owner's
+configuration must decide); auto-granting on import (same problem); truncating docs to fit instead
+of dropping whole files (partial documents mislead the reviewer); naming dropped/withheld files in
+the prompt (bytes spent on metadata, and the model does not need them); posting pack versions or
+file names in the GitHub review (leaks internal material); accepting `references/` as a second
+injectable folder (the requested contract is `docs/`; other folders stay ignored so the boundary is
+one rule); a per-repository+reviewer grant scope (the three requested scopes cover it); storing
+pack content in R2 (a second binding and deploy configuration for bounded text); a batch import of
+every pack in one folder (the candidate picker imports one pack at a time in v1); automatically
+migrating existing reviewer textarea text into packs (an operator decision, not a silent rewrite).
+
+**Not in this change:** no marketplace or cross-instance sharing; no writing a pack back to a
+repository; no raw-zip API endpoint; no pack edit/delete, version pruning, or rollback UI; no
+posted-review provenance; no `references/` or `scripts/` injection; no batch import; no
+reviewer+repository pair grant; no automatic textarea migration; no change to readiness, reviewer
+import/export, templates, the review event, or the diff/reference budgets.

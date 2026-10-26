@@ -77,3 +77,14 @@ one error taxonomy, validated responses on both sides, real client-side routing 
 layer — and stacks on C's merge (`b93d2f04b1`). The rework is product work, not a phase — phase
 3 (promo site) still starts after it. The hold is lifted (D-030): the product is live at `jury.prakashsewani.com`, and a merge to `dev`
 deploys it. `main` is retired, so the release path is now the deploy path.
+
+## Knowledge packs (D-034, 2026-10-26)
+
+A post-phase-2 feature, not a phase: upload a folder or zip containing a `SKILL.md` manifest plus
+`docs/` files, store each distinct upload as an immutable content-hashed version, grant it
+globally / per repository / per reviewer with configurable precedence, and inject it into the
+reviewer prompt under a manifest-first size budget. `never_quote` withholds docs from the model;
+`apply: paths` limits a granted pack to runs whose visible changed files match. Every run records
+each reviewer's `slug@hash`, injected bytes, dropped/withheld files and budget state; the posted
+review stays free of pack names and paths. The feature lands as `feat/knowledge-packs-20261026`
+against `dev`; the merge deploys and applies migration `0009` (D-030).
