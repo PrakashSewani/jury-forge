@@ -71,6 +71,110 @@ A reviewer can be more than a prompt. Its version declares a **tool policy**:
   the claim in code.
 - Tool calls and results are recorded in the turn timeline.
 
+## 2.2 Reviewer creation screen
+
+Yes — capabilities are configured **on the reviewer**, in the create/edit screen. Repo bindings are
+a separate grant step. The screen is a stepper:
+
+```
+Create reviewer
+  1. Basics
+  2. Capabilities
+  3. Model
+  4. Instructions & rules
+  5. Tools & sandbox
+  6. Availability (bind to repos)   ← role-gated; can be skipped and done later
+  7. Test & activate
+```
+
+### 1. Basics
+
+- Name, slug, description.
+- Owner (SME/admin) and domain (security, testing, backend, …).
+- Template picker: start blank or from a built-in template; templates prefill capabilities, tools,
+  instructions, and rules.
+- Status is **draft** until approved/activated.
+
+### 2. Capabilities
+
+- A **tag picker** with suggestions: `security`, `auth`, `crypto`, `secrets`, `correctness`,
+  `architecture`, `backend`, `frontend`, `performance`, `testing`, `coverage`, `docs`, `data`,
+  `database`, `sql`, `infra`, `accessibility`.
+- Custom tags are allowed only for admins/owners (policy-controlled), so the alias registry stays
+  coherent.
+- At least one capability is required to activate a reviewer.
+- Live preview: **“Requestable by labels: `jury:cap:security`, `jury:cap:auth`.”** This shows which
+  `jury:cap:*` labels can request this reviewer.
+- Helper text: “Capabilities make this reviewer requestable. They do not bind it to a repo; a repo
+  binding is still required.”
+
+### 3. Model
+
+- Provider select → model select from the provider catalog (no free-text model).
+- Endpoint select from `supportedEndpoints` (chat/responses/messages); defaults to a valid one.
+- Params validated against the model’s capability schema.
+- Default token/cost budget for this reviewer.
+- Provider/model health shown; if the model disappears later, the reviewer becomes
+  `configuration_error`.
+
+### 4. Instructions & rules
+
+- Instructions: what this reviewer is responsible for.
+- Rules: team-specific constraints and output expectations.
+- Optional: attach knowledge packs or reference conventions (org policy).
+- Versioned; changes create a new draft version.
+
+### 5. Tools & sandbox
+
+- Fixed read tools: `diff.read`, `file.read` (and `tests.inspect` for most reviewers).
+- Optional: `graph.query`, `static.analyze`.
+- Sandbox tools: `tests.run`, `build.run`. They are **off by default**, require the repo to opt into
+  the sandbox, and show a warning: “Running repository code requires an isolated sandbox and a
+  resource budget.”
+- A capability label can request the reviewer; it cannot enable a sandbox tool.
+- Show the tool budget: max calls, max wall time, max tokens.
+
+### 6. Availability (bind to repos)
+
+- Role-gated:
+  - **Personal install / Owner / Admin:** can bind to any repo in the installation.
+  - **SME:** can bind their domain reviewer to assigned repos/domains.
+  - **Maintainer:** bind only if `allowMaintainerBindings` is on; otherwise request a binding.
+- Per repo: required/optional, paths include/exclude, languages, labels, context paths, priority,
+  budget.
+- A reviewer can be saved as a draft without a binding; it simply cannot run anywhere until bound.
+- This step can be skipped and done from **Repositories → <repo> → Reviewers**.
+
+### 7. Test & activate
+
+- **Try on a PR** (no publish) with the reviewer’s current draft.
+- Preview: “This reviewer would run on repos X; requestable by labels Y; tools Z.”
+- Save draft → approve (admin for org; owner for personal) → active version.
+- Activation is versioned; rollback to a previous version is one click.
+- The final screen shows the exact provider/model/endpoint, capabilities, tools, and bound repos.
+
+### Role behavior
+
+| Actor | Can create | Can approve/activate | Can bind |
+| ----- | :--------: | :------------------: | :------: |
+| Owner | ✓ | ✓ | ✓ |
+| Admin | ✓ | ✓ | ✓ |
+| SME | ✓ in domain | — (admin approves) | ✓ assigned repos |
+| Maintainer | — | — | only if `allowMaintainerBindings` |
+| Member/Viewer | — | — | — |
+
+### Validation and UX rules
+
+- No free-text model or endpoint.
+- At least one capability to activate.
+- A reviewer with a sandbox tool but no repo sandbox policy can be created, but the tool is disabled
+  and explained.
+- A reviewer can be draft/unbound; it is not available on any repo until bound.
+- Show a clear “request vs grant” callout: capabilities are requestable; bindings are grants.
+- Every create/version/approval/binding change is audited.
+- The screen must be usable on mobile; the sticky save bar and unsaved-changes guard from the PoC
+  reviewer editor carry over.
+
 ## 3. Repo bindings (the important part)
 
 A reviewer is **not available on a repo** unless there is an enabled binding.

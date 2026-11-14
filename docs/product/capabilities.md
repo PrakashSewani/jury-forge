@@ -51,6 +51,7 @@ Status key: **Proven** (the PoC shipped a version), **Planned** (in the target p
 | Per-repo reviewer bindings | Planned | Required/optional, path/language/label scope, budget; no binding = not available. |
 | No-reviewers / no-match fallback | Planned | Comment with setup/retrigger; never a misleading clean review. |
 | Capability agents + tool policy | Planned | Graph/tests/static tools; agent chooses verification; `tests.run`/`build.run` opt-in sandbox. |
+| Reviewer creation studio (capabilities, model, tools, availability) | Planned | Capability tags, catalog model/endpoint, tool policy, optional repo binding, test/activate. |
 | Capability labels (`jury:cap:*`) | Planned | Request a capability group only within the repo’s bound/approved reviewers. |
 | Dynamic agent availability (repo/path/language/label scope) | Planned | Router selects the jury; no per-repo enable toggle (ADR-0013). |
 | Path scope (include/exclude globs) | Proven | Keep; enforce at output. |
