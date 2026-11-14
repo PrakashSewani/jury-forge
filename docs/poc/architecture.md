@@ -156,6 +156,9 @@ See [`deployment.md`](deployment.md) for details and constraints.
 - A real activity trail and a readiness checklist computed from the database.
 - A design-system layer, dark mode, and an accessibility harness.
 
+For the code-level structure, storage-key protocol, and implementation decisions, see
+[`code-review.md`](code-review.md).
+
 ## What this architecture cannot do
 
 - Run a real background worker, a queue, or a long CPU-bound analysis.

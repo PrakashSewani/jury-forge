@@ -17,7 +17,8 @@ PoC was a one-month proof of concept and many of these are deliberate trade-offs
 ## Read this first: the ten that change the design
 
 1. **A run can stay `running` forever** if the final D1 write fails after the DO marks itself
-   finished. No watchdog, no retry, no operator recovery. (F-001)
+   finished, **or never start at all** if `start()` persists the payload and then fails before
+   scheduling its alarm. No watchdog, no retry, no operator recovery. (F-001, F-066)
 2. **A retry can double-publish** a review: the post step is not idempotent. (F-002)
 3. **PR content is injected as instructions.** No trust boundary, no prompt-injection defense, no
    secret redaction before code leaves the perimeter. (F-003, F-005)
@@ -721,6 +722,159 @@ vulnerability disclosure process in the PoC.
 a security-adjacent product.
 
 ---
+
+## G. Code-level defects (deep pass)
+
+These came from reading the implementation line by line after the architecture-level review. They
+are specific to the PoC's code and are the easiest to miss from docs alone.
+
+### F-066 — `start()` can persist a run and never schedule its alarm
+
+**Severity:** S1
+**Evidence:** `product/worker/run-engine.ts` `start()`: it returns early if `payload` exists, then
+writes `payload`, `step`, and `attempt`, then runs the D1 `INSERT` for the `runs` row, and only then
+calls `setAlarm(Date.now())`. If the D1 insert throws, the webhook deletes the delivery row and
+returns 500; GitHub retries; the retry sees the stored payload and returns early without ever
+scheduling an alarm.
+**Impact:** a transient D1 error can leave a run that never executes and has no row (or a row with
+no alarm). The webhook retry path makes it permanent.
+**Instead:** persist the start intent in D1/outbox first, then always ensure an alarm on retry (or
+make `start()` idempotent by checking an alarm/step marker and rescheduling). Reconcile orphaned
+runs with a janitor.
+
+### F-067 — Previous findings include failed runs that never published
+
+**Severity:** S2
+**Evidence:** `run-engine.ts` `stepConfig()` loads previous findings with
+`r.status IN ('completed', 'failed')` and `rr.findings_json != '[]'`, but does not require the run
+to have published (`review_url` is not checked). A run can finish `failed` after some reviewers
+produced findings but the post failed.
+**Impact:** findings that never appeared on the pull request become "previously reported" in the
+next prompt and in the Resolved / Still present / New buckets. The reviewer can suppress a real
+issue or declare it resolved when it was never published.
+**Instead:** only treat published findings as previous; store a `published_at`/publication id per
+run or per finding, and keep unpublished findings in a separate diagnostic bucket.
+
+### F-068 — Pack upload is parsed before the aggregate size cap
+
+**Severity:** S2
+**Evidence:** `product/worker/routes/packs.ts` calls `await c.req.json()` and only then
+`analyzePack()`, which enforces the 2,000,000-byte total. `PackPreviewRequestSchema` caps each
+file's `text` at 1,000,000 and the array at 1,000, but there is no aggregate request cap.
+**Impact:** a direct API caller can make the Worker parse a very large JSON body before any cap
+applies, consuming memory/CPU. The browser UI caps itself, but the API is the boundary.
+**Instead:** a body-size middleware that enforces `Content-Length`/streamed limits per route
+before JSON parsing, plus an aggregate cap in the schema.
+
+### F-069 — ZIP decompression can exceed the cap before checking
+
+**Severity:** S2
+**Evidence:** `product/src/lib/zip.ts` `readZipBytes()` checks the central directory's
+`uncompressedSize`, but calls `inflateRaw()` and only after full decompression checks
+`bytes.byteLength > MAX_ENTRY_BYTES` and the total. A forged central directory or a high-ratio
+deflate can expand far beyond the cap first.
+**Impact:** a malicious pack zip can freeze or crash the operator's browser. The server re-validates
+the normalized text, but the browser is already the victim.
+**Instead:** stream decompression with a hard output cap (abort as soon as the cap is exceeded),
+reject suspicious compression ratios, cap the total compressed and uncompressed sizes, and consider
+decompressing in a worker.
+
+### F-070 — Provider params can enable streaming and break the response parser
+
+**Severity:** S2
+**Evidence:** `product/worker/lib/providers.ts` spreads `call.params` into the request body, and
+`callProvider()` always calls `response.json()`. `params` is `z.record(z.string(), z.unknown())`
+(`worker/lib/reviewers.ts`), so `{ "stream": true }` (or another mode that changes the wire
+format) is accepted and produces an SSE body that fails to parse.
+**Impact:** an operator can configure a reviewer that always fails at the provider step, with a
+confusing error. Arbitrary params can also change model behavior in ways the UI does not explain.
+**Instead:** validate params against the provider/model capability schema; reject streaming until
+implemented; type params per flavor; surface unsupported fields at save time.
+
+### F-071 — Non-strict GitHub client loses status; setup errors become 500s
+
+**Severity:** S3
+**Evidence:** `product/worker/lib/github.ts` has two readers. `readJsonStrict()` throws
+`GitHubApiError` with a status; `readJson()` throws a generic `Error('github_request_failed
+(status)')`. `convertManifest`, `listAppInstallations`, `exchangeOAuthCode`, `fetchUser`, and
+`fetchUserInstallations` use the non-strict reader, and the setup/auth routes do not map the error.
+**Impact:** a GitHub outage, rate limit, or permission error during setup becomes an opaque
+`internal_error` 500 instead of an actionable taxonomy code.
+**Instead:** one GitHub error type with status/rate-limit metadata; map to `github_unavailable`,
+`github_auth_failed`, `github_rate_limited`, and retry guidance; test the setup failure paths.
+
+### F-072 — Stored JSON is parsed unguarded on read paths
+
+**Severity:** S3
+**Evidence:** `product/worker/routes/runs.ts` does `JSON.parse(row.files_json)`,
+`JSON.parse(row.scope_skip_json)`, and `JSON.parse(row.knowledge_json)` without a guard;
+`routes/repositories.ts` parses `files_json` in the scope-preview endpoint. A legacy, corrupt, or
+hand-edited row throws and the global `onError` returns 500.
+**Impact:** one bad row breaks a run detail or a scope preview with no recovery or diagnostic.
+**Instead:** parse with a schema and fall back to a safe default; log a data-integrity event; add a
+repair/export path.
+
+### F-073 — Pack creation can leave an empty pack on partial failure
+
+**Severity:** S2
+**Evidence:** `product/worker/lib/packs.ts` `createPackVersion()` inserts the `packs` row first
+(when the slug is new or `forceNew` is set), then later runs `db.batch()` for the version, files,
+and pack update. There is no transaction spanning the pack insert and the version insert.
+**Impact:** if the batch fails (DB error, limits), an empty pack remains. `listPacks` inner-joins
+versions so it is invisible, but `findPackBySlug`/`uniqueSlug` still see it and it can block a
+name or produce a confusing version count.
+**Instead:** one transaction/batch for pack + version + files, or clean up the pack on failure;
+make the slug allocation idempotent.
+
+### F-074 — Setup and claim state writes are not atomic
+
+**Severity:** S2
+**Evidence:** `routes/setup.ts` writes `setup_session_hash` and `setup_session_expires` in two
+`setMeta()` calls; `routes/auth.ts` claims with four `setMeta()` calls (`owner_login`, `owner_id`,
+`owner_type`, `claimed_at`) plus `deleteMeta()`; `lib/github-app.ts` `storeGitHubApp()` does
+`DELETE FROM github_app` then `INSERT` as two statements. A failure between them leaves partial
+state.
+**Impact:** an instance can be half-claimed (login without owner id, or claimed without a usable
+app), with no reset endpoint. The operator must clear D1 to recover.
+**Instead:** `DB.batch()`/transaction for related meta writes; make claim idempotent; add a
+repair/diagnose command; never delete the app row before the replacement insert succeeds.
+
+### F-075 — Reviewer count and per-run fan-out are unbounded
+
+**Severity:** S2
+**Evidence:** `run-engine.ts` `stepConfig()` selects every enabled reviewer; `stepReview()` runs
+`Promise.allSettled` over all of them; `finishRun()` builds one `INSERT` per reviewer in a single
+`DB.batch`; there is no maximum reviewer count in the schema or API (only manual try runs cap at
+10).
+**Impact:** a large reviewer set fans out unbounded provider calls and spend, can hit provider
+rate limits, and produces a very large single `DB.batch` at finish. One noisy instance can starve
+itself.
+**Instead:** cap reviewers per run/repository (for example 20), enforce per-provider concurrency,
+chunk DB writes, and return a clear policy error when the cap is exceeded.
+
+### F-076 — Webhook and API bodies have no app-level size cap
+
+**Severity:** S2
+**Evidence:** `routes/webhooks.ts` reads `await c.req.text()` before JSON parsing; API routes such
+as `routes/packs.ts`, `routes/reviewers.ts` (import), and the setup routes call `c.req.json()`
+without a route-level limit. The platform has request limits, but the application does not enforce
+its own.
+**Impact:** a large or malicious body can consume memory/CPU before validation; the pack route is
+the most exposed because its schema allows up to 1,000 × 1 MB texts.
+**Instead:** a body-size middleware per route with an explicit 413 response; stream/parse with a
+cap; reject early; log the rejection without the body.
+
+### F-077 — Reviewer list query fans out to N×M rows
+
+**Severity:** S3
+**Evidence:** `product/worker/lib/reviewers.ts` `listReviewers()` runs
+`REVIEWER_REPOSITORIES_SQL`, which joins every enabled repository to every reviewer and then groups
+in memory. With many reviewers and repositories this returns a large intermediate set on every
+reviewer list, readiness check, and repository-reviewer save.
+**Impact:** dashboard latency and memory grow with the product of reviewers and repositories; the
+query is run even when only a name or id is needed.
+**Instead:** paginate the reviewer list, fetch the repository names only for the reviewers on the
+page, or use a per-reviewer aggregate (JSON array / `COUNT`) in one indexed query.
 
 ## The pattern behind the flaws
 

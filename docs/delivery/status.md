@@ -25,10 +25,13 @@ one phase `in progress`.
 - Cloned and studied `PrakashSewani/jury-forge-poc` at `1cc22b7` (final `dev` commit).
 - Read the PoC's product, architecture, design, decisions, development, roadmap, status, rework,
   tests, source, migrations, and CI.
+- Completed a second, code-level pass through the Worker routes, libs, run engine, D1 schema,
+  React data layer/UI, test suites, and scripts; the result is `docs/poc/code-review.md` and
+  twelve additional findings (F-066–F-077).
 - Created the knowledge base:
   - `docs/poc/` — overview, architecture, behaviour, deployment, data model, API, decisions,
-    testing, retrospective.
-  - `docs/analysis/` — flaw register (65 findings), risks, inherit/reject/rethink, open questions,
+    testing, retrospective, code review.
+  - `docs/analysis/` — flaw register (77 findings), risks, inherit/reject/rethink, open questions,
     assumptions.
   - `docs/product/` — vision, personas, principles, capabilities, scope, success metrics.
   - `docs/architecture/` — overview, components, data model, job pipeline, security, AI pipeline,
@@ -44,6 +47,10 @@ one phase `in progress`.
 
 - All files written and inspected for links and paths.
 - The PoC claims are cited to file/decision where practical; no PoC code was copied.
+- The deep code pass added F-066–F-077 with file/function evidence (start/alarm ordering, previous
+  findings from failed runs, pack request/zip limits, provider params, GitHub error mapping,
+  unguarded JSON, pack atomicity, setup/claim atomicity, unbounded receivers, body limits, N×M
+  reviewer query).
 - No product code, no dependencies, no secrets.
 
 **Blocked by:**

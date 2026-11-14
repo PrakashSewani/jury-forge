@@ -24,7 +24,13 @@ summary. This page records what was read and how to reproduce the study.
 - `.github/workflows/ci.yml`, `deploy.yml`
 - `product/`, `shared/`, `site/` package manifests and configuration
 
-## Code read (representative, not exhaustive)
+## Code read (deep pass)
+
+The first pass read the entry points, core libs, migrations, routes, tests, and docs. A second pass
+read the remaining implementation in full: the run engine step by step, pack analyzer and pack
+CRUD, reviewer scope and import/export, repository sync, settings/readiness, the React data layer
+and shell, the ZIP reader and pack upload, the workerd/UI test setup, and the deploy/seed/release
+scripts.
 
 - `product/worker/index.ts`, `middleware.ts`, `run-engine.ts`
 - `product/worker/lib/{access,activity,consolidate,context,crypto,github,github-app,instance,
@@ -33,12 +39,16 @@ summary. This page records what was read and how to reproduce the study.
 - `product/worker/routes/{auth,setup,webhooks,runs,reviewers,repositories,settings,packs}.ts`
 - `product/migrations/0001`–`0009`
 - `shared/src/{contracts,errors,index,templates}.ts`, `shared/src/schemas/*`
-- `product/src/App.tsx`, `product/src/lib/*`, `product/src/pages/*`, `product/src/shell/*`,
-  `product/src/ui/*` (spot-checked)
-- `product/test/*`, `product/test-ui/*` (spot-checked for coverage claims)
+- `product/src/App.tsx`, `product/src/lib/{api,router,use-resource,use-poll,zip,pack-upload,
+  wizard,theme}.ts`, `product/src/pages/*`, `product/src/shell/*`, `product/src/ui/*`
+- `product/test/*`, `product/test-ui/*`, `product/vitest*.config.ts`, `vite.config.ts`,
+  `tsconfig.*.json`
 - `scripts/{deploy-guided,seed-dev,release,measure-layout}.mjs`
 - `product/wrangler.jsonc`, `.dev.vars.example`
-- `site/src/pages/index.astro`, `site/wrangler.jsonc`
+- `site/src/pages/index.astro`, `site/wrangler.jsonc`, `site/astro.config.mjs`
+
+The code-level result is [`../poc/code-review.md`](../poc/code-review.md); the additional findings
+are F-066–F-077 in [`../analysis/flaws.md`](../analysis/flaws.md).
 
 ## Commands used
 
@@ -74,7 +84,11 @@ and the harness on the PoC if a claim is load-bearing for a decision.
 - Test counts and harness results are from the PoC's status file, not re-run.
 - The PoC's live instance at `jury.prakashsewani.com` was not accessed; the status file is the
   source.
-- Some UI files were spot-checked rather than read line by line; the flaws listed are
-  architectural or security-relevant, not cosmetic line-level issues.
+- Some UI files were read at the screen/hook level rather than every primitive line by line; the
+  flaws listed are architectural, security, correctness, or operability issues, not cosmetic
+  line-level nits.
+- The run engine and pack analyzer were read in full; no test was executed against the PoC during
+  the study, so the code-level defects are from static reading. Reproduce F-066/F-069/F-073 with a
+  test before relying on the exact failure mode.
 - Cloudflare plan limits, pricing, and product behaviour can change; verify them before relying on
   a constraint in a new ADR.

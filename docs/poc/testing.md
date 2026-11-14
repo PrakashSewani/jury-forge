@@ -63,9 +63,11 @@ fails.
 3. **Load, concurrency, and rate limits.** No test for many simultaneous webhooks, provider 429s,
    GitHub secondary rate limits, or queue backpressure.
 4. **Failure injection at the infrastructure boundary.** No test for a lost alarm, a D1 timeout
-   after a successful post, a Durable Object eviction, or a partial `finishRun`.
+   after a successful post, a Durable Object eviction, a partial `finishRun`, a `start()` that
+   persists the payload and then fails before scheduling the alarm, or a partial pack insert.
 5. **Security testing.** No prompt-injection suite, no SSRF tests, no authz matrix, no secret
-   scanning in prompts, no dependency review, no fuzzing of the zip/pack parser.
+   scanning in prompts, no dependency review, and no fuzzing of the zip/pack parser for
+   decompression bombs or request-size abuse.
 6. **Upgrade and migration testing.** No test that applies migrations to a populated database and
    verifies the old rows still render.
 7. **Restore/backup.** No backup/restore drill.
@@ -94,7 +96,8 @@ fails.
 2. **End-to-end tests** against a disposable GitHub test organisation and a local OpenAI-compatible
    stub server.
 3. **Fault-injection tests** for the job pipeline: duplicate delivery, worker crash mid-step,
-   publish succeeded but recording failed, cancelled run, expired lease.
+   publish succeeded but recording failed, cancelled run, expired lease, start-before-alarm
+   failure, partial pack insert, and a pack upload that exceeds the body cap before parsing.
 4. **Prompt-injection and exfiltration tests** as a first-class suite.
 5. **Load and soak tests** for webhook bursts, concurrent runs, and provider rate limits.
 6. **Migration tests** from the previous release's schema with representative data.
