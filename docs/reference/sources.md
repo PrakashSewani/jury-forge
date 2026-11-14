@@ -50,6 +50,31 @@ scripts.
 The code-level result is [`../poc/code-review.md`](../poc/code-review.md); the additional findings
 are F-066–F-077 in [`../analysis/flaws.md`](../analysis/flaws.md).
 
+## Live evidence (2026-11-14/15)
+
+The live instance at `https://jury.prakashsewani.com` was inspected **read-only** through the
+operator's authenticated Wrangler token. The queries were `SELECT`-only; no instance configuration
+was changed. The review evidence was cross-checked against the GitHub PR and the checked-out code
+at `152fef6`.
+
+Commands (representative):
+
+```bash
+cd jury-forge-poc-ref/product
+npx wrangler d1 execute jury-forge --remote --json --command \
+  "SELECT key, value FROM instance_meta ORDER BY key;"
+npx wrangler d1 execute jury-forge --remote --json --command \
+  "SELECT id, repo_id, pr_number, head_sha, event, mode, status, review_url, created_at, finished_at FROM runs ORDER BY created_at DESC LIMIT 50;"
+npx wrangler d1 execute jury-forge --remote --json --command \
+  "SELECT rr.run_id, r.mode, rr.reviewer_id, rr.status, rr.findings_json, rr.summary, rr.usage_json FROM run_reviewers rr JOIN runs r ON r.id = rr.run_id;"
+gh api repos/PrakashSewani/jury-forge-guinea-pig/pulls/3/reviews
+gh api repos/PrakashSewani/jury-forge-guinea-pig/pulls/3/comments
+```
+
+The full result is [`../poc/live-instance.md`](../poc/live-instance.md). No provider keys, session
+tokens, session hashes, or encrypted secrets were read or recorded. The only key-like value in the
+findings is the guinea pig's planted fake key.
+
 ## Commands used
 
 ```bash
@@ -90,5 +115,14 @@ and the harness on the PoC if a claim is load-bearing for a decision.
 - The run engine and pack analyzer were read in full; no test was executed against the PoC during
   the study, so the code-level defects are from static reading. Reproduce F-066/F-069/F-073 with a
   test before relying on the exact failure mode.
+- The live instance's dashboard could not be screenshotted: Cloudflare Access uses a Cloudflare
+  OAuth login, and the Playwright-controlled Brave profile failed the verification challenge. The
+  database is the stronger evidence, but the UI rendering of the current empty state was not
+  visually captured.
+- The live D1 was read through the operator's Wrangler OAuth token; the queries are listed above.
+  The Access application/policy could not be read through that token (`access/apps` empty,
+  `access/organizations` 403).
+- The live instance currently has no reviewers or enabled repositories; the only real review is
+  from 2026-10-19 and covers one PR. Do not treat it as a benchmark.
 - Cloudflare plan limits, pricing, and product behaviour can change; verify them before relying on
   a constraint in a new ADR.

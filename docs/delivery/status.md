@@ -28,6 +28,11 @@ one phase `in progress`.
 - Completed a second, code-level pass through the Worker routes, libs, run engine, D1 schema,
   React data layer/UI, test suites, and scripts; the result is `docs/poc/code-review.md` and
   twelve additional findings (F-066–F-077).
+- Captured the **live instance** read-only through D1: it is claimed and installed, with 47
+  repositories (0 enabled), 0 reviewers, and 25 runs (23 skipped, 1 completed auto, 1 completed
+  manual). Verified the only posted review (guinea-pig PR #3): 8/8 auto findings valid, 9/9 manual
+  findings valid, and one critical issue outside the diff. Recorded in
+  `docs/poc/live-instance.md`.
 - Created the knowledge base:
   - `docs/poc/` — overview, architecture, behaviour, deployment, data model, API, decisions,
     testing, retrospective, code review.
@@ -51,7 +56,11 @@ one phase `in progress`.
   findings from failed runs, pack request/zip limits, provider params, GitHub error mapping,
   unguarded JSON, pack atomicity, setup/claim atomicity, unbounded receivers, body limits, N×M
   reviewer query).
-- No product code, no dependencies, no secrets.
+- Live evidence: the only posted review's 8 findings all check out against the PR code; the same
+  Testing reviewer that failed with a provider 401 in the auto run succeeded in a manual try run
+  with 9 valid findings; the reviewers were later deleted, leaving only UUIDs in run history.
+- No product code, no dependencies, no secrets. The live queries were read-only; no instance
+  configuration was changed.
 
 **Blocked by:**
 
@@ -62,6 +71,11 @@ one phase `in progress`.
 
 The owner reviews the knowledge base and the proposed ADRs, answers the blocking open questions,
 and approves or amends the scope. Implementation does not start until G0 passes.
+
+**Next evidence (optional):** the live instance is currently unconfigured (0 reviewers, 0 enabled
+repositories). Enabling one repository and adding one reviewer with a key would produce a fresh
+run and a full dashboard state; it is not required for G0, but it would close the remaining live
+UI gap.
 
 ## G0 checklist
 

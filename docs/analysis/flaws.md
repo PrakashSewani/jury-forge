@@ -239,6 +239,9 @@ Make the cap configurable and estimate the cost of raising it.
 that reviewer immediately; `Promise.allSettled` turns it into a failed reviewer.
 **Impact:** transient provider errors lose a reviewer from the jury, and the summary notes a
 failure that a retry would have fixed.
+**Live evidence (2026-10-19):** In the only automatic run on the live instance, the Testing reviewer
+failed with `openai provider responded with status 401`; the operator updated the reviewer and
+re-ran it manually, where it completed with 9 valid findings. The auto review shipped without it.
 **Instead:** classify provider errors, honour `Retry-After`, retry with jitter, support per-provider
 circuit breakers, and only fail a reviewer after the retry budget is exhausted.
 
@@ -281,8 +284,11 @@ second-opinion reviewer and a confidence threshold before publish.
 **Severity:** S2
 **Evidence:** consolidation concatenates per-reviewer findings; the same issue from Security and
 Architecture becomes two comments. Contradictory advice is published as-is.
-**Impact:** noisy, repetitive reviews and an incoherent verdict. The "jury" is N independent
+**Impact:** noisy, repetitive reviews and an incoherent verdict. The “jury” is N independent
 reviewers, not a deliberating jury.
+**Live evidence (2026-10-19):** The manual Testing review re-reported four Security findings
+(`verifyExportLink`, `/admin/sweep` auth, the signing-key leak, and `writeExportFile` traversal).
+A two-reviewer automatic run would have duplicated them in one review.
 **Instead:** cluster findings by semantic similarity, merge duplicates with attribution, surface
 disagreements explicitly, and let a chair/consensus step decide the verdict.
 
@@ -324,6 +330,10 @@ upload API, store a content hash in every run, and budget in tokens.
 model, instructions hash, or prompt hash. `finishRun()` writes only the id and outcomes.
 **Impact:** rename or delete a reviewer and the run history is no longer self-explanatory. You
 cannot reproduce why a finding was produced or compare prompt versions.
+**Live evidence (2026-10-19 → 2026-10-25):** The live instance's only two reviewers (`Security` and
+`Testing`) were deleted six days after the one real review. `run_reviewers` retains only reviewer
+UUIDs and outcomes, so the model, name, instructions, and prompt behind the only posted review
+cannot be reconstructed from the instance.
 **Instead:** snapshot `name`, `model`, `provider`, `instructions_hash`, `rules_hash`, `prompt_hash`,
 and pack hashes per run. Keep the snapshot even if the reviewer is deleted.
 
@@ -518,6 +528,10 @@ generated deployment manifest.
 graph, dependency graph, or relevance ranking.
 **Impact:** the reviewer cannot see the callers, types, tests, or configuration that determine
 whether a change is correct. It reviews a patch in isolation.
+**Live evidence (2026-10-19):** The only posted review found 8/8 valid issues inside the PR patch,
+but `src/server.ts:78` (a direct signing-key leak from `/reports/export`) and the SQL injection in
+`src/exporter.ts` / `src/export/job.ts` were outside the changed hunks, so the reviewer never saw
+them. The miss is a context-boundary miss, not a model miss.
 **Instead:** a repository index (symbols, references, tests, configs), semantic retrieval, and a
 context planner that selects the most relevant files within a token budget.
 

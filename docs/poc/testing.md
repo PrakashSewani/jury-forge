@@ -29,6 +29,14 @@ handlers. No test performs real network calls.
   140 measured cells, asserting zero horizontal overflow, tap-target failures, contrast failures,
   or focus failures, plus a mobile-nav check.
 
+## Live evidence (2026-10-19)
+
+The PoC did have one real end-to-end run on the live instance, not only mocks: the auto review on
+`jury-forge-guinea-pig#3` posted 8 inline findings (one reviewer failed with a provider 401), and a
+manual try run of the failed reviewer produced 9 more findings without publishing. All 17 findings
+were checked against the PR code and are valid. This is evidence that the product loop works; it is
+not an automated test and it covers one PR. See [`live-instance.md`](live-instance.md).
+
 ## What was tested well
 
 - **Crypto:** round-trip, key-ring formats, rotation detection, legacy decryption.
@@ -54,12 +62,13 @@ fails.
 
 ## What was not tested
 
-1. **A real GitHub installation, end to end.** The status file says the live instance had no
-   reviewer and no first review when written. The setup flow and review post were exercised
-   against mocks and a seeded local state, not a real repository.
-2. **Real provider APIs.** Both adapters were tested against mocked `fetch`. No conformance run
-   against OpenAI, Anthropic, a gateway, or a local model. No test for provider-specific quirks,
-   streaming, tool calls, or structured-output modes.
+1. **A real GitHub installation, end to end.** The live instance exercised it once (2026-10-19),
+   but there is no automated end-to-end test and no disposable test organisation. See
+   [`live-instance.md`](live-instance.md).
+2. **Real provider APIs.** Both adapters were tested against mocked `fetch`. The live run did call a
+   real OpenAI-compatible provider and surfaced a 401, but there is no conformance suite against
+   OpenAI, Anthropic, a gateway, or a local model, and no test for streaming, tool calls, or
+   structured-output modes.
 3. **Load, concurrency, and rate limits.** No test for many simultaneous webhooks, provider 429s,
    GitHub secondary rate limits, or queue backpressure.
 4. **Failure injection at the infrastructure boundary.** No test for a lost alarm, a D1 timeout

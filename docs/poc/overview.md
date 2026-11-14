@@ -75,4 +75,5 @@ is better on the axes that matter:
 
 Read next: [`architecture.md`](architecture.md) for the component view,
 [`code-review.md`](code-review.md) for the module-by-module code structure and code-level
-defects, then [`../analysis/flaws.md`](../analysis/flaws.md) for what we will not repeat.
+defects, [`live-instance.md`](live-instance.md) for the real deployment and its verified review,
+then [`../analysis/flaws.md`](../analysis/flaws.md) for what we will not repeat.

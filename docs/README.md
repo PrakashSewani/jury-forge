@@ -20,6 +20,7 @@ written to be read by humans and agents. Start at the layer you need; do not rea
 - [`poc/overview.md`](poc/overview.md) — what the PoC is, its timeline, its promises.
 - [`poc/architecture.md`](poc/architecture.md) — components, runtime, data flow, run engine.
 - [`poc/code-review.md`](poc/code-review.md) — module-by-module code structure, technical decisions, and code-level defects.
+- [`poc/live-instance.md`](poc/live-instance.md) — the live deployment, its real run history, and the only posted review, verified against the PR code.
 - [`poc/behavior.md`](poc/behavior.md) — setup, auth, webhooks, review lifecycle, UI.
 - [`poc/deployment.md`](poc/deployment.md) — Cloudflare deployment, secrets, CI/CD, constraints.
 - [`poc/data-model.md`](poc/data-model.md) — every table, migration, and stored shape.
