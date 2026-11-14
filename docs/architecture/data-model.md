@@ -67,6 +67,37 @@ token/cost budgets, model allowlist, data policy, fork policy, suppression rules
 | `finding_feedback` | `finding_id`, `user_id`, `verdict` (`helpful`/`wrong`/`fixed`/`duplicate`), `reason`, `created_at` | The learning loop. |
 | `review_publications` | `id`, `run_id`, `forge`, `external_review_id`, `idempotency_key`, `status`, `published_at`, `error` | Exactly-once publish. |
 
+## Agentic sessions
+
+| Entity | Key fields | Notes |
+| ------ | ---------- | ----- |
+| `pr_sessions` | `id`, `org_id`, `installation_id`, `repository_id`, `pr_number`, `state`, `generation`, `lease_owner`, `lease_expires_at`, `last_turn_at`, `archived_at` | One per PR; `state` = created/active/waiting_for_user/resolved/archived. |
+| `session_threads` | `id`, `session_id`, `github_thread_id`, `file`, `line`, `created_by`, `state`, `resolved_by`, `resolved_at` | One per review-comment thread; bot-owned threads are the only ones the bot can resolve. |
+| `session_messages` | `id`, `session_id`, `thread_id`, `role`, `agent_version_id`, `github_comment_id`, `body`, `created_at` | `role` = user/agent/system/tool; append-only. |
+| `session_turns` | `id`, `session_id`, `trigger`, `generation`, `status`, `input`, `plan`, `output`, `cost_micros`, `started_at`, `finished_at` | Durable unit of work; serialized per session. |
+| `session_findings` | `id`, `session_id`, `thread_id`, `agent_run_id`, `file`, `line`, `severity`, `status`, `fingerprint`, `evidence` | `status` = open/addressed/verified/dismissed/resolved/reopened. |
+| `tool_calls` | `id`, `turn_id`, `agent_run_id`, `tool`, `input`, `output`, `tokens`, `latency_ms`, `status` | Bounded; read-only tools in v1. |
+| `resolutions` | `id`, `thread_id`, `actor_type`, `actor_id`, `evidence`, `confidence`, `created_at` | Bot resolution is guarded; human resolutions are recorded too. |
+| `agent_definitions` | `id`, `org_id`, `name`, `slug`, `role`, `created_at`, `archived_at` | Stable identity. |
+| `agent_versions` | `id`, `agent_id`, `version`, `status`, `instructions`, `rules`, `provider_id`, `model_id`, `params`, `tools`, `content_hash`, `activated_at` | Immutable once active; provider/model from the catalog only. |
+| `agent_scopes` | `id`, `agent_version_id`, `scope_type` (`repo`/`path`/`language`/`label`), `pattern`, `required` | Dynamic availability. |
+| `provider_models` | `id`, `provider_id`, `model_id`, `display_name`, `context_window`, `max_output`, `input_price`, `output_price`, `capabilities`, `source`, `status`, `last_seen_at` | Fetched from `/models`; enriched by the registry. |
+| `repo_indexes` | `id`, `org_id`, `repository_id`, `commit_sha`, `status`, `parser_version`, `built_at`, `stale_at` | One per indexed commit. |
+| `index_nodes` | `id`, `index_id`, `kind`, `key`, `path`, `symbol`, `summary`, `content_hash`, `metadata` | File/symbol/test/config/doc/owner/finding. |
+| `index_edges` | `index_id`, `from_id`, `to_id`, `kind`, `metadata` | imports/references/tests/owns/documents/relates_to. |
+| `context_manifests` | `id`, `turn_id`, `index_id`, `included`, `omitted`, `tokens`, `bytes`, `reasons` | What the model saw and why. |
+
+### Session invariants
+
+1. One `pr_sessions` row per `(installation_id, repository_id, pr_number)`.
+2. One active `session_turn` per session; the queue serializes by `session_id`.
+3. A `session_threads` row can be resolved only by its bot owner or a human; a bot resolution
+   requires a `resolutions` row with evidence and a prior human message.
+4. `agent_versions` reference a `provider_models` row; a removed model marks the agent
+   `configuration_error`.
+5. `repo_indexes` are derived and rebuildable; `index_nodes`/`index_edges` never store secrets.
+6. `context_manifests` are immutable and link to the turn's generation.
+
 ## Knowledge
 
 | Entity | Key fields | Notes |

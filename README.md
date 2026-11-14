@@ -26,8 +26,17 @@ Jury Forge starts again from the product, not from the deployment target:
 - **Self-hosted first.** Container-first, vendor-neutral, no managed-service requirement.
 - **Yours end to end.** Your infrastructure, your database, your object storage, your keys.
 - **Provider-agnostic.** OpenAI-compatible, Anthropic-compatible, and local model servers.
-- **A jury, not a slot machine.** Multiple specialist reviewers, grounded findings, explicit
+- **A jury, not a slot machine.** Multiple specialist agents, grounded findings, explicit
   disagreements, and a verdict you can audit.
+- **A conversation, not a comment.** Every PR gets a durable session; the author can reply, ask,
+  fix, and the jury responds with context alive. Only Jury Forge resolves its threads, after a
+  satisfactory response.
+- **Manual-first.** Ask on any PR in an installed account/org. No repo enable/disable toggles;
+  automatic review is opt-in config-as-code.
+- **Models you can actually use.** Add a provider key, fetch its model catalog, bind agents to
+  catalog models — no free-text model entry, keys encrypted.
+- **Diff-first with a memory.** Default reviews stay on the diff; full-repo reviews use an
+  incrementally updated repository knowledge graph so context is reused, not rebuilt.
 - **Open source, MIT.** Fork it, extend it, run it commercially, no open-core trap.
 
 ## What this repository contains today

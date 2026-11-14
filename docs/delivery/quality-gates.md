@@ -35,18 +35,20 @@ named reviewer) signs off. "Looks good" is not evidence.
 
 ## G1 — Walking skeleton
 
-- [ ] Stack ADRs accepted (runtime, deployment, storage, queue, auth).
+- [ ] Stack ADRs accepted (runtime, deployment, storage, queue, auth, harness).
 - [ ] A clean Linux host can install from the README in ≤ 60 minutes.
-- [ ] The app, worker, and scheduler start; `/healthz` and `/readyz` pass.
+- [ ] The app, worker, scheduler, Postgres, and UI start; `/healthz` and `/readyz` pass.
 - [ ] Migrations run; the schema version is reported.
-- [ ] A GitHub App can be created, installed, and verified; a repository can be enabled.
+- [ ] A GitHub App can be created, installed, and verified; no per-repo enable toggle is required.
+- [ ] A provider key is validated; `/models` is fetched; an agent binds to a catalog model (no free text).
 - [ ] A webhook is verified, persisted, and enqueued.
-- [ ] One reviewer calls one provider, parses a finding, and publishes one review.
-- [ ] The run, steps, findings, and publish are recorded and visible in the dashboard.
-- [ ] A duplicate delivery does not create a duplicate run.
-- [ ] A failed publish is retryable and idempotent.
-- [ ] `npm run check` (or the equivalent) passes; tests cover the happy path and the duplicate.
-- [ ] The PoC can be turned off; a real PR gets a review from the new stack.
+- [ ] Manual `/jury review` starts a session; one agent uses one tool and publishes one review.
+- [ ] A human reply resumes the session and produces a second agent response with prior context.
+- [ ] A guarded resolve works after a satisfactory reply; a new reply reopens.
+- [ ] Session, turn, tool call, finding, and publish records are visible in the timeline.
+- [ ] A duplicate delivery does not create a duplicate turn; a failed turn is retryable/idempotent.
+- [ ] `npm run check` (or the equivalent) passes; tests cover the happy path, duplicate, and resume.
+- [ ] The PoC can be turned off; a real PR gets a conversational review from the new stack.
 
 **Evidence:** a recorded install log, a run trace, a PR link, and the check output.
 
@@ -57,10 +59,16 @@ named reviewer) signs off. "Looks good" is not evidence.
 - [ ] Credential-to-origin binding; a key cannot be sent to an arbitrary URL.
 - [ ] Egress policy blocks private/loopback/link-local/metadata ranges; SSRF tests pass.
 - [ ] Secret/PII redaction is tested against a corpus; a pre-send manifest exists.
-- [ ] Prompt-injection corpus does not change the published verdict; trust labels and nonce
-      delimiters are in place.
+- [ ] Prompt-injection corpus does not change the published verdict or trigger a resolve; trust
+      labels and nonce delimiters are in place for diffs, comments, and replies.
 - [ ] Findings are grounded: file/line/evidence checks reject fabricated claims.
-- [ ] Audit events are written for every mutation and exportable.
+- [ ] The resolution guard rejects: bot-unauthored thread, no human response, no evidence, low
+      confidence; a positive path resolves and reopens correctly.
+- [ ] Provider keys are encrypted, write-only, origin-bound, rotatable; no copy-to-arbitrary-URL.
+- [ ] Model catalog calls are SSRF-safe; invalid keys store nothing.
+- [ ] Session turns are serialized; a reply during a turn coalesces; no parallel turns.
+- [ ] Rate limits and bot-loop protection (ignore self, mention/reply, debounce) are tested.
+- [ ] Audit events are written for every trigger, turn, tool call, model call, reply, and resolve.
 - [ ] Retention/deletion works and is tested.
 - [ ] Sessions can be revoked; sensitive actions require re-auth.
 - [ ] Security headers/CSP are present.
@@ -76,14 +84,18 @@ checklist.
 - [ ] Baseline measured (single strong model, and the PoC if feasible).
 - [ ] Precision ≥ target, recall ≥ target, false-positive rate ≤ target, grounding = 100% for
       inline findings.
-- [ ] Deduplication rate ≤ target; disagreement is surfaced.
+- [ ] Deduplication rate ≤ target; disagreement is surfaced; role overlap is measured.
 - [ ] Confidence is calibrated (precision per bucket).
 - [ ] Suggested fixes apply cleanly; no auto-apply.
-- [ ] Token and cost estimates are within X% of actual; budgets enforce.
-- [ ] Prompt/reviewer versioning, activation gates, rollback, and prompt hashes work.
-- [ ] Feedback capture works; reviewer scorecards exist.
-- [ ] The dogfood repository runs on itself and the team uses the reviews.
-- [ ] A prompt/model change without a benchmark is blocked by process.
+- [ ] Token and cost estimates are within X% of actual; budgets enforce per turn/session/repo.
+- [ ] Agent versioning, activation gates, rollback, run-time snapshots, and prompt hashes work.
+- [ ] The agent router selects by explicit/config/path/language/label and records why; skipped
+      agents are explained.
+- [ ] Diff-only is the default; `/jury full` builds/uses the graph with an estimate and cancel.
+- [ ] The repo graph updates incrementally; a second run reuses unchanged summaries and context.
+- [ ] Feedback capture works; agent/session scorecards exist.
+- [ ] The dogfood repository runs on itself and the team uses the sessions.
+- [ ] A prompt/model/agent change without a benchmark is blocked by process.
 
 **Evidence:** the benchmark scorecard, the dogfood report, and the cost report.
 

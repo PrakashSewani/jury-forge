@@ -199,7 +199,32 @@ full diffs into an issue.
 - Have a disclosure channel and an incident runbook.
 - Test restore and key rotation at least once per quarter.
 
-## 9. Runbooks to write
+## 9. Agentic operations
+
+- **Session janitor:** expire leases, recover stuck turns, archive merged/closed sessions, enforce
+  retention. A session must never be left `active` without a lease.
+- **Turn queue:** one active turn per session; coalesce replies; cancel stale generations; DLQ and
+  replay for failed turns.
+- **Provider catalog refresh:** daily and on demand; mark stale/removed models; surface affected
+  agents; never silently switch a bound model.
+- **Repository graph:** incremental update on every review/default-branch push; full rebuild on
+  parser upgrade or manual action; per-repo lock; stale badge.
+- **Resolution audit:** report bot resolutions, human resolutions, reopens, and false-resolve
+  feedback; investigate outliers weekly.
+- **Cost watches:** per-session/turn/repo budgets; alert on runaway loops and provider errors.
+- **Troubleshooting additions:**
+
+| Symptom | Likely cause | Fix |
+| ------- | ------------ | --- |
+| Session waits forever | Turn lease expired/janitor down | Check lease/heartbeat, reclaim, inspect turn. |
+| Agent answers an old commit | Stale generation/turn | Cancel stale turn; verify generation check. |
+| Same comment answered twice | Missing idempotency/debounce | Check event/delivery id, turn key, bot filter. |
+| Resolve refused | Guard failed (no human reply/evidence) | Inspect resolution guard reason; do not bypass. |
+| Model missing | Provider catalog refreshed | Rebind the agent from the catalog; check deprecation. |
+| Full review is slow/expensive | Graph cold or budget too high | Check index status, estimate, budget; rebuild or lower scope. |
+| Graph stale | Index job failed | Inspect index job, rebuild; review should warn, not silently use stale. |
+
+## 10. Runbooks to write
 
 - [ ] First install and first review.
 - [ ] Upgrade and rollback.
@@ -214,16 +239,20 @@ full diffs into an issue.
 - [ ] Data deletion request.
 - [ ] Migration failure.
 - [ ] Disk full / object storage failure.
+- [ ] Stuck session / turn backlog.
+- [ ] Agent resolution refused or wrong.
+- [ ] Model catalog refresh removed a model.
+- [ ] Repository graph rebuild / stale index.
 
 Each runbook: symptoms, impact, diagnosis, mitigation, verification, follow-up.
 
-## 10. What the PoC did
+## 11. What the PoC did
 
 The PoC had a guided deploy, migrations, CI/CD, and a troubleshooting table. It did not have
 backups, restore, upgrade/rollback, readiness, metrics, traces, a doctor command, a support bundle,
 or a runbook set. Those are table stakes for the new product.
 
-## 11. Operations principles
+## 12. Operations principles
 
 1. **No manual database edits.** Every operation has a command.
 2. **Back up before you change.** Automate it; test the restore.

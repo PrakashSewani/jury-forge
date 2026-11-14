@@ -60,11 +60,14 @@ ADRs and require the owner's approval; the boundaries below are the durable part
 | Service | Responsibility | First implementation |
 | ------- | -------------- | -------------------- |
 | **Web/API** | Auth, dashboard API, SPA, webhook ingress, admin endpoints | One container: API + static SPA |
-| **Review worker** | Consume jobs, run pipeline steps, call providers, publish | One container, N replicas |
-| **Indexer** | Build and refresh the repository index (symbols, imports, tests) | Same image, separate queue/worker type |
-| **Scheduler/janitor** | Lease expiry, retries, stuck-run recovery, retention, budgets | A worker loop or a scheduled job |
-| **PostgreSQL** | Durable state, queue (or an external queue), audit | Operator-managed or bundled |
-| **Object storage** | Raw diffs, model responses, reports, exports | Local volume or S3-compatible |
+| **Session service** | PR sessions, threads, messages, findings, turns, serialization | Part of the API/worker modules |
+| **Review worker** | Consume jobs, run turns/agents/tools, call providers, publish | One container, N replicas |
+| **Agent runtime** | Graph/loop, agent selection, tools, chair, guardrails | LangGraph.js or a thin turn runner (ADR-0010) |
+| **Provider gateway** | Model catalog, encrypted keys, provider calls, usage/cost | Shared module + worker calls |
+| **Indexer** | Build and incrementally update the repository graph | Same image, separate queue/worker type |
+| **Scheduler/janitor** | Lease expiry, retries, stuck-turn recovery, retention, budgets | A worker loop or a scheduled job |
+| **PostgreSQL** | Durable state, queue (or an external queue), audit, sessions, graph | Operator-managed or bundled |
+| **Object storage** | Raw diffs, model responses, reports, exports, graph blobs | Local volume or S3-compatible |
 | **Reverse proxy** | TLS, host routing, security headers | Caddy/Traefik/Nginx; optional built-in |
 
 A single-container "all-in-one" mode can bundle the web, worker, scheduler, and an embedded
@@ -72,21 +75,21 @@ Postgres-compatible store later, but the reference deployment is Compose with se
 
 ## Data flow
 
-### Review
+### Review (agentic session)
 
-1. GitHub sends a webhook. The web/API verifies the signature, persists a `webhook_event`, and
-   enqueues a `review.requested` job in one transaction (transactional outbox).
-2. A worker claims the job with a lease, creates a `run` with a generation number, and executes
-   the pipeline steps. Each step is idempotent and recorded in `run_steps`.
-3. The context step fetches the diff, the repository index, instructions, and knowledge packs. It
-   builds a token-budgeted plan.
-4. Reviewer steps call providers through the gateway. Raw responses go to object storage; parsed
+1. GitHub sends a webhook. The web/API verifies it, persists a `webhook_event`, and enqueues a
+   session turn in one transaction (transactional outbox).
+2. The session service loads/creates the PR session and thread; turns are serialized per session.
+3. The agent runtime plans, selects agents, and requests context from the graph, diff, instructions,
+   packs, and prior findings within a token budget.
+4. Agents call tools and providers through the gateway; raw responses go to object storage; parsed
    findings go to Postgres.
-5. The grounding/verification step checks every finding against the reviewed SHA.
-6. The jury step de-duplicates, resolves disagreement, and assigns confidence.
-7. The publish step creates one review (idempotency key = run id), records the review id, and
-   emits audit events.
-8. The run completes. The janitor cleans up leases and applies retention.
+5. Grounding verifies every finding at the generation SHA; the chair de-duplicates and resolves
+   disagreement.
+6. The writer replies in the thread/PR; the resolution guard may resolve a bot-owned thread after a
+   satisfactory human response.
+7. The turn completes; the session waits, resolves, or archives. The janitor cleans leases and
+   applies retention.
 
 ### Setup
 
@@ -94,7 +97,10 @@ Postgres-compatible store later, but the reference deployment is Compose with se
 2. A bootstrap token authorizes the first owner.
 3. The owner creates a GitHub App via the manifest flow; the app credentials are encrypted.
 4. The owner installs the app; the installation is discovered or explicitly selected.
-5. Repositories are imported; the owner enables them and defines a policy.
+5. Repositories are imported for policy display; there is **no repo enable toggle** for agentic
+   review. Automatic policy is config-as-code; manual review is available on installed repos.
+6. The owner adds a provider key; the server fetches the model catalog; agents bind to catalog
+   models only.
 
 ### Dashboard
 
@@ -103,6 +109,10 @@ validated against shared schemas. The SPA is static and cacheable; the API is th
 surface.
 
 ## Boundaries and invariants
+
+See [`agentic-review.md`](agentic-review.md) for the session/turn/routing/provider/graph architecture
+that extends this document. The original run/step pipeline remains the execution substrate; a turn
+is a durable unit within a session.
 
 - **Tenant boundary:** every row is scoped to an organisation/installation. A query without a
   tenant scope is a bug. The single-operator mode is a tenant with one member, not a special case.
@@ -137,6 +147,12 @@ surface.
 | Queue + worker job model | Proposed | ADR-0006 |
 | Token-aware context + retrieval | Proposed | ADR-0007 |
 | Roles + trust boundaries | Proposed | ADR-0008 |
+| Agent runtime harness | Proposed (spike) | ADR-0010 |
+| Provider/model discovery | Proposed | ADR-0011 |
+| PR sessions + agent-only resolution | Proposed | ADR-0012 |
+| Manual-first trigger + dynamic routing | Proposed | ADR-0013 |
+| Diff-first + incremental repo graph | Proposed | ADR-0014 |
 
-Read next: [`components.md`](components.md) → [`job-pipeline.md`](job-pipeline.md) →
-[`security.md`](security.md) → [`ai-pipeline.md`](ai-pipeline.md).
+Read next: [`agentic-review.md`](agentic-review.md) → [`components.md`](components.md) →
+[`job-pipeline.md`](job-pipeline.md) → [`security.md`](security.md) →
+[`ai-pipeline.md`](ai-pipeline.md).

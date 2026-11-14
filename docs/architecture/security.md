@@ -322,3 +322,24 @@ A `SECURITY.md` with a private disclosure channel is required before public laun
   threat model).
 - The default data policy for third-party providers (redact secrets only vs a stricter allowlist).
 - Whether prompt/response bodies are retained by default (privacy vs debuggability).
+
+## 15. Agentic sessions, providers, and resolution (2026-11-15)
+
+New attack surface and controls:
+
+| Threat | Control |
+| ------ | ------- |
+| Prompt injection in a user reply/comment | Untrusted-data labels, nonce delimiters, output validation; injection cannot trigger a resolve or a tool outside the allowlist. |
+| Premature/incorrect resolve | Server-side resolution guard: bot-owned thread, human response, evidence, verifier/confidence, summary, audit. |
+| Session hijack | Tenant/repo scoping, session authorization, short-lived tokens, audit; no session id in URLs without auth. |
+| Bot loop | Ignore self, mention/reply requirement, debounce/coalesce, turn/tool/rate limits. |
+| Provider key exfiltration | Envelope encryption, write-only, origin-bound, no copy-to-arbitrary-URL, re-auth for rotation. |
+| Model catalog SSRF | HTTPS, block private/loopback/link-local/metadata, origin binding, timeouts/size caps. |
+| Graph data leakage | Tenant/repo scoping, no secrets, retention/delete, access checks on tools. |
+| Runaway cost | Per-turn/session/repo budgets; stop before the next call; alert. |
+| Untrusted tool output | Tool results are data, not instructions; validate and bound. |
+| GitHub permission overreach | Least-privilege App permissions; installation-scoped tokens; verify reply/resolve mutations. |
+
+Resolution is an authorization decision, not a model output. The model may request it; the server
+guard decides. See [`agentic-review.md`](agentic-review.md) and
+[`../product/specs/agentic-review-sessions.md`](../product/specs/agentic-review-sessions.md).

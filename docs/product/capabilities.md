@@ -29,30 +29,32 @@ Status key: **Proven** (the PoC shipped a version), **Planned** (in the target p
 | Draft PR handling | Proven | Skip drafts. |
 | Webhook signature verification and de-duplication | Proven | Keep. |
 | Fork PR policy | Planned | Skip / restricted / approve; least privilege. |
-| Repository discovery and enablement | Proven | Manual refresh; add installation events. |
+| Repository discovery and enablement | Proven | Manual refresh; add installation events. No per-repo enable toggle for agentic review (ADR-0013). |
+| Manual review trigger (`/jury review`, label, UI) | Planned | Available on any PR in an installed repo; primary path. |
+| Automatic review policy (config-as-code) | Planned | `.jury-forge.yml`; default off; manual bypasses the allowlist. |
 | GitHub Checks / status / annotations | Planned | Gate merges, surface findings in CI. |
 | SARIF export | Planned | Feed security dashboards. |
 | GitHub Enterprise Server | Planned | Configurable API base; same App model where available. |
 | GitLab / Gitea / Bitbucket adapters | Deferred | Forge interface from day one. |
 | Monorepo / path-aware routing | Planned | Different reviewers and policies per path. |
 
-## 3. Reviewers and the jury
+## 3. Agents and the jury
 
 | Capability | Status | Notes |
 | ---------- | ------ | ----- |
-| User-defined reviewers (name, instructions, rules) | Proven | Keep. |
-| Per-reviewer model and provider binding | Proven | Keep. |
-| Multiple reviewers per run, in parallel | Proven | Keep; add limits and a deliberation stage. |
-| Reviewer templates | Proven | Seven starters; keep as local prefill. |
-| Reviewer versions and prompt diffs | Planned | Draft → active, rollback, prompt hash. |
-| Reviewer↔repository enablement (opt-out) | Proven | Keep. |
+| User-defined agents (name, instructions, rules) | Proven | Keep. |
+| Per-agent model and provider binding | Proven | Keep; model from the catalog only (ADR-0011). |
+| Multiple agents per turn, in parallel | Proven | Keep; add limits, routing, and a deliberation stage. |
+| Agent templates | Proven | Seven starters; keep as local prefill. |
+| Agent versions and prompt diffs | Planned | Draft → active, rollback, prompt hash, run snapshot. |
+| Dynamic agent availability (repo/path/language/label scope) | Planned | Router selects the jury; no per-repo enable toggle (ADR-0013). |
 | Path scope (include/exclude globs) | Proven | Keep; enforce at output. |
-| Reference context paths | Proven | Keep; add semantic retrieval. |
-| Cross-reviewer de-duplication and disagreement | Planned | The "jury" step. |
+| Reference context paths | Proven | Keep; add semantic retrieval and the repo graph. |
+| Cross-agent de-duplication and disagreement | Planned | The "jury" step. |
 | Chair / consensus verdict | Planned | Configurable; not every team wants it. |
 | Confidence and evidence per finding | Planned | Grounding and scoring. |
 | Suggested fixes (validated diff suggestions) | Planned | Never auto-merge. |
-| Reviewer marketplace | Out (v1) | Local templates and packs only. |
+| Agent marketplace | Out (v1) | Local templates and packs only. |
 
 ## 4. Context and code intelligence
 
@@ -99,7 +101,9 @@ Status key: **Proven** (the PoC shipped a version), **Planned** (in the target p
 | Publish modes (comment / request changes / check / label) | Partly proven | PoC has instance-wide blocking; make per-policy. |
 | Preview and edit before publish | Planned | For new prompts and sensitive repos. |
 | Suppression / known false positives | Planned | Per repo and per finding. |
-| Review threading and resolution | Planned | Respect GitHub conversation state. |
+| Review threading and resolution | Planned | Respect GitHub conversation state; only Jury Forge resolves its threads after a satisfactory reply (ADR-0012). |
+| Conversational PR sessions | Planned | Per-PR session, thread replies, context alive across days (ADR-0012). |
+| Agentic turn loop | Planned | Tools, grounding, verification, chair, budgets; not one LLM call. |
 | Notifications (Slack/email/webhook) | Planned | Run failures, budgets, digests. |
 
 ## 7. Policy and governance
@@ -125,6 +129,9 @@ Status key: **Proven** (the PoC shipped a version), **Planned** (in the target p
 | Streaming | Planned | Latency and UX. |
 | Tool use / function calling | Planned | Retrieval, verification, suggestions. |
 | Provider capability registry | Planned | Windows, prices, features, health. |
+| Provider model discovery | Planned | Fetch `/models` with the key; no free-text model input (ADR-0011). |
+| Model catalog + registry enrichment | Planned | Provider truth + context/prices/capabilities; unknown models flagged. |
+| Encrypted, write-only provider keys | Planned | Envelope encryption, origin binding, rotation, audit. |
 | Per-provider concurrency and rate limits | Planned | Protect the provider and the bill. |
 | Provider fallback / routing | Deferred | Per reviewer first; org-level later. |
 | Custom headers / Azure / gateways | Planned | Adapter config. |
@@ -161,15 +168,41 @@ Status key: **Proven** (the PoC shipped a version), **Planned** (in the target p
 | Fault-injection tests | Planned | Duplicate, crash, publish-then-fail, cancel. |
 | Security test suite (prompt injection, SSRF, authz) | Planned | First-class. |
 
-## 11. Owner-supplied capabilities
+## 11. Agentic sessions (owner directive, 2026-11-15)
 
-> **TBD.** The owner will provide the final capability list. Add rows here with a source (owner
-> message, date), a status, and a link to the spec. Do not implement a TBD capability from
-> inference.
+| Capability | Status | Notes |
+| ---------- | ------ | ----- |
+| Per-PR durable session | Planned | One session per PR; threads, messages, findings, turns, generations. |
+| User reply → agent response | Planned | GitHub review-comment/issue-comment events; debounce/coalesce; no parallel turns. |
+| Agent-only resolution | Planned | Guarded `resolve_thread`; evidence + human response; reopen on reply. |
+| Manual-first triggering | Planned | `/jury review`, label, UI; no repo enable toggle. |
+| Dynamic agent availability/router | Planned | Scope by repo/path/language/label; explicit request wins; record why. |
+| Diff-only default + full-repo review | Planned | `/jury full`; estimate; cancellable. |
+| Repository knowledge graph | Planned | Symbols/imports/tests/configs/docs/owners/findings; incremental updates. |
+| Context reuse across runs | Planned | Content-hash summaries; manifest; only changed files re-indexed. |
+| Session inbox / conversation UI | Planned | Timeline, agent activity, tool calls, findings, cost, resolve state. |
+| Dockerized backend + UI | Planned | Compose reference; Postgres/queue/object storage; no Cloudflare. |
+
+## 12. Owner-supplied capabilities
+
+> **2026-11-15:** the owner supplied the agentic-review capability set. The rows below are the
+> source; the specs and ADRs are the plan.
 
 | Capability | Source | Status | Spec |
 | ---------- | ------ | ------ | ---- |
-| _Pending owner input_ | — | TBD | — |
+| Agentic reviewer, not a single LLM call | Owner, 2026-11-15 | Planned | [`specs/agentic-review-sessions.md`](specs/agentic-review-sessions.md) |
+| Per-PR session with replies and live context | Owner, 2026-11-15 | Planned | [`specs/agentic-review-sessions.md`](specs/agentic-review-sessions.md) |
+| Manual trigger above all installed repos | Owner, 2026-11-15 | Planned | [`specs/agentic-review-sessions.md`](specs/agentic-review-sessions.md) |
+| Dynamic multi-agent availability | Owner, 2026-11-15 | Planned | [`specs/agentic-review-sessions.md`](specs/agentic-review-sessions.md) |
+| Provider model discovery, no free text | Owner, 2026-11-15 | Planned | [`specs/provider-model-discovery.md`](specs/provider-model-discovery.md) |
+| Encrypted provider keys | Owner, 2026-11-15 | Planned | [`specs/provider-model-discovery.md`](specs/provider-model-discovery.md) |
+| Only Jury Forge resolves conversations | Owner, 2026-11-15 | Planned | [`specs/agentic-review-sessions.md`](specs/agentic-review-sessions.md) |
+| Diff-only default; full-repo graph | Owner, 2026-11-15 | Planned | [`specs/repo-knowledge-graph.md`](specs/repo-knowledge-graph.md) |
+| Incremental graph update every run | Owner, 2026-11-15 | Planned | [`specs/repo-knowledge-graph.md`](specs/repo-knowledge-graph.md) |
+| Dockerized self-hosted backend + UI | Owner, 2026-11-15 | Planned | [`../architecture/deployment.md`](../architecture/deployment.md) |
+
+> **TBD.** The owner will supply further capabilities later. Add a row with the source and a spec;
+> do not implement a TBD capability from inference.
 
 ## How a capability becomes a feature
 

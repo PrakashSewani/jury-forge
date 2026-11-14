@@ -20,7 +20,7 @@ one phase `in progress`.
 
 **Branch:** `docs/poc-analysis-product-foundations`.
 
-**Done this session (2026-11-14):**
+**Done this session (2026-11-14/15):**
 
 - Cloned and studied `PrakashSewani/jury-forge-poc` at `1cc22b7` (final `dev` commit).
 - Read the PoC's product, architecture, design, decisions, development, roadmap, status, rework,
@@ -47,6 +47,15 @@ one phase `in progress`.
 - Wrote `README.md`, `AGENTS.md`, and the MIT `LICENSE`.
 - Added project skills under `.agents/skills/` and project agents under `.pi/agents/`, plus a
   chain prompt in `.pi/prompts/`.
+- **Capability intake (2026-11-15):** the owner shifted the product to an **agentic reviewer** with
+  per-PR sessions, manual-first triggering, dynamic multi-agent routing, provider/model discovery,
+  encrypted keys, diff-first + full-repo graph reviews, and agent-only resolution. Captured in:
+  - `docs/product/specs/agentic-review-sessions.md`
+  - `docs/product/specs/provider-model-discovery.md`
+  - `docs/product/specs/repo-knowledge-graph.md`
+  - `docs/architecture/agentic-review.md`
+  - `docs/decisions/ADR-0010` … `ADR-0014`
+  - `docs/product/capabilities.md`, `docs/product/scope.md`, `docs/delivery/roadmap.md`
 
 **Verified:**
 
@@ -64,13 +73,18 @@ one phase `in progress`.
 
 **Blocked by:**
 
-- The owner's final capability list (`docs/product/capabilities.md`, Q-001) for scope certainty.
-- The owner's decisions on deployment, storage, runtime, and tenancy (Q-002–Q-005, ADR-0003–0005).
+- The owner's further capability list (`docs/product/capabilities.md`, Q-001) — the 2026-11-15 set is
+  captured, but more may follow.
+- Owner decisions on the harness spike (Q-021), trigger surface (Q-022), resolution semantics
+  (Q-023), automatic policy (Q-024), graph languages (Q-025), and the existing deployment/storage/
+  runtime/tenancy questions (Q-002–Q-005).
 
 **Next action:**
 
-The owner reviews the knowledge base and the proposed ADRs, answers the blocking open questions,
-and approves or amends the scope. Implementation does not start until G0 passes.
+The owner reviews the agentic specs and ADRs, approves the harness spike (ADR-0010), the manual
+trigger/router (ADR-0013), the session/resolution model (ADR-0012), provider discovery (ADR-0011),
+and the incremental graph (ADR-0014). Implementation follows the G0 gate; the first build is the
+manual conversational walking skeleton.
 
 **Next evidence (optional):** the live instance is currently unconfigured (0 reviewers, 0 enabled
 repositories). Enabling one repository and adding one reviewer with a key would produce a fresh
@@ -79,9 +93,9 @@ UI gap.
 
 ## G0 checklist
 
-- [ ] Owner has read `docs/product/vision.md`, `scope.md`, and `analysis/flaws.md`.
-- [ ] Owner has answered Q-001–Q-005 (or recorded defaults).
-- [ ] Owner has approved or amended ADR-0001–0003.
+- [ ] Owner has read `docs/product/vision.md`, `scope.md`, the three specs, and `analysis/flaws.md`.
+- [ ] Owner has answered Q-001–Q-005 and Q-021–Q-028 (or recorded defaults).
+- [ ] Owner has approved or amended ADR-0001–0003 and the agentic ADRs 0010–0014.
 - [ ] Agent chain and skills are usable in the owner's harness.
 - [ ] No unresolved contradiction between docs.
 
@@ -98,6 +112,11 @@ UI gap.
 | ADR-0007 | proposed | Token-aware context + retrieval. |
 | ADR-0008 | proposed | Roles and trust boundaries. |
 | ADR-0009 | accepted (owner directive) | MIT licence, no CLA. |
+| ADR-0010 | proposed | Agent runtime harness: LangGraph.js spike, thin runner fallback. |
+| ADR-0011 | proposed | Provider/model discovery; no free-text model; encrypted keys. |
+| ADR-0012 | proposed | PR sessions and agent-only resolution. |
+| ADR-0013 | proposed | Manual-first triggering and dynamic agent routing. |
+| ADR-0014 | proposed | Diff-first review with an incremental repository graph. |
 
 ## How to update this file
 

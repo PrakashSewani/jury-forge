@@ -107,6 +107,10 @@ Every model used by the product is described by a registry entry:
 The registry is operator-overridable and versioned. Unknown models fail closed or use a
 conservative default with a warning.
 
+The live **provider catalog** is the source of which model IDs exist for a key; the registry only
+enriches metadata. An agent can bind only to a catalog entry (ADR-0011). See
+[`../product/specs/provider-model-discovery.md`](../product/specs/provider-model-discovery.md).
+
 ## 4. Token budgeting
 
 The planner computes, per reviewer:
@@ -397,3 +401,21 @@ decides whether to block a merge.
 - Do not run N reviewers on the same full prompt and call it a jury.
 - Do not optimise for "more findings"; optimise for accepted findings.
 - Do not ship a prompt change without the benchmark.
+
+## 18. Agentic session extension (2026-11-15)
+
+The pipeline above is the per-turn execution core. The product now adds a durable **PR session**
+and an **agent turn** on top:
+
+- A turn is triggered by a manual command, a human reply, a push, or config-as-code policy.
+- The agent plans, selects agents, uses read-only tools, grounds findings, and either replies,
+  asks a question, or resolves a bot-owned thread after a satisfactory human response.
+- The session keeps the conversation across turns and days; the graph keeps repository context
+  between turns and runs.
+- Diff-only is the default; full-repo review is explicit and graph-backed.
+- The harness/state model, routing, resolution guard, and data model are in
+  [`agentic-review.md`](agentic-review.md) and
+  [`../product/specs/agentic-review-sessions.md`](../product/specs/agentic-review-sessions.md).
+
+Do not implement the agentic loop as a single prompt call. The turn is a bounded loop with tools,
+and the session is the durable state.

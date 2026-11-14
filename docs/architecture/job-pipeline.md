@@ -195,3 +195,23 @@ The first implementation can use PostgreSQL as the queue (`SELECT … FOR UPDATE
 avoid an extra dependency. The job interface must not leak Postgres specifics, so Redis/BullMQ or
 another queue can replace it later. The contract is: enqueue, claim with lease, heartbeat, complete,
 fail, retry, dead-letter, cancel.
+
+## Session turns (2026-11-15)
+
+Agentic review adds session-scoped jobs on top of the queue:
+
+| Job | Trigger | Idempotency |
+| --- | ------- | ----------- |
+| `session.turn` | `/jury`, user reply, push, policy | `(session_id, generation, event_id)` |
+| `index.incremental` | review run, default-branch push | `(repo_id, sha)` |
+| `index.full` | manual rebuild / parser upgrade | `(repo_id, sha, parser_version)` |
+| `model.refresh` | schedule / manual | `(provider_id, day)` |
+| `session.archive` | merge/close / retention | `session_id` |
+
+- Turns are serialized per session; the queue must not deliver two active turns for one session.
+- A human reply during a running turn is queued and coalesced; it does not start a parallel turn.
+- A push advances the generation; stale turns are canceled or skipped before the next agent call.
+- The same lease/heartbeat/DLQ/cancellation rules apply; a turn is a job, not a process that lives
+  for days. The session row is the durable state.
+
+See [`agentic-review.md`](agentic-review.md).

@@ -6,7 +6,7 @@ non-goals. It will be revised when the owner provides the final capability list.
 ## v1: the first release
 
 **Goal:** a self-hosted, MIT-licensed GitHub PR review jury that a small team can install,
-operate, trust, and measure.
+operate, trust, and measure — with durable, conversational per-PR sessions, not one-shot reviews.
 
 ### In scope
 
@@ -19,39 +19,58 @@ operate, trust, and measure.
 2. **Connect**
    - GitHub App (manifest flow) for GitHub.com; GitHub Enterprise Server if the install spike is
      clean.
-   - Multiple installations per instance (one org per deployment is still the default).
-   - Repository discovery, enablement, and per-repo reviewer policy.
+   - Installation-level availability: manual review on any PR in an installed account/org, with no
+     per-repo enable toggle (ADR-0013).
+   - Config-as-code (`.jury-forge.yml`) for automatic review policy, agent scopes, and diff/full
+     mode; default `auto: false`.
+   - Repository discovery, policy display, and installation events; no webview enable/disable gate
+     for agentic review.
 
 3. **Review**
-   - User-defined reviewers with instructions, rules, model, provider, and parameters.
-   - Reviewer templates and versioned prompts (draft → active, rollback).
-   - Parallel execution with per-provider concurrency limits.
-   - Diff context, repository instructions, path scope, and reference context.
+   - Durable per-PR sessions: threads, messages, turns, findings, generations; replies resume with
+     context (ADR-0012).
+   - Manual first: `/jury review`, labels, and UI actions; automatic reviews only by policy.
+   - Multi-agent routing by explicit request, repo config, paths, languages, labels, and
+     availability (ADR-0013).
+   - User-defined agents with instructions, rules, provider/model binding, parameters, and scope.
+   - Agent versions, activation, rollback, and run-time snapshots.
+   - Parallel agent execution with per-provider concurrency limits.
+   - Diff-only by default; explicit full-repo review backed by an incrementally updated graph
+     (ADR-0014).
    - Knowledge packs with immutable versions, grants, and provenance.
    - Grounding: every inline finding must cite code that exists at the reviewed SHA.
-   - Cross-reviewer de-duplication and an optional consensus/chair step.
-   - One consolidated review with inline comments, overflow summary, and resolution buckets.
+   - Cross-reviewer de-duplication, disagreement, and a chair/consensus step.
+   - One consolidated response per turn; inline comments, overflow summary, and resolution state.
    - Per-finding confidence, evidence, and optional suggested fixes.
    - Publish policy: comment by default; request changes / check conclusion per repo policy.
-   - Preview/approve mode for new or sensitive reviewers.
+   - Preview/approve mode for new or sensitive agents.
    - Suppression rules and per-finding feedback.
+   - Guarded agent-only resolution: only Jury Forge resolves its threads after a satisfactory
+     human response; a new reply reopens.
 
-4. **Control**
+4. **Providers and models**
+   - Add a provider with base URL + key; validate and fetch `/models`; no free-text model entry
+     (ADR-0011).
+   - Model catalog enriched with context window, prices, capabilities; unknown models flagged.
+   - Encrypted, write-only, origin-bound, rotatable keys; per-provider health/refresh.
+   - CommandCode, OpenAI-compatible, Anthropic-compatible, and local model servers.
+
+5. **Control**
    - Roles: owner, admin, maintainer, viewer, auditor (scoped to installation/repo).
-   - Audit stream with export.
-   - Token and cost budgets with pre-run estimates and alerts.
-   - Data retention and deletion.
+   - Audit stream with export; every trigger, turn, tool call, model call, reply, and resolution.
+   - Token and cost budgets per session/turn/repo with estimates and alerts.
+   - Data retention and deletion for sessions, messages, graph, and raw responses.
    - Secret redaction before prompts leave the perimeter.
-   - Egress policy and key-to-provider binding.
+   - Egress policy and key-to-provider binding; resolution guard.
 
-5. **Measure**
+6. **Measure**
    - An evaluation benchmark of labelled PRs with precision/recall, acceptance, and false-positive
      metrics.
-   - Per-reviewer scorecards.
+   - Per-agent scorecards and session outcomes.
    - OpenTelemetry traces, Prometheus metrics, structured logs, and cost/latency dashboards.
    - A dogfood repository that runs the product on itself.
 
-6. **Deliver**
+7. **Deliver**
    - MIT licence, `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`.
    - Signed container images, SBOM, changelog, and SemVer releases.
    - Documentation for install, upgrade, backup, security model, and troubleshooting.
@@ -62,6 +81,8 @@ operate, trust, and measure.
 | ------------ | --- | ------- |
 | Auto-fix / auto-merge | Human judgment stays in the loop; risk is too high. | After suggested fixes are proven and there is a strong safety model. |
 | Code generation / agentic coding | Different product; dilutes the wedge. | Not planned. |
+| Arbitrary agent code execution / shell tools | Too risky for a review product in v1. | Sandboxed static analysis later. |
+| A graph database as a required dependency | Postgres adjacency is enough for v1. | Revisit at large graph scale. |
 | Multi-forge (GitLab/Gitea/Bitbucket) | GitHub first; the adapter interface is designed for later. | v1.1+ based on demand. |
 | Kubernetes/Helm as the primary install | Compose is the reference; K8s is a later adapter. | After Compose operations are solid. |
 | A hosted SaaS with customer code | Contradicts the privacy thesis. | A demo instance only. |
@@ -79,15 +100,17 @@ release.
 
 ### MVP (the walking skeleton)
 
-- Compose install with Postgres and one worker.
-- GitHub App setup and one repository.
-- One reviewer, one provider, one prompt.
-- Webhook → fetch diff → call model → parse → post one review.
-- A run record, a basic dashboard, and a health check.
+- Compose install with Postgres, one worker, and one UI.
+- GitHub App setup and installation-level availability (no repo toggle).
+- Provider add → `/models` discovery → one agent bound to a catalog model.
+- Manual `/jury review` on a PR → diff context → agent turn with one tool → one posted review.
+- A user reply in the thread → a second turn with the session context alive.
+- Guarded resolve after a satisfactory reply; a new reply reopens.
+- Session/turn/tool-call records, a basic session timeline, and health/readiness.
 - A deterministic test suite and a clean-machine install test.
 
-The MVP is deliberately small. It proves that the new runtime and the pipeline can replace the PoC
-end to end. It does **not** prove the quality thesis; the next milestone does.
+The MVP proves the **agentic loop and the self-hosted runtime**, not the quality thesis. It must
+include the session/reply/resolve path; a one-shot review is not the product.
 
 ### v1
 

@@ -98,6 +98,31 @@ code.
 
 **Tie-breaker:** choose the option that a new maintainer can understand from the repository.
 
+## 13. Conversation is first-class
+
+A review is a conversation, not a comment. A PR gets a durable session; a reply resumes the
+context; the agent can ask, verify, and resolve. A one-shot response is a fallback, not the
+product.
+
+**Tie-breaker:** choose the design that keeps the conversation coherent over the one that makes a
+single turn cheaper.
+
+## 14. Manual-first, automation opt-in
+
+The human decides when the jury is summoned. Any PR in an installed repo can be reviewed on
+request; automatic review is config-as-code, not a hidden default. No per-repo enable toggle should
+stand between a user and a review.
+
+**Tie-breaker:** choose the path that gives the user control now and lets them opt into automation
+later.
+
+## 15. Discover models, don't type them
+
+The provider is the source of truth for the models a key can use. The product fetches the catalog
+and binds agents to real entries; it never asks a human to type a model name.
+
+**Tie-breaker:** choose live provider truth over a static list or free-text input.
+
 ## How to use these principles
 
 - In a spec, name the principles the design serves.

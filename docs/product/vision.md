@@ -2,9 +2,10 @@
 
 ## The short version
 
-Jury Forge is a **self-hosted AI code-review jury** for teams that will not send their code to
-someone else's review SaaS. You run it on your infrastructure, connect your own model keys, define
-the reviewers you want, and get one grounded, auditable verdict on every pull request.
+Jury Forge is a **self-hosted, agentic AI code-review jury** for teams that will not send their
+code to someone else's review SaaS. You run it on your infrastructure, connect your own model keys,
+define the reviewers you want, and get a grounded, auditable review on every pull request — with a
+conversation that stays alive as the author replies, fixes, and asks questions.
 
 ## The problem
 
@@ -32,7 +33,22 @@ understand the change → gather the right context → run specialist reviewers
 ```
 
 The PoC proved the interface — a jury of configurable reviewers, one consolidated review, BYOK,
-self-hosted. It did not build the pipeline. Jury Forge will.
+self-hosted. It did not build the pipeline, and it treated the review as a one-shot prompt.
+
+Jury Forge makes the review **conversational and agentic**: a durable session per PR, specialist
+agents with tools, a repository knowledge graph, and a resolution protocol that only closes a
+thread when the author's response actually satisfies the finding.
+
+```
+manual ask / reply / push
+  → PR session
+  → router selects agents
+  → agents use tools + repo graph
+  → ground + verify + chair
+  → reply in the thread
+  → human responds
+  → verify + resolve (or ask again)
+```
 
 ## The wedge
 

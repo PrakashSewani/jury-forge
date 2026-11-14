@@ -9,12 +9,15 @@ the server process for v1.
 | Seam | Interface | Default | Replaceable by |
 | ---- | --------- | ------- | -------------- |
 | Forge | `ForgeAdapter` | GitHub | GHES, GitLab, Gitea, Bitbucket |
-| Provider | `ProviderAdapter` | OpenAI-compatible, Anthropic-compatible | Gateways, local servers, new vendors |
+| Provider | `ProviderAdapter` | OpenAI-compatible, Anthropic-compatible, CommandCode | Gateways, local servers, new vendors |
+| Model catalog | `ModelCatalog` | Provider `/models` + registry | Signed manifest, curated catalog |
+| Agent runtime | `AgentRuntime` | LangGraph.js or thin turn runner | Another harness behind the session contract |
 | Queue | `JobQueue` | PostgreSQL `SKIP LOCKED` | Redis/BullMQ, SQS, RabbitMQ |
 | Object storage | `ArtifactStore` | Local volume | S3-compatible |
 | Identity | `IdentityProvider` | GitHub OAuth | OIDC/SSO, SAML via a proxy |
 | Notification | `Notifier` | Webhook + email | Slack, Teams, PagerDuty |
-| Context source | `ContextProvider` | Diff + index + packs | New index types, external knowledge |
+| Context source | `ContextProvider` | Diff + repo graph + packs | New index types, external knowledge |
+| Repository graph | `KnowledgeGraph` | Postgres adjacency | Graph DB, external index |
 | Policy | `PolicyEngine` | Built-in schema/DSL | Custom rules, external policy service |
 
 Each seam has a conformance test suite. An adapter that does not pass is not supported.

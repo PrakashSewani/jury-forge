@@ -75,6 +75,38 @@ The full result is [`../poc/live-instance.md`](../poc/live-instance.md). No prov
 tokens, session hashes, or encrypted secrets were read or recorded. The only key-like value in the
 findings is the guinea pig's planted fake key.
 
+## Harness and provider research (2026-11-15)
+
+For the agentic pivot, the harness and provider options were checked live rather than from memory:
+
+```bash
+npm view @langchain/langgraph version license
+npm view @langchain/langgraph-checkpoint-postgres version license
+npm view @openai/agents version license
+npm view ai version license
+npm view @temporalio/workflow version license
+npm view @mastra/core version license
+npm view @restatedev/restate-sdk version license
+npm view inngest version license
+gh api repos/mastra-ai/mastra/license
+gh api repos/restatedev/restate/license
+gh api repos/inngest/inngest/license
+```
+
+Results that matter:
+
+- LangGraph.js 1.7.4 — MIT; Postgres checkpointer 1.1.3 — MIT.
+- OpenAI Agents SDK 0.22.0 — MIT.
+- Vercel AI SDK 7.0.173 — Apache-2.0 (repository license file).
+- Temporal TypeScript SDK 1.25.0 — MIT (server operations are heavier).
+- Mastra core 1.83.0 — Apache-2.0 with `ee/` portions under a commercial licence; open-core risk.
+- Restate — BSL 1.1; Inngest — SSPL. Neither is acceptable for an MIT core.
+- CommandCode's provider package exposes `/v1/models` and `/provider/v1/models`; its cached model
+  list includes OpenAI/Anthropic/Google/Qwen/MiniMax/DeepSeek families. The API key was not used
+  for this research.
+
+See ADR-0010 and ADR-0011 for the resulting recommendations.
+
 ## Commands used
 
 ```bash

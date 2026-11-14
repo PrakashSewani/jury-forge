@@ -46,10 +46,14 @@ written to be read by humans and agents. Start at the layer you need; do not rea
 - [`product/scope.md`](product/scope.md) — in, out, and deferred.
 - [`product/success.md`](product/success.md) — what "better than the PoC" means, measurably.
 - [`product/specs/`](product/specs/) — one spec per approved capability (template and index).
+  - [`agentic-review-sessions.md`](product/specs/agentic-review-sessions.md) — per-PR sessions, manual triggers, routing, resolution.
+  - [`provider-model-discovery.md`](product/specs/provider-model-discovery.md) — provider keys, `/models`, catalog, no free text.
+  - [`repo-knowledge-graph.md`](product/specs/repo-knowledge-graph.md) — diff-first + full-repo graph, incremental updates.
 
 ### 4. Architecture
 
 - [`architecture/overview.md`](architecture/overview.md) — the target system in one page.
+- [`architecture/agentic-review.md`](architecture/agentic-review.md) — PR sessions, turns, agent harness, routing, resolution, provider/graph integration.
 - [`architecture/components.md`](architecture/components.md) — services, responsibilities, boundaries.
 - [`architecture/data-model.md`](architecture/data-model.md) — target entities and storage choices.
 - [`architecture/job-pipeline.md`](architecture/job-pipeline.md) — webhook to verdict, reliably.

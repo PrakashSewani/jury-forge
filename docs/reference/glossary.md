@@ -50,3 +50,20 @@ Shared vocabulary. When a term is ambiguous, this page wins.
 | **Verdict** | The run's overall outcome: comment, request changes, approve, or needs human judgment. |
 | **Webhook event** | A persisted, verified forge delivery; idempotent and replayable. |
 | **Worker** | A stateless process that claims jobs and executes steps. |
+| **Agent** | The target-product reviewer: a versioned configuration with role, instructions, tools, provider/model binding, and scope. |
+| **Agent version** | An immutable agent configuration (prompt, model binding, tools, scope); a turn references it. |
+| **Agent router** | Selects agents for a turn from explicit requests, repo config, path/language/label scope, availability, and budget; records why. |
+| **PR session** | The durable conversation for one PR: threads, messages, findings, turns, generations. |
+| **Thread** | A GitHub review-comment conversation; the unit the bot can reply to and resolve. |
+| **Turn** | One bounded agent execution triggered by a command, reply, push, or policy; serialized per session. |
+| **Resolution guard** | The server-side check that allows only a bot-owned thread with a human response and evidence to be resolved. |
+| **Model catalog** | The provider-fetched list of models available to a key. |
+| **Model registry** | A versioned catalogue that enriches model IDs with context window, prices, and capabilities. |
+| **Provider model** | A catalog entry bound to a provider credential; the only valid model value for an agent. |
+| **Repository knowledge graph** | The derived symbol/import/test/config/doc/finding graph used for context and full-repo review. |
+| **Incremental index** | A graph update that re-parses only changed files and their reverse dependencies, reusing content-hash summaries. |
+| **Full review** | An explicit review that uses the repository graph, not only the diff. |
+| **Diff review** | The default review that uses the PR diff plus targeted graph context. |
+| **Manual trigger** | A human command/label/UI action that starts a review on any PR in an installed repo. |
+| **Config-as-code** | `.jury-forge.yml` or `.github/jury-forge.yml`; opt-in automatic review policy and agent scopes. |
+| **Harness** | The library/runtime that manages agent state, loops, tools, and human-in-the-loop (LangGraph.js or a thin turn runner). |

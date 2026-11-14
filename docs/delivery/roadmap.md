@@ -26,20 +26,25 @@ architecture, and approved the scope and principles.
 
 ## Phase 1 — Foundation and walking skeleton
 
-**Goal:** prove the new runtime can replace the PoC end to end with a minimal review.
+**Goal:** prove the self-hosted runtime with a manual, diff-only, one-agent review **and a persisted
+conversation** — not a one-shot review.
 
 **Deliverables:**
 
-- Stack ADRs accepted: runtime, deployment, storage, queue, auth.
+- Stack ADRs accepted: runtime, deployment, storage, queue, auth, agent harness (ADR-0010).
 - Repository structure and the one-command check.
 - Compose install (app, worker, scheduler, Postgres) with migrations and a bootstrap admin.
 - Shared contracts (schemas), error taxonomy, OpenAPI generation.
-- GitHub App setup, webhook ingress, queue, one reviewer, one provider, one review publish.
-- Run/step/finding records, a basic dashboard, health/readiness, structured logs.
+- Provider onboarding: key validation, `/models` discovery, encrypted storage, catalog (ADR-0011).
+- GitHub App setup, webhook ingress, queue, manual `/jury review` on an installed repo.
+- One agent bound to a catalog model; diff-only context; one review publish.
+- Per-PR session, one thread reply, and a guarded resolve after a human reply (ADR-0012).
+- Session/turn/tool-call/finding records, a basic session timeline, health/readiness, logs.
 - A clean-machine install test and a deterministic test suite.
 
-**Exit gate (G1):** a new operator installs on a clean Linux host, connects a test repository,
-opens a PR, and sees one review posted. The PoC can be turned off.
+**Exit gate (G1):** a new operator installs on a clean Linux host, adds a provider key, sees the
+model catalog, triggers `/jury review` on a test PR, replies to the thread, gets a second agent
+response, and sees a guarded resolve. The PoC can be turned off.
 
 ## Phase 2 — Trust and security
 
@@ -48,10 +53,12 @@ opens a PR, and sees one review posted. The PoC can be turned off.
 **Deliverables:**
 
 - Roles, memberships, scopes, authorization matrix and tests.
-- Credential-to-origin binding, egress policy, SSRF defenses.
+- Credential-to-origin binding, egress policy, SSRF defenses; provider key encryption/rotation.
 - Secret/PII redaction and a pre-send manifest.
 - Trust-labelled prompts, nonce delimiters, output validation.
-- Audit stream with export; retention and deletion.
+- Prompt-injection defenses for **user replies and PR comments**, not only diffs.
+- Resolution guard: bot-owned thread, human response, evidence, verifier, audit (ADR-0012).
+- Audit stream with export; retention and deletion for sessions/messages/graph.
 - Preview/approve mode; suppression rules.
 - Session revocation, re-auth for sensitive actions, security headers.
 - Prompt-injection and SSRF test suites.
@@ -66,14 +73,18 @@ red-team exercise finds no S1 issues.
 
 **Deliverables:**
 
-- Repository index: symbols, imports, tests, configs, ownership.
-- Token-aware context planner with a manifest and cost estimate.
+- Repository knowledge graph: symbols, imports, references, tests, configs, ownership; incremental
+  update on every review run and default-branch push (ADR-0014).
+- Token-aware context planner with a manifest and cost estimate; context reuse via content hashes.
+- Multi-agent router: explicit request > repo config > path/language/label scope > availability;
+  record why each agent ran or was skipped (ADR-0013).
+- Diff-only default; explicit full-repo review with estimate/cancel.
 - Structured output, repair, grounding, verification, confidence.
 - Deduplication, disagreement, optional chair/consensus.
 - Suggested fixes with patch validation.
 - Evaluation benchmark (golden PRs, metrics, scorecards).
-- Prompt/reviewer versioning, activation gates, rollback.
-- Feedback capture and reviewer scorecards.
+- Agent versioning, activation gates, rollback, run-time snapshots.
+- Feedback capture and agent scorecards.
 - Knowledge-pack retrieval (not wholesale injection).
 
 **Exit gate (G3):** the benchmark beats the baseline on precision, recall, grounding, and
@@ -133,9 +144,9 @@ Ordered by expected demand, not committed:
 | Milestone | Phase | Proves |
 | --------- | ----- | ------ |
 | M0 | 0 | We agree on the product and the architecture. |
-| M1 | 1 | The new runtime can replace the PoC. |
-| M2 | 2 | A real team can use it safely. |
-| M3 | 3 | The jury is measurably better. |
+| M1 | 1 | The self-hosted runtime can do a manual, conversational review. |
+| M2 | 2 | A real team can use the sessions/providers safely. |
+| M3 | 3 | The jury/router/graph are measurably better. |
 | M4 | 4 | An operator can run it. |
 | M5 | 5 | It is a product, not a project. |
 
@@ -162,6 +173,8 @@ starts at M1 (install, health, logs) and hardens at M4.
 - The benchmark may show that a code index is not worth the cost; then Phase 3 focuses on
   grounding and consensus instead.
 - A security review may force an earlier trust/security phase.
+- The harness spike (ADR-0010) may choose a thin turn runner instead of LangGraph.js; that changes
+  Phase 1 implementation, not the product contract.
 
 See [`status.md`](status.md) for the live state and [`quality-gates.md`](quality-gates.md) for the
 gate checklists.

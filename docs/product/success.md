@@ -10,6 +10,20 @@ suppressed, or edited into irrelevance by the operator.
 
 This is deliberately not "reviews generated". A review nobody trusts is noise.
 
+## Conversation and session metrics
+
+| Metric | Definition | v1 target |
+| ------ | ---------- | --------- |
+| Time to first reply | Trigger → first agent reply | ≤ 60 s p50, ≤ 3 min p95 |
+| Time to resolution | First review → thread resolved | ≤ 2 human turns median |
+| Turns per session | Agent turns before resolve/archive | ≤ 5 median |
+| False-resolve rate | Resolved threads a human reopens or disputes | ≤ 2% |
+| Reopen rate | Resolved threads reopened | ≤ 5% |
+| Context reuse | Turns using cached graph summaries / total turns | ≥ 60% |
+| Agent selection override | Manual agent choice vs router choice | ≤ 20% |
+| Model catalog freshness | Providers refreshed in the last 24h | 100% |
+| Session cost | Provider cost per session | Visible; within budget |
+
 ## Quality metrics
 
 Measured on a labelled benchmark and on dogfood runs.

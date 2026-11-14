@@ -188,3 +188,18 @@ A change is done when all of the following are true:
 - 2026-11-14: The owner wants flaws found and documented, not softened.
 - 2026-11-14: The owner will provide final product capabilities later; do not invent them.
 - 2026-11-14: Use a chain of specialist agents that hand off through documents and stay in sync.
+- 2026-11-15: The product is an **agentic reviewer**, not a single LLM call. Every PR gets a
+  durable session; comments and replies keep context alive; the bot resolves its own threads after
+  a satisfactory human response.
+- 2026-11-15: **Manual-first.** Any PR in an installed account/org can be reviewed on request; no
+  per-repo enable/disable toggle. Automatic review is opt-in config-as-code. Agents have dynamic
+  repository/path/language/label scopes; the router explains who ran and why.
+- 2026-11-15: **Provider/model discovery is mandatory.** Add a provider key, fetch `/models`, bind
+  agents only to catalog models. No free-text model entry. Keys are encrypted, write-only, and
+  origin-bound.
+- 2026-11-15: **Diff-only by default.** Full-repo review is explicit and backed by an incrementally
+  updated repository knowledge graph; context is reused, not rebuilt every run.
+- 2026-11-15: The backend and UI must be **Dockerized and self-hostable**. Never introduce a
+  Cloudflare or managed-service requirement.
+- 2026-11-15: Harness candidates require MIT/Apache-compatible licences. No BSL/SSPL/open-core
+  dependency in the core; see ADR-0010.
