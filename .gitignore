@@ -1,0 +1,42 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Secrets and local config
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+.dev.vars
+
+# Node / build output
+node_modules/
+dist/
+build/
+out/
+coverage/
+*.tsbuildinfo
+.vite/
+
+# Logs and runtime
+*.log
+logs/
+tmp/
+.cache/
+
+# Local databases and artefacts
+*.sqlite
+*.sqlite3
+*.db
+data/
+backups/
+
+# Test / tool output
+playwright-report/
+test-results/
+.harness/
