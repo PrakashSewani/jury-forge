@@ -47,6 +47,9 @@ Status key: **Proven** (the PoC shipped a version), **Planned** (in the target p
 | Multiple agents per turn, in parallel | Proven | Keep; add limits, routing, and a deliberation stage. |
 | Agent templates | Proven | Seven starters; keep as local prefill. |
 | Agent versions and prompt diffs | Planned | Draft → active, rollback, prompt hash, run snapshot. |
+| Reviewer catalog + approval | Planned | Org catalog; SME drafts/owns, admin approves; maintainer binds approved (ADR-0016). |
+| Per-repo reviewer bindings | Planned | Required/optional, path/language/label scope, budget; no binding = not available. |
+| No-reviewers / no-match fallback | Planned | Comment with setup/retrigger; never a misleading clean review. |
 | Dynamic agent availability (repo/path/language/label scope) | Planned | Router selects the jury; no per-repo enable toggle (ADR-0013). |
 | Path scope (include/exclude globs) | Proven | Keep; enforce at output. |
 | Reference context paths | Proven | Keep; add semantic retrieval and the repo graph. |
@@ -112,7 +115,7 @@ Status key: **Proven** (the PoC shipped a version), **Planned** (in the target p
 | ---------- | ------ | ----- |
 | Instance settings with bounds | Proven | Keep. |
 | Per-repository / branch policy | Planned | Severity thresholds, publish mode, budgets, required reviewers. |
-| Roles and membership | Planned | Owner/admin/maintainer/viewer/auditor; scoped. |
+| Roles and membership | Planned | Owner/admin/**SME**/maintainer/member/viewer/auditor; scoped to org/repo/domain. |
 | Audit trail | Proven (basic) | Replace with append-only audit + export. |
 | Data retention and deletion | Planned | Per data class; export/delete. |
 | Approval workflow for prompt changes | Planned | Four-eyes for security reviewers. |
@@ -175,7 +178,9 @@ Status key: **Proven** (the PoC shipped a version), **Planned** (in the target p
 | Per-PR durable session | Planned | One session per PR; threads, messages, findings, turns, generations. |
 | User reply → agent response | Planned | GitHub review-comment/issue-comment events; debounce/coalesce; no parallel turns. |
 | Agent-only resolution | Planned | Guarded `resolve_thread`; evidence + human response; reopen on reply. |
-| Manual-first triggering | Planned | `/jury review`, label, UI; no repo enable toggle. |
+| Manual-first triggering | Planned | `jury:review`/`jury:context` labels + Check Run actions; slash command/UI fallback; no repo enable toggle. |
+| Reviewer catalog + repo bindings | Planned | Required/optional reviewers per repo; SME-owned/approved catalog; admin/maintainer bind (ADR-0016). |
+| No-reviewers fallback | Planned | Comment with setup/retrigger; no review posted. |
 | Dynamic agent availability/router | Planned | Scope by repo/path/language/label; explicit request wins; record why. |
 | Diff-only default + context review | Planned | `/jury context`; estimate; cancellable. |
 | Repository knowledge graph | Planned | Symbols/imports/tests/configs/docs/owners/findings; incremental updates. |
@@ -194,6 +199,9 @@ Status key: **Proven** (the PoC shipped a version), **Planned** (in the target p
 | Per-PR session with replies and live context | Owner, 2026-11-15 | Planned | [`specs/agentic-review-sessions.md`](specs/agentic-review-sessions.md) |
 | Manual trigger above all installed repos | Owner, 2026-11-15 | Planned | [`specs/agentic-review-sessions.md`](specs/agentic-review-sessions.md) |
 | Dynamic multi-agent availability | Owner, 2026-11-15 | Planned | [`specs/agentic-review-sessions.md`](specs/agentic-review-sessions.md) |
+| Per-repo reviewer catalog + required/optional bindings | Owner, 2026-11-15 | Planned | [`specs/reviewer-assignment-and-roles.md`](specs/reviewer-assignment-and-roles.md) |
+| SME/admin reviewer ownership and approval | Owner, 2026-11-15 | Planned | [`specs/reviewer-assignment-and-roles.md`](specs/reviewer-assignment-and-roles.md) |
+| No-reviewers fallback + retrigger | Owner, 2026-11-15 | Planned | [`specs/reviewer-assignment-and-roles.md`](specs/reviewer-assignment-and-roles.md) |
 | Provider model discovery, no free text | Owner, 2026-11-15 | Planned | [`specs/provider-model-discovery.md`](specs/provider-model-discovery.md) |
 | Encrypted provider keys | Owner, 2026-11-15 | Planned | [`specs/provider-model-discovery.md`](specs/provider-model-discovery.md) |
 | Only Jury Forge resolves conversations | Owner, 2026-11-15 | Planned | [`specs/agentic-review-sessions.md`](specs/agentic-review-sessions.md) |

@@ -42,9 +42,11 @@ named reviewer) signs off. "Looks good" is not evidence.
 - [ ] A GitHub App can be created, installed, and verified; no per-repo enable toggle is required.
 - [ ] A provider key is validated; `/models` is fetched; an agent binds to a catalog model (no free text).
 - [ ] A webhook is verified, persisted, and enqueued.
-- [ ] Manual `/jury review` starts a session; one agent uses one tool and publishes one review.
+- [ ] Manual `jury:review`/`jury:context` label or Check Run action starts a session; one agent uses one tool and publishes one review.
+- [ ] A reviewer catalog entry is bound to the repo as required; no binding means unavailable.
 - [ ] A human reply resumes the session and produces a second agent response with prior context.
 - [ ] A guarded resolve works after a satisfactory reply; a new reply reopens.
+- [ ] No-reviewers/no-match fallback comment is posted with setup/retrigger instructions; no review posted.
 - [ ] Session, turn, tool call, finding, and publish records are visible in the timeline.
 - [ ] A duplicate delivery does not create a duplicate turn; a failed turn is retryable/idempotent.
 - [ ] `npm run check` (or the equivalent) passes; tests cover the happy path, duplicate, and resume.
@@ -55,6 +57,8 @@ named reviewer) signs off. "Looks good" is not evidence.
 ## G2 — Trust and security
 
 - [ ] Roles and scopes are enforced server-side; an authorization test exists per mutating route.
+- [ ] Owner/admin/SME/maintainer/member/viewer/auditor permissions are enforced; SME domain scope and reviewer binding authorization are tested.
+- [ ] A required reviewer that is unavailable blocks the review with a fallback; no partial/clean review.
 - [ ] Tenant-scoped queries; cross-tenant tests pass.
 - [ ] Credential-to-origin binding; a key cannot be sent to an arbitrary URL.
 - [ ] Egress policy blocks private/loopback/link-local/metadata ranges; SSRF tests pass.
@@ -89,8 +93,10 @@ checklist.
 - [ ] Suggested fixes apply cleanly; no auto-apply.
 - [ ] Token and cost estimates are within X% of actual; budgets enforce per turn/session/repo.
 - [ ] Agent versioning, activation gates, rollback, run-time snapshots, and prompt hashes work.
-- [ ] The agent router selects by explicit/config/path/language/label and records why; skipped
+- [ ] The agent router selects by explicit/repo binding/path/language/label and records why; skipped
       agents are explained.
+- [ ] Reviewer catalog approval and required/optional bindings are enforced; an unbound reviewer
+      never runs.
 - [ ] Diff-only is the default; `/jury context` builds/uses the graph with an estimate and cancel.
 - [ ] The repo graph updates incrementally; a second run reuses unchanged summaries and context.
 - [ ] Feedback capture works; agent/session scorecards exist.

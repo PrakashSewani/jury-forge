@@ -153,6 +153,7 @@ is a durable unit within a session.
 | Manual-first trigger + dynamic routing | Proposed | ADR-0013 |
 | Diff-first + incremental repo graph | Proposed | ADR-0014 |
 | Session capacity, interface, roles, visibility | Proposed | ADR-0015 |
+| Reviewer catalog, repo bindings, SME roles, fallback | Proposed | ADR-0016 |
 
 Read next: [`agentic-review.md`](agentic-review.md) → [`components.md`](components.md) →
 [`job-pipeline.md`](job-pipeline.md) → [`security.md`](security.md) →

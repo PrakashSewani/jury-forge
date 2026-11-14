@@ -36,9 +36,11 @@ conversation** — not a one-shot review.
 - Compose install (app, worker, scheduler, Postgres) with migrations and a bootstrap admin.
 - Shared contracts (schemas), error taxonomy, OpenAPI generation.
 - Provider onboarding: key validation, `/models` discovery, encrypted storage, catalog (ADR-0011).
-- GitHub App setup, webhook ingress, queue, manual `/jury review` on an installed repo.
+- GitHub App setup, webhook ingress, queue, manual `jury:review`/`jury:context` labels + Check Run actions on an installed repo.
+- Reviewer catalog + per-repo binding: one approved reviewer bound as required; no binding = unavailable (ADR-0016).
 - One agent bound to a catalog model; diff-only context; one review publish.
 - Per-PR session, one thread reply, and a guarded resolve after a human reply (ADR-0012).
+- No-reviewers/no-match fallback comment with setup/retrigger instructions.
 - Session/turn/tool-call/finding records, a basic session timeline, health/readiness, logs.
 - A clean-machine install test and a deterministic test suite.
 
@@ -52,7 +54,8 @@ response, and sees a guarded resolve. The PoC can be turned off.
 
 **Deliverables:**
 
-- Roles, memberships, scopes, authorization matrix and tests.
+- Roles, memberships, scopes, authorization matrix and tests: owner/admin/**SME**/maintainer/member/viewer/auditor.
+- Reviewer catalog approval and repo binding authorization; required-unavailable blocks the review.
 - Credential-to-origin binding, egress policy, SSRF defenses; provider key encryption/rotation.
 - Secret/PII redaction and a pre-send manifest.
 - Trust-labelled prompts, nonce delimiters, output validation.
@@ -76,8 +79,8 @@ red-team exercise finds no S1 issues.
 - Repository knowledge graph: symbols, imports, references, tests, configs, ownership; incremental
   update on every review run and default-branch push (ADR-0014).
 - Token-aware context planner with a manifest and cost estimate; context reuse via content hashes.
-- Multi-agent router: explicit request > repo config > path/language/label scope > availability;
-  record why each agent ran or was skipped (ADR-0013).
+- Multi-agent router: explicit request > repo bindings > path/language/label scope > availability;
+  record why each agent ran or was skipped (ADR-0013/ADR-0016).
 - Diff-only default; explicit context review with estimate/cancel.
 - Structured output, repair, grounding, verification, confidence.
 - Deduplication, disagreement, optional chair/consensus.

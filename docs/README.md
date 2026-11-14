@@ -50,6 +50,7 @@ written to be read by humans and agents. Start at the layer you need; do not rea
   - [`provider-model-discovery.md`](product/specs/provider-model-discovery.md) — provider keys, `/models`, catalog, no free text.
   - [`repo-knowledge-graph.md`](product/specs/repo-knowledge-graph.md) — diff-first + context graph, incremental updates.
   - [`session-capacity-and-visibility.md`](product/specs/session-capacity-and-visibility.md) — interface, concurrency, roles, visibility, budgets.
+  - [`reviewer-assignment-and-roles.md`](product/specs/reviewer-assignment-and-roles.md) — reviewer catalog, repo bindings, SME/admin roles, fallback.
 
 ### 4. Architecture
 

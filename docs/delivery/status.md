@@ -54,8 +54,9 @@ one phase `in progress`.
   - `docs/product/specs/provider-model-discovery.md`
   - `docs/product/specs/repo-knowledge-graph.md`
   - `docs/product/specs/session-capacity-and-visibility.md`
+  - `docs/product/specs/reviewer-assignment-and-roles.md`
   - `docs/architecture/agentic-review.md`
-  - `docs/decisions/ADR-0010` … `ADR-0015`
+  - `docs/decisions/ADR-0010` … `ADR-0016`
   - `docs/product/capabilities.md`, `docs/product/scope.md`, `docs/delivery/roadmap.md`
 
 **Verified:**
@@ -84,7 +85,7 @@ one phase `in progress`.
 
 The owner reviews the agentic specs and ADRs, approves the harness spike (ADR-0010), the manual
 trigger/router (ADR-0013), the session/resolution model (ADR-0012), provider discovery (ADR-0011),
-the incremental graph (ADR-0014), and capacity/roles/visibility (ADR-0015). Implementation follows
+the incremental graph (ADR-0014), capacity/roles/visibility (ADR-0015), and reviewer catalog/bindings/fallback (ADR-0016). Implementation follows
 the G0 gate; the first build is the manual conversational walking skeleton.
 
 **Next evidence (optional):** the live instance is currently unconfigured (0 reviewers, 0 enabled
@@ -119,6 +120,7 @@ UI gap.
 | ADR-0013 | proposed | Manual-first triggering and dynamic agent routing. |
 | ADR-0014 | proposed | Diff-first review with an incremental repository graph. |
 | ADR-0015 | proposed | Session capacity, interface, roles, and visibility. |
+| ADR-0016 | proposed | Reviewer catalog, repo bindings, SME roles, fallback. |
 
 ## How to update this file
 

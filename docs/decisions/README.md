@@ -43,6 +43,7 @@ new one, never rewritten. The index below is the source of truth for status.
 | [ADR-0013](ADR-0013-manual-trigger-and-agent-routing.md) | Manual-first triggering and dynamic agent routing | proposed | 2026-11-15 |
 | [ADR-0014](ADR-0014-repo-knowledge-graph.md) | Diff-first review with an incremental repository graph | proposed | 2026-11-15 |
 | [ADR-0015](ADR-0015-session-capacity-and-visibility.md) | Session capacity, interface, roles, and visibility | proposed | 2026-11-15 |
+| [ADR-0016](ADR-0016-reviewer-catalog-and-roles.md) | Reviewer catalog, repo bindings, SME roles, and fallback | proposed | 2026-11-15 |
 
 ## Conventions
 

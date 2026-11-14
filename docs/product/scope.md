@@ -29,8 +29,12 @@ operate, trust, and measure — with durable, conversational per-PR sessions, no
 3. **Review**
    - Durable per-PR sessions: threads, messages, turns, findings, generations; replies resume with
      context (ADR-0012).
-   - Manual first: `/jury review`, labels, and UI actions; automatic reviews only by policy.
-   - Multi-agent routing by explicit request, repo config, paths, languages, labels, and
+   - Manual first: `jury:review`/`jury:context` labels and Check Run actions; slash command/UI
+     fallback; automatic reviews only by policy.
+   - Reviewer catalog per org, with SME ownership and admin approval; per-repo bindings with
+     required/optional, path/language/label scope, and budgets (ADR-0016).
+   - No-reviewers/no-match/required-unavailable fallback comments; never a misleading clean review.
+   - Multi-agent routing by explicit request, repo bindings, paths, languages, labels, and
      availability (ADR-0013).
    - User-defined agents with instructions, rules, provider/model binding, parameters, and scope.
    - Agent versions, activation, rollback, and run-time snapshots.
@@ -51,12 +55,13 @@ operate, trust, and measure — with durable, conversational per-PR sessions, no
 4. **Providers and models**
    - Add a provider with base URL + key; validate and fetch `/models`; no free-text model entry
      (ADR-0011).
-   - Model catalog enriched with context window, prices, capabilities; unknown models flagged.
+   - Model catalog enriched with context window, prices, capabilities, and supported endpoint;
+     unknown models flagged. Pricing from provider `/models`, registry, or audited admin override.
    - Encrypted, write-only, origin-bound, rotatable keys; per-provider health/refresh.
    - CommandCode, OpenAI-compatible, Anthropic-compatible, and local model servers.
 
 5. **Control**
-   - Roles: owner, admin, maintainer, viewer, auditor (scoped to installation/repo).
+   - Roles: owner, admin, **SME**, maintainer, member, viewer, auditor (scoped to org/repo/domain).
    - Audit stream with export; every trigger, turn, tool call, model call, reply, and resolution.
    - Token and cost budgets per session/turn/repo with estimates and alerts.
    - Data retention and deletion for sessions, messages, graph, and raw responses.

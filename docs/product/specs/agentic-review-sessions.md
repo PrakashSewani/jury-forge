@@ -122,8 +122,10 @@ Surfaces, in order of preference:
    `Jury Forge` check run with action buttons `Review` and `Context review` (Checks API `actions`;
    max 3, label ≤ 20 chars). Clicking a button sends `check_run.requested_action` to the app and
    starts the turn. No comment is posted just to trigger. Requires `checks: write`.
-2. **PR label:** `jury:review` and `jury:context` (one click in the sidebar; app listens to
-   `pull_request.labeled`). The app can create these labels on install. No comment required.
+2. **PR label:** `jury:review` and `jury:context`, plus optional domain labels (`jury:security`,
+   `jury:testing`, `jury:frontend`, `jury:docs`, `jury:performance`, `jury:database`, `jury:infra`). One
+   click in the sidebar; the app listens to `pull_request.labeled`. The app can create these labels
+   on install. No comment required. Multiple domain labels union the requested domains.
 3. **Slash command (fallback):** `/jury review`, `/jury review security,testing`, `/jury context`,
    `/jury status`, `/jury pause`, `/jury resolve`, `/jury reopen`.
 4. **Web UI:** “Ask Jury Forge” on a repository/PR view; it enqueues the same turn. The UI must not
@@ -251,11 +253,17 @@ The **router** builds the jury for a turn:
 2. Repo config (`.jury-forge.yml`) adds required/optional agents.
 3. Scope match: changed paths, languages, labels, repo, required context.
 4. Availability: agent enabled, provider/model healthy, budget available.
-5. Default: a configured default reviewer or a general-purpose agent; if none, ask.
+5. Default: required reviewers + optional reviewers whose scope matches. If none are bound or none
+   match, post the fallback notice — never a clean review.
 6. Record **why** each agent ran or was skipped in the session timeline.
 
 Agents that are not available on a repo are never silently used. The UI and the `/jury status`
 command show availability and the reason.
+
+**Catalog and repo bindings:** a reviewer is not available on a repo without an enabled binding.
+Bindings can be required/optional with path/language/label scope. A required reviewer that cannot
+run blocks the review with a configuration fallback. The full model is in
+[`reviewer-assignment-and-roles.md`](reviewer-assignment-and-roles.md) and ADR-0016.
 
 ## 7. Diff-only and context review
 

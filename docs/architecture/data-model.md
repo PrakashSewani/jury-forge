@@ -44,10 +44,15 @@ the PoC: tenancy, versioning, idempotency, audit, budgets, and run snapshots are
 
 | Entity | Key fields | Notes |
 | ------ | ---------- | ----- |
-| `reviewers` | `id`, `org_id`, `name`, `slug`, `description`, `created_by`, `created_at`, `archived_at` | Stable identity. No mutable prompt here. |
-| `reviewer_versions` | `id`, `reviewer_id`, `version`, `status` (`draft`/`active`/`archived`), `instructions`, `rules`, `model`, `provider`, `params`, `output_schema`, `tool_policy`, `content_hash`, `created_by`, `created_at`, `activated_at` | Immutable once active. A run references a version. |
+| `reviewers` | `id`, `org_id`, `name`, `slug`, `description`, `domain`, `owner_user_id`, `status`, `created_by`, `created_at`, `archived_at` | Catalog identity; owner is an SME/admin. |
+| `reviewer_versions` | `id`, `reviewer_id`, `version`, `status` (`draft`/`approved`/`active`/`archived`), `instructions`, `rules`, `provider_id`, `model_id`, `endpoint`, `params`, `output_schema`, `tool_policy`, `content_hash`, `created_by`, `approved_by`, `created_at`, `activated_at` | Immutable once active; model/endpoint from the catalog. |
 | `provider_credentials` | `id`, `org_id`, `name`, `provider`, `base_url`, `allowed_origins`, `ciphertext`, `key_version`, `created_at`, `last_used_at` | Credential is bound to allowed origins. No copy-to-arbitrary-URL. |
-| `reviewer_bindings` | `reviewer_version_id`, `provider_credential_id`, `model`, `params`, `budget` | Explicit binding, replaceable. |
+| `reviewer_bindings` | `reviewer_version_id`, `provider_credential_id`, `model_id`, `endpoint`, `params`, `budget` | Explicit binding, replaceable. |
+| `repo_reviewer_bindings` | `id`, `repo_id`, `reviewer_id`, `reviewer_version_id`, `enabled`, `requirement` (`required`/`optional`), `priority`, `paths_include`, `paths_exclude`, `context_paths`, `languages`, `labels`, `budget`, `created_by`, `updated_at` | A reviewer runs on a repo only with a binding. |
+| `repo_reviewer_policy` | `repo_id`, `default_mode` (`diff`/`context`), `min_required`, `fallback_mode`, `policy_version`, `updated_at` | Default jury and fallback behavior. |
+| `reviewer_approvals` | `id`, `reviewer_version_id`, `approved_by`, `approved_at`, `note` | Org approval before a maintainer can bind. |
+| `role_bindings` | `id`, `org_id`, `principal_type` (`user`/`team`), `principal_id`, `role`, `scope_type` (`org`/`repo`/`domain`), `scope_id` | Owner/admin/SME/maintainer/member/viewer/auditor. |
+| `fallback_comments` | `id`, `repo_id`, `pr_number`, `policy_version`, `reason`, `github_comment_id`, `updated_at` | Dedupe/update the no-reviewers/no-match notice. |
 | `policies` | `id`, `org_id`, `scope_type` (`org`/`repo`/`branch`/`path`), `scope_id`, `version`, `config`, `created_by`, `created_at` | Validated by schema; versioned. |
 
 Policy config covers: required/optional reviewers, severity thresholds, inline caps, publish mode,

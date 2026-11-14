@@ -67,3 +67,12 @@ Shared vocabulary. When a term is ambiguous, this page wins.
 | **Manual trigger** | A human command/label/UI action that starts a review on any PR in an installed repo. |
 | **Config-as-code** | `.jury-forge.yml` or `.github/jury-forge.yml`; opt-in automatic review policy and agent scopes. |
 | **Harness** | The library/runtime that manages agent state, loops, tools, and human-in-the-loop (LangGraph.js or a thin turn runner). |
+| **Reviewer** | User-facing name for an AI review agent (security, testing, backend, docs, custom). |
+| **Reviewer catalog** | The org-level set of reviewer definitions/versions, with domain, owner, and approval status. |
+| **Reviewer owner** | The SME/admin responsible for a reviewer’s content and versions. |
+| **Repo reviewer binding** | The configuration that makes a catalog reviewer available on one repo; required/optional, scopes, budget. |
+| **Required reviewer** | A binding that must run for a review; if unavailable, the review is blocked with a fallback. |
+| **Optional reviewer** | A binding that runs only when its path/language/label scope matches. |
+| **SME** | Subject matter expert; owns/curates domain reviewers and binds them to assigned repos. |
+| **Fallback comment** | The no-reviewers/no-match/required-unavailable notice; an issue comment, never a review. |
+| **Domain label** | A trigger label like `jury:security` or `jury:testing` that requests a domain’s reviewers. |

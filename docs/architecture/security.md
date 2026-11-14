@@ -350,8 +350,16 @@ guard decides. See [`agentic-review.md`](agentic-review.md) and
   session, even if they are an org member.
 - **Session belongs to the PR**, not the trigger user. Participants (author, commenters, mentioned
   humans, maintainers) are stored and shown; the trigger user is audit.
-- **Role mapping:** owner/admin configure; maintainer (repo write) can trigger/reply; member with
-  repo read can view/reply where GitHub permits; viewer read-only; auditor sees audit/export.
+- **Role mapping:** owner/admin configure; **SME** owns domain reviewers and binds them to assigned
+  repos; maintainer (repo write) can bind approved reviewers to their repo and trigger/reply; member
+  with repo read can view/reply where GitHub permits; viewer read-only; auditor sees audit/export.
+- **Reviewer binding authorization:** no reviewer runs without a repo binding; only admin/SME
+  (domain)/maintainer (approved catalog, own repo) can bind; every binding/approval/role change is
+  audited. An actor cannot bind a reviewer to a repo they cannot access.
+- **Required reviewer unavailable:** the run is blocked with a configuration fallback; never a
+  partial or clean review. Optional unavailable is noted.
+- **Fallback comments:** no reviewers/no match/required-unavailable are issue comments, not reviews;
+  deduped by policy version; no secrets or model internals beyond reviewer name/domain.
 - **Mentions:** `@jury-forge` asks the bot; `@human` is a request for human input. The bot must not
   impersonate the human or answer on their behalf; it can provide context and wait.
 - **Access checks:** use the user's installation access (`GET /user/installations/{id}/repositories`)

@@ -28,6 +28,11 @@ agent is not available on every repo, so the product needs a dynamic way to choo
   `jury:review`/`jury:context` label (both one click, no comment); slash commands
   (`/jury review`, `/jury review <agents>`, `/jury context`, `/jury status`, etc.) and the UI
   “Ask Jury Forge” action as fallbacks. Manual requests bypass the automatic allowlist.
+- **Domain labels:** `jury:security`, `jury:testing`, `jury:frontend`, `jury:docs`,
+  `jury:performance`, `jury:database`, `jury:infra` request required reviewers plus the named
+  domain’s optional reviewers; multiple labels union.
+- **No-reviewer fallback:** if no reviewers are bound, none match, or a required reviewer is
+  unavailable, post a fallback notice with setup/retrigger instructions — never a clean review.
 - **Reviewer picker:** tested 2026-11-15; a request for `jury-forge[bot]` was accepted by the API but
   the app was not added as a reviewer. Arbitrary GitHub Apps cannot be requested there (Copilot is
   special); use the Check Run action instead, and revisit if GitHub adds a first-class AI reviewer.
