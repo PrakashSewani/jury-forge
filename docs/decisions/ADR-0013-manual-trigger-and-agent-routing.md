@@ -24,8 +24,13 @@ agent is not available on every repo, so the product needs a dynamic way to choo
 
 - **Installation-level availability.** If the app is installed on an account/org (all or selected
   repos), manual review is available on those repos. No per-repo enable toggle is required.
-- **Manual triggers:** `/jury review`, `/jury review <agents>`, `/jury context`, `/jury status`, labels,
-  and a UI "Ask Jury Forge" action. Manual requests bypass the automatic allowlist.
+- **Manual triggers:** a `Jury Forge` **Check Run action** (`Review` / `Context review`) or the
+  `jury:review`/`jury:context` label (both one click, no comment); slash commands
+  (`/jury review`, `/jury review <agents>`, `/jury context`, `/jury status`, etc.) and the UI
+  “Ask Jury Forge” action as fallbacks. Manual requests bypass the automatic allowlist.
+- **Reviewer picker:** tested 2026-11-15; a request for `jury-forge[bot]` was accepted by the API but
+  the app was not added as a reviewer. Arbitrary GitHub Apps cannot be requested there (Copilot is
+  special); use the Check Run action instead, and revisit if GitHub adds a first-class AI reviewer.
 - **Automatic reviews are opt-in** via `.jury-forge.yml`/`.github/jury-forge.yml` (or an org default
   later). Default `auto: false`.
 - **Dynamic agent router:** explicit request > repo config > path/language/label scope >

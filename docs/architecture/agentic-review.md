@@ -102,8 +102,10 @@ Resolution
 
 | GitHub event | Session effect |
 | ------------ | -------------- |
-| `pull_request.opened` | Create session if policy/trigger; otherwise record nothing or post a discoverability affordance. |
+| `pull_request.opened` | Create a neutral `Jury Forge` check run with `Review` / `Context review` actions; create a session only if policy/trigger. |
 | `pull_request.ready_for_review` | Same as opened if policy. |
+| `pull_request.labeled` | If `jury:review` or `jury:context`, enqueue the turn (manual trigger). |
+| `check_run.requested_action` | If action `review` or `context`, enqueue the turn (primary manual trigger). |
 | `pull_request.synchronize` | Advance generation; enqueue `reindex`; mark findings `needs_recheck`; no auto-post unless policy. |
 | `pull_request.closed` | Archive session. |
 | `issue_comment.created` on PR | If `/jury` or mention, enqueue PR-level turn; ignore bot. |
@@ -111,7 +113,12 @@ Resolution
 | `pull_request_review_comment.edited/deleted` | Update stored message; no automatic turn unless it changes the question. |
 | `pull_request_review.submitted` | Add context; respond only if mentioned/policy. |
 | `push` to default branch | Enqueue graph incremental update; no PR session turn. |
-| `check_run` / `workflow_run` | Optional context for the agent; no turn by default. |
+| `check_run` / `workflow_run` (other actions) | Optional context for the agent; no turn by default. |
+
+> **Reviewer picker:** tested 2026-11-15; requesting `jury-forge[bot]` via the review-request API did
+> not add the app as a reviewer. Arbitrary GitHub Apps cannot be requested there (Copilot is
+> special). Use the Check Run action and `jury:review` label; revisit if GitHub adds a first-class
+> AI reviewer request.
 
 Exact event names and GraphQL mutations must be verified in the GitHub spike. The App permissions
 are expected to include `contents: read`, `pull_requests: write`, `issues: write` (PR conversation

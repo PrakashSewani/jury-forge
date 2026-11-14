@@ -15,8 +15,8 @@ The product has two user interfaces:
 
 | Surface | Role |
 | ------- | ---- |
-| **GitHub** | The primary conversation: ask `/jury review`, reply in the thread, receive reviews, resolve/reopen. Most users never leave the PR. |
-| **Website** | The control plane and deep view: onboarding, session inbox, session timeline, agents, providers/models, policy, roles, audit, costs, full/context review, exports. |
+| **GitHub** | The primary conversation: start via a Check Run action (`Review` / `Context review`), the `jury:review` label, or `/jury review`; reply in the thread, receive reviews, resolve/reopen. Most users never leave the PR. |
+| **Website** | The control plane and deep view: onboarding, session inbox, session timeline, agents, providers/models, policy, roles, audit, costs, context review, exports. |
 | **API/CLI** | Later: automation, CI, scripts. Same auth/roles. |
 
 The website is a React SPA served by the self-hosted app; it is not a separate hosted service. The

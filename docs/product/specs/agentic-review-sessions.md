@@ -118,13 +118,19 @@ installation-level; it is not gated by a per-repo enable toggle.
 
 Surfaces, in order of preference:
 
-1. **PR comment command:** `/jury review`, `/jury review security,testing`, `/jury context`,
+1. **GitHub Check Run action (primary).** On PR open/synchronize, the app creates a neutral
+   `Jury Forge` check run with action buttons `Review` and `Context review` (Checks API `actions`;
+   max 3, label ≤ 20 chars). Clicking a button sends `check_run.requested_action` to the app and
+   starts the turn. No comment is posted just to trigger. Requires `checks: write`.
+2. **PR label:** `jury:review` and `jury:context` (one click in the sidebar; app listens to
+   `pull_request.labeled`). The app can create these labels on install. No comment required.
+3. **Slash command (fallback):** `/jury review`, `/jury review security,testing`, `/jury context`,
    `/jury status`, `/jury pause`, `/jury resolve`, `/jury reopen`.
-2. **PR label:** `jury:review` (and optional `jury:full`).
-3. **Web UI:** "Ask Jury Forge" on a repository/PR view; it writes the same command or enqueues the
-   same turn. The UI must not require the repo to be "enabled".
-4. **GitHub App review request** if GitHub permits requesting the bot as a reviewer; verify in the
-   platform spike. Do not rely on it as the only path.
+4. **Web UI:** “Ask Jury Forge” on a repository/PR view; it enqueues the same turn. The UI must not
+   require the repo to be “enabled”.
+5. **Reviewer picker:** tested 2026-11-15; GitHub accepted a request for `jury-forge[bot]` but did
+   not add the app as a reviewer. Arbitrary GitHub Apps cannot be requested there (Copilot is
+   special). Revisit if GitHub exposes a first-class AI reviewer request.
 
 ### Automatic (optional, policy-driven)
 
@@ -135,7 +141,7 @@ reads `.jury-forge.yml` (or `.github/jury-forge.yml`) at the PR head/base:
 version: 1
 review:
   auto: true                 # default false
-  mode: diff                 # diff | full
+  mode: diff                 # diff | context
   on: [opened, ready_for_review, synchronize]
 agents:
   security: { paths: ["src/**", "auth/**"], required: true }

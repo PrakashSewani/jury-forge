@@ -81,9 +81,9 @@ token/cost budgets, model allowlist, data policy, fork policy, suppression rules
 | `tool_calls` | `id`, `turn_id`, `agent_run_id`, `tool`, `input`, `output`, `tokens`, `latency_ms`, `status` | Bounded; read-only tools in v1. |
 | `resolutions` | `id`, `thread_id`, `actor_type`, `actor_id`, `evidence`, `confidence`, `created_at` | Bot resolution is guarded; human resolutions are recorded too. |
 | `agent_definitions` | `id`, `org_id`, `name`, `slug`, `role`, `created_at`, `archived_at` | Stable identity. |
-| `agent_versions` | `id`, `agent_id`, `version`, `status`, `instructions`, `rules`, `provider_id`, `model_id`, `params`, `tools`, `content_hash`, `activated_at` | Immutable once active; provider/model from the catalog only. |
+| `agent_versions` | `id`, `agent_id`, `version`, `status`, `instructions`, `rules`, `provider_id`, `model_id`, `endpoint`, `params`, `tools`, `content_hash`, `activated_at` | Immutable once active; provider/model/endpoint from the catalog only. |
 | `agent_scopes` | `id`, `agent_version_id`, `scope_type` (`repo`/`path`/`language`/`label`), `pattern`, `required` | Dynamic availability. |
-| `provider_models` | `id`, `provider_id`, `model_id`, `display_name`, `context_window`, `max_output`, `input_price`, `output_price`, `capabilities`, `source`, `status`, `last_seen_at` | Fetched from `/models`; enriched by the registry. |
+| `provider_models` | `id`, `provider_id`, `model_id`, `display_name`, `context_window`, `max_output`, `input_price`, `output_price`, `cache_read_price`, `cache_write_price`, `capabilities`, `supported_endpoints`, `pricing_source`, `source`, `status`, `last_seen_at` | Fetched from `/models`; enriched by the registry. |
 | `repo_indexes` | `id`, `org_id`, `repository_id`, `commit_sha`, `status`, `parser_version`, `built_at`, `stale_at` | One per indexed commit. |
 | `index_nodes` | `id`, `index_id`, `kind`, `key`, `path`, `symbol`, `summary`, `content_hash`, `metadata` | File/symbol/test/config/doc/owner/finding. |
 | `index_edges` | `index_id`, `from_id`, `to_id`, `kind`, `metadata` | imports/references/tests/owns/documents/relates_to. |

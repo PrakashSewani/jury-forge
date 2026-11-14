@@ -24,13 +24,21 @@ metadata it needs for token budgeting, cost, and capabilities.
 | ---- | -------------- | -------------- | ---- |
 | `openai` | `https://api.openai.com/v1` | `GET /models` | `Authorization: Bearer` |
 | `anthropic` | `https://api.anthropic.com` | `GET /v1/models` | `x-api-key`, `anthropic-version` |
-| `commandcode` | `https://api.commandcode.ai/provider/v1` (confirm in spike) | `GET /models` or `GET /provider/v1/models` | Bearer / provider-specific |
+| `commandcode` | `https://api.commandcode.ai/provider/v1` | `GET /models` | Bearer |
+| `openrouter` | `https://openrouter.ai/api/v1` | `GET /models` (public; pricing + context) | Bearer (for calls) |
 | `openai-compatible` | operator URL | `GET /models` | Bearer or configured header |
 | `local` | operator URL (Ollama/vLLM/…) | `GET /v1/models` | optional key |
 
-CommandCode specifically exposes `/v1/models` and `/provider/v1/models` in its provider surface;
-the spike must verify the exact path and response shape with a real key. Do not hard-code a model
-list from a package cache; fetch it live.
+**CommandCode (verified 2026-11-15):** the live models endpoint is
+`https://api.commandcode.ai/provider/v1/models`. Each model carries a `supported_endpoints` field
+(chat completions, responses, and/or messages); Claude models answer on `/v1/messages` only. Pricing
+is on the separate Pricing & Limits page, not necessarily in `/models`. The catalog must store the
+supported endpoints per model and the gateway must choose the right route — do not assume one
+provider-wide flavor.
+
+**OpenRouter (verified 2026-11-15):** `GET https://openrouter.ai/api/v1/models` is public and
+returns `pricing` (prompt/completion/image/audio/cache read/cache write), `context_length`, and
+`supported_parameters`. This is the best-case provider for catalog/pricing discovery.
 
 ## 1. Provider onboarding
 
@@ -65,6 +73,8 @@ Each entry:
 | `maxOutput` | Registry / provider metadata / unknown |
 | `inputPrice`, `outputPrice` | Registry; operator override optional |
 | `capabilities` | Registry: chat, tools, structured output, vision, streaming, embeddings |
+| `supportedEndpoints` | Provider (CommandCode `supported_endpoints`) or adapter default: `chat`, `responses`, `messages` |
+| `pricingSource` | `catalog` / `registry` / `manual` / `unknown` |
 | `source` | `provider` or `registry` |
 | `firstSeenAt`, `lastSeenAt` | Jury Forge |
 | `status` | `available`, `stale`, `unknown`, `deprecated` |
@@ -80,7 +90,10 @@ Each entry:
 
 ## 3. Binding an agent to a model
 
-- An agent version references `providerId` + `modelId` + params.
+- An agent version references `providerId` + `modelId` + `endpoint` + params.
+- The endpoint must be one of the model's `supportedEndpoints`; the UI picks a valid default
+  (prefer chat, then responses, then messages) and the gateway routes accordingly. This matters for
+  CommandCode, where Claude models only answer on `/v1/messages`.
 - On save, the server checks the catalog entry exists and is available.
 - If the model disappears on refresh, the agent becomes `configuration_error`; the UI explains and
   offers a replacement from the current catalog. Existing sessions keep their snapshot; new turns

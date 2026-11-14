@@ -30,7 +30,7 @@ Status key: **Proven** (the PoC shipped a version), **Planned** (in the target p
 | Webhook signature verification and de-duplication | Proven | Keep. |
 | Fork PR policy | Planned | Skip / restricted / approve; least privilege. |
 | Repository discovery and enablement | Proven | Manual refresh; add installation events. No per-repo enable toggle for agentic review (ADR-0013). |
-| Manual review trigger (`/jury review`, label, UI) | Planned | Available on any PR in an installed repo; primary path. |
+| Manual review trigger (Check Run action, label, slash command, UI) | Planned | Available on any PR in an installed repo; Check Run button + `jury:review` label primary; reviewer picker unsupported for arbitrary apps. |
 | Automatic review policy (config-as-code) | Planned | `.jury-forge.yml`; default off; manual bypasses the allowlist. |
 | GitHub Checks / status / annotations | Planned | Gate merges, surface findings in CI. |
 | SARIF export | Planned | Feed security dashboards. |

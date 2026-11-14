@@ -105,7 +105,26 @@ Results that matter:
   list includes OpenAI/Anthropic/Google/Qwen/MiniMax/DeepSeek families. The API key was not used
   for this research.
 
-See ADR-0010 and ADR-0011 for the resulting recommendations.
+### Provider catalog and GitHub trigger spikes (2026-11-15)
+
+- **CommandCode** (`https://commandcode.ai/docs/provider`): the live model list is
+  `GET https://api.commandcode.ai/provider/v1/models`; each model carries `supported_endpoints`
+  (chat completions, responses, and/or messages). Claude models answer on `/v1/messages` only.
+  Pricing is on a separate Pricing & Limits page, not necessarily in the model response.
+- **OpenRouter** (`https://openrouter.ai/api/v1/models`, public): returns `pricing`
+  (prompt/completion/image/audio/cache read/cache write), `context_length`, and
+  `supported_parameters` for ~471 models. Best-case catalog/pricing provider.
+- **GitHub reviewer picker:** `POST /repos/.../pulls/3/requested_reviewers` with
+  `reviewers:["jury-forge[bot]"]` returned the PR but did not add the app; `requested_reviewers`
+  stayed empty. Arbitrary GitHub Apps cannot be requested as reviewers (Copilot is special).
+- **GitHub Check Run actions:** the Checks API supports an `actions` array (max 3; label ≤ 20 chars,
+  description ≤ 40 chars); buttons are shown after the check completes and clicking sends
+  `check_run.requested_action`. This is the primary manual trigger.
+- **GitHub App permission:** the `check_run` webhook's `requested_action` requires at least write
+  access to Checks; the app needs `checks: write` in addition to `pull_requests: write`,
+  `issues: write`, `contents: read`, and `metadata: read`.
+
+See ADR-0010, ADR-0011, and ADR-0013 for the resulting recommendations.
 
 ## Commands used
 
