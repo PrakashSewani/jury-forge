@@ -48,7 +48,8 @@ written to be read by humans and agents. Start at the layer you need; do not rea
 - [`product/specs/`](product/specs/) — one spec per approved capability (template and index).
   - [`agentic-review-sessions.md`](product/specs/agentic-review-sessions.md) — per-PR sessions, manual triggers, routing, resolution.
   - [`provider-model-discovery.md`](product/specs/provider-model-discovery.md) — provider keys, `/models`, catalog, no free text.
-  - [`repo-knowledge-graph.md`](product/specs/repo-knowledge-graph.md) — diff-first + full-repo graph, incremental updates.
+  - [`repo-knowledge-graph.md`](product/specs/repo-knowledge-graph.md) — diff-first + context graph, incremental updates.
+  - [`session-capacity-and-visibility.md`](product/specs/session-capacity-and-visibility.md) — interface, concurrency, roles, visibility, budgets.
 
 ### 4. Architecture
 

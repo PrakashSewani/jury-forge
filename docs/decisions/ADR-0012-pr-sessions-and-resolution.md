@@ -29,7 +29,10 @@ user response.
 - Turns are **event-driven and serialized per session**. A user reply enqueues a turn; multiple
   replies are debounced/coalesced; no parallel turns.
 - The session of record is Postgres: `sessions`, `threads`, `messages`, `findings`, `turns`,
-  `agent_runs`, `tool_calls`, `resolutions`.
+  `agent_runs`, `tool_calls`, `resolutions`, `session_participants`.
+- The session belongs to the **PR**, not the trigger user. It is visible to repo readers; the
+  trigger user is audit. Mentions of humans are requests for human input, not bot instructions.
+  Roles/visibility are in [`../product/specs/session-capacity-and-visibility.md`](../product/specs/session-capacity-and-visibility.md).
 - **Only Jury Forge resolves its own threads programmatically.** `resolve_thread` is a guarded tool:
   bot-owned thread, human response after the last question/finding, evidence that the finding is
   addressed, verifier/confidence threshold, summary posted, audit event. A new human reply reopens.

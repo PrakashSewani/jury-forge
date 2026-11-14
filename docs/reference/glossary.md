@@ -60,9 +60,9 @@ Shared vocabulary. When a term is ambiguous, this page wins.
 | **Model catalog** | The provider-fetched list of models available to a key. |
 | **Model registry** | A versioned catalogue that enriches model IDs with context window, prices, and capabilities. |
 | **Provider model** | A catalog entry bound to a provider credential; the only valid model value for an agent. |
-| **Repository knowledge graph** | The derived symbol/import/test/config/doc/finding graph used for context and full-repo review. |
+| **Repository knowledge graph** | The derived symbol/import/test/config/doc/finding graph used for context and context review. |
 | **Incremental index** | A graph update that re-parses only changed files and their reverse dependencies, reusing content-hash summaries. |
-| **Full review** | An explicit review that uses the repository graph, not only the diff. |
+| **Context review** | An explicit review that uses the repository graph, not only the diff. |
 | **Diff review** | The default review that uses the PR diff plus targeted graph context. |
 | **Manual trigger** | A human command/label/UI action that starts a review on any PR in an installed repo. |
 | **Config-as-code** | `.jury-forge.yml` or `.github/jury-forge.yml`; opt-in automatic review policy and agent scopes. |

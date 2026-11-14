@@ -111,7 +111,49 @@ Some OpenAI-compatible gateways do not expose `/models`. Options:
 
 The default is (1) + (2). Do not silently accept an unvalidated model name.
 
-## 6. API surface (proposed)
+## 6. Pricing discovery
+
+Pricing is a **best-effort enrichment**, not the source of model existence. The model exists because
+`/models` returned it; the price comes from the best available source.
+
+Sources, in order:
+
+1. **Provider `/models` pricing fields.** Some OpenAI-compatible gateways (for example OpenRouter)
+   return `pricing.prompt`, `pricing.completion`, `pricing.request`, `pricing.image`, and
+   `context_length`. Parse and normalize per-token/per-million values.
+2. **Provider pricing endpoint** if the adapter knows one. Rare; do not scrape HTML pages.
+3. **Versioned model registry** for known OpenAI/Anthropic/Google/CommandCode families.
+4. **Admin price override** for a custom/private model. Audited; shown with a source and date.
+5. **Unknown** — token-only budget; the UI shows “cost unknown,” never a fake dollar figure.
+
+CommandCode: verify whether its `/models` response includes pricing. If it does, parse it; if not,
+use the registry or an admin override. Do not hard-code a price list from a package cache.
+
+**Base URL detection:** map known hosts to adapters (`api.openai.com`, `api.anthropic.com`,
+`openrouter.ai`, `api.commandcode.ai`, localhost). A custom base URL uses the OpenAI-compatible
+adapter with a provider manifest. Pricing is fetched only if the endpoint exposes it; never scrape
+HTML pricing pages. An admin can set a manual price for a custom/private model.
+
+Normalized pricing fields:
+
+| Field | Meaning |
+| ----- | ------- |
+| `inputPrice` | per 1M input tokens |
+| `outputPrice` | per 1M output tokens |
+| `cacheReadPrice` | per 1M cached-input tokens (if provider charges separately) |
+| `cacheWritePrice` | per 1M cache-write tokens (if provider charges) |
+| `source` | `catalog` / `registry` / `manual` / `unknown` |
+| `updatedAt` | when the price was last resolved |
+
+- A manual override does **not** add a model to the catalog; the model still has to come from
+  `/models`.
+- A price change is audited and shown on the provider detail. It affects estimates, not whether an
+  agent can run.
+- If the provider reports cache reads/writes in usage, price them separately; otherwise charge the
+  normal input price (conservative).
+- Budget enforcement always has a token ceiling; currency is additive when a price is known.
+
+## 7. API surface (proposed)
 
 | Method | Path | Purpose |
 | ------ | ---- | ------- |
@@ -127,7 +169,7 @@ The default is (1) + (2). Do not silently accept an unvalidated model name.
 
 All require session + role; all mutations are audited.
 
-## 7. UI
+## 8. UI
 
 - **Providers** page: add provider (kind, base URL, key), verify, status, last refresh.
 - **Model catalog** table: model ID, context, prices, capabilities, source, staleness; refresh.
@@ -136,7 +178,7 @@ All require session + role; all mutations are audited.
 - **Cost preview:** per-model price and estimated cost for a typical review.
 - **Key management:** set/replace/rotate/delete; never reveal.
 
-## 8. Security
+## 9. Security
 
 - Key validation must not be an SSRF: enforce HTTPS, block private/link-local/loopback/metadata
   ranges, and bind the destination to the provider's allowed origin.
@@ -146,7 +188,7 @@ All require session + role; all mutations are audited.
   ciphertext copy.
 - Rate-limit provider verification to prevent abuse.
 
-## 9. Acceptance criteria
+## 10. Acceptance criteria
 
 - [ ] Adding a valid CommandCode/OpenAI key fetches a model list and stores the provider encrypted.
 - [ ] An invalid key is rejected and nothing is stored.
@@ -157,11 +199,16 @@ All require session + role; all mutations are audited.
 - [ ] The key is never returned, logged, or sent to an origin other than the provider.
 - [ ] A provider refresh is audited; a rotation is audited.
 - [ ] The model catalog shows context, price, and capabilities for known models.
+- [ ] A provider that exposes pricing in `/models` shows it with `source=catalog` and a date.
+- [ ] A custom provider can be priced manually; the model list is still provider-driven.
+- [ ] Unknown pricing shows “cost unknown” and enforces a token budget.
+- [ ] Cache reads/writes are priced separately when reported; otherwise charged as input.
 
-## 10. Open questions
+## 11. Open questions
 
-- Exact CommandCode models endpoint/response shape (spike with a real key).
-- Which metadata does each provider return vs require the registry?
+- Exact CommandCode models endpoint/response shape and whether it exposes pricing (spike with a
+  real key).
+- Which providers expose pricing in `/models` vs require the registry/manual override?
 - Do we ship a registry snapshot in the image, or fetch it? (Default: bundled snapshot + optional
   signed refresh.)
 - Do we allow an operator price override for private/self-hosted models? (Default: yes, audited.)

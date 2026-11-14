@@ -21,7 +21,7 @@ operate, trust, and measure — with durable, conversational per-PR sessions, no
      clean.
    - Installation-level availability: manual review on any PR in an installed account/org, with no
      per-repo enable toggle (ADR-0013).
-   - Config-as-code (`.jury-forge.yml`) for automatic review policy, agent scopes, and diff/full
+   - Config-as-code (`.jury-forge.yml`) for automatic review policy, agent scopes, and diff/context
      mode; default `auto: false`.
    - Repository discovery, policy display, and installation events; no webview enable/disable gate
      for agentic review.
@@ -35,7 +35,7 @@ operate, trust, and measure — with durable, conversational per-PR sessions, no
    - User-defined agents with instructions, rules, provider/model binding, parameters, and scope.
    - Agent versions, activation, rollback, and run-time snapshots.
    - Parallel agent execution with per-provider concurrency limits.
-   - Diff-only by default; explicit full-repo review backed by an incrementally updated graph
+   - Diff-only by default; explicit context review backed by an incrementally updated graph
      (ADR-0014).
    - Knowledge packs with immutable versions, grants, and provenance.
    - Grounding: every inline finding must cite code that exists at the reviewed SHA.

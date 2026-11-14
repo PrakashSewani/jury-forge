@@ -39,6 +39,21 @@ GitHub (PR, review comments, issue comments, pushes)
                  Postgres + object storage + audit
 ```
 
+## 0. Interface, capacity, and visibility
+
+- **GitHub is the conversation surface:** ask, reply, resolve. **The website is the control plane
+  and deep session view.** The harness is internal and never user-facing.
+- **Sessions are cheap rows; turns are the scarce resource.** No per-session process. An open
+  session can wait for days with zero compute; a webhook reply wakes it.
+- **Personal defaults, org tuning:** 1 turn/session, 2 concurrent turns/org, 2/user, 2–4/worker;
+  org admin can raise within limits; repo override. No hard open-session cap; soft warning at 500.
+- **Roles follow GitHub repo access:** owners/admins configure, maintainers trigger/reply, members
+  with repo read view, viewers read-only, auditors see audit. A session is visible to repo readers,
+  not just the trigger user. Mentions of humans are requests for human input, not bot instructions.
+- **Context review target:** the PR. The graph is repository context; a context review does not
+  audit every file. Full details:
+  [`../product/specs/session-capacity-and-visibility.md`](../product/specs/session-capacity-and-visibility.md).
+
 ## 1. Components
 
 | Component | Responsibility | Non-responsibility |
@@ -157,7 +172,7 @@ ADR-0014.
 - Postgres adjacency tables + content-addressed object storage; optional vector store later.
 - Index version per `(repo, commit)`; incremental update on every review run and default-branch push.
 - Context Service uses summaries first, expands via tools, records a manifest.
-- Full review is explicit, estimated, cancellable; diff review uses the graph for targeted context.
+- Context review is explicit, estimated, cancellable; diff review uses the graph for targeted context.
 
 ## 8. Resolution guard
 

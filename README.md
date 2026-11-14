@@ -35,7 +35,7 @@ Jury Forge starts again from the product, not from the deployment target:
   automatic review is opt-in config-as-code.
 - **Models you can actually use.** Add a provider key, fetch its model catalog, bind agents to
   catalog models — no free-text model entry, keys encrypted.
-- **Diff-first with a memory.** Default reviews stay on the diff; full-repo reviews use an
+- **Diff-first with a memory.** Default reviews stay on the diff; context reviews use an
   incrementally updated repository knowledge graph so context is reused, not rebuilt.
 - **Open source, MIT.** Fork it, extend it, run it commercially, no open-core trap.
 

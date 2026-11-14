@@ -24,7 +24,7 @@
    from explicit requests, repo policy, paths, languages, labels, and agent scopes.
 9. **Keys are stored encrypted** and are write-only to the API.
 10. **Only Jury Forge resolves its conversations**, after a satisfactory user response.
-11. **Diff-only by default.** Full-repo review is explicit and backed by a repo knowledge graph that
+11. **Diff-only by default.** Context review is explicit and backed by a repo knowledge graph that
     is updated incrementally on every review run, so context is not rebuilt from scratch.
 12. **Copyright/licence:** MIT; no open-core or BSL/SSPL dependency in the core.
 
@@ -50,6 +50,20 @@ and it cannot decide which specialist agents a given PR needs.
   without typing model names."
 - **Security lead:** "Know which agents can see which repos, what was sent to which model, and who
   resolved a thread."
+
+## Interface and session ownership
+
+- **GitHub is the primary conversation surface.** Most users ask, reply, and resolve in the PR.
+- **The website is the control plane and deep view.** Onboarding, session inbox/timeline, agents,
+  providers/models, policy, roles, audit, costs, context review, exports.
+- **The harness is internal.** LangGraph.js or the turn runner is not a user interface.
+- **The session belongs to the PR**, not to the user who triggered it. It is keyed by
+  `(installation, repository, PR)` and is visible to repo readers; the trigger user is recorded for
+  audit. Participants include the author, commenters, mentioned humans, and maintainers.
+- **A mention of a human is a request for human input**, not an instruction to the bot. The bot can
+  provide context and wait; it never impersonates the human.
+- Capacity, roles, visibility, and personal/org defaults are in
+  [`session-capacity-and-visibility.md`](session-capacity-and-visibility.md).
 
 ## 1. Session model
 
@@ -91,6 +105,10 @@ merged/closed → archived
 - **resolved:** the agent resolved the thread after a satisfactory response. A new reply reopens it.
 - **archived:** PR merged/closed or retention expiry; no further turns.
 
+There is **no per-session process to suspend**. `waiting_for_user` and long idle periods consume no
+compute; a reply is the wake-up. Only storage/retention/UI noise justify aging a session. See
+[`session-capacity-and-visibility.md`](session-capacity-and-visibility.md).
+
 ## 3. Triggers
 
 ### Manual (always available)
@@ -100,7 +118,7 @@ installation-level; it is not gated by a per-repo enable toggle.
 
 Surfaces, in order of preference:
 
-1. **PR comment command:** `/jury review`, `/jury review security,testing`, `/jury full`,
+1. **PR comment command:** `/jury review`, `/jury review security,testing`, `/jury context`,
    `/jury status`, `/jury pause`, `/jury resolve`, `/jury reopen`.
 2. **PR label:** `jury:review` (and optional `jury:full`).
 3. **Web UI:** "Ask Jury Forge" on a repository/PR view; it writes the same command or enqueues the
@@ -233,7 +251,11 @@ The **router** builds the jury for a turn:
 Agents that are not available on a repo are never silently used. The UI and the `/jury status`
 command show availability and the reason.
 
-## 7. Diff-only and full-repo review
+## 7. Diff-only and context review
+
+**The review target is always the PR.** A context review does not audit the whole repository; it
+builds/updates the repository context graph and reviews the PR **against** that context. The graph
+is the memory, not a second review target.
 
 ### Default: diff-only
 
@@ -242,12 +264,13 @@ command show availability and the reason.
 - It does not send the whole repository.
 - It still uses the graph to answer "who calls this?" and "what tests cover this?".
 
-### Explicit: full-repo review
+### Explicit: context review
 
-- Triggered by `/jury full`, the UI, or config `mode: full`.
-- The graph is loaded/updated first; the agent can query the whole repository, not just the diff.
+- Triggered by `/jury context`, the UI, or config `mode: context`.
+- The graph is loaded/updated first; the agent can query the whole repository as **context**, not
+  as a review target.
 - The run shows an estimate (tokens, cost, time) before it starts; the operator can cancel.
-- Full review is a session turn, not a separate product.
+- Context review is a session turn, not a separate product.
 
 ### Repo knowledge graph
 
@@ -281,7 +304,7 @@ See [`provider-model-discovery.md`](provider-model-discovery.md).
 
 - **Session inbox:** PRs with active sessions, last turn, waiting state, cost, unresolved findings.
 - **Session view:** timeline of messages, agent runs, tool calls, findings, diff, resolution, cost.
-- **Composer:** reply in a thread, ask a follow-up, request a specific agent, run full review.
+- **Composer:** reply in a thread, ask a follow-up, request a specific agent, run context review.
 - **Triggers:** "Ask Jury Forge" from a repo/PR; copy the `/jury` command; no repo enable toggle.
 - **Agent studio:** name/role/instructions, provider/model picker (catalog only), scope rules,
   availability preview, version/activation, evaluation status.
@@ -315,7 +338,7 @@ See [`provider-model-discovery.md`](provider-model-discovery.md).
 - [ ] Adding a provider key fetches the model list; the UI has no free-text model field; an invalid
       key is rejected.
 - [ ] Keys are encrypted and never returned; a key is bound to its provider origin.
-- [ ] Diff-only is the default; `/jury full` builds/uses the repo graph and reports an estimate.
+- [ ] Diff-only is the default; `/jury context` builds/uses the repo graph and reports an estimate.
 - [ ] Re-running a review reuses the graph and only re-indexes changed files.
 - [ ] All provider/session/tool/resolution actions are audited.
 - [ ] Docker Compose install runs the backend, worker, scheduler, Postgres, and UI.
@@ -342,7 +365,7 @@ See [`provider-model-discovery.md`](provider-model-discovery.md).
 
 **Commands and triggers**
 
-- `/jury review`, `/jury review security,testing`, `/jury full`, `/jury status`, `/jury pause`,
+- `/jury review`, `/jury review security,testing`, `/jury context`, `/jury status`, `/jury pause`,
   `/jury resume`, `/jury resolve`, `/jury reopen`, `/jury explain`.
 - Labels `jury:review`, `jury:full`, `jury:pause` as an alternative to comments.
 - A GitHub Check “Jury Forge: ready” with a details link so users discover the command without a
@@ -379,7 +402,7 @@ See [`provider-model-discovery.md`](provider-model-discovery.md).
 
 - Catalog diff on refresh: new, removed, deprecated models; affected agents.
 - Provider health and last-error; automatic fallback only if policy allows.
-- Cost estimate before a turn/full review; per-agent model routing (cheap triage, strong verifier).
+- Cost estimate before a turn/context review; per-agent model routing (cheap triage, strong verifier).
 - Local model option for sensitive repos; per-repo model allowlist.
 - Model capability checks at save time (tools, structured output, context).
 

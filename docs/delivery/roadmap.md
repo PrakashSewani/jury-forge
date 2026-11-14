@@ -78,7 +78,7 @@ red-team exercise finds no S1 issues.
 - Token-aware context planner with a manifest and cost estimate; context reuse via content hashes.
 - Multi-agent router: explicit request > repo config > path/language/label scope > availability;
   record why each agent ran or was skipped (ADR-0013).
-- Diff-only default; explicit full-repo review with estimate/cancel.
+- Diff-only default; explicit context review with estimate/cancel.
 - Structured output, repair, grounding, verification, confidence.
 - Deduplication, disagreement, optional chair/consensus.
 - Suggested fixes with patch validation.

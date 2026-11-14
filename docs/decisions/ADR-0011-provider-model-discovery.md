@@ -28,6 +28,9 @@ budgeting and capability checks.
 - Every provider must expose a model catalog via a `/models` endpoint at add/verify time.
 - The UI and API accept only a `modelId` present in that provider's catalog. There is no free-text
   model field.
+- Pricing is a best-effort enrichment: parse provider `/models` pricing when exposed, else use the
+  versioned registry, else an audited admin override, else show “cost unknown” and enforce token
+  budgets. See [`../product/specs/provider-model-discovery.md`](../product/specs/provider-model-discovery.md#6-pricing-discovery).
 - Known models are enriched from a versioned model registry (context window, max output, prices,
   capabilities); unknown models are flagged and use conservative defaults.
 - Keys are validated before storage; invalid keys store nothing.

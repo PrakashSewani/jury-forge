@@ -177,7 +177,7 @@ Status key: **Proven** (the PoC shipped a version), **Planned** (in the target p
 | Agent-only resolution | Planned | Guarded `resolve_thread`; evidence + human response; reopen on reply. |
 | Manual-first triggering | Planned | `/jury review`, label, UI; no repo enable toggle. |
 | Dynamic agent availability/router | Planned | Scope by repo/path/language/label; explicit request wins; record why. |
-| Diff-only default + full-repo review | Planned | `/jury full`; estimate; cancellable. |
+| Diff-only default + context review | Planned | `/jury context`; estimate; cancellable. |
 | Repository knowledge graph | Planned | Symbols/imports/tests/configs/docs/owners/findings; incremental updates. |
 | Context reuse across runs | Planned | Content-hash summaries; manifest; only changed files re-indexed. |
 | Session inbox / conversation UI | Planned | Timeline, agent activity, tool calls, findings, cost, resolve state. |
@@ -197,7 +197,7 @@ Status key: **Proven** (the PoC shipped a version), **Planned** (in the target p
 | Provider model discovery, no free text | Owner, 2026-11-15 | Planned | [`specs/provider-model-discovery.md`](specs/provider-model-discovery.md) |
 | Encrypted provider keys | Owner, 2026-11-15 | Planned | [`specs/provider-model-discovery.md`](specs/provider-model-discovery.md) |
 | Only Jury Forge resolves conversations | Owner, 2026-11-15 | Planned | [`specs/agentic-review-sessions.md`](specs/agentic-review-sessions.md) |
-| Diff-only default; full-repo graph | Owner, 2026-11-15 | Planned | [`specs/repo-knowledge-graph.md`](specs/repo-knowledge-graph.md) |
+| Diff-only default; context graph | Owner, 2026-11-15 | Planned | [`specs/repo-knowledge-graph.md`](specs/repo-knowledge-graph.md) |
 | Incremental graph update every run | Owner, 2026-11-15 | Planned | [`specs/repo-knowledge-graph.md`](specs/repo-knowledge-graph.md) |
 | Dockerized self-hosted backend + UI | Owner, 2026-11-15 | Planned | [`../architecture/deployment.md`](../architecture/deployment.md) |
 

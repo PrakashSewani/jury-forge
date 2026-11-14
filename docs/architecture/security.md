@@ -343,3 +343,22 @@ New attack surface and controls:
 Resolution is an authorization decision, not a model output. The model may request it; the server
 guard decides. See [`agentic-review.md`](agentic-review.md) and
 [`../product/specs/agentic-review-sessions.md`](../product/specs/agentic-review-sessions.md).
+
+## 16. Session visibility and roles (2026-11-15)
+
+- **Visibility never exceeds GitHub repo visibility.** A user without repo read access cannot see a
+  session, even if they are an org member.
+- **Session belongs to the PR**, not the trigger user. Participants (author, commenters, mentioned
+  humans, maintainers) are stored and shown; the trigger user is audit.
+- **Role mapping:** owner/admin configure; maintainer (repo write) can trigger/reply; member with
+  repo read can view/reply where GitHub permits; viewer read-only; auditor sees audit/export.
+- **Mentions:** `@jury-forge` asks the bot; `@human` is a request for human input. The bot must not
+  impersonate the human or answer on their behalf; it can provide context and wait.
+- **Access checks:** use the user's installation access (`GET /user/installations/{id}/repositories`)
+  and/or `GET /repos/{owner}/{repo}` with the user token; cache briefly; re-check on membership or
+  installation changes.
+- **Audit:** trigger, reply, resolve, role change, visibility change, export.
+- **Data exposure:** session messages/findings may contain code; apply the same redaction/retention
+  as prompts and restrict to repo readers.
+
+See [`../product/specs/session-capacity-and-visibility.md`](../product/specs/session-capacity-and-visibility.md).

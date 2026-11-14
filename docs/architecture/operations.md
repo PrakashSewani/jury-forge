@@ -221,7 +221,7 @@ full diffs into an issue.
 | Same comment answered twice | Missing idempotency/debounce | Check event/delivery id, turn key, bot filter. |
 | Resolve refused | Guard failed (no human reply/evidence) | Inspect resolution guard reason; do not bypass. |
 | Model missing | Provider catalog refreshed | Rebind the agent from the catalog; check deprecation. |
-| Full review is slow/expensive | Graph cold or budget too high | Check index status, estimate, budget; rebuild or lower scope. |
+| Context review is slow/expensive | Graph cold or budget too high | Check index status, estimate, budget; rebuild or lower scope. |
 | Graph stale | Index job failed | Inspect index job, rebuild; review should warn, not silently use stale. |
 
 ## 10. Runbooks to write

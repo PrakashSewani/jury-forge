@@ -152,6 +152,7 @@ is a durable unit within a session.
 | PR sessions + agent-only resolution | Proposed | ADR-0012 |
 | Manual-first trigger + dynamic routing | Proposed | ADR-0013 |
 | Diff-first + incremental repo graph | Proposed | ADR-0014 |
+| Session capacity, interface, roles, visibility | Proposed | ADR-0015 |
 
 Read next: [`agentic-review.md`](agentic-review.md) → [`components.md`](components.md) →
 [`job-pipeline.md`](job-pipeline.md) → [`security.md`](security.md) →

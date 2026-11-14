@@ -74,6 +74,8 @@ token/cost budgets, model allowlist, data policy, fork policy, suppression rules
 | `pr_sessions` | `id`, `org_id`, `installation_id`, `repository_id`, `pr_number`, `state`, `generation`, `lease_owner`, `lease_expires_at`, `last_turn_at`, `archived_at` | One per PR; `state` = created/active/waiting_for_user/resolved/archived. |
 | `session_threads` | `id`, `session_id`, `github_thread_id`, `file`, `line`, `created_by`, `state`, `resolved_by`, `resolved_at` | One per review-comment thread; bot-owned threads are the only ones the bot can resolve. |
 | `session_messages` | `id`, `session_id`, `thread_id`, `role`, `agent_version_id`, `github_comment_id`, `body`, `created_at` | `role` = user/agent/system/tool; append-only. |
+| `session_participants` | `id`, `session_id`, `user_id`, `github_login`, `role`, `joined_at` | PR author, commenters, mentioned humans, maintainers; visibility is repo-scoped. |
+| `session_mentions` | `id`, `session_message_id`, `mentioned_login`, `kind` (`human`/`agent`), `created_at` | A human mention is a request for human input, not a bot instruction. |
 | `session_turns` | `id`, `session_id`, `trigger`, `generation`, `status`, `input`, `plan`, `output`, `cost_micros`, `started_at`, `finished_at` | Durable unit of work; serialized per session. |
 | `session_findings` | `id`, `session_id`, `thread_id`, `agent_run_id`, `file`, `line`, `severity`, `status`, `fingerprint`, `evidence` | `status` = open/addressed/verified/dismissed/resolved/reopened. |
 | `tool_calls` | `id`, `turn_id`, `agent_run_id`, `tool`, `input`, `output`, `tokens`, `latency_ms`, `status` | Bounded; read-only tools in v1. |
@@ -97,6 +99,8 @@ token/cost budgets, model allowlist, data policy, fork policy, suppression rules
    `configuration_error`.
 5. `repo_indexes` are derived and rebuildable; `index_nodes`/`index_edges` never store secrets.
 6. `context_manifests` are immutable and link to the turn's generation.
+7. Session visibility never exceeds repo visibility; a participant/reader must have repo access.
+   The session belongs to the PR, not the trigger user.
 
 ## Knowledge
 

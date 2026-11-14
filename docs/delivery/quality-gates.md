@@ -91,7 +91,7 @@ checklist.
 - [ ] Agent versioning, activation gates, rollback, run-time snapshots, and prompt hashes work.
 - [ ] The agent router selects by explicit/config/path/language/label and records why; skipped
       agents are explained.
-- [ ] Diff-only is the default; `/jury full` builds/uses the graph with an estimate and cancel.
+- [ ] Diff-only is the default; `/jury context` builds/uses the graph with an estimate and cancel.
 - [ ] The repo graph updates incrementally; a second run reuses unchanged summaries and context.
 - [ ] Feedback capture works; agent/session scorecards exist.
 - [ ] The dogfood repository runs on itself and the team uses the sessions.

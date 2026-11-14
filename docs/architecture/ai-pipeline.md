@@ -32,7 +32,7 @@ changes during the run do not affect it.
 ### `fetch`
 
 Fetch the diff and metadata from the forge. Store the raw diff and file list in object storage.
-Determine the review mode: full diff, incremental since the last reviewed SHA, or a specific
+Determine the review mode: context diff, incremental since the last reviewed SHA, or a specific
 commit range.
 
 ### `index`
@@ -412,7 +412,7 @@ and an **agent turn** on top:
   asks a question, or resolves a bot-owned thread after a satisfactory human response.
 - The session keeps the conversation across turns and days; the graph keeps repository context
   between turns and runs.
-- Diff-only is the default; full-repo review is explicit and graph-backed.
+- Diff-only is the default; context review is explicit and graph-backed.
 - The harness/state model, routing, resolution guard, and data model are in
   [`agentic-review.md`](agentic-review.md) and
   [`../product/specs/agentic-review-sessions.md`](../product/specs/agentic-review-sessions.md).

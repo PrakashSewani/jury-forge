@@ -8,7 +8,7 @@
 
 ## Owner directive
 
-Default to **diff-only** PR review. If the user asks for a **full-repo review**, build a graph /
+Default to **diff-only** PR review. If the user asks for a **context review**, build a graph /
 knowledge base against the repository so context is not repeated. **Update it on every review run.**
 
 ## Problem
@@ -16,7 +16,7 @@ knowledge base against the repository so context is not repeated. **Update it on
 A diff-only reviewer sees a patch in isolation. It misses callers, types, tests, configuration, and
 the conventions that decide whether a change is correct. Sending the whole repo on every turn is
 expensive, slow, and repetitive. The product needs a persistent, incrementally updated model of the
-repository that both diff and full reviews can query.
+repository that both diff and context reviews can query.
 
 ## 1. What the graph is
 
@@ -97,15 +97,15 @@ Exposed to agents as tools and to the context planner as ranked sources:
   rejected at consolidation.
 - Results are capped by count and tokens; the agent can expand explicitly.
 
-## 5. Full-repo review
+## 5. Context review
 
-- Triggered by `/jury full`, the UI, or `mode: full` in repo config.
+- Triggered by `/jury context`, the UI, or `mode: context` in repo config.
 - Before starting, show an estimate: files, symbols, tokens, cost, expected time; allow cancel.
 - The index is updated first; the planner builds a coverage plan (what areas to read) and the agents
   can query the graph arbitrarily within budget.
 - Output is still a review (findings + summary), not a repository report; the difference is context
   depth.
-- Full review is expensive; default off; never automatic unless policy explicitly says so.
+- Context review is expensive; default off; never automatic unless policy explicitly says so.
 
 ## 6. Storage
 
@@ -147,12 +147,12 @@ Exposed to agents as tools and to the context planner as ranked sources:
 
 ## 10. Acceptance criteria
 
-- [ ] First full review builds an index for a test repo; the second run reuses it.
+- [ ] First context review builds an index for a test repo; the second run reuses it.
 - [ ] A two-file change re-parses only those files and their reverse dependencies, not the whole repo.
 - [ ] A changed file invalidates its summaries/edges; an unchanged file's summary is reused.
 - [ ] `find_references` returns the callers of a changed symbol.
 - [ ] `find_tests` returns related tests.
-- [ ] A full review shows an estimate and can be cancelled.
+- [ ] A context review shows an estimate and can be cancelled.
 - [ ] The context manifest shows graph-sourced context and why it was included.
 - [ ] A stale index is visible and never silently used as fresh.
 - [ ] Deleting a repo deletes its index.

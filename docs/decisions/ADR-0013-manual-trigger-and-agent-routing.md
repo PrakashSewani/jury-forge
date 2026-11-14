@@ -24,7 +24,7 @@ agent is not available on every repo, so the product needs a dynamic way to choo
 
 - **Installation-level availability.** If the app is installed on an account/org (all or selected
   repos), manual review is available on those repos. No per-repo enable toggle is required.
-- **Manual triggers:** `/jury review`, `/jury review <agents>`, `/jury full`, `/jury status`, labels,
+- **Manual triggers:** `/jury review`, `/jury review <agents>`, `/jury context`, `/jury status`, labels,
   and a UI "Ask Jury Forge" action. Manual requests bypass the automatic allowlist.
 - **Automatic reviews are opt-in** via `.jury-forge.yml`/`.github/jury-forge.yml` (or an org default
   later). Default `auto: false`.
@@ -33,6 +33,9 @@ agent is not available on every repo, so the product needs a dynamic way to choo
   agents are never silently used. The session timeline records why each agent ran or was skipped.
 - **No repo enable/disable UI** for agentic review. A repository policy view shows config-as-code and
   agent availability, but it is not a gate for manual review.
+- **Personal vs org:** personal installs use the defaults; an org admin tunes concurrency, budgets,
+  auto policy, visibility, and agent defaults. Repo config overrides. Roles/visibility follow repo
+  access; see [`../product/specs/session-capacity-and-visibility.md`](../product/specs/session-capacity-and-visibility.md).
 
 ## Consequences
 

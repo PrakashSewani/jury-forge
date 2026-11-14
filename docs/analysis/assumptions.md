@@ -27,7 +27,7 @@ false, the plan changes. Each has a validation method and an owner.
 | A-020 | An agentic loop improves outcomes enough to justify the cost/latency. | Medium | Benchmark one-shot vs agentic on the same PRs. | Simplify the loop; keep the session shell. |
 | A-021 | GitHub Apps can reply to and resolve review threads with acceptable permissions. | Medium | Platform spike (events, GraphQL mutations, permissions). | Fall back to PR-level comments; no thread resolve. |
 | A-022 | Provider `/models` is reliable enough to be the only model source. | Medium | Provider conformance tests; fallback manifest. | Add a signed provider manifest as a first-class path. |
-| A-023 | The repo graph materially improves full-repo review quality. | Medium | Benchmark diff vs graph-assisted. | Keep diff-only; make full review optional. |
+| A-023 | The repo graph materially improves context review quality. | Medium | Benchmark diff vs graph-assisted. | Keep diff-only; make context review optional. |
 | A-024 | Docker Compose is enough for the first agentic release. | High | Install spike + 10× load test. | Add K8s/Helm earlier. |
 
 ## Assumptions we reject

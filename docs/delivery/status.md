@@ -49,12 +49,13 @@ one phase `in progress`.
   chain prompt in `.pi/prompts/`.
 - **Capability intake (2026-11-15):** the owner shifted the product to an **agentic reviewer** with
   per-PR sessions, manual-first triggering, dynamic multi-agent routing, provider/model discovery,
-  encrypted keys, diff-first + full-repo graph reviews, and agent-only resolution. Captured in:
+  encrypted keys, diff-first + context graph reviews, and agent-only resolution. Captured in:
   - `docs/product/specs/agentic-review-sessions.md`
   - `docs/product/specs/provider-model-discovery.md`
   - `docs/product/specs/repo-knowledge-graph.md`
+  - `docs/product/specs/session-capacity-and-visibility.md`
   - `docs/architecture/agentic-review.md`
-  - `docs/decisions/ADR-0010` … `ADR-0014`
+  - `docs/decisions/ADR-0010` … `ADR-0015`
   - `docs/product/capabilities.md`, `docs/product/scope.md`, `docs/delivery/roadmap.md`
 
 **Verified:**
@@ -83,8 +84,8 @@ one phase `in progress`.
 
 The owner reviews the agentic specs and ADRs, approves the harness spike (ADR-0010), the manual
 trigger/router (ADR-0013), the session/resolution model (ADR-0012), provider discovery (ADR-0011),
-and the incremental graph (ADR-0014). Implementation follows the G0 gate; the first build is the
-manual conversational walking skeleton.
+the incremental graph (ADR-0014), and capacity/roles/visibility (ADR-0015). Implementation follows
+the G0 gate; the first build is the manual conversational walking skeleton.
 
 **Next evidence (optional):** the live instance is currently unconfigured (0 reviewers, 0 enabled
 repositories). Enabling one repository and adding one reviewer with a key would produce a fresh
@@ -117,6 +118,7 @@ UI gap.
 | ADR-0012 | proposed | PR sessions and agent-only resolution. |
 | ADR-0013 | proposed | Manual-first triggering and dynamic agent routing. |
 | ADR-0014 | proposed | Diff-first review with an incremental repository graph. |
+| ADR-0015 | proposed | Session capacity, interface, roles, and visibility. |
 
 ## How to update this file
 
