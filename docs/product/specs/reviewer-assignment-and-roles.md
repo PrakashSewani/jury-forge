@@ -45,6 +45,32 @@ A reviewer is created once, versioned, and then bound to repos.
   and the result is visible to the owner/admin.
 - **No free-text model:** the reviewer binds to a provider catalog model + supported endpoint.
 
+## 2.1 Capabilities and tools
+
+A reviewer can be more than a prompt. Its version declares a **tool policy**:
+
+| Tool/capability | What it does | Default |
+| --------------- | ------------ | ------- |
+| `diff.read` | Read the PR diff/hunks | on |
+| `graph.query` | Search symbols, references, tests, ownership | branch review; optional PR |
+| `file.read` | Read a file slice at the SHA | on |
+| `tests.inspect` | Find tests, coverage, skipped tests | on |
+| `static.analyze` | Run/read static analysis results | optional |
+| `tests.run` | Run tests in a sandbox | **off**, opt-in per repo |
+| `build.run` | Build in a sandbox | **off**, opt-in per repo |
+
+- The **agent decides which tools to use** for its task, within its instructions, budget, and the
+  repo’s policy. A “Capability reviewer” can inspect contracts, callers, and tests; if `tests.run`
+  is enabled, it can run the relevant tests and include the result as evidence.
+- `tests.run`/`build.run` are **not** implied by branch review. They require an opt-in repo policy,
+  a sandbox, and a resource budget.
+- Sandbox rules: ephemeral container, non-root, no secrets, network off by default, CPU/memory/time
+  caps, command allowlist, no push/merge, output captured and redacted. Untrusted repo code is
+  never run on the host.
+- A tool result is evidence, not an instruction; findings can cite it, but the agent still grounds
+  the claim in code.
+- Tool calls and results are recorded in the turn timeline.
+
 ## 3. Repo bindings (the important part)
 
 A reviewer is **not available on a repo** unless there is an enabled binding.
@@ -121,10 +147,14 @@ ownership. They are not GitHub labels; labels are only review modes.
 
 - `jury:pr-review` — PR review: the repo’s bound jury reviews the PR diff + targeted context.
 - `jury:branch-review` — complete branch review: compare the PR branch to the **repository default branch**, review the full branch delta against the repo context graph (no code execution in v1).
-- Labels are **modes, not reviewer selectors**. The repo bindings decide which reviewers run;
-  specific reviewers are requested via slash command/UI (for example `/jury pr-review security,testing`).
-- The app creates these two labels on install (or documents them); labels are not a per-repo enable
-  toggle, they are a trigger.
+- Optional **capability labels** (`jury:cap:security`, `jury:cap:tests`, `jury:cap:performance`,
+  `jury:cap:docs`, `jury:cap:data`, `jury:cap:infra`, `jury:cap:accessibility`) request a capability
+  group. They only select from reviewers already bound/approved for the repo; they cannot enable an
+  unbound reviewer, bypass required reviewers, budgets, or provider policy. No matching bound
+  reviewer → capability fallback.
+- The app creates the two mode labels on install; capability labels can be created on demand. Labels
+  are a trigger/request, not a per-repo enable toggle.
+- Specific reviewers are requested via slash command/UI (for example `/jury pr-review security,testing`).
 
 ### Check Run (also primary)
 

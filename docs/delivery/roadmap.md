@@ -26,8 +26,8 @@ architecture, and approved the scope and principles.
 
 ## Phase 1 — Foundation and walking skeleton
 
-**Goal:** prove the self-hosted runtime with a manual, diff-only, one-agent review **and a persisted
-conversation** — not a one-shot review.
+**Goal:** prove the self-hosted runtime with a manual PR review (diff-only, one agent) **and a
+persisted conversation** — not a one-shot review.
 
 **Deliverables:**
 
@@ -38,7 +38,7 @@ conversation** — not a one-shot review.
 - Provider onboarding: key validation, `/models` discovery, encrypted storage, catalog (ADR-0011).
 - GitHub App setup, webhook ingress, queue, manual `jury:pr-review`/`jury:branch-review` labels + Check Run actions on an installed repo.
 - Reviewer catalog + per-repo binding: one approved reviewer bound as required; no binding = unavailable (ADR-0016).
-- One agent bound to a catalog model; diff-only context; one review publish.
+- One agent bound to a catalog model; PR review is diff-only; one review publish.
 - Per-PR session, one thread reply, and a guarded resolve after a human reply (ADR-0012).
 - No-reviewers/no-match fallback comment with setup/retrigger instructions.
 - Session/turn/tool-call/finding records, a basic session timeline, health/readiness, logs.

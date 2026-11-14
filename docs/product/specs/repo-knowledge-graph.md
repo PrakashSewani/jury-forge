@@ -16,7 +16,7 @@ knowledge base against the repository so context is not repeated. **Update it on
 A diff-only reviewer sees a patch in isolation. It misses callers, types, tests, configuration, and
 the conventions that decide whether a change is correct. Sending the whole repo on every turn is
 expensive, slow, and repetitive. The product needs a persistent, incrementally updated model of the
-repository that both diff and branch reviews can query.
+repository that branch review can query. PR review is diff-only and does not use the graph.
 
 ## 1. What the graph is
 
@@ -104,6 +104,8 @@ Exposed to agents as tools and to the context planner as ranked sources:
   branch delta vs default: all changed files, functions, tests, and configs.
 - The index is updated first; the planner builds a coverage plan and the agents can query the graph
   as context. Untouched files are context, not a review target.
+- A capability agent may use graph queries, test inspection, static analysis, and (if the repo
+  enables it) a sandboxed test/build run to compare behavior.
 - “Compare functionality” is static analysis of the behavioral change: contracts, callers, tests,
   config, and docs. It does not execute code/tests in v1; a sandboxed test-run mode is a later
   capability.

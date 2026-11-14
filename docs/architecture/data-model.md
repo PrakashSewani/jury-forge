@@ -45,7 +45,7 @@ the PoC: tenancy, versioning, idempotency, audit, budgets, and run snapshots are
 | Entity | Key fields | Notes |
 | ------ | ---------- | ----- |
 | `reviewers` | `id`, `org_id`, `name`, `slug`, `description`, `domain`, `owner_user_id`, `status`, `created_by`, `created_at`, `archived_at` | Catalog identity; owner is an SME/admin. |
-| `reviewer_versions` | `id`, `reviewer_id`, `version`, `status` (`draft`/`approved`/`active`/`archived`), `instructions`, `rules`, `provider_id`, `model_id`, `endpoint`, `params`, `output_schema`, `tool_policy`, `content_hash`, `created_by`, `approved_by`, `created_at`, `activated_at` | Immutable once active; model/endpoint from the catalog. |
+| `reviewer_versions` | `id`, `reviewer_id`, `version`, `status` (`draft`/`approved`/`active`/`archived`), `instructions`, `rules`, `provider_id`, `model_id`, `endpoint`, `params`, `output_schema`, `tool_policy`, `sandbox_policy`, `content_hash`, `created_by`, `approved_by`, `created_at`, `activated_at` | Immutable once active; model/endpoint from the catalog. |
 | `provider_credentials` | `id`, `org_id`, `name`, `provider`, `base_url`, `allowed_origins`, `ciphertext`, `key_version`, `created_at`, `last_used_at` | Credential is bound to allowed origins. No copy-to-arbitrary-URL. |
 | `reviewer_bindings` | `reviewer_version_id`, `provider_credential_id`, `model_id`, `endpoint`, `params`, `budget` | Explicit binding, replaceable. |
 | `repo_reviewer_bindings` | `id`, `repo_id`, `reviewer_id`, `reviewer_version_id`, `enabled`, `requirement` (`required`/`optional`), `priority`, `paths_include`, `paths_exclude`, `context_paths`, `languages`, `labels`, `budget`, `created_by`, `updated_at` | A reviewer runs on a repo only with a binding. |
@@ -86,7 +86,7 @@ token/cost budgets, model allowlist, data policy, fork policy, suppression rules
 | `tool_calls` | `id`, `turn_id`, `agent_run_id`, `tool`, `input`, `output`, `tokens`, `latency_ms`, `status` | Bounded; read-only tools in v1. |
 | `resolutions` | `id`, `thread_id`, `actor_type`, `actor_id`, `evidence`, `confidence`, `created_at` | Bot resolution is guarded; human resolutions are recorded too. |
 | `agent_definitions` | `id`, `org_id`, `name`, `slug`, `role`, `created_at`, `archived_at` | Stable identity. |
-| `agent_versions` | `id`, `agent_id`, `version`, `status`, `instructions`, `rules`, `provider_id`, `model_id`, `endpoint`, `params`, `tools`, `content_hash`, `activated_at` | Immutable once active; provider/model/endpoint from the catalog only. |
+| `agent_versions` | `id`, `agent_id`, `version`, `status`, `instructions`, `rules`, `provider_id`, `model_id`, `endpoint`, `params`, `tools`, `sandbox_policy`, `content_hash`, `activated_at` | Immutable once active; provider/model/endpoint from the catalog only. |
 | `agent_scopes` | `id`, `agent_version_id`, `scope_type` (`repo`/`path`/`language`/`label`), `pattern`, `required` | Dynamic availability. |
 | `provider_models` | `id`, `provider_id`, `model_id`, `display_name`, `context_window`, `max_output`, `input_price`, `output_price`, `cache_read_price`, `cache_write_price`, `capabilities`, `supported_endpoints`, `pricing_source`, `source`, `status`, `last_seen_at` | Fetched from `/models`; enriched by the registry. |
 | `repo_indexes` | `id`, `org_id`, `repository_id`, `commit_sha`, `status`, `parser_version`, `built_at`, `stale_at` | One per indexed commit. |

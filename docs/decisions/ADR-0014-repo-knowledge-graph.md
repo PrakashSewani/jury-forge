@@ -23,8 +23,9 @@ tests, or the rest of the repository unless the operator listed paths.
 
 ## Decision
 
-- **Diff is the default.** The context planner uses the diff plus targeted related code from the
-  graph within a token budget.
+- **PR review is diff-only.** It sends the PR diff/hunks and metadata; no graph, no full files.
+- **Branch review uses the graph.** It compares the branch to the default branch and provides the
+  graph as context.
 - **The review target is the branch delta vs the repository default branch.** The graph is context,
   not a second review target; a branch review does not audit untouched files.
 - **Branch review is explicit** (`/jury branch-review`, UI, config) and shows an estimate; it uses the

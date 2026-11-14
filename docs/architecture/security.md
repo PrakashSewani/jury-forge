@@ -338,6 +338,7 @@ New attack surface and controls:
 | Graph data leakage | Tenant/repo scoping, no secrets, retention/delete, access checks on tools. |
 | Runaway cost | Per-turn/session/repo budgets; stop before the next call; alert. |
 | Untrusted tool output | Tool results are data, not instructions; validate and bound. |
+| Sandbox escape / untrusted test execution | Ephemeral non-root container, no secrets, network off, CPU/memory/time caps, command allowlist, no push; opt-in per repo. |
 | GitHub permission overreach | Least-privilege App permissions; installation-scoped tokens; verify reply/resolve mutations. |
 
 Resolution is an authorization decision, not a model output. The model may request it; the server

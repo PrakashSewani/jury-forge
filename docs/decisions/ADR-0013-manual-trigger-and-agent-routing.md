@@ -28,9 +28,11 @@ agent is not available on every repo, so the product needs a dynamic way to choo
   `jury:pr-review`/`jury:branch-review` label (both one click, no comment); slash commands
   (`/jury pr-review`, `/jury pr-review <agents>`, `/jury branch-review`, `/jury status`, etc.) and the UI
   “Ask Jury Forge” action as fallbacks. Manual requests bypass the automatic allowlist.
-- **Labels are modes, not reviewer selectors.** `jury:pr-review` runs the repo’s bound jury on the
-  PR diff + targeted context; `jury:branch-review` runs a complete branch review. Specific
-  reviewers are requested via slash command/UI, not via per-domain labels.
+- **Labels are modes.** `jury:pr-review` runs the repo’s bound jury on the PR diff; `jury:branch-review`
+  runs a complete branch review. Optional capability labels (`jury:cap:security`, `jury:cap:tests`, …)
+  request a capability group only from reviewers already bound/approved for the repo; they never
+  enable an unbound reviewer or bypass required reviewers/budgets/provider policy. Specific
+  reviewers are requested via slash command/UI.
 - **No-reviewer fallback:** if no reviewers are bound, none match, or a required reviewer is
   unavailable, post a fallback notice with setup/retrigger instructions — never a clean review.
 - **Reviewer picker:** tested 2026-11-15; a request for `jury-forge[bot]` was accepted by the API but

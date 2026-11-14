@@ -75,5 +75,8 @@ Shared vocabulary. When a term is ambiguous, this page wins.
 | **SME** | Subject matter expert; owns/curates domain reviewers and binds them to assigned repos. |
 | **Fallback comment** | The no-reviewers/no-match/required-unavailable notice; an issue comment, never a review. |
 | **Review mode label** | `jury:pr-review` or `jury:branch-review`; a mode trigger, not a reviewer selector. |
+| **Capability label** | `jury:cap:<tag>`; requests a capability group within the repo’s bound/approved reviewers. Never grants an unbound reviewer. |
+| **Capability agent** | A reviewer with tools to verify behavior (graph, tests, static analysis, optional sandbox run). |
+| **Sandbox run** | Opt-in, isolated execution of tests/builds for a capability agent; no secrets, network off, resource caps. |
 | **PR review** | Review the PR diff plus targeted repository context. |
 | **Branch review** | Compare the PR branch to the repository default branch and review the full branch delta against the context graph. |

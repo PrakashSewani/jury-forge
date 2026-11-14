@@ -86,7 +86,7 @@ operate, trust, and measure — with durable, conversational per-PR sessions, no
 | ------------ | --- | ------- |
 | Auto-fix / auto-merge | Human judgment stays in the loop; risk is too high. | After suggested fixes are proven and there is a strong safety model. |
 | Code generation / agentic coding | Different product; dilutes the wedge. | Not planned. |
-| Arbitrary agent code execution / shell tools | Too risky for a review product in v1. | Sandboxed static analysis later. |
+| Arbitrary host shell / unsandboxed code execution | Too risky for v1. | Opt-in sandboxed `tests.run`/`build.run` capability later, with isolation/resource caps. |
 | A graph database as a required dependency | Postgres adjacency is enough for v1. | Revisit at large graph scale. |
 | Multi-forge (GitLab/Gitea/Bitbucket) | GitHub first; the adapter interface is designed for later. | v1.1+ based on demand. |
 | Kubernetes/Helm as the primary install | Compose is the reference; K8s is a later adapter. | After Compose operations are solid. |

@@ -57,8 +57,12 @@ required.
 - `jury:pr-review` — PR review: the repo’s bound jury reviews the PR diff + targeted context.
 - `jury:branch-review` — complete branch review: compare the PR branch to the **repository default branch**, review the full branch delta against the repo context graph; static functional/behavioral impact, no code execution in v1.
 - Check Run actions (`PR review`, `Branch review`) — same turns.
+- **Capability agents** may use graph/tests/static tools; `tests.run`/`build.run` are opt-in
+  sandbox capabilities, not automatic. The agent decides the verification path within policy.
 - Slash commands — fallback/specific reviewers (for example `/jury pr-review security,testing`).
-- Labels are **modes**, not reviewer selectors. Reviewers come from repo bindings; no domain labels.
+- Labels are **modes**; optional capability labels (`jury:cap:security`, `jury:cap:tests`, …) are
+  requests within the repo’s bound/approved reviewers. A label can never enable an unbound reviewer
+  or bypass required reviewers/budgets/provider policy.
 - Reviewer picker is not available to arbitrary GitHub Apps (tested 2026-11-15).
 
 ### Fallback

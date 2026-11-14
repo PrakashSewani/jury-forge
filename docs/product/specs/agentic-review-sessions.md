@@ -24,8 +24,9 @@
    from explicit requests, repo policy, paths, languages, labels, and agent scopes.
 9. **Keys are stored encrypted** and are write-only to the API.
 10. **Only Jury Forge resolves its conversations**, after a satisfactory user response.
-11. **Diff-only by default.** Branch review is explicit and backed by a repo knowledge graph that
-    is updated incrementally on every review run, so context is not rebuilt from scratch.
+11. **PR review is diff-only by default.** Branch review is explicit: it compares the branch to the
+    default branch and uses a repo knowledge graph updated incrementally on every review run, so
+    context is not rebuilt from scratch.
 12. **Copyright/licence:** MIT; no open-core or BSL/SSPL dependency in the core.
 
 ## Problem
@@ -125,8 +126,12 @@ Surfaces, in order of preference:
 2. **PR label (modes):** `jury:pr-review` (PR diff + targeted context) and `jury:branch-review`
    (complete branch review against the repo context graph). One click in the sidebar; the app
    listens to `pull_request.labeled` and can create the labels on install. No comment required.
-   Labels are **modes, not reviewer selectors**; the repo bindings decide which reviewers run.
-   Specific reviewers are requested via slash command/UI, not per-domain labels.
+   These two labels are **modes**.
+   Optional **capability labels** (`jury:cap:security`, `jury:cap:tests`, `jury:cap:performance`,
+   `jury:cap:docs`, `jury:cap:data`, `jury:cap:infra`, `jury:cap:accessibility`) request a capability
+   group **within the reviewers already bound/approved for the repo**. They never enable an agent
+   that is not bound, never bypass required reviewers, budgets, or provider policy. If no bound
+   reviewer matches the capability, post a fallback. Specific agents are requested via slash/UI.
 3. **Slash command (fallback):** `/jury pr-review`, `/jury pr-review security,testing`, `/jury branch-review`,
    `/jury status`, `/jury pause`, `/jury resolve`, `/jury reopen`.
 4. **Web UI:** “Ask Jury Forge” on a repository/PR view; it enqueues the same turn. The UI must not
@@ -204,6 +209,8 @@ ingest event
 | `reopen_thread` | Reopen on new evidence | Guard: human reply or new failure |
 | `update_finding` | Mark addressed/verified/dismissed/reopened | Guard: evidence + actor |
 | `check_ci` | Read check runs/status for the SHA | Read-only |
+| `tests.run` | Run selected tests in a sandbox | Opt-in repo policy; isolated, no secrets, network off, resource caps |
+| `build.run` | Build in a sandbox | Opt-in repo policy; same isolation |
 
 No arbitrary shell, no code execution, no network fetch by default. Static-analysis tools can be
 added later behind a sandbox and an explicit capability.
@@ -272,19 +279,21 @@ Two review modes, both session turns:
 
 ### `jury:pr-review` — PR review (default)
 
-- Compares the PR head to the PR **base branch** (usually the default branch) and reviews the PR
-  diff plus targeted related code (callers, types, tests) from the graph, within a token budget.
-- Fast and incremental; it does not send the whole repository.
-- It still uses the graph to answer "who calls this?" and "what tests cover this?".
+- Sends **only the PR diff/hunks** plus PR metadata; no repository graph, no full files.
+- Fast and cheap; it is the "review these diffs" mode.
+- It does not answer "who calls this?" — that is branch review’s job.
 
 ### `jury:branch-review` — complete branch review
 
 - Compares the PR branch to the **repository’s default branch**, not just the latest PR diff.
 - Reviews the complete branch delta (all changed files/functions vs default) against the repository
   context graph, including cross-file and functional/behavioral impact.
-- It does **not** audit untouched files; they are context. It does not execute code/tests in v1;
-  “compare functionality” means analyze the behavioral change, contracts, tests, and callers. A
-  sandboxed test-run mode can be a later capability.
+- It does **not** audit untouched files; they are context.
+- **Capability agents decide how to verify functionality.** A reviewer can be configured with tools
+  such as graph queries, test inspection, static analysis, and (opt-in) a sandboxed test/build run.
+  The agent chooses the verification path within its instructions, budget, and repo policy.
+- Default: static behavior/contract/test analysis. `tests.run` / `build.run` are opt-in sandbox
+  capabilities; they are not implied by branch review.
 - Explicit only: `/jury branch-review`, `jury:branch-review`, the Check Run action, or
   `mode: branch` in repo config. Shows an estimate; cancellable.
 - If the PR base is not the default branch, branch review still uses the default branch unless the
@@ -356,7 +365,7 @@ See [`provider-model-discovery.md`](provider-model-discovery.md).
 - [ ] Adding a provider key fetches the model list; the UI has no free-text model field; an invalid
       key is rejected.
 - [ ] Keys are encrypted and never returned; a key is bound to its provider origin.
-- [ ] Diff-only is the default; `/jury branch-review` builds/uses the repo graph and reports an estimate.
+- [ ] PR review is diff-only by default; `/jury branch-review` compares the branch to the default branch, builds/uses the repo graph, and reports an estimate.
 - [ ] Re-running a review reuses the graph and only re-indexes changed files.
 - [ ] All provider/session/tool/resolution actions are audited.
 - [ ] Docker Compose install runs the backend, worker, scheduler, Postgres, and UI.
