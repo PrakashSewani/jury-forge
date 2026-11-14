@@ -16,7 +16,7 @@ false, the plan changes. Each has a validation method and an owner.
 | A-009 | Model providers will keep offering OpenAI/Anthropic-compatible APIs. | High | Provider conformance suite. | Adapter-per-provider cost rises; prioritize the most used. |
 | A-010 | The operator will pay providers directly and accept variable cost. | Medium | Cost telemetry; interviews. | Add budgets, estimates, and a local-model default. |
 | A-011 | A code index is feasible to build and operate on a single node for a mid-size repo. | Medium | Indexing spike: time, size, memory, query latency. | Start with symbol/import graph only; defer embeddings. |
-| A-012 | Incremental review since the last SHA is what users want. | Medium | Dogfood + interviews. | Keep full-diff review, optimize cost differently. |
+| A-012 | Incremental review since the last SHA is what users want. | Medium | Dogfood + interviews. | Keep full-PR review, optimize cost differently. |
 | A-013 | One instance per organisation is acceptable for v1. | High | Sales/community feedback. | Add multi-installation tenancy earlier. |
 | A-014 | MIT + no CLA attracts contributors and users. | Medium | Community response. | Revisit governance, not the licence. |
 | A-015 | A documentation-first, agent-assisted process can sustain a small team. | Medium | Delivery retrospectives. | Reduce process, automate more, or add contributors. |
@@ -27,7 +27,7 @@ false, the plan changes. Each has a validation method and an owner.
 | A-020 | An agentic loop improves outcomes enough to justify the cost/latency. | Medium | Benchmark one-shot vs agentic on the same PRs. | Simplify the loop; keep the session shell. |
 | A-021 | GitHub Apps can reply to and resolve review threads with acceptable permissions. | Medium | Platform spike (events, GraphQL mutations, permissions). | Fall back to PR-level comments; no thread resolve. |
 | A-022 | Provider `/models` is reliable enough to be the only model source. | Medium | Provider conformance tests; fallback manifest. | Add a signed provider manifest as a first-class path. |
-| A-023 | The repo graph materially improves context review quality. | Medium | Benchmark diff vs graph-assisted. | Keep diff-only; make context review optional. |
+| A-023 | The repo graph materially improves branch review quality. | Medium | Benchmark diff vs graph-assisted. | Keep diff-only; make branch review optional. |
 | A-024 | Docker Compose is enough for the first agentic release. | High | Install spike + 10× load test. | Add K8s/Helm earlier. |
 
 ## Assumptions we reject

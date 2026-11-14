@@ -8,14 +8,14 @@
 
 ## Context
 
-The owner wants PR reviews to be diff-only by default. For context reviews, the product must build
+The owner wants PR reviews to be diff-only by default. For branch reviews, the product must build
 a graph/knowledge base of the repository so context is not repeated, and update it on every review
 run. The PoC only had the diff plus optional literal reference paths; it could not see callers,
 tests, or the rest of the repository unless the operator listed paths.
 
 ## Options
 
-1. **Diff-only forever** — cheap, but misses context; rejected for context review.
+1. **Diff-only forever** — cheap, but misses context; rejected for branch review.
 2. **Send the whole repo on every run** — expensive, slow, repetitive; rejected.
 3. **Vector-only RAG** — fuzzy, no structural guarantees; insufficient alone.
 4. **Postgres graph + incremental index + content-hash summaries** — chosen.
@@ -25,9 +25,9 @@ tests, or the rest of the repository unless the operator listed paths.
 
 - **Diff is the default.** The context planner uses the diff plus targeted related code from the
   graph within a token budget.
-- **The review target is always the PR.** The graph is context, not a second review target; a
-  “context review” reviews the PR against the repository, it does not audit every file.
-- **Context review is explicit** (`/jury context`, UI, config) and shows an estimate; it uses the
+- **The review target is the branch delta vs the repository default branch.** The graph is context,
+  not a second review target; a branch review does not audit untouched files.
+- **Branch review is explicit** (`/jury branch-review`, UI, config) and shows an estimate; it uses the
   graph and can query the repository within budget.
 - **The graph is a first-class service:** nodes/edges for files, symbols, imports/references, tests,
   configs, docs, ownership, conventions, prior findings; content-hash summaries and cached slices.
@@ -42,7 +42,7 @@ tests, or the rest of the repository unless the operator listed paths.
 
 ## Consequences
 
-**Easier:** context review without re-indexing; related code for diff review; lower context cost;
+**Easier:** branch review without re-indexing; related code for PR review; lower context cost;
 explainable context; a foundation for retrieval and evaluation.
 
 **Harder:** parser/indexer maintenance; incremental correctness; graph schema/migrations; language

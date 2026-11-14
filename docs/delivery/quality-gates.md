@@ -42,7 +42,7 @@ named reviewer) signs off. "Looks good" is not evidence.
 - [ ] A GitHub App can be created, installed, and verified; no per-repo enable toggle is required.
 - [ ] A provider key is validated; `/models` is fetched; an agent binds to a catalog model (no free text).
 - [ ] A webhook is verified, persisted, and enqueued.
-- [ ] Manual `jury:review`/`jury:context` label or Check Run action starts a session; one agent uses one tool and publishes one review.
+- [ ] Manual `jury:pr-review`/`jury:branch-review` label or Check Run action starts a session; one agent uses one tool and publishes one review.
 - [ ] A reviewer catalog entry is bound to the repo as required; no binding means unavailable.
 - [ ] A human reply resumes the session and produces a second agent response with prior context.
 - [ ] A guarded resolve works after a satisfactory reply; a new reply reopens.
@@ -97,7 +97,7 @@ checklist.
       agents are explained.
 - [ ] Reviewer catalog approval and required/optional bindings are enforced; an unbound reviewer
       never runs.
-- [ ] Diff-only is the default; `/jury context` builds/uses the graph with an estimate and cancel.
+- [ ] PR review is the default; `/jury branch-review` compares the PR branch to the default branch, uses the graph, and shows an estimate/cancel.
 - [ ] The repo graph updates incrementally; a second run reuses unchanged summaries and context.
 - [ ] Feedback capture works; agent/session scorecards exist.
 - [ ] The dogfood repository runs on itself and the team uses the sessions.

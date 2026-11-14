@@ -30,7 +30,7 @@ Status key: **Proven** (the PoC shipped a version), **Planned** (in the target p
 | Webhook signature verification and de-duplication | Proven | Keep. |
 | Fork PR policy | Planned | Skip / restricted / approve; least privilege. |
 | Repository discovery and enablement | Proven | Manual refresh; add installation events. No per-repo enable toggle for agentic review (ADR-0013). |
-| Manual review trigger (Check Run action, label, slash command, UI) | Planned | Available on any PR in an installed repo; Check Run button + `jury:review` label primary; reviewer picker unsupported for arbitrary apps. |
+| Manual review trigger (Check Run action, label, slash command, UI) | Planned | Available on any PR in an installed repo; Check Run button + `jury:pr-review` label primary; reviewer picker unsupported for arbitrary apps. |
 | Automatic review policy (config-as-code) | Planned | `.jury-forge.yml`; default off; manual bypasses the allowlist. |
 | GitHub Checks / status / annotations | Planned | Gate merges, surface findings in CI. |
 | SARIF export | Planned | Feed security dashboards. |
@@ -178,11 +178,11 @@ Status key: **Proven** (the PoC shipped a version), **Planned** (in the target p
 | Per-PR durable session | Planned | One session per PR; threads, messages, findings, turns, generations. |
 | User reply → agent response | Planned | GitHub review-comment/issue-comment events; debounce/coalesce; no parallel turns. |
 | Agent-only resolution | Planned | Guarded `resolve_thread`; evidence + human response; reopen on reply. |
-| Manual-first triggering | Planned | `jury:review`/`jury:context` labels + Check Run actions; slash command/UI fallback; no repo enable toggle. |
+| Manual-first triggering | Planned | `jury:pr-review`/`jury:branch-review` labels + Check Run actions; slash command/UI fallback; no repo enable toggle. |
 | Reviewer catalog + repo bindings | Planned | Required/optional reviewers per repo; SME-owned/approved catalog; admin/maintainer bind (ADR-0016). |
 | No-reviewers fallback | Planned | Comment with setup/retrigger; no review posted. |
 | Dynamic agent availability/router | Planned | Scope by repo/path/language/label; explicit request wins; record why. |
-| Diff-only default + context review | Planned | `/jury context`; estimate; cancellable. |
+| PR review default + branch review | Planned | `jury:branch-review` compares the PR branch to the default branch and reviews the full delta against context; estimate; cancellable. |
 | Repository knowledge graph | Planned | Symbols/imports/tests/configs/docs/owners/findings; incremental updates. |
 | Context reuse across runs | Planned | Content-hash summaries; manifest; only changed files re-indexed. |
 | Session inbox / conversation UI | Planned | Timeline, agent activity, tool calls, findings, cost, resolve state. |
@@ -205,7 +205,7 @@ Status key: **Proven** (the PoC shipped a version), **Planned** (in the target p
 | Provider model discovery, no free text | Owner, 2026-11-15 | Planned | [`specs/provider-model-discovery.md`](specs/provider-model-discovery.md) |
 | Encrypted provider keys | Owner, 2026-11-15 | Planned | [`specs/provider-model-discovery.md`](specs/provider-model-discovery.md) |
 | Only Jury Forge resolves conversations | Owner, 2026-11-15 | Planned | [`specs/agentic-review-sessions.md`](specs/agentic-review-sessions.md) |
-| Diff-only default; context graph | Owner, 2026-11-15 | Planned | [`specs/repo-knowledge-graph.md`](specs/repo-knowledge-graph.md) |
+| PR review default; branch review against default branch with context graph | Owner, 2026-11-15 | Planned | [`specs/repo-knowledge-graph.md`](specs/repo-knowledge-graph.md) |
 | Incremental graph update every run | Owner, 2026-11-15 | Planned | [`specs/repo-knowledge-graph.md`](specs/repo-knowledge-graph.md) |
 | Dockerized self-hosted backend + UI | Owner, 2026-11-15 | Planned | [`../architecture/deployment.md`](../architecture/deployment.md) |
 

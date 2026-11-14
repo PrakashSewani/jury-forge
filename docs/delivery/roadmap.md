@@ -36,7 +36,7 @@ conversation** — not a one-shot review.
 - Compose install (app, worker, scheduler, Postgres) with migrations and a bootstrap admin.
 - Shared contracts (schemas), error taxonomy, OpenAPI generation.
 - Provider onboarding: key validation, `/models` discovery, encrypted storage, catalog (ADR-0011).
-- GitHub App setup, webhook ingress, queue, manual `jury:review`/`jury:context` labels + Check Run actions on an installed repo.
+- GitHub App setup, webhook ingress, queue, manual `jury:pr-review`/`jury:branch-review` labels + Check Run actions on an installed repo.
 - Reviewer catalog + per-repo binding: one approved reviewer bound as required; no binding = unavailable (ADR-0016).
 - One agent bound to a catalog model; diff-only context; one review publish.
 - Per-PR session, one thread reply, and a guarded resolve after a human reply (ADR-0012).
@@ -45,7 +45,7 @@ conversation** — not a one-shot review.
 - A clean-machine install test and a deterministic test suite.
 
 **Exit gate (G1):** a new operator installs on a clean Linux host, adds a provider key, sees the
-model catalog, triggers `/jury review` on a test PR, replies to the thread, gets a second agent
+model catalog, triggers `/jury pr-review` on a test PR, replies to the thread, gets a second agent
 response, and sees a guarded resolve. The PoC can be turned off.
 
 ## Phase 2 — Trust and security
@@ -81,7 +81,7 @@ red-team exercise finds no S1 issues.
 - Token-aware context planner with a manifest and cost estimate; context reuse via content hashes.
 - Multi-agent router: explicit request > repo bindings > path/language/label scope > availability;
   record why each agent ran or was skipped (ADR-0013/ADR-0016).
-- Diff-only default; explicit context review with estimate/cancel.
+- PR review default; explicit branch review compares the PR branch to the default branch, with estimate/cancel.
 - Structured output, repair, grounding, verification, confidence.
 - Deduplication, disagreement, optional chair/consensus.
 - Suggested fixes with patch validation.

@@ -24,7 +24,7 @@
    from explicit requests, repo policy, paths, languages, labels, and agent scopes.
 9. **Keys are stored encrypted** and are write-only to the API.
 10. **Only Jury Forge resolves its conversations**, after a satisfactory user response.
-11. **Diff-only by default.** Context review is explicit and backed by a repo knowledge graph that
+11. **Diff-only by default.** Branch review is explicit and backed by a repo knowledge graph that
     is updated incrementally on every review run, so context is not rebuilt from scratch.
 12. **Copyright/licence:** MIT; no open-core or BSL/SSPL dependency in the core.
 
@@ -55,7 +55,7 @@ and it cannot decide which specialist agents a given PR needs.
 
 - **GitHub is the primary conversation surface.** Most users ask, reply, and resolve in the PR.
 - **The website is the control plane and deep view.** Onboarding, session inbox/timeline, agents,
-  providers/models, policy, roles, audit, costs, context review, exports.
+  providers/models, policy, roles, audit, costs, branch review, exports.
 - **The harness is internal.** LangGraph.js or the turn runner is not a user interface.
 - **The session belongs to the PR**, not to the user who triggered it. It is keyed by
   `(installation, repository, PR)` and is visible to repo readers; the trigger user is recorded for
@@ -119,14 +119,15 @@ installation-level; it is not gated by a per-repo enable toggle.
 Surfaces, in order of preference:
 
 1. **GitHub Check Run action (primary).** On PR open/synchronize, the app creates a neutral
-   `Jury Forge` check run with action buttons `Review` and `Context review` (Checks API `actions`;
+   `Jury Forge` check run with action buttons `PR review` and `Branch review` (Checks API `actions`;
    max 3, label ≤ 20 chars). Clicking a button sends `check_run.requested_action` to the app and
    starts the turn. No comment is posted just to trigger. Requires `checks: write`.
-2. **PR label:** `jury:review` and `jury:context`, plus optional domain labels (`jury:security`,
-   `jury:testing`, `jury:frontend`, `jury:docs`, `jury:performance`, `jury:database`, `jury:infra`). One
-   click in the sidebar; the app listens to `pull_request.labeled`. The app can create these labels
-   on install. No comment required. Multiple domain labels union the requested domains.
-3. **Slash command (fallback):** `/jury review`, `/jury review security,testing`, `/jury context`,
+2. **PR label (modes):** `jury:pr-review` (PR diff + targeted context) and `jury:branch-review`
+   (complete branch review against the repo context graph). One click in the sidebar; the app
+   listens to `pull_request.labeled` and can create the labels on install. No comment required.
+   Labels are **modes, not reviewer selectors**; the repo bindings decide which reviewers run.
+   Specific reviewers are requested via slash command/UI, not per-domain labels.
+3. **Slash command (fallback):** `/jury pr-review`, `/jury pr-review security,testing`, `/jury branch-review`,
    `/jury status`, `/jury pause`, `/jury resolve`, `/jury reopen`.
 4. **Web UI:** “Ask Jury Forge” on a repository/PR view; it enqueues the same turn. The UI must not
    require the repo to be “enabled”.
@@ -143,7 +144,7 @@ reads `.jury-forge.yml` (or `.github/jury-forge.yml`) at the PR head/base:
 version: 1
 review:
   auto: true                 # default false
-  mode: diff                 # diff | context
+  mode: diff                 # pr | branch
   on: [opened, ready_for_review, synchronize]
 agents:
   security: { paths: ["src/**", "auth/**"], required: true }
@@ -249,7 +250,7 @@ An **agent definition** is a versioned configuration with:
 
 The **router** builds the jury for a turn:
 
-1. Explicit request (`/jury review security,testing`) wins.
+1. Explicit request (`/jury pr-review security,testing`) wins.
 2. Repo config (`.jury-forge.yml`) adds required/optional agents.
 3. Scope match: changed paths, languages, labels, repo, required context.
 4. Availability: agent enabled, provider/model healthy, budget available.
@@ -265,26 +266,29 @@ Bindings can be required/optional with path/language/label scope. A required rev
 run blocks the review with a configuration fallback. The full model is in
 [`reviewer-assignment-and-roles.md`](reviewer-assignment-and-roles.md) and ADR-0016.
 
-## 7. Diff-only and context review
+## 7. PR review and branch review
 
-**The review target is always the PR.** A context review does not audit the whole repository; it
-builds/updates the repository context graph and reviews the PR **against** that context. The graph
-is the memory, not a second review target.
+Two review modes, both session turns:
 
-### Default: diff-only
+### `jury:pr-review` — PR review (default)
 
-- The context planner uses the PR diff plus targeted related code (callers, types, tests) from the
-  repo graph, within a token budget.
-- It does not send the whole repository.
+- Compares the PR head to the PR **base branch** (usually the default branch) and reviews the PR
+  diff plus targeted related code (callers, types, tests) from the graph, within a token budget.
+- Fast and incremental; it does not send the whole repository.
 - It still uses the graph to answer "who calls this?" and "what tests cover this?".
 
-### Explicit: context review
+### `jury:branch-review` — complete branch review
 
-- Triggered by `/jury context`, the UI, or config `mode: context`.
-- The graph is loaded/updated first; the agent can query the whole repository as **context**, not
-  as a review target.
-- The run shows an estimate (tokens, cost, time) before it starts; the operator can cancel.
-- Context review is a session turn, not a separate product.
+- Compares the PR branch to the **repository’s default branch**, not just the latest PR diff.
+- Reviews the complete branch delta (all changed files/functions vs default) against the repository
+  context graph, including cross-file and functional/behavioral impact.
+- It does **not** audit untouched files; they are context. It does not execute code/tests in v1;
+  “compare functionality” means analyze the behavioral change, contracts, tests, and callers. A
+  sandboxed test-run mode can be a later capability.
+- Explicit only: `/jury branch-review`, `jury:branch-review`, the Check Run action, or
+  `mode: branch` in repo config. Shows an estimate; cancellable.
+- If the PR base is not the default branch, branch review still uses the default branch unless the
+  repo policy overrides it.
 
 ### Repo knowledge graph
 
@@ -318,7 +322,7 @@ See [`provider-model-discovery.md`](provider-model-discovery.md).
 
 - **Session inbox:** PRs with active sessions, last turn, waiting state, cost, unresolved findings.
 - **Session view:** timeline of messages, agent runs, tool calls, findings, diff, resolution, cost.
-- **Composer:** reply in a thread, ask a follow-up, request a specific agent, run context review.
+- **Composer:** reply in a thread, ask a follow-up, request a specific agent, run branch review.
 - **Triggers:** "Ask Jury Forge" from a repo/PR; copy the `/jury` command; no repo enable toggle.
 - **Agent studio:** name/role/instructions, provider/model picker (catalog only), scope rules,
   availability preview, version/activation, evaluation status.
@@ -342,7 +346,7 @@ See [`provider-model-discovery.md`](provider-model-discovery.md).
 
 ## 11. Acceptance criteria
 
-- [ ] A human can trigger a review on any PR in an installed repo with `/jury review`; no repo toggle.
+- [ ] A human can trigger a review on any PR in an installed repo with `/jury pr-review`; no repo toggle.
 - [ ] A session survives a process restart and a multi-day wait; a reply resumes with prior context.
 - [ ] The agent replies in the correct GitHub thread, not a duplicate top-level comment.
 - [ ] Only the bot resolves threads it created, after a satisfactory human response, with evidence.
@@ -352,7 +356,7 @@ See [`provider-model-discovery.md`](provider-model-discovery.md).
 - [ ] Adding a provider key fetches the model list; the UI has no free-text model field; an invalid
       key is rejected.
 - [ ] Keys are encrypted and never returned; a key is bound to its provider origin.
-- [ ] Diff-only is the default; `/jury context` builds/uses the repo graph and reports an estimate.
+- [ ] Diff-only is the default; `/jury branch-review` builds/uses the repo graph and reports an estimate.
 - [ ] Re-running a review reuses the graph and only re-indexes changed files.
 - [ ] All provider/session/tool/resolution actions are audited.
 - [ ] Docker Compose install runs the backend, worker, scheduler, Postgres, and UI.
@@ -379,9 +383,9 @@ See [`provider-model-discovery.md`](provider-model-discovery.md).
 
 **Commands and triggers**
 
-- `/jury review`, `/jury review security,testing`, `/jury context`, `/jury status`, `/jury pause`,
+- `/jury pr-review`, `/jury pr-review security,testing`, `/jury branch-review`, `/jury status`, `/jury pause`,
   `/jury resume`, `/jury resolve`, `/jury reopen`, `/jury explain`.
-- Labels `jury:review`, `jury:full`, `jury:pause` as an alternative to comments.
+- Labels `jury:pr-review`, `jury:full`, `jury:pause` as an alternative to comments.
 - A GitHub Check “Jury Forge: ready” with a details link so users discover the command without a
   noisy comment on every PR.
 - Optional “suggest” comment on PR open (repo policy, default off).
@@ -416,7 +420,7 @@ See [`provider-model-discovery.md`](provider-model-discovery.md).
 
 - Catalog diff on refresh: new, removed, deprecated models; affected agents.
 - Provider health and last-error; automatic fallback only if policy allows.
-- Cost estimate before a turn/context review; per-agent model routing (cheap triage, strong verifier).
+- Cost estimate before a turn/branch review; per-agent model routing (cheap triage, strong verifier).
 - Local model option for sensitive repos; per-repo model allowlist.
 - Model capability checks at save time (tools, structured output, context).
 

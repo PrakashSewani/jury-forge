@@ -8,7 +8,7 @@
 
 ## Owner directive
 
-Default to **diff-only** PR review. If the user asks for a **context review**, build a graph /
+Default to **diff-only** PR review. If the user asks for a **branch review**, build a graph /
 knowledge base against the repository so context is not repeated. **Update it on every review run.**
 
 ## Problem
@@ -16,7 +16,7 @@ knowledge base against the repository so context is not repeated. **Update it on
 A diff-only reviewer sees a patch in isolation. It misses callers, types, tests, configuration, and
 the conventions that decide whether a change is correct. Sending the whole repo on every turn is
 expensive, slow, and repetitive. The product needs a persistent, incrementally updated model of the
-repository that both diff and context reviews can query.
+repository that both diff and branch reviews can query.
 
 ## 1. What the graph is
 
@@ -97,15 +97,19 @@ Exposed to agents as tools and to the context planner as ranked sources:
   rejected at consolidation.
 - Results are capped by count and tokens; the agent can expand explicitly.
 
-## 5. Context review
+## 5. Branch review
 
-- Triggered by `/jury context`, the UI, or `mode: context` in repo config.
+- Triggered by `/jury branch-review`, the UI, or `mode: branch` in repo config.
+- **Base = the repository’s default branch**, not the PR’s base. The review covers the complete
+  branch delta vs default: all changed files, functions, tests, and configs.
+- The index is updated first; the planner builds a coverage plan and the agents can query the graph
+  as context. Untouched files are context, not a review target.
+- “Compare functionality” is static analysis of the behavioral change: contracts, callers, tests,
+  config, and docs. It does not execute code/tests in v1; a sandboxed test-run mode is a later
+  capability.
 - Before starting, show an estimate: files, symbols, tokens, cost, expected time; allow cancel.
-- The index is updated first; the planner builds a coverage plan (what areas to read) and the agents
-  can query the graph arbitrarily within budget.
-- Output is still a review (findings + summary), not a repository report; the difference is context
-  depth.
-- Context review is expensive; default off; never automatic unless policy explicitly says so.
+- Output is still a review (findings + summary), not a repository report; the difference is depth.
+- Branch review is expensive; default off; never automatic unless policy explicitly says so.
 
 ## 6. Storage
 
@@ -147,12 +151,12 @@ Exposed to agents as tools and to the context planner as ranked sources:
 
 ## 10. Acceptance criteria
 
-- [ ] First context review builds an index for a test repo; the second run reuses it.
+- [ ] First branch review builds an index for a test repo; the second run reuses it.
 - [ ] A two-file change re-parses only those files and their reverse dependencies, not the whole repo.
 - [ ] A changed file invalidates its summaries/edges; an unchanged file's summary is reused.
 - [ ] `find_references` returns the callers of a changed symbol.
 - [ ] `find_tests` returns related tests.
-- [ ] A context review shows an estimate and can be cancelled.
+- [ ] A branch review shows an estimate and can be cancelled.
 - [ ] The context manifest shows graph-sourced context and why it was included.
 - [ ] A stale index is visible and never silently used as fresh.
 - [ ] Deleting a repo deletes its index.
@@ -164,7 +168,7 @@ Exposed to agents as tools and to the context planner as ranked sources:
 - Incremental update time; files parsed vs reused.
 - Graph query latency; context tokens per turn.
 - Cache hit rate for summaries and prompts.
-- Full-review cost vs diff-review cost.
+- Full-review cost vs PR-review cost.
 - Retrieval usefulness (finding acceptance when graph context is used).
 
 ## 12. Open questions

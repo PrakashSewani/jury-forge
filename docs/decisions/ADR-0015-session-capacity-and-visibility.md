@@ -34,7 +34,7 @@ The product is session-based. The owner has clarified four things:
 
 - **GitHub** is the primary conversation surface: ask, reply, resolve.
 - **Website** is the control plane and deep view: onboarding, session inbox/timeline, agents,
-  providers/models, policy, roles, audit, cost, context review, exports.
+  providers/models, policy, roles, audit, cost, branch review, exports.
 - **Harness is internal.** LangGraph.js or the turn runner is not a user interface.
 
 ### Lifecycle and capacity
@@ -44,7 +44,7 @@ The product is session-based. The owner has clarified four things:
 - Defaults: 1 turn/session, 2 concurrent turns/org, 2/user, 2–4/worker, 4 provider calls; 20 turns/
   session soft, 3 consecutive agent turns without a human. Org admin tunes; repo overrides.
 - No hard open-session cap by default; soft warning at 500/org with admin override.
-- Queue priorities: human reply > manual review > automatic review > context review > indexing.
+- Queue priorities: human reply > manual review > automatic review > branch review > indexing.
 
 ### Roles and visibility
 

@@ -24,13 +24,13 @@ agent is not available on every repo, so the product needs a dynamic way to choo
 
 - **Installation-level availability.** If the app is installed on an account/org (all or selected
   repos), manual review is available on those repos. No per-repo enable toggle is required.
-- **Manual triggers:** a `Jury Forge` **Check Run action** (`Review` / `Context review`) or the
-  `jury:review`/`jury:context` label (both one click, no comment); slash commands
-  (`/jury review`, `/jury review <agents>`, `/jury context`, `/jury status`, etc.) and the UI
+- **Manual triggers:** a `Jury Forge` **Check Run action** (`PR review` / `Branch review`) or the
+  `jury:pr-review`/`jury:branch-review` label (both one click, no comment); slash commands
+  (`/jury pr-review`, `/jury pr-review <agents>`, `/jury branch-review`, `/jury status`, etc.) and the UI
   “Ask Jury Forge” action as fallbacks. Manual requests bypass the automatic allowlist.
-- **Domain labels:** `jury:security`, `jury:testing`, `jury:frontend`, `jury:docs`,
-  `jury:performance`, `jury:database`, `jury:infra` request required reviewers plus the named
-  domain’s optional reviewers; multiple labels union.
+- **Labels are modes, not reviewer selectors.** `jury:pr-review` runs the repo’s bound jury on the
+  PR diff + targeted context; `jury:branch-review` runs a complete branch review. Specific
+  reviewers are requested via slash command/UI, not via per-domain labels.
 - **No-reviewer fallback:** if no reviewers are bound, none match, or a required reviewer is
   unavailable, post a fallback notice with setup/retrigger instructions — never a clean review.
 - **Reviewer picker:** tested 2026-11-15; a request for `jury-forge[bot]` was accepted by the API but

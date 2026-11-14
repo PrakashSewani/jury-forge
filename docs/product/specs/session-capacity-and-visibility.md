@@ -15,8 +15,8 @@ The product has two user interfaces:
 
 | Surface | Role |
 | ------- | ---- |
-| **GitHub** | The primary conversation: start via a Check Run action (`Review` / `Context review`), the `jury:review` label, or `/jury review`; reply in the thread, receive reviews, resolve/reopen. Most users never leave the PR. |
-| **Website** | The control plane and deep view: onboarding, session inbox, session timeline, agents, providers/models, policy, roles, audit, costs, context review, exports. |
+| **GitHub** | The primary conversation: start via a Check Run action (`PR review` / `Branch review`), the `jury:pr-review` label, or `/jury pr-review`; reply in the thread, receive reviews, resolve/reopen. Most users never leave the PR. |
+| **Website** | The control plane and deep view: onboarding, session inbox, session timeline, agents, providers/models, policy, roles, audit, costs, branch review, exports. |
 | **API/CLI** | Later: automation, CI, scripts. Same auth/roles. |
 
 The website is a React SPA served by the self-hosted app; it is not a separate hosted service. The
@@ -50,7 +50,7 @@ open
 2. Friday–Tuesday: no agent, no worker slot, no memory; just rows and a thread index.
 3. Tuesday: user replies; webhook resolves the session; a turn is queued; a worker rehydrates.
 4. If the PR head changed: update the graph delta, mark affected findings `needs_recheck`, answer
-   the comment, do a focused recheck, and offer a context review rather than silently running one.
+   the comment, do a focused recheck, and offer a branch review rather than silently running one.
 
 ## 3. Capacity and concurrency
 
@@ -72,7 +72,7 @@ Sessions are cheap; **turns** are the scarce resource.
 - No hard cap on open sessions by default. A soft warning at 500/org with an admin override avoids
   blocking real PRs while surfacing abuse.
 - The scheduler is fair per org and prioritises human replies > manual review > automatic review >
-  context review > indexing.
+  branch review > indexing.
 - Worker concurrency is auto-sized at install from CPU/memory, then configurable.
 - Provider limits are per provider/model; one slow provider must not block another.
 
@@ -149,7 +149,7 @@ still provider-driven).
 - [ ] The website shows sessions, agents, providers, policy, roles, audit, cost; GitHub remains the
       primary conversation surface.
 - [ ] A session open for a week resumes instantly from a reply with no warm process.
-- [ ] A human reply is prioritised over indexing/context review in the queue.
+- [ ] A human reply is prioritised over indexing/branch review in the queue.
 - [ ] An org member with repo read can see the session; without repo read, they cannot.
 - [ ] A repo write user can trigger/reply; an admin can configure; a viewer cannot.
 - [ ] `@human` mentions notify the human; the bot does not impersonate them; it can provide context
@@ -157,7 +157,7 @@ still provider-driven).
 - [ ] The org admin can tune concurrent turns, budgets, visibility, and auto policy.
 - [ ] A provider with pricing in `/models` shows it; a custom provider can be priced manually;
       unknown pricing enforces token budgets.
-- [ ] Context review is a PR review against repo context, not a full-repo audit.
+- [ ] Branch review compares the PR branch to the repository default branch, reviews the full branch delta against context, and is not a full-repo audit.
 
 ## 8. Open questions
 

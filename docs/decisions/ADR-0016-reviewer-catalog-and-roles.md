@@ -43,7 +43,7 @@ post a misleading clean review.
   roles.
 - **SME** — domain-scoped reviewer ownership: draft/edit/test/version reviewers in their domain;
   bind their domain reviewers to assigned repos; no provider/billing.
-- **Maintainer** — trigger, reply, context review, request reviewers; bind approved reviewers only
+- **Maintainer** — trigger, reply, branch review, request reviewers; bind approved reviewers only
   if the org enables `allowMaintainerBindings` (default off).
 - **Member** — repo read; view and reply where GitHub permits.
 - **Viewer** — read-only.
@@ -54,11 +54,11 @@ required.
 
 ### Triggers
 
-- `jury:review` — default diff jury for the repo (required + matching optional).
-- `jury:context` — context review.
-- Domain labels (`jury:security`, `jury:testing`, …) — required + that domain’s optional reviewers.
-- Check Run actions (`Review`, `Context review`) — same turns.
-- Slash commands — fallback/specific agents.
+- `jury:pr-review` — PR review: the repo’s bound jury reviews the PR diff + targeted context.
+- `jury:branch-review` — complete branch review: compare the PR branch to the **repository default branch**, review the full branch delta against the repo context graph; static functional/behavioral impact, no code execution in v1.
+- Check Run actions (`PR review`, `Branch review`) — same turns.
+- Slash commands — fallback/specific reviewers (for example `/jury pr-review security,testing`).
+- Labels are **modes**, not reviewer selectors. Reviewers come from repo bindings; no domain labels.
 - Reviewer picker is not available to arbitrary GitHub Apps (tested 2026-11-15).
 
 ### Fallback

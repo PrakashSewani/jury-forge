@@ -25,7 +25,7 @@
 | **Reviewer catalog** | The org-level set of reviewer definitions and versions. |
 | **SME** | A human subject matter expert who owns/curates reviewers in a domain (security, data, frontend, infra, etc.). |
 | **Repo binding** | The configuration that makes a catalog reviewer available on one repository, with required/optional, scope, and budget. |
-| **Default jury** | The reviewers a `jury:review` label runs for a repo: required reviewers + optional reviewers whose scope matches. |
+| **Default jury** | The reviewers a `jury:pr-review` label runs for a repo: required reviewers + optional reviewers whose scope matches. |
 | **Fallback** | The comment posted when no reviewer can run, explaining why and how to fix/retrigger. |
 
 ## 2. Reviewer catalog (org-level)
@@ -82,7 +82,7 @@ Rules:
 
 ### Precedence
 
-1. Explicit request (`/jury review security,testing`, a domain label, or UI selection).
+1. Explicit reviewer request (`/jury pr-review security,testing`, or UI selection).
 2. Repo binding (required/optional, scope).
 3. Org default reviewer policy.
 4. No match → fallback notice.
@@ -94,7 +94,7 @@ Rules:
 | **Owner** | org / personal install | Everything, including providers, billing, delete, transfer ownership |
 | **Admin** | org / repo | Providers/models, org policy, budgets, visibility, approve reviewer catalog, manage bindings/roles |
 | **SME** | domain + assigned repos | Create/edit/test/version reviewers in their domain; own/curate reviewers; bind their domain reviewers to assigned repos; not providers/billing |
-| **Maintainer** | repo write | Trigger, reply, context review, request reviewers; bind approved reviewers only if the org enables maintainer binding |
+| **Maintainer** | repo write | Trigger, reply, branch review, request reviewers; bind approved reviewers only if the org enables maintainer binding |
 | **Member** | repo read (org member) | View sessions; reply where GitHub permits |
 | **Viewer** | repo read | Read-only |
 | **Auditor** | org | Audit/export, no configuration |
@@ -112,30 +112,28 @@ Rules:
 ### Domain examples
 
 Security, Architecture, Backend, Frontend, Performance, Testing, Documentation, Database, Infra,
-Accessibility, Custom. Domains drive reviewer tags and optional labels (`jury:security`,
-`jury:testing`, etc.).
+Accessibility, Custom. Domains are **catalog metadata/tags** for organization, search, and SME
+ownership. They are not GitHub labels; labels are only review modes.
 
 ## 5. Triggers and the default jury
 
 ### Labels (primary, as requested)
 
-- `jury:review` — run the repo’s default **diff** review.
-- `jury:context` — run a **context** review (graph-backed, PR is still the target).
-- Optional domain labels: `jury:security`, `jury:testing`, `jury:frontend`, `jury:docs`,
-  `jury:performance`, `jury:database`, `jury:infra` — run required reviewers + the named domain’s
-  optional reviewers.
-- Multiple `jury:*` labels are allowed; the app unions the requested domains, capped by policy.
-- The app creates these labels on install (or documents them); labels are not a per-repo enable
+- `jury:pr-review` — PR review: the repo’s bound jury reviews the PR diff + targeted context.
+- `jury:branch-review` — complete branch review: compare the PR branch to the **repository default branch**, review the full branch delta against the repo context graph (no code execution in v1).
+- Labels are **modes, not reviewer selectors**. The repo bindings decide which reviewers run;
+  specific reviewers are requested via slash command/UI (for example `/jury pr-review security,testing`).
+- The app creates these two labels on install (or documents them); labels are not a per-repo enable
   toggle, they are a trigger.
 
 ### Check Run (also primary)
 
-A neutral `Jury Forge` check with actions `Review` and `Context review`; clicking starts the same
-turn. Domain selection via labels or slash command.
+A neutral `Jury Forge` check with actions `PR review` and `Branch review`; clicking starts the same
+turn. Reviewer selection comes from repo bindings; specific reviewers via slash command/UI.
 
 ### Slash command (fallback)
 
-`/jury review`, `/jury review security,testing`, `/jury context`, `/jury status`, `/jury pause`,
+`/jury pr-review`, `/jury pr-review security,testing`, `/jury branch-review`, `/jury status`, `/jury pause`,
 `/jury resolve`, `/jury reopen`.
 
 ## 6. Availability resolution
@@ -183,8 +181,8 @@ Jury Forge is installed on this repository, but no reviewers are enabled for it 
 was run.
 
 **For an admin:** open **Jury Forge → Repositories → <repo>** and enable at least one reviewer.
-**Then retrigger:** remove and re-add the `jury:review` label, click **Review** on the Jury Forge
-check, or comment `/jury review`.
+**Then retrigger:** remove and re-add the `jury:pr-review` label, click **Review** on the Jury Forge
+check, or comment `/jury pr-review`.
 ```
 
 ### No reviewer matched this change
@@ -211,7 +209,7 @@ An admin can adjust the path scopes in **Repositories → <repo>**, then retrigg
 The required reviewer **Security** cannot run (no model key / model missing / provider disabled).
 The review was not run, because a partial verdict would be misleading.
 
-Fix the reviewer/provider, then retrigger with `jury:review` or the Review button.
+Fix the reviewer/provider, then retrigger with `jury:pr-review` or the Review button.
 ```
 
 Rules:
@@ -257,8 +255,8 @@ Rules:
 - [ ] A reviewer exists in the catalog but is not used on a repo without a binding.
 - [ ] An admin/SME can bind a reviewer with required/optional and path/language/label scopes; the
       change is audited. A maintainer can bind only when `allowMaintainerBindings` is on.
-- [ ] `jury:review` runs required + matching optional reviewers for the repo.
-- [ ] `jury:security` runs required + security-domain optional reviewers.
+- [ ] `jury:pr-review` runs the repo’s bound jury (required + matching optional reviewers).
+- [ ] `jury:branch-review` runs a complete branch review against the repo context graph.
 - [ ] No bindings → fallback comment with setup/retrigger instructions; no review posted.
 - [ ] Bindings but no match → fallback listing scopes and changed files; no review posted.
 - [ ] Required reviewer unavailable → fallback; no partial/clean review.
@@ -280,7 +278,7 @@ Rules:
 - Per-repo min/max reviewers and budget.
 - Notify admins when a repo has no bindings or a required reviewer is broken.
 - Reviewer ownership transfer and archive.
-- Domain labels auto-created; custom domains later.
+- Review-mode labels only (`jury:pr-review`, `jury:branch-review`); reviewer domains are catalog metadata, not labels.
 - A “default general reviewer” for personal installs, but still requires a binding.
 - A repo onboarding checklist in the UI: provider → reviewer → binding → trigger.
 
@@ -291,6 +289,5 @@ Rules:
 | Q-040 | Can maintainers create reviewers, or only bind approved ones? | Bind approved only; SMEs create. |
 | Q-041 | Can an SME bind reviewers to repos they don't maintain? | Only assigned repos/domains. |
 | Q-042 | Required reviewer unavailable: block or run optional? | Block the review; config fallback. |
-| Q-043 | Domain labels: fixed set or custom? | Fixed core set + custom org labels later. |
 | Q-044 | Who approves a reviewer: admin only, or SME + admin? | SME drafts; admin approves. |
 | Q-045 | Fallback comment on forks? | Policy-controlled; default skip comments on forks. |

@@ -21,7 +21,7 @@ operate, trust, and measure — with durable, conversational per-PR sessions, no
      clean.
    - Installation-level availability: manual review on any PR in an installed account/org, with no
      per-repo enable toggle (ADR-0013).
-   - Config-as-code (`.jury-forge.yml`) for automatic review policy, agent scopes, and diff/context
+   - Config-as-code (`.jury-forge.yml`) for automatic review policy, agent scopes, and pr/branch
      mode; default `auto: false`.
    - Repository discovery, policy display, and installation events; no webview enable/disable gate
      for agentic review.
@@ -29,7 +29,7 @@ operate, trust, and measure — with durable, conversational per-PR sessions, no
 3. **Review**
    - Durable per-PR sessions: threads, messages, turns, findings, generations; replies resume with
      context (ADR-0012).
-   - Manual first: `jury:review`/`jury:context` labels and Check Run actions; slash command/UI
+   - Manual first: `jury:pr-review`/`jury:branch-review` labels and Check Run actions; slash command/UI
      fallback; automatic reviews only by policy.
    - Reviewer catalog per org, with SME ownership and admin approval; per-repo bindings with
      required/optional, path/language/label scope, and budgets (ADR-0016).
@@ -39,7 +39,7 @@ operate, trust, and measure — with durable, conversational per-PR sessions, no
    - User-defined agents with instructions, rules, provider/model binding, parameters, and scope.
    - Agent versions, activation, rollback, and run-time snapshots.
    - Parallel agent execution with per-provider concurrency limits.
-   - Diff-only by default; explicit context review backed by an incrementally updated graph
+   - PR review by default; explicit branch review compares the PR branch to the default branch and uses an incrementally updated graph
      (ADR-0014).
    - Knowledge packs with immutable versions, grants, and provenance.
    - Grounding: every inline finding must cite code that exists at the reviewed SHA.
@@ -108,7 +108,7 @@ release.
 - Compose install with Postgres, one worker, and one UI.
 - GitHub App setup and installation-level availability (no repo toggle).
 - Provider add → `/models` discovery → one agent bound to a catalog model.
-- Manual `/jury review` on a PR → diff context → agent turn with one tool → one posted review.
+- Manual `/jury pr-review` on a PR → diff context → agent turn with one tool → one posted review.
 - A user reply in the thread → a second turn with the session context alive.
 - Guarded resolve after a satisfactory reply; a new reply reopens.
 - Session/turn/tool-call records, a basic session timeline, and health/readiness.

@@ -50,8 +50,8 @@ GitHub (PR, review comments, issue comments, pushes)
 - **Roles follow GitHub repo access:** owners/admins configure, maintainers trigger/reply, members
   with repo read view, viewers read-only, auditors see audit. A session is visible to repo readers,
   not just the trigger user. Mentions of humans are requests for human input, not bot instructions.
-- **Context review target:** the PR. The graph is repository context; a context review does not
-  audit every file. Full details:
+- **Branch review target:** the branch delta vs the **repository default branch**. The graph is
+  repository context; a branch review does not audit untouched files. Full details:
   [`../product/specs/session-capacity-and-visibility.md`](../product/specs/session-capacity-and-visibility.md).
 
 ## 1. Components
@@ -102,9 +102,9 @@ Resolution
 
 | GitHub event | Session effect |
 | ------------ | -------------- |
-| `pull_request.opened` | Create a neutral `Jury Forge` check run with `Review` / `Context review` actions; create a session only if policy/trigger. |
+| `pull_request.opened` | Create a neutral `Jury Forge` check run with `PR review` / `Branch review` actions; create a session only if policy/trigger. |
 | `pull_request.ready_for_review` | Same as opened if policy. |
-| `pull_request.labeled` | If `jury:review` or `jury:context`, enqueue the turn (manual trigger). |
+| `pull_request.labeled` | If `jury:pr-review` or `jury:branch-review`, enqueue the turn (manual trigger). |
 | `check_run.requested_action` | If action `review` or `context`, enqueue the turn (primary manual trigger). |
 | `pull_request.synchronize` | Advance generation; enqueue `reindex`; mark findings `needs_recheck`; no auto-post unless policy. |
 | `pull_request.closed` | Archive session. |
@@ -117,7 +117,7 @@ Resolution
 
 > **Reviewer picker:** tested 2026-11-15; requesting `jury-forge[bot]` via the review-request API did
 > not add the app as a reviewer. Arbitrary GitHub Apps cannot be requested there (Copilot is
-> special). Use the Check Run action and `jury:review` label; revisit if GitHub adds a first-class
+> special). Use the Check Run action and `jury:pr-review` label; revisit if GitHub adds a first-class
 > AI reviewer request.
 
 Exact event names and GraphQL mutations must be verified in the GitHub spike. The App permissions
@@ -179,7 +179,7 @@ ADR-0014.
 - Postgres adjacency tables + content-addressed object storage; optional vector store later.
 - Index version per `(repo, commit)`; incremental update on every review run and default-branch push.
 - Context Service uses summaries first, expands via tools, records a manifest.
-- Context review is explicit, estimated, cancellable; diff review uses the graph for targeted context.
+- Branch review is explicit, estimated, cancellable; PR review uses the graph for targeted context.
 
 ## 8. Resolution guard
 

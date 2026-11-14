@@ -60,9 +60,8 @@ Shared vocabulary. When a term is ambiguous, this page wins.
 | **Model catalog** | The provider-fetched list of models available to a key. |
 | **Model registry** | A versioned catalogue that enriches model IDs with context window, prices, and capabilities. |
 | **Provider model** | A catalog entry bound to a provider credential; the only valid model value for an agent. |
-| **Repository knowledge graph** | The derived symbol/import/test/config/doc/finding graph used for context and context review. |
+| **Repository knowledge graph** | The derived symbol/import/test/config/doc/finding graph used for context and branch review. |
 | **Incremental index** | A graph update that re-parses only changed files and their reverse dependencies, reusing content-hash summaries. |
-| **Context review** | An explicit review that uses the repository graph, not only the diff. |
 | **Diff review** | The default review that uses the PR diff plus targeted graph context. |
 | **Manual trigger** | A human command/label/UI action that starts a review on any PR in an installed repo. |
 | **Config-as-code** | `.jury-forge.yml` or `.github/jury-forge.yml`; opt-in automatic review policy and agent scopes. |
@@ -75,4 +74,6 @@ Shared vocabulary. When a term is ambiguous, this page wins.
 | **Optional reviewer** | A binding that runs only when its path/language/label scope matches. |
 | **SME** | Subject matter expert; owns/curates domain reviewers and binds them to assigned repos. |
 | **Fallback comment** | The no-reviewers/no-match/required-unavailable notice; an issue comment, never a review. |
-| **Domain label** | A trigger label like `jury:security` or `jury:testing` that requests a domain’s reviewers. |
+| **Review mode label** | `jury:pr-review` or `jury:branch-review`; a mode trigger, not a reviewer selector. |
+| **PR review** | Review the PR diff plus targeted repository context. |
+| **Branch review** | Compare the PR branch to the repository default branch and review the full branch delta against the context graph. |

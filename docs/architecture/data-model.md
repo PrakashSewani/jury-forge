@@ -62,8 +62,8 @@ token/cost budgets, model allowlist, data policy, fork policy, suppression rules
 
 | Entity | Key fields | Notes |
 | ------ | ---------- | ----- |
-| `review_requests` | `id`, `org_id`, `repository_id`, `pr_number`, `head_sha`, `base_sha`, `event`, `mode` (`auto`/`manual`/`replay`), `requested_by`, `created_at` | One per webhook/try; enqueues a run. |
-| `runs` | `id`, `org_id`, `request_id`, `repository_id`, `pr_number`, `head_sha`, `generation`, `status`, `phase`, `attempt`, `lease_owner`, `lease_expires_at`, `heartbeat_at`, `error_code`, `error_detail`, `started_at`, `finished_at`, `canceled_at` | `status`: queued, running, completed, failed, canceled, skipped. `generation` orders runs per PR. |
+| `review_requests` | `id`, `org_id`, `repository_id`, `pr_number`, `head_sha`, `base_sha`, `compare_sha`, `review_mode` (`pr`/`branch`), `event`, `mode` (`auto`/`manual`/`replay`), `requested_by`, `created_at` | One per webhook/try; `compare_sha` is the default branch for a branch review. |
+| `runs` | `id`, `org_id`, `request_id`, `repository_id`, `pr_number`, `head_sha`, `base_sha`, `compare_sha`, `review_mode` (`pr`/`branch`), `generation`, `status`, `phase`, `attempt`, `lease_owner`, `lease_expires_at`, `heartbeat_at`, `error_code`, `error_detail`, `started_at`, `finished_at`, `canceled_at` | `status`: queued, running, completed, failed, canceled, skipped. `compare_sha` = default branch for branch review. |
 | `run_steps` | `id`, `run_id`, `name`, `status`, `attempt`, `started_at`, `finished_at`, `error`, `metrics`, `output_ref` | One row per step attempt; idempotent by `(run_id, name, attempt)`. |
 | `run_config_snapshot` | `run_id`, `reviewer_versions`, `policy_version`, `pack_versions`, `model_registry`, `prompt_hashes`, `context_budget` | JSON; the exact configuration used. |
 | `run_context` | `run_id`, `manifest`, `included_files`, `omitted_files`, `tokens`, `bytes`, `artefact_ref` | What the model saw and why. |
