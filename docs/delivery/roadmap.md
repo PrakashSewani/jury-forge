@@ -89,7 +89,7 @@ red-team exercise finds no S1 issues.
 - Evaluation benchmark (golden PRs, metrics, scorecards).
 - Agent versioning, activation gates, rollback, run-time snapshots.
 - Feedback capture and agent scorecards.
-- Knowledge system: packs/skills, repo docs at SHA, allowlisted doc-link snapshots, capability/repo/reviewer grants, retrieval with citations.
+- Knowledge system: packs/skills, repo docs at SHA, allowlisted live doc links with per-run snapshots, capability/repo/reviewer grants, retrieval with citations.
 - Knowledge-pack retrieval (not wholesale injection).
 - Branch review (default-branch comparison + graph diff) is v1.1, not the first quality milestone.
 

@@ -80,8 +80,8 @@ Shared vocabulary. When a term is ambiguous, this page wins.
 | **Sandbox run** | Opt-in, isolated execution of tests/builds for a capability agent; no secrets, network off, resource caps. |
 | **PR review** | Review only the PR diff/hunks plus metadata; no graph, no full files. |
 | **Branch review** | Compare the PR branch to the repository default branch and review the full branch delta against the context graph. |
-| **Knowledge source** | A pack, repo doc, doc-link snapshot, org convention, or graph used by a reviewer. |
-| **Doc-link snapshot** | A content-hashed copy of an allowlisted external URL, ingested/refreshed outside the review turn. |
+| **Knowledge source** | A pack, repo doc at SHA, live doc link, org convention, or graph used by a reviewer. |
+| **Doc-link snapshot** | The content-hashed copy of an allowlisted external URL fetched live for a turn; stored for audit and used as fallback. |
 | **Knowledge grant** | A scoped attachment (org/repo/reviewer/capability) with precedence and pin/latest. |
 | **Knowledge citation** | The source/version/hash/path recorded for injected knowledge. |
 | **Human override** | An SME/admin/owner resolution/reopen/dismissal with a reason, audited; the agent respects it. |

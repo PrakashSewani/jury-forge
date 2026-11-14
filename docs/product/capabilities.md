@@ -87,7 +87,7 @@ Status key: **Proven** (the PoC shipped a version), **Planned** (in the target p
 | Precedence and path-scoped apply | Proven | Keep. |
 | Provenance (`slug@hash`, injected bytes) | Proven | Keep; add token counts. |
 | Repo docs (AGENTS/CONTRIBUTING/ADRs/docs) at SHA | Planned | Index + retrieve relevant sections; opt-in per repo. |
-| Doc-link snapshots (allowlisted URLs) | Planned | Ingest/snapshot; no live fetch at review time; refresh/stale. |
+| Live doc links (allowlisted) + per-run snapshot | Planned | Live fetch at turn time with SSRF/rate/size guards; store the fetched copy for audit; stale fallback. |
 | Capability-scoped knowledge grants | Planned | Org/repo/reviewer/capability; precedence; pin/latest. |
 | Retrieval + citations | Planned | Relevant chunks under token budget; cite source/hash/path. |
 | Never-quote files | Proven | Keep; audit. |

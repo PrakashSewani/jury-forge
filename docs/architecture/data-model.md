@@ -117,7 +117,7 @@ token/cost budgets, model allowlist, data policy, fork policy, suppression rules
 | `pack_documents` | `id`, `version_id`, `path`, `bytes`, `tokens`, `text`, `never_quote` | Only manifest + docs. |
 | `pack_grants` | `id`, `pack_id`, `scope_type`, `scope_id`, `precedence`, `pinned_version_id`, `enabled`, `created_at` | Global/repo/reviewer/capability; pin or latest. |
 | `knowledge_sources` | `id`, `org_id`, `kind` (`pack`/`url`/`repo-doc`/`convention`), `name`, `owner_user_id`, `status`, `created_at` | Unified source identity. |
-| `knowledge_snapshots` | `id`, `source_id`, `url`, `content_hash`, `title`, `text`, `fetched_at`, `status` | URL snapshots; no live fetch at review time. |
+| `knowledge_snapshots` | `id`, `source_id`, `url`, `final_url`, `content_hash`, `title`, `text`, `fetched_at`, `status` | The fetched copy of a live doc link; stored per run for audit/fallback. |
 | `knowledge_citations` | `id`, `turn_id`, `source_id`, `version_id`, `path`, `tokens`, `created_at` | What was injected and where it came from. |
 | `reviewer_knowledge_bindings` | `reviewer_version_id`, `source_id`, `mode`, `enabled` | Explicit reviewer knowledge. |
 | `pack_chunks` | `id`, `version_id`, `path`, `chunk_index`, `text`, `tokens`, `embedding_ref` | For relevance retrieval (optional). |

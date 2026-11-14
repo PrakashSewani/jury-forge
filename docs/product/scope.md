@@ -43,7 +43,7 @@ operate, trust, and measure — with durable, conversational per-PR sessions, no
    - Parallel agent execution with per-provider concurrency limits.
    - PR review by default; explicit branch review compares the PR branch to the default branch and uses an incrementally updated graph
      (ADR-0014).
-   - Knowledge system: packs/skills, repo docs at SHA, allowlisted doc-link snapshots, capability/repo/reviewer grants, retrieval with citations.
+   - Knowledge system: packs/skills, repo docs at SHA, allowlisted live doc links with per-run snapshots, capability/repo/reviewer grants, retrieval with citations.
    - Knowledge packs with immutable versions, grants, and provenance.
    - Grounding: every inline finding must cite code that exists at the reviewed SHA.
    - Cross-reviewer de-duplication, disagreement, and a chair/consensus step.

@@ -335,6 +335,7 @@ New attack surface and controls:
 | Bot loop | Ignore self, mention/reply requirement, debounce/coalesce, turn/tool/rate limits. |
 | Provider key exfiltration | Envelope encryption, write-only, origin-bound, no copy-to-arbitrary-URL, re-auth for rotation. |
 | Model catalog SSRF | HTTPS, block private/loopback/link-local/metadata, origin binding, timeouts/size caps. |
+| Live doc-link fetch SSRF | Admin-curated allowlist, HTTPS, block private/link-local/metadata, recheck redirects, per-domain rate limit, timeout/size caps, per-run snapshot. |
 | Graph data leakage | Tenant/repo scoping, no secrets, retention/delete, access checks on tools. |
 | Runaway cost | Per-turn/session/repo budgets; stop before the next call; alert. |
 | Untrusted tool output | Tool results are data, not instructions; validate and bound. |

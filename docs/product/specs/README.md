@@ -17,7 +17,7 @@ failure modes, rollout, and open questions.
 | [`repo-knowledge-graph.md`](repo-knowledge-graph.md) | Incremental repository graph for PR/branch review and context reuse | draft for owner review |
 | [`session-capacity-and-visibility.md`](session-capacity-and-visibility.md) | Interface, concurrency, lifecycle, roles, visibility, budgets | draft for owner review |
 | [`reviewer-assignment-and-roles.md`](reviewer-assignment-and-roles.md) | Reviewer catalog, repo bindings, required/optional, SME/admin roles, fallback | draft for owner review |
-| [`knowledge-system.md`](knowledge-system.md) | Skills/docs/doc links, snapshots, grants, retrieval, citations | draft for owner review |
+| [`knowledge-system.md`](knowledge-system.md) | Skills/docs/live doc links, snapshots, grants, retrieval, citations | draft for owner review |
 | [`v1-ui.md`](v1-ui.md) | V1 website scope: control plane, sessions, reviewers, providers, audit | draft for owner review |
 
 The specs follow the owner's 2026-11-15 capability list (Q-001) and the v1 scope in
