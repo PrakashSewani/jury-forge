@@ -150,9 +150,11 @@ Stop and ask the owner when:
 ## Using the chain in this harness
 
 Project agent definitions live in `.pi/agents/`. They are loaded by a subagent-capable extension
-(for example, the `subagent` example extension) when the project scope is enabled. If the
-extension is not installed, the primary agent can run the stages itself in the same order, writing
-each artefact to `docs/` before moving on.
+(for example, the `subagent` example extension) when the project scope is enabled — pass
+`agentScope: "both"` (or `"project"`) so project agents are included; the default is user-level
+agents only. If the extension is not installed, the primary agent can run the stages itself in the
+same order, writing each artefact to `docs/` before moving on. See
+[`.pi/agents/README.md`](../../.pi/agents/README.md) for the role list and an example chain.
 
 The canonical workflow prompt is `.pi/prompts/docs-chain.md`. It describes the documentation-phase
 chain and the handoff format.
