@@ -362,6 +362,10 @@ guard decides. See [`agentic-review.md`](agentic-review.md) and
   partial or clean review. Optional unavailable is noted.
 - **Fallback comments:** no reviewers/no match/required-unavailable are issue comments, not reviews;
   deduped by policy version; no secrets or model internals beyond reviewer name/domain.
+- **Capability labels:** a `jury:cap:*` label is a request, never a grant. It can only select from
+  reviewers already bound/approved for the repo; it cannot enable an unbound/archived reviewer,
+  bypass required reviewers, raise budgets, or change provider policy. Labels are parsed strictly;
+  unknown/empty aliases are ignored with a note.
 - **Mentions:** `@jury-forge` asks the bot; `@human` is a request for human input. The bot must not
   impersonate the human or answer on their behalf; it can provide context and wait.
 - **Access checks:** use the user's installation access (`GET /user/installations/{id}/repositories`)

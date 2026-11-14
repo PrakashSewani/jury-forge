@@ -145,7 +145,7 @@ ownership. They are not GitHub labels; labels are only review modes.
 
 ### Labels (primary, as requested)
 
-- `jury:pr-review` — PR review: the repo’s bound jury reviews the PR diff + targeted context.
+- `jury:pr-review` — PR review: the repo’s bound jury reviews **only the PR diff/hunks + metadata** (no graph, no full files).
 - `jury:branch-review` — complete branch review: compare the PR branch to the **repository default branch**, review the full branch delta against the repo context graph (no code execution in v1).
 - Optional **capability labels** (`jury:cap:security`, `jury:cap:tests`, `jury:cap:performance`,
   `jury:cap:docs`, `jury:cap:data`, `jury:cap:infra`, `jury:cap:accessibility`) request a capability
@@ -155,6 +155,98 @@ ownership. They are not GitHub labels; labels are only review modes.
 - The app creates the two mode labels on install; capability labels can be created on demand. Labels
   are a trigger/request, not a per-repo enable toggle.
 - Specific reviewers are requested via slash command/UI (for example `/jury pr-review security,testing`).
+
+### Capability labels (`jury:cap:*`) — request, not grant
+
+A capability label is a **request for a kind of review**, not a way to enable a new reviewer. The
+repo binding is the grant; the label can only select from what is already granted.
+
+**What a capability is**
+
+A reviewer version carries tags such as:
+
+`security`, `auth`, `crypto`, `secrets`, `correctness`, `architecture`, `backend`, `frontend`,
+`performance`, `testing`, `coverage`, `docs`, `data`, `database`, `sql`, `infra`, `accessibility`.
+
+A capability label maps to one or more tags through a small alias registry:
+
+| Label | Tags it matches |
+| ----- | --------------- |
+| `jury:cap:security` | `security`, `auth`, `crypto`, `secrets` |
+| `jury:cap:tests` | `testing`, `coverage` |
+| `jury:cap:performance` | `performance` |
+| `jury:cap:docs` | `docs` |
+| `jury:cap:data` | `data`, `database`, `sql` |
+| `jury:cap:infra` | `infra` |
+| `jury:cap:accessibility` | `accessibility` |
+
+The alias registry is org-configurable. A label that expands to nothing is invalid and is ignored
+with a note; it does not enable anything.
+
+**Resolution**
+
+For a trigger:
+
+```
+required   = repo bindings with requirement=required
+mode       = branch if `jury:branch-review` else pr if `jury:pr-review` else repo default
+requested  = tags from every `jury:cap:*` label
+optional   = repo bindings with requirement=optional
+             AND (requested is empty OR reviewer has a requested tag)
+             AND scope matches (paths/languages/labels)
+selected   = required ∪ optional, capped by policy
+```
+
+- Required reviewers always run, regardless of capability labels.
+- If no capability labels are present, all matching optional reviewers run (the repo default jury).
+- If capability labels are present, they **narrow** the optional set to reviewers carrying those
+  tags. They do not add unbound reviewers.
+- Multiple capability labels union their tags.
+- A label can never change the mode; mode comes from the mode label or repo default.
+- A label can never raise budgets, bypass provider policy, or mark a reviewer required.
+
+**Examples**
+
+| Labels | Result |
+| ------ | ------ |
+| `jury:pr-review` | Required + all matching optional; diff-only. |
+| `jury:pr-review` + `jury:cap:security` | Required + security-tagged optional; diff-only. |
+| `jury:branch-review` + `jury:cap:tests` + `jury:cap:performance` | Required + testing/performance-tagged optional; complete branch vs default. |
+| `jury:cap:security` alone | Default mode (PR unless repo says branch) + security-tagged optional. |
+| `jury:pr-review` + `jury:branch-review` | Branch review wins (most comprehensive), with a note in the session. |
+| `jury:cap:security` when no bound security reviewer | Required/matched optional run if any; capability notice says no security reviewer is bound. If nothing runs, fallback. |
+
+**If a requested capability has no bound reviewer**
+
+- Other required/matching reviewers still run.
+- The review/session includes a note: “Requested capability `security` has no bound reviewer on this
+  repo.”
+- If *nothing* can run (no required, no matching optional), post the no-reviewers/no-match fallback
+  instead of a review.
+- Do **not** silently substitute an unrelated reviewer.
+
+**Label lifecycle**
+
+- Applying a label triggers one turn; the label is not a standing subscription for every future push.
+- Multiple labels added together are debounced/coalesced into one turn.
+- To retrigger, remove/re-add the label, click the Check Run action, or use `/jury pr-review`.
+- The app creates the two mode labels on install; capability labels can be created on demand.
+- Labels do not grant repo-level enablement. Repo-level enablement is admin/SME binding or
+  `.jury-forge.yml`; labels only request within it.
+
+**Security and audit**
+
+- Applying a label requires GitHub write/triage permission; the label is still only a request.
+- A label cannot enable an unbound/archived reviewer or a reviewer from another org.
+- The session records which labels were applied, which tags they expanded to, which reviewers were
+  selected, and which were skipped/why.
+- Capability labels are ignored on repos where the reviewer set is empty; fallback applies.
+
+**Why not per-agent labels?**
+
+- Label explosion and renames.
+- Anyone who can label a PR could try to force an unapproved agent.
+- Capability tags are stable; specific agents stay in the UI/slash command.
 
 ### Check Run (also primary)
 
@@ -171,9 +263,13 @@ turn. Reviewer selection comes from repo bindings; specific reviewers via slash 
 For a trigger, the router computes:
 
 ```
-requested = explicit domains/agents ∪ repo default
-required  = bindings with requirement=required
-optional  = bindings with requirement=optional and scope matches
+mode       = branch if jury:branch-review else pr if jury:pr-review else repo default
+requested  = tags from jury:cap:* labels ∪ explicit slash/UI selection
+required   = bindings with requirement=required
+optional   = bindings with requirement=optional
+             AND (requested is empty OR reviewer has a requested tag)
+             AND scope matches (paths/languages/labels)
+selected   = required ∪ optional, capped by policy
 ```
 
 Availability checks per reviewer:

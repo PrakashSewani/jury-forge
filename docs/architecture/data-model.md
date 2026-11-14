@@ -45,11 +45,12 @@ the PoC: tenancy, versioning, idempotency, audit, budgets, and run snapshots are
 | Entity | Key fields | Notes |
 | ------ | ---------- | ----- |
 | `reviewers` | `id`, `org_id`, `name`, `slug`, `description`, `domain`, `owner_user_id`, `status`, `created_by`, `created_at`, `archived_at` | Catalog identity; owner is an SME/admin. |
-| `reviewer_versions` | `id`, `reviewer_id`, `version`, `status` (`draft`/`approved`/`active`/`archived`), `instructions`, `rules`, `provider_id`, `model_id`, `endpoint`, `params`, `output_schema`, `tool_policy`, `sandbox_policy`, `content_hash`, `created_by`, `approved_by`, `created_at`, `activated_at` | Immutable once active; model/endpoint from the catalog. |
+| `reviewer_versions` | `id`, `reviewer_id`, `version`, `status` (`draft`/`approved`/`active`/`archived`), `instructions`, `rules`, `provider_id`, `model_id`, `endpoint`, `params`, `output_schema`, `capabilities`, `tool_policy`, `sandbox_policy`, `content_hash`, `created_by`, `approved_by`, `created_at`, `activated_at` | Immutable once active; model/endpoint from the catalog. |
 | `provider_credentials` | `id`, `org_id`, `name`, `provider`, `base_url`, `allowed_origins`, `ciphertext`, `key_version`, `created_at`, `last_used_at` | Credential is bound to allowed origins. No copy-to-arbitrary-URL. |
 | `reviewer_bindings` | `reviewer_version_id`, `provider_credential_id`, `model_id`, `endpoint`, `params`, `budget` | Explicit binding, replaceable. |
 | `repo_reviewer_bindings` | `id`, `repo_id`, `reviewer_id`, `reviewer_version_id`, `enabled`, `requirement` (`required`/`optional`), `priority`, `paths_include`, `paths_exclude`, `context_paths`, `languages`, `labels`, `budget`, `created_by`, `updated_at` | A reviewer runs on a repo only with a binding. |
-| `repo_reviewer_policy` | `repo_id`, `default_mode` (`diff`/`context`), `min_required`, `fallback_mode`, `policy_version`, `updated_at` | Default jury and fallback behavior. |
+| `repo_reviewer_policy` | `repo_id`, `default_mode` (`pr`/`branch`), `min_required`, `fallback_mode`, `policy_version`, `updated_at` | Default jury and fallback behavior. |
+| `capability_labels` | `id`, `org_id`, `label`, `tags` (JSON), `enabled`, `created_at` | Maps `jury:cap:*` to reviewer capability tags. |
 | `reviewer_approvals` | `id`, `reviewer_version_id`, `approved_by`, `approved_at`, `note` | Org approval before a maintainer can bind. |
 | `role_bindings` | `id`, `org_id`, `principal_type` (`user`/`team`), `principal_id`, `role`, `scope_type` (`org`/`repo`/`domain`), `scope_id` | Owner/admin/SME/maintainer/member/viewer/auditor. |
 | `fallback_comments` | `id`, `repo_id`, `pr_number`, `policy_version`, `reason`, `github_comment_id`, `updated_at` | Dedupe/update the no-reviewers/no-match notice. |
@@ -81,7 +82,7 @@ token/cost budgets, model allowlist, data policy, fork policy, suppression rules
 | `session_messages` | `id`, `session_id`, `thread_id`, `role`, `agent_version_id`, `github_comment_id`, `body`, `created_at` | `role` = user/agent/system/tool; append-only. |
 | `session_participants` | `id`, `session_id`, `user_id`, `github_login`, `role`, `joined_at` | PR author, commenters, mentioned humans, maintainers; visibility is repo-scoped. |
 | `session_mentions` | `id`, `session_message_id`, `mentioned_login`, `kind` (`human`/`agent`), `created_at` | A human mention is a request for human input, not a bot instruction. |
-| `session_turns` | `id`, `session_id`, `trigger`, `generation`, `status`, `input`, `plan`, `output`, `cost_micros`, `started_at`, `finished_at` | Durable unit of work; serialized per session. |
+| `session_turns` | `id`, `session_id`, `trigger`, `mode`, `requested_capabilities`, `generation`, `status`, `input`, `plan`, `output`, `cost_micros`, `started_at`, `finished_at` | Durable unit of work; serialized per session; labels/tags recorded for provenance. |
 | `session_findings` | `id`, `session_id`, `thread_id`, `agent_run_id`, `file`, `line`, `severity`, `status`, `fingerprint`, `evidence` | `status` = open/addressed/verified/dismissed/resolved/reopened. |
 | `tool_calls` | `id`, `turn_id`, `agent_run_id`, `tool`, `input`, `output`, `tokens`, `latency_ms`, `status` | Bounded; read-only tools in v1. |
 | `resolutions` | `id`, `thread_id`, `actor_type`, `actor_id`, `evidence`, `confidence`, `created_at` | Bot resolution is guarded; human resolutions are recorded too. |
