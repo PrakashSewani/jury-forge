@@ -27,8 +27,8 @@ connections to forges, or doing CPU-heavy indexing.
 **Responsibility:** execute the review pipeline for one claimed job at a time.
 
 - Claim a job with a lease; load the run and its configuration snapshot.
-- Execute steps: `resolve`, `fetch`, `index`, `plan`, `review`, `ground`, `jury`, `publish`,
-  `record`. Each step is idempotent and recorded.
+- Execute steps: `resolve`, `fetch`, `index` (T2 branch review only), `plan`, `review`, `ground`,
+  `jury`, `publish`, `record`. Each step is idempotent and recorded; T0 PR review skips `index`.
 - Call the provider gateway; stream/normalize responses; store raw artefacts.
 - Enforce budgets, timeouts, cancellation, and per-provider concurrency.
 - Publish at most one review per run with an idempotency key.
@@ -39,7 +39,7 @@ limits. A worker never owns durable state outside Postgres/object storage.
 
 ## 3. Indexer
 
-**Responsibility:** build and refresh the repository knowledge that makes reviews grounded.
+**Responsibility:** build and refresh the repository knowledge that makes branch reviews grounded (T2).
 
 - Clone/fetch the repository at a SHA (or use the forge API) into an ephemeral workspace.
 - Extract symbols, imports, call references, tests, configs, and ownership.
@@ -71,15 +71,18 @@ logic outside the adapter.
 
 **Responsibility:** decide what the model sees, within a token and cost budget.
 
-Inputs: diff, repository index, instructions (`AGENTS.md`, `CONTRIBUTING.md`, repo policy), knowledge
-packs, previous findings, reviewer role, model window, budget.
+Inputs: PR diff/hunks and metadata (T0); repository index/graph (T2 branch review); instructions
+(`AGENTS.md`, `CONTRIBUTING.md`, repo policy), knowledge packs, previous findings, reviewer role,
+model window, and budget.
 
-Outputs: a structured, trust-labelled context bundle: changed files with patches, file slices,
-related symbols, tests, docs, previous findings, and a manifest of what was included/omitted and
-why.
+Outputs: a structured, trust-labelled context bundle. **T0:** diff/hunks, PR metadata, reviewer
+instructions, granted packs, thread and prior findings. **T2:** changed files with patches, file
+slices, related symbols, tests, repo docs, previous findings. Both include a manifest of what was
+included/omitted and why.
 
 Rules: token-aware; deterministic; auditable; never silently drops a changed file (it may degrade
-with a reason); prioritises changed source, then related code, then docs.
+with a reason). T0 does not read files or the graph; T2 prioritises changed source, then related
+code, then docs.
 
 ## 6. Reviewer runtime
 

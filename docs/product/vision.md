@@ -36,18 +36,18 @@ The PoC proved the interface — a jury of configurable reviewers, one consolida
 self-hosted. It did not build the pipeline, and it treated the review as a one-shot prompt.
 
 Jury Forge makes the review **conversational and agentic**: a durable session per PR, specialist
-agents with tools, a repository knowledge graph, and a resolution protocol that only closes a
-thread when the author's response actually satisfies the finding.
+agents with a diff-only PR path and a graph-backed branch path, and a resolution protocol that
+closes a thread only when the finding is actually satisfied (human-confirmed by default).
 
 ```
 manual ask / reply / push
   → PR session
   → router selects agents
-  → agents use tools + repo graph
+  → agents use diff (T0) or tools + repo graph (T2)
   → ground + verify + chair
   → reply in the thread
   → human responds
-  → verify + resolve (or ask again)
+  → verify + resolve (suggest default; auto guarded) or ask again
 ```
 
 ## The wedge

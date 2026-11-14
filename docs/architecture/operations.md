@@ -207,7 +207,7 @@ full diffs into an issue.
   replay for failed turns.
 - **Provider catalog refresh:** daily and on demand; mark stale/removed models; surface affected
   agents; never silently switch a bound model.
-- **Repository graph:** incremental update on every review/default-branch push; full rebuild on
+- **Repository graph:** incremental update on every branch/T2 review/default-branch push; full rebuild on
   parser upgrade or manual action; per-repo lock; stale badge.
 - **Resolution audit:** report bot resolutions, human resolutions, reopens, and false-resolve
   feedback; investigate outliers weekly.

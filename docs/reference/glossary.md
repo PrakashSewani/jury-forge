@@ -56,7 +56,7 @@ Shared vocabulary. When a term is ambiguous, this page wins.
 | **PR session** | The durable conversation for one PR: threads, messages, findings, turns, generations. |
 | **Thread** | A GitHub review-comment conversation; the unit the bot can reply to and resolve. |
 | **Turn** | One bounded agent execution triggered by a command, reply, push, or policy; serialized per session. |
-| **Resolution guard** | The server-side check that allows only a bot-owned thread with a human response and evidence to be resolved. |
+| **Resolution guard** | The server-side check used only in `auto` mode: bot-owned thread, human response, evidence, verifier, audit. |
 | **Model catalog** | The provider-fetched list of models available to a key. |
 | **Model registry** | A versioned catalogue that enriches model IDs with context window, prices, and capabilities. |
 | **Provider model** | A catalog entry bound to a provider credential; the only valid model value for an agent. |
@@ -69,17 +69,25 @@ Shared vocabulary. When a term is ambiguous, this page wins.
 | **Reviewer** | User-facing name for an AI review agent (security, testing, backend, docs, custom). |
 | **Reviewer catalog** | The org-level set of reviewer definitions/versions, with domain, owner, and approval status. |
 | **Reviewer owner** | The SME/admin responsible for a reviewer’s content and versions. |
-| **Repo reviewer binding** | The configuration that makes a catalog reviewer available on one repo; required/optional, scopes, budget. |
+| **Repo reviewer binding** | The configuration that makes a catalog reviewer available on one repo; selection `required`/`default`/`capability`, scopes, budget. |
 | **Required reviewer** | A binding that must run for a review; if unavailable, the review is blocked with a fallback. |
-| **Optional reviewer** | A binding that runs only when its path/language/label scope matches. |
+| **Default reviewer** | A binding that runs on a plain review when its scope matches. |
+| **Capability reviewer** | A binding that runs only when a matching `jury:cap:<id>` label or UI selection is present. |
+| **Capability registry** | Tenant-scoped capabilities: immutable ID, display name, optional one-level parent, status; built-in + SME-drafted/admin-approved custom. |
+| **Capability group** | A one-level parent (e.g. `security` → `auth`, `crypto`, `secrets`); a parent label matches its children. |
 | **SME** | Subject matter expert; owns/curates domain reviewers and binds them to assigned repos. |
 | **Fallback comment** | The no-reviewers/no-match/required-unavailable notice; an issue comment, never a review. |
 | **Review mode label** | `jury:pr-review` or `jury:branch-review`; a mode trigger, not a reviewer selector. |
-| **Capability label** | `jury:cap:<tag>`; requests a capability group within the repo’s bound/approved reviewers. Narrows optional reviewers; required reviewers always run; never grants an unbound reviewer. |
-| **Capability agent** | A reviewer with tools to verify behavior (graph, tests, static analysis, optional sandbox run). |
-| **Sandbox run** | Opt-in, isolated execution of tests/builds for a capability agent; no secrets, network off, resource caps. |
-| **PR review** | Review only the PR diff/hunks plus metadata; no graph, no full files. |
-| **Branch review** | Compare the PR branch to the repository default branch and review the full branch delta against the context graph. |
+| **Capability label** | `jury:cap:<id>`; requests a capability group within the repo’s bound/approved reviewers. Capability bindings only; required reviewers always run; never grants an unbound reviewer. |
+| **Capability agent** | A branch/T2 reviewer with tools to verify behavior (graph, tests, static analysis); a sandbox run is later. |
+| **Sandbox run** | Later, opt-in, isolated execution of tests/builds for a capability agent; no secrets, network off, resource caps. |
+| **PR review** | Strict T0: PR diff/hunks + metadata + thread context; no repository file reads, no graph. |
+| **T0 / T1 / T2** | Context tiers: T0 diff (PR review); T1 bounded reads (rejected for PR review); T2 repository graph (branch review). |
+| **Resolution modes** | `suggest` (default: agent proposes, human resolves natively/UI), `auto` (bot resolves after guard), `off` (humans only). |
+| **Branch review** | v1.1: compare the PR branch to the repository default branch and review the full branch delta against the context graph. |
+| **Shadow mode** | A reviewer binding that runs the full pipeline but publishes nothing; findings are stored unpublished and compared with human review (B-01, backlog). |
+| **Zone / data policy** | Admin-assigned provider trust label and the per-repo rule (allowlist or minimum zone) deciding which providers may receive its code (B-02, backlog). |
+| **Coverage manifest** | Per-turn list of changed files as reviewed / partial / not reviewed, with reasons (B-04, backlog). |
 | **Knowledge source** | A pack, repo doc at SHA, live doc link, org convention, or graph used by a reviewer. |
 | **Doc-link snapshot** | The content-hashed copy of an allowlisted external URL fetched live for a turn; stored for audit and used as fallback. |
 | **Knowledge grant** | A scoped attachment (org/repo/reviewer/capability) with precedence and pin/latest. |

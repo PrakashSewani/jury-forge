@@ -189,8 +189,8 @@ A change is done when all of the following are true:
 - 2026-11-14: The owner will provide final product capabilities later; do not invent them.
 - 2026-11-14: Use a chain of specialist agents that hand off through documents and stay in sync.
 - 2026-11-15: The product is an **agentic reviewer**, not a single LLM call. Every PR gets a
-  durable session; comments and replies keep context alive; the bot resolves its own threads after
-  a satisfactory human response.
+  durable session; comments and replies keep context alive. Resolution is human by default
+  (`suggest`); guarded bot resolution is opt-in (`auto`), and `off` leaves it to humans.
 - 2026-11-15: **Manual-first.** Any PR in an installed account/org can be reviewed on request; no
   per-repo enable/disable toggle. Automatic review is opt-in config-as-code. Agents have dynamic
   repository/path/language/label scopes; the router explains who ran and why.

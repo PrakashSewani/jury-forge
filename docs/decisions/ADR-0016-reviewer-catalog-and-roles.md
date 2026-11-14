@@ -27,13 +27,16 @@ post a misleading clean review.
 
 ### Catalog and bindings
 
-- A **reviewer catalog** is org-level: identity, versions, domain/tags, owner (SME), provider/model/
+- A **reviewer catalog** is org-level: identity, versions, capabilities, owner (SME), provider/model/
   endpoint, tools, status.
-- A **repo binding** is required for a reviewer to run on a repo. Binding fields: requirement
-  (`required`/`optional`), path/language/label scopes, context paths, priority, budget, enabled.
-- No binding = not available. Required reviewers must run; optional only when scope matches.
+- A **repo binding** is required for a reviewer to run on a repo. Binding fields: selection
+  (`required`/`default`/`capability`), path/language/label scopes, T2 context paths, priority, budget,
+  enabled.
+- No binding = not available. `required` always runs; `default` runs on a plain review when scope
+  matches; `capability` runs only when its capability is requested (label/UI). Required overrides
+  capability gating.
 - **Required reviewer unavailable blocks the review** with a configuration fallback (no partial or
-  clean review). Optional unavailable is noted and the rest run.
+  clean review). Default/capability unavailable is noted and the rest run.
 - Bindings/policies are versioned and audited.
 
 ### Roles
@@ -54,15 +57,14 @@ required.
 
 ### Triggers
 
-- `jury:pr-review` — PR review: the repo’s bound jury reviews the PR diff + targeted context.
-- `jury:branch-review` — complete branch review: compare the PR branch to the **repository default branch**, review the full branch delta against the repo context graph; static functional/behavioral impact, no code execution in v1.
+- `jury:pr-review` — **strict T0 diff-only** PR review: the PR diff/hunks + metadata + thread context; no repository file reads, no graph.
+- `jury:branch-review` — complete branch review: compare the PR branch to the repository default branch and review the full branch delta against the repo context graph (T2); static functional/behavioral impact, no code execution in v1/v1.1.
 - Check Run actions (`PR review`, `Branch review`) — same turns.
-- **Capability agents** may use graph/tests/static tools; `tests.run`/`build.run` are opt-in
-  sandbox capabilities, not automatic. The agent decides the verification path within policy.
-- Slash commands — fallback/specific reviewers (for example `/jury pr-review security,testing`).
-- Labels are **modes**; optional capability labels (`jury:cap:security`, `jury:cap:tests`, …) are
-  requests within the repo’s bound/approved reviewers. A label can never enable an unbound reviewer
-  or bypass required reviewers/budgets/provider policy.
+- **No slash commands in PR conversations.** Specific reviewers are selected via the UI picker; capability labels select capability groups.
+- **Selection modes:** a repo binding is `required` (always runs), `default` (plain review), or `capability` (only when requested by a `jury:cap:*` label or UI selection). Required overrides capability gating.
+- **Capabilities are tenant-scoped first-class objects:** immutable `id`, display name, optional one-level parent, status. Labels are always `jury:cap:<id>`. Built-ins + custom; SME drafts, admin approves. All active capability labels are synced to every installed repo; a request with no bound reviewer gets a capability-specific fallback; disabling leaves the label for history and marks it unavailable.
+- A capability label alone defaults to `jury:pr-review`; add `jury:branch-review` for the complete branch comparison.
+- Capability labels never enable an unbound reviewer or bypass required reviewers/budgets/provider policy.
 - Reviewer picker is not available to arbitrary GitHub Apps (tested 2026-11-15).
 
 ### Fallback
@@ -71,7 +73,7 @@ required.
   review, no resolution.
 - Bindings but no scope match → comment listing configured scopes and changed files. No review.
 - Required reviewer unavailable → comment naming the reviewer and the fix. No review.
-- Optional unavailable → run, note the skip.
+- `default`/`capability` unavailable → run the rest, note the skip.
 - Fallback comments are deduped/updated by policy version; no spam.
 
 ## Consequences

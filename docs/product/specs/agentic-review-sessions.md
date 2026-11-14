@@ -17,15 +17,16 @@
 4. **Self-hostable backend and UI, Dockerized.** No Cloudflare requirement.
 5. **Provider management is first-class.** The operator adds a provider key; Jury Forge fetches the
    models available with that key. **No free-text model entry.**
-6. **Manual-first triggering.** Any PR in an installed account/org can be reviewed on request. A repo
-   allowlist may enable automatic reviews, but manual review must always be available.
+6. **Manual-first triggering.** Any PR in an installed account/org can be reviewed on request.
+   Automatic review is opt-in config-as-code; manual review must always be available.
 7. **No repo enable/disable toggles for agentic review.** The app sits above all installed repos.
 8. **Dynamic agent availability.** Agents are not available on every repo; a router selects the jury
    from explicit requests, repo policy, paths, languages, labels, and agent scopes.
 9. **Keys are stored encrypted** and are write-only to the API.
-10. **Only Jury Forge resolves its conversations**, after a satisfactory user response.
+10. **Resolution is human-confirmed by default** (`suggest`); `auto` (bot resolves after a guard)
+    and `off` are opt-in. A human can always resolve natively in GitHub or the UI.
 11. **PR review is diff-only by default.** Branch review is explicit: it compares the branch to the
-    default branch and uses a repo knowledge graph updated incrementally on every review run, so
+    default branch and uses a repo knowledge graph updated incrementally on every branch/T2 review run, so
     context is not rebuilt from scratch.
 12. **Copyright/licence:** MIT; no open-core or BSL/SSPL dependency in the core.
 
@@ -82,7 +83,8 @@ PrSession (installation, repo, pr_number)
  └── agent_runs + tool_calls: trace, tokens, cost, latency
 ```
 
-- **PR-level context** is shared: the diff, repo graph, instructions, pack grants, prior findings.
+- **PR-level context** is shared: the diff (T0) or branch delta + repo graph (T2), instructions,
+  pack grants, prior findings.
 - **Thread-level context** is the local conversation and the finding(s) it concerns.
 - A session has a **generation** per head SHA. A push does not destroy the session; it advances the
   generation and marks findings that need re-verification.
@@ -103,7 +105,7 @@ merged/closed → archived
 - **active:** the agent is planning, retrieving context, running agents, or writing.
 - **waiting_for_user:** the agent asked a question or posted findings and has nothing to add until a
   human replies.
-- **resolved:** the agent resolved the thread after a satisfactory response. A new reply reopens it.
+- **resolved:** a human resolved it (`suggest`/`off`) or the bot resolved it under `auto`; a new reply reopens it.
 - **archived:** PR merged/closed or retention expiry; no further turns.
 
 There is **no per-session process to suspend**. `waiting_for_user` and long idle periods consume no
@@ -123,20 +125,21 @@ Surfaces, in order of preference:
    `Jury Forge` check run with action buttons `PR review` and `Branch review` (Checks API `actions`;
    max 3, label ≤ 20 chars). Clicking a button sends `check_run.requested_action` to the app and
    starts the turn. No comment is posted just to trigger. Requires `checks: write`.
-2. **PR label (modes):** `jury:pr-review` (PR diff + targeted context) and `jury:branch-review`
-   (complete branch review against the repo context graph). One click in the sidebar; the app
-   listens to `pull_request.labeled` and can create the labels on install. No comment required.
+2. **PR label (modes):** `jury:pr-review` (strict T0: PR diff/hunks + metadata + thread context;
+   no repository file reads, no graph) and `jury:branch-review` (v1.1: complete branch review against the
+   repo context graph, T2). One click in the sidebar; the app listens to `pull_request.labeled`.
    These two labels are **modes**.
-   Optional **capability labels** (`jury:cap:security`, `jury:cap:tests`, `jury:cap:performance`,
-   `jury:cap:docs`, `jury:cap:data`, `jury:cap:infra`, `jury:cap:accessibility`) request a capability
-   group **within the reviewers already bound/approved for the repo**. They never enable an agent
-   that is not bound, never bypass required reviewers, budgets, or provider policy. If no bound
-   reviewer matches the capability, post a fallback. Specific agents are requested via slash/UI.
-3. **Slash command (fallback):** `/jury pr-review`, `/jury pr-review security,testing`, `/jury branch-review`,
-   `/jury status`, `/jury pause`, `/jury resolve`, `/jury reopen`.
-4. **Web UI:** “Ask Jury Forge” on a repository/PR view; it enqueues the same turn. The UI must not
-   require the repo to be “enabled”.
-5. **Reviewer picker:** tested 2026-11-15; GitHub accepted a request for `jury-forge[bot]` but did
+   **Capability labels** `jury:cap:<id>` request a capability group **within the reviewers already
+   bound/approved for the repo**. They never enable an unbound reviewer, bypass required reviewers,
+   budgets, or provider policy. A capability label alone defaults to PR review; add
+   `jury:branch-review` for the branch mode. If no bound reviewer matches, post a capability
+   fallback. All active capability labels are synced to every installed repo. Specific reviewers are
+   selected via the UI “Ask Jury Forge” picker, not a command. **Tier note:** Phase 1 uses built-in
+   capability IDs; the registry and label sync ship in v1 (ADR-0018).
+3. **Web UI:** “Ask Jury Forge” on a repository/PR view; select mode and specific bound
+   reviewers/capabilities; it enqueues the same turn. The UI must not require the repo to be
+   “enabled”.
+4. **Reviewer picker:** tested 2026-11-15; GitHub accepted a request for `jury-forge[bot]` but did
    not add the app as a reviewer. Arbitrary GitHub Apps cannot be requested there (Copilot is
    special). Revisit if GitHub exposes a first-class AI reviewer request.
 
@@ -152,9 +155,9 @@ review:
   mode: diff                 # pr | branch
   on: [opened, ready_for_review, synchronize]
 agents:
-  security: { paths: ["src/**", "auth/**"], required: true }
-  testing:  { paths: ["**/*.test.*", "src/**"], required: false }
-  docs:     { paths: ["docs/**", "**/*.md"], required: false }
+  security: { paths: ["src/**", "auth/**"], selection: required }
+  testing:  { paths: ["**/*.test.*", "src/**"], selection: default }
+  docs:     { paths: ["docs/**", "**/*.md"], selection: capability, capabilities: [docs] }
 ```
 
 - If `auto` is false (the default), the app does nothing until a human triggers it.
@@ -168,9 +171,9 @@ agents:
 | Event | Behavior |
 | ----- | -------- |
 | `pull_request_review_comment` created (human reply) | Resume the thread session; enqueue a turn. Ignore the bot's own comments. |
-| `issue_comment` created on a PR (human) | If it mentions Jury Forge or uses `/jury`, enqueue a PR-level turn; otherwise observe only. |
+| `issue_comment` created on a PR (human) | If it mentions Jury Forge, enqueue a PR-level turn; no slash commands. |
 | `pull_request_review` submitted (human review) | Add to session context; the agent may respond if it was mentioned or if policy says so. |
-| `pull_request` synchronize | Advance generation; re-index changed files; mark affected findings `needs_recheck`; do not auto-post unless policy says so. |
+| `pull_request` synchronize | Advance generation; mark affected findings `needs_recheck`; T0 PR review does not re-index; a branch/T2 or background graph job may refresh the index; do not auto-post unless policy says so. |
 | `pull_request` closed/merged | Archive the session. |
 | `push` to default branch | Update the repo graph, not the PR session. |
 
@@ -183,65 +186,82 @@ ingest event
   → load session + thread + generation
   → plan intent (review, answer, verify, resolve, clarify)
   → select agents (explicit > repo config > scope/language/path/labels > default)
-  → retrieve context (diff, repo graph, instructions, packs, prior findings)
+  → retrieve context (diff for T0; branch delta + graph for T2; instructions, packs, prior findings)
   → run agents (parallel or sequential, bounded)
   → ground + verify findings
   → chair/merge (dedup, disagreement, severity, confidence)
   → write response (thread reply or PR comment)
   → update findings/thread state
-  → resolve (only if guard passes) or wait
+  → in auto, resolve only if the guard passes; in suggest/off, wait for a human
 ```
 
 ### Tools available to agents
 
+**Tier rule:** PR review (T0) may use only `get_diff`, `get_thread`, `get_prior_findings`,
+`get_knowledge` (granted packs), `post_reply`, `ask_user`, `update_finding`. Repository read/graph/test tools are **branch review
+(T2)** only. `resolve_thread` is used only in `auto` resolution mode.
+
 | Tool | Purpose | Guard |
 | ---- | ------- | ----- |
-| `get_diff` | The PR diff/hunks at the generation SHA | Read-only |
-| `read_file(path, range)` | A file slice at the SHA | Bounded range, repo-relative |
-| `search_symbols` / `find_references` | Query the repo graph | Read-only, result cap |
-| `find_tests` | Tests related to changed code | Read-only |
+| `get_diff` | The PR diff/hunks at the generation SHA | Read-only; T0 |
+| `read_file(path, range)` | A file slice at the SHA | T2 only; bounded range, repo-relative |
+| `search_symbols` / `find_references` | Query the repo graph | T2 only; read-only, result cap |
+| `find_tests` | Tests related to changed code | T2 only; read-only |
 | `get_thread` | The conversation and finding history | Session-scoped |
 | `get_prior_findings` | Open/resolved findings for this repo/PR | Session/repo-scoped |
-| `get_knowledge` | Granted packs, ranked by relevance | Budgeted |
+| `get_knowledge` | Granted packs, ranked by relevance | T0 packs only; repo-doc/live/graph sources are T2; budgeted |
 | `post_reply` | Reply in the current thread or PR | One reply per turn unless policy allows more |
 | `ask_user` | Ask a focused question and wait | Ends the turn in `waiting_for_user` |
-| `resolve_thread` | Resolve the thread | Guard: evidence, user response, agent-owned thread |
+| `resolve_thread` | Resolve the thread | Only in `auto`; guard: evidence, user response, agent-owned thread |
 | `reopen_thread` | Reopen on new evidence | Guard: human reply or new failure |
 | `update_finding` | Mark addressed/verified/dismissed/reopened | Guard: evidence + actor |
-| `check_ci` | Read check runs/status for the SHA | Read-only |
-| `tests.run` | Run selected tests in a sandbox | Opt-in repo policy; isolated, no secrets, network off, resource caps |
-| `build.run` | Build in a sandbox | Opt-in repo policy; same isolation |
+| `check_ci` | Read check runs/status for the SHA | T2 only |
+| `tests.run` | Run selected tests in a sandbox | Later (post-v1.1); opt-in repo policy; isolated, no secrets, network off, resource caps |
+| `build.run` | Build in a sandbox | Later (post-v1.1); opt-in repo policy; same isolation |
 
-No arbitrary shell, no code execution, no network fetch by default. Static-analysis tools can be
-added later behind a sandbox and an explicit capability.
+No arbitrary shell, no code execution, no network fetch by default. Static-analysis tools are T2
+optional; sandboxed test/build tools can be added later behind an explicit capability.
 
 ### Loop limits
 
 - Max turns per session: configurable (for example 20) before requiring an explicit human command.
-- Max tool calls and tokens per turn; max wall time; max cost per session.
+- Max tokens, tool calls, and wall-clock per turn; currency cap only when pricing is known.
 - A turn that hits a limit posts a short status, stops, and waits — it never silently truncates.
 - A user reply interrupts/queues; it does not run a second turn in parallel with the current one.
 
 ## 5. Resolution protocol
 
-**Only Jury Forge resolves its own threads programmatically.** Humans can still use GitHub's resolve
-button; the session records that as a human action and does not fight it.
+Resolution has three modes: **`suggest` (default)**, **`auto`**, and **`off`**. There are no slash
+commands; a human resolves natively in GitHub or via the Jury Forge UI.
 
-Before `resolve_thread`:
+### `suggest` (default)
+
+1. The agent decides the finding looks addressed and posts a **proposed resolution summary** in the
+   thread (“this looks resolved because …”).
+2. The agent does **not** call `resolve_thread`.
+3. A human resolves the thread with GitHub’s **Resolve conversation** or the UI **Resolve** action.
+4. A normal “thanks/fixed” reply does not resolve; the agent may ask for the explicit action.
+
+### `auto` (opt-in)
+
+The agent may call `resolve_thread` only when all guard checks pass:
 
 1. The thread was created by Jury Forge.
 2. There is a human response after the last agent finding/question.
-3. The agent has evidence that the finding is addressed (fixed code, accepted rationale, or an
-   explicit "won't fix" with a reason).
+3. Evidence that the finding is addressed (fixed code, accepted rationale, or “won't fix” with a
+   reason).
 4. A verifier/guard step agrees; confidence and evidence are recorded.
-5. The agent posts a short resolution summary in the thread.
+5. A short resolution summary is posted.
 6. The resolution is audited with actor, evidence, model, and timestamp.
-7. The thread is resolved via the forge adapter (GitHub GraphQL `resolveReviewThread`; verify the App
-   permission in the spike).
+7. The thread is resolved via the forge adapter.
 
-If any condition fails, the agent asks a focused question or leaves the thread open. A new human
-reply after resolution reopens the thread and starts a new turn. The UI shows who resolved a thread
-and why; it never presents a bot resolution as a human one.
+### `off`
+
+The agent never resolves; humans resolve natively or in the UI.
+
+A new human reply after resolution reopens the thread and starts a new turn. The UI shows who
+resolved a thread and why; it never presents a bot resolution as a human one. The wrong-resolution
+rate is a benchmark/scorecard metric.
 
 ### Human override
 
@@ -269,26 +289,27 @@ An **agent definition** is a versioned configuration with:
 - provider + model binding (from the model catalog, never free text);
 - tools/capabilities;
 - **availability scope:** org, repositories, paths, languages, labels, required files, team;
-- trigger policy: manual, automatic, both; required/optional;
+- selection mode: `required` / `default` / `capability`; trigger policy manual/automatic/both;
 - budget and priority;
 - version, prompt hash, evaluation status.
 
 The **router** builds the jury for a turn:
 
-1. Explicit request (`/jury pr-review security,testing`) wins.
-2. Repo config (`.jury-forge.yml`) adds required/optional agents.
-3. Scope match: changed paths, languages, labels, repo, required context.
-4. Availability: agent enabled, provider/model healthy, budget available.
-5. Default: required reviewers + optional reviewers whose scope matches. If none are bound or none
-   match, post the fallback notice — never a clean review.
-6. Record **why** each agent ran or was skipped in the session timeline.
+1. Explicit capability labels (`jury:cap:*`) or UI selection request a capability group.
+2. Required bindings always run.
+3. Scope match: changed paths, languages, labels, repo.
+4. Availability: reviewer enabled, provider/model healthy, budget available.
+5. If a capability is requested: required + capability bindings that match. If not: required +
+   default bindings that match. If nothing can run, post the fallback notice — never a clean review.
+6. Record **why** each reviewer ran or was skipped in the session timeline.
 
-Agents that are not available on a repo are never silently used. The UI and the `/jury status`
-command show availability and the reason.
+Agents that are not available on a repo are never silently used. The UI shows availability and the
+reason.
 
 **Catalog and repo bindings:** a reviewer is not available on a repo without an enabled binding.
-Bindings can be required/optional with path/language/label scope. A required reviewer that cannot
-run blocks the review with a configuration fallback. The full model is in
+Bindings are `required` (always), `default` (plain review), or `capability` (only when requested)
+with path/language/label scope. A required reviewer that cannot run blocks the review with a
+configuration fallback. The full model is in
 [`reviewer-assignment-and-roles.md`](reviewer-assignment-and-roles.md) and ADR-0016.
 
 ## 7. PR review and branch review
@@ -301,18 +322,18 @@ Two review modes, both session turns:
 - Fast and cheap; it is the "review these diffs" mode.
 - It does not answer "who calls this?" — that is branch review’s job.
 
-### `jury:branch-review` — complete branch review
+### `jury:branch-review` — complete branch review (v1.1)
 
 - Compares the PR branch to the **repository’s default branch**, not just the latest PR diff.
 - Reviews the complete branch delta (all changed files/functions vs default) against the repository
   context graph, including cross-file and functional/behavioral impact.
 - It does **not** audit untouched files; they are context.
 - **Capability agents decide how to verify functionality.** A reviewer can be configured with tools
-  such as graph queries, test inspection, static analysis, and (opt-in) a sandboxed test/build run.
+  such as graph queries, test inspection, and static analysis; a sandboxed test/build run is later.
   The agent chooses the verification path within its instructions, budget, and repo policy.
-- Default: static behavior/contract/test analysis. `tests.run` / `build.run` are opt-in sandbox
+- Default: static behavior/contract/test analysis. `tests.run` / `build.run` are later opt-in sandbox
   capabilities; they are not implied by branch review.
-- Explicit only: `/jury branch-review`, `jury:branch-review`, the Check Run action, or
+- Explicit only: the `jury:branch-review` label, the Branch review Check Run action, or
   `mode: branch` in repo config. Shows an estimate; cancellable.
 - If the PR base is not the default branch, branch review still uses the default branch unless the
   repo policy overrides it.
@@ -323,7 +344,7 @@ The graph is the product's memory of the repository. See
 [`repo-knowledge-graph`](repo-knowledge-graph.md) and
 [`../../architecture/agentic-review.md#7-repo-knowledge-graph`](../../architecture/agentic-review.md#7-repo-knowledge-graph).
 
-- Updated on every review run at the generation SHA.
+- Updated on every branch/T2 review run at the generation SHA.
 - Updated on pushes to the default branch.
 - Incremental: only changed files and their reverse dependencies are re-parsed; summaries and
   embeddings are content-hash keyed.
@@ -350,7 +371,7 @@ See [`provider-model-discovery.md`](provider-model-discovery.md).
 - **Session inbox:** PRs with active sessions, last turn, waiting state, cost, unresolved findings.
 - **Session view:** timeline of messages, agent runs, tool calls, findings, diff, resolution, cost.
 - **Composer:** reply in a thread, ask a follow-up, request a specific agent, run branch review.
-- **Triggers:** "Ask Jury Forge" from a repo/PR; copy the `/jury` command; no repo enable toggle.
+- **Triggers:** "Ask Jury Forge" from a repo/PR, plus the mode/capability labels and Check Run actions; no repo enable toggle.
 - **Agent studio:** name/role/instructions, provider/model picker (catalog only), scope rules,
   availability preview, version/activation, evaluation status.
 - **Providers:** add/verify/refresh, model table with capabilities/prices, status, rotation.
@@ -373,18 +394,19 @@ See [`provider-model-discovery.md`](provider-model-discovery.md).
 
 ## 11. Acceptance criteria
 
-- [ ] A human can trigger a review on any PR in an installed repo with `/jury pr-review`; no repo toggle.
+- [ ] A human can trigger a review on any PR in an installed repo with the `jury:pr-review` label or Check Run action; no repo toggle.
 - [ ] A session survives a process restart and a multi-day wait; a reply resumes with prior context.
 - [ ] The agent replies in the correct GitHub thread, not a duplicate top-level comment.
-- [ ] Only the bot resolves threads it created, after a satisfactory human response, with evidence.
-- [ ] A new reply after resolution reopens the thread.
+- [ ] `suggest` is the default: the agent proposes, a human resolves natively/UI; no `/jury` command.
+- [ ] `auto` resolves only through the guard and is opt-in; `off` never resolves.
+- [ ] SME/admin override works with a reason and audit; a new reply reopens.
 - [ ] The agent router selects agents by explicit request, repo config, path/language/label, and
       availability; the timeline explains why.
 - [ ] Adding a provider key fetches the model list; the UI has no free-text model field; an invalid
       key is rejected.
 - [ ] Keys are encrypted and never returned; a key is bound to its provider origin.
-- [ ] PR review is diff-only by default; `/jury branch-review` compares the branch to the default branch, builds/uses the repo graph, and reports an estimate.
-- [ ] Re-running a review reuses the graph and only re-indexes changed files.
+- [ ] PR review is diff-only by default; the `jury:branch-review` label or Branch review action compares the branch to the default branch, builds/uses the repo graph, and reports an estimate.
+- [ ] A branch/T2 re-run reuses the graph and only re-indexes changed files; T0 PR review does not touch the graph.
 - [ ] All provider/session/tool/resolution actions are audited.
 - [ ] Docker Compose install runs the backend, worker, scheduler, Postgres, and UI.
 
@@ -410,8 +432,8 @@ See [`provider-model-discovery.md`](provider-model-discovery.md).
 
 **Commands and triggers**
 
-- `/jury pr-review`, `/jury pr-review security,testing`, `/jury branch-review`, `/jury status`, `/jury pause`,
-  `/jury resume`, `/jury resolve`, `/jury reopen`, `/jury explain`.
+- the `jury:pr-review` label or Check Run action, `jury:cap:security` + `jury:cap:tests` labels, the `jury:branch-review` label or Branch review action, the UI session status, pause in the UI,
+  resume in the UI, GitHub Resolve conversation / UI, reopen in the UI, the UI session explanation.
 - Labels `jury:pr-review`, `jury:full`, `jury:pause` as an alternative to comments.
 - A GitHub Check “Jury Forge: ready” with a details link so users discover the command without a
   noisy comment on every PR.
@@ -430,16 +452,16 @@ See [`provider-model-discovery.md`](provider-model-discovery.md).
 **Resolution**
 
 - Satisfaction guard with evidence: fixed code, accepted rationale, “won’t fix” reason, duplicate.
-- Optional explicit confirmation (“reply `resolved`”) for ambiguous cases.
+- In `suggest`, the human confirms by using GitHub Resolve or the UI; no comment command.
 - Reopen on a new reply or a new push that touches the finding.
-- Never resolve a thread the bot did not start; never resolve on the first agent message.
+- In `auto`, never resolve a thread the bot did not start, and never on the first agent message.
 - Show who resolved and why in the UI and the audit.
 
 **Agent routing**
 
 - “Why this jury?” explanation in the session: selected, skipped, and why.
 - Agent availability preview in the studio: which repos/paths/labels match.
-- Manual override by name; required/optional agents; org defaults; route by label.
+- Manual override by name in the UI; selection modes required/default/capability; org defaults; route by label.
 - A default agent when no scope matches; ask the user if none is safe.
 - Agent scorecards: acceptance, false positives, resolution quality, cost.
 
@@ -493,11 +515,11 @@ See [`provider-model-discovery.md`](provider-model-discovery.md).
 
 | ID | Question | Default |
 | -- | -------- | ------- |
-| Q-021 | Which harness: LangGraph.js, OpenAI Agents SDK, Vercel AI SDK + custom, or a spike? | Spike LangGraph.js vs custom; ADR-0010. |
-| Q-022 | Trigger surface: slash command, label, check, or app review request? | Slash command + label first; verify app review request. |
-| Q-023 | Must the user explicitly confirm before resolution, or can the agent judge satisfaction? | Agent judges with evidence + guard; explicit confirmation preferred for ambiguity. |
-| Q-024 | Automatic review policy: config-as-code only, or org UI? | Config-as-code; org defaults later. |
-| Q-025 | Graph languages for v1? | TypeScript/JavaScript first; Python/Go next. |
-| Q-026 | Graph store: Postgres adjacency vs a graph database? | Postgres first; extract later. |
-| Q-027 | Session retention? | 90 days after merge/close; configurable. |
-| Q-028 | Who can trigger/resolve besides the bot? | Repo write access; org roles; audited. |
+| AG-01 | Which harness: LangGraph.js, OpenAI Agents SDK, Vercel AI SDK + custom, or a spike? | Spike LangGraph.js vs custom; ADR-0010. |
+| AG-02 | Trigger surface: labels, Check Run, UI, or app review request? | Labels + Check Run actions + UI; no slash commands. Reviewer picker unsupported for arbitrary apps (tested). |
+| AG-03 | Must the user explicitly confirm before resolution, or can the agent judge satisfaction? | `suggest` default: agent proposes, human resolves natively/UI; `auto`/`off` opt-in. |
+| AG-04 | Automatic review policy: config-as-code only, or org UI? | Config-as-code; org defaults later. |
+| AG-05 | Graph languages for v1? | TypeScript/JavaScript first; Python/Go next. |
+| AG-06 | Graph store: Postgres adjacency vs a graph database? | Postgres first; extract later. |
+| AG-07 | Session retention? | 90 days after merge/close; configurable. |
+| AG-08 | Who can trigger/resolve besides the bot? | Repo write access; org roles; audited. |

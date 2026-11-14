@@ -45,26 +45,28 @@ the PoC: tenancy, versioning, idempotency, audit, budgets, and run snapshots are
 | Entity | Key fields | Notes |
 | ------ | ---------- | ----- |
 | `reviewers` | `id`, `org_id`, `name`, `slug`, `description`, `domain`, `owner_user_id`, `status`, `created_by`, `created_at`, `archived_at` | Catalog identity; owner is an SME/admin. |
-| `reviewer_versions` | `id`, `reviewer_id`, `version`, `status` (`draft`/`approved`/`active`/`archived`), `instructions`, `rules`, `provider_id`, `model_id`, `endpoint`, `params`, `output_schema`, `capabilities`, `tool_policy`, `sandbox_policy`, `content_hash`, `created_by`, `approved_by`, `created_at`, `activated_at` | Immutable once active; model/endpoint from the catalog. |
+| `reviewer_versions` | `id`, `reviewer_id`, `version`, `status` (`draft`/`approved`/`active`/`archived`), `instructions`, `rules`, `provider_id`, `model_id`, `endpoint`, `params`, `output_schema`, `capability_ids`, `tool_policy`, `sandbox_policy`, `content_hash`, `created_by`, `approved_by`, `created_at`, `activated_at` | Immutable once active; model/endpoint from the catalog. |
 | `provider_credentials` | `id`, `org_id`, `name`, `provider`, `base_url`, `allowed_origins`, `ciphertext`, `key_version`, `created_at`, `last_used_at` | Credential is bound to allowed origins. No copy-to-arbitrary-URL. |
 | `reviewer_bindings` | `reviewer_version_id`, `provider_credential_id`, `model_id`, `endpoint`, `params`, `budget` | Explicit binding, replaceable. |
-| `repo_reviewer_bindings` | `id`, `repo_id`, `reviewer_id`, `reviewer_version_id`, `enabled`, `requirement` (`required`/`optional`), `priority`, `paths_include`, `paths_exclude`, `context_paths`, `languages`, `labels`, `budget`, `created_by`, `updated_at` | A reviewer runs on a repo only with a binding. |
+| `repo_reviewer_bindings` | `id`, `repo_id`, `reviewer_id`, `reviewer_version_id`, `enabled`, `selection` (`required`/`default`/`capability`), `priority`, `paths_include`, `paths_exclude`, `context_paths`, `languages`, `labels`, `budget`, `created_by`, `updated_at` | A reviewer runs on a repo only with a binding; `capability` runs only when requested; `context_paths` is T2 branch review only. |
 | `repo_reviewer_policy` | `repo_id`, `default_mode` (`pr`/`branch`), `min_required`, `fallback_mode`, `policy_version`, `updated_at` | Default jury and fallback behavior. |
-| `capability_labels` | `id`, `org_id`, `label`, `tags` (JSON), `enabled`, `created_at` | Maps `jury:cap:*` to reviewer capability tags. |
-| `reviewer_approvals` | `id`, `reviewer_version_id`, `approved_by`, `approved_at`, `note` | Org approval before a maintainer can bind. |
+| `capabilities` | `id`, `org_id`, `capability_key`, `name`, `description`, `parent_id`, `status`, `built_in`, `approved_by`, `created_at` | First-class capability; `capability_key` is immutable and used in the label. |
+| `capability_labels` | `id`, `org_id`, `capability_id`, `repo_id`, `label`, `status`, `last_synced_at` | `jury:cap:<key>` labels synced to every installed repo; disabled labels remain with fallback. |
+| `reviewer_capabilities` | `reviewer_version_id`, `capability_id` | Many-to-many capability tags on a reviewer version. |
+| `reviewer_approvals` | `id`, `reviewer_version_id`, `approved_by`, `approved_at`, `note` | Org approval before any binding; a maintainer still needs `allowMaintainerBindings` to bind. |
 | `role_bindings` | `id`, `org_id`, `principal_type` (`user`/`team`), `principal_id`, `role`, `scope_type` (`org`/`repo`/`domain`), `scope_id` | Owner/admin/SME/maintainer/member/viewer/auditor. |
 | `fallback_comments` | `id`, `repo_id`, `pr_number`, `policy_version`, `reason`, `github_comment_id`, `updated_at` | Dedupe/update the no-reviewers/no-match notice. |
 | `policies` | `id`, `org_id`, `scope_type` (`org`/`repo`/`branch`/`path`), `scope_id`, `version`, `config`, `created_by`, `created_at` | Validated by schema; versioned. |
 
-Policy config covers: required/optional reviewers, severity thresholds, inline caps, publish mode,
+Policy config covers: required/default/capability reviewers, severity thresholds, inline caps, publish mode,
 token/cost budgets, model allowlist, data policy, fork policy, suppression rules, and preview/approve.
 
 ## Runs
 
 | Entity | Key fields | Notes |
 | ------ | ---------- | ----- |
-| `review_requests` | `id`, `org_id`, `repository_id`, `pr_number`, `head_sha`, `base_sha`, `compare_sha`, `review_mode` (`pr`/`branch`), `event`, `mode` (`auto`/`manual`/`replay`), `requested_by`, `created_at` | One per webhook/try; `compare_sha` is the default branch for a branch review. |
-| `runs` | `id`, `org_id`, `request_id`, `repository_id`, `pr_number`, `head_sha`, `base_sha`, `compare_sha`, `review_mode` (`pr`/`branch`), `generation`, `status`, `phase`, `attempt`, `lease_owner`, `lease_expires_at`, `heartbeat_at`, `error_code`, `error_detail`, `started_at`, `finished_at`, `canceled_at` | `status`: queued, running, completed, failed, canceled, skipped. `compare_sha` = default branch for branch review. |
+| `review_requests` | `id`, `org_id`, `repository_id`, `pr_number`, `head_sha`, `base_sha`, `compare_sha`, `review_mode` (`pr`/`branch`), `context_tier` (`T0`/`T2`), `event`, `mode` (`auto`/`manual`/`replay`), `requested_by`, `created_at` | One per webhook/try; `compare_sha` is the default branch for a branch review. |
+| `runs` | `id`, `org_id`, `request_id`, `repository_id`, `pr_number`, `head_sha`, `base_sha`, `compare_sha`, `review_mode` (`pr`/`branch`), `context_tier` (`T0`/`T2`), `generation`, `status`, `phase`, `attempt`, `lease_owner`, `lease_expires_at`, `heartbeat_at`, `error_code`, `error_detail`, `started_at`, `finished_at`, `canceled_at` | `status`: queued, running, completed, failed, canceled, skipped. `compare_sha` = default branch for branch review. |
 | `run_steps` | `id`, `run_id`, `name`, `status`, `attempt`, `started_at`, `finished_at`, `error`, `metrics`, `output_ref` | One row per step attempt; idempotent by `(run_id, name, attempt)`. |
 | `run_config_snapshot` | `run_id`, `reviewer_versions`, `policy_version`, `pack_versions`, `model_registry`, `prompt_hashes`, `context_budget` | JSON; the exact configuration used. |
 | `run_context` | `run_id`, `manifest`, `included_files`, `omitted_files`, `tokens`, `bytes`, `artefact_ref` | What the model saw and why. |
@@ -85,7 +87,7 @@ token/cost budgets, model allowlist, data policy, fork policy, suppression rules
 | `session_turns` | `id`, `session_id`, `trigger`, `mode`, `requested_capabilities`, `generation`, `status`, `input`, `plan`, `output`, `cost_micros`, `started_at`, `finished_at` | Durable unit of work; serialized per session; labels/tags recorded for provenance. |
 | `session_findings` | `id`, `session_id`, `thread_id`, `agent_run_id`, `file`, `line`, `severity`, `status`, `fingerprint`, `evidence` | `status` = open/addressed/verified/dismissed/resolved/reopened. |
 | `tool_calls` | `id`, `turn_id`, `agent_run_id`, `tool`, `input`, `output`, `tokens`, `latency_ms`, `status` | Bounded; read-only tools in v1. |
-| `resolutions` | `id`, `thread_id`, `actor_type`, `actor_id`, `evidence`, `confidence`, `created_at` | Bot resolution is guarded; human resolutions are recorded too. |
+| `resolutions` | `id`, `thread_id`, `actor_type`, `actor_id`, `mode` (`suggest`/`auto`/`off`), `evidence`, `confidence`, `created_at` | In `suggest`, actor is the human who resolved; in `auto`, the bot resolution is guarded. |
 | `agent_definitions` | `id`, `org_id`, `name`, `slug`, `role`, `created_at`, `archived_at` | Stable identity. |
 | `agent_versions` | `id`, `agent_id`, `version`, `status`, `instructions`, `rules`, `provider_id`, `model_id`, `endpoint`, `params`, `tools`, `sandbox_policy`, `content_hash`, `activated_at` | Immutable once active; provider/model/endpoint from the catalog only. |
 | `agent_scopes` | `id`, `agent_version_id`, `scope_type` (`repo`/`path`/`language`/`label`), `pattern`, `required` | Dynamic availability. |
@@ -99,10 +101,11 @@ token/cost budgets, model allowlist, data policy, fork policy, suppression rules
 
 1. One `pr_sessions` row per `(installation_id, repository_id, pr_number)`.
 2. One active `session_turn` per session; the queue serializes by `session_id`.
-3. A `session_threads` row can be resolved only by its bot owner or a human; a bot resolution
-   requires a `resolutions` row with evidence and a prior human message.
-4. `agent_versions` reference a `provider_models` row; a removed model marks the agent
-   `configuration_error`.
+3. A `session_threads` row can be resolved by a human natively/UI (`suggest`/`off`) or by the bot
+   in `auto`; a bot resolution requires a `resolutions` row with evidence and a prior human message.
+4. `agent_versions` reference a `provider_models` row and a capability set; a removed model marks
+   the agent `configuration_error`. A `capability` binding must reference a reviewer with at least
+   one capability.
 5. `repo_indexes` are derived and rebuildable; `index_nodes`/`index_edges` never store secrets.
 6. `context_manifests` are immutable and link to the turn's generation.
 7. Session visibility never exceeds repo visibility; a participant/reader must have repo access.

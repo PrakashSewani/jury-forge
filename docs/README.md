@@ -48,11 +48,12 @@ written to be read by humans and agents. Start at the layer you need; do not rea
 - [`product/specs/`](product/specs/) — one spec per approved capability (template and index).
   - [`agentic-review-sessions.md`](product/specs/agentic-review-sessions.md) — per-PR sessions, manual triggers, routing, resolution.
   - [`provider-model-discovery.md`](product/specs/provider-model-discovery.md) — provider keys, `/models`, catalog, no free text.
-  - [`repo-knowledge-graph.md`](product/specs/repo-knowledge-graph.md) — diff-first + context graph, incremental updates.
+  - [`repo-knowledge-graph.md`](product/specs/repo-knowledge-graph.md) — PR review is diff-only; branch review uses the graph (v1.1).
   - [`session-capacity-and-visibility.md`](product/specs/session-capacity-and-visibility.md) — interface, concurrency, roles, visibility, budgets.
-  - [`reviewer-assignment-and-roles.md`](product/specs/reviewer-assignment-and-roles.md) — reviewer catalog, repo bindings, SME/admin roles, fallback.
+  - [`reviewer-assignment-and-roles.md`](product/specs/reviewer-assignment-and-roles.md) — reviewer catalog, repo bindings (required/default/capability), capability registry, SME/admin roles, fallback.
   - [`knowledge-system.md`](product/specs/knowledge-system.md) — skills/docs/doc links, snapshots, grants, retrieval, citations.
-  - [`v1-ui.md`](product/specs/v1-ui.md) — v1 website control plane and session UI scope.
+  - [`v1-ui.md`](product/specs/v1-ui.md) — v1 website control plane, sessions, reviewers, capabilities, and session UI scope.
+  - **Backlog specs:** [`shadow-mode.md`](product/specs/shadow-mode.md), [`provider-allowlist.md`](product/specs/provider-allowlist.md), [`local-cli-review.md`](product/specs/local-cli-review.md), [`large-pr-handling.md`](product/specs/large-pr-handling.md), [`reviewers-as-code.md`](product/specs/reviewers-as-code.md), [`history-seeded-conventions.md`](product/specs/history-seeded-conventions.md), [`mcp-surface.md`](product/specs/mcp-surface.md), [`pr-walkthrough.md`](product/specs/pr-walkthrough.md).
 
 ### 4. Architecture
 

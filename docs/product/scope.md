@@ -8,6 +8,10 @@ non-goals. It will be revised when the owner provides the final capability list.
 **Goal:** a self-hosted, MIT-licensed GitHub PR review jury that a small team can install,
 operate, trust, and measure — with durable, conversational per-PR sessions, not one-shot reviews.
 
+> **Proposed re-tiering (ADR-0018, pending owner approval):** the list below is the *union* of v1
+> and v1.1. Items tagged **(v1.1)** ship after the benchmark exists; the tier map is in
+> [`capabilities.md`](capabilities.md#release-tiers-proposed-adr-0018-pending-owner-approval).
+
 ### In scope
 
 1. **Install and operate**
@@ -19,8 +23,7 @@ operate, trust, and measure — with durable, conversational per-PR sessions, no
 2. **Connect**
    - **Single-tenant v1:** one organisation or personal account per instance, one GitHub
      installation, many repositories. Multi-org/multi-installation is later.
-   - GitHub App (manifest flow) for GitHub.com; GitHub Enterprise Server if the install spike is
-     clean.
+   - GitHub App (manifest flow) for GitHub.com; GitHub Enterprise Server **(v1.1)**.
    - Installation-level availability: manual review on any PR in an installed account/org, with no
      per-repo enable toggle (ADR-0013).
    - Config-as-code (`.jury-forge.yml`) for automatic review policy, agent scopes, and pr/branch
@@ -31,19 +34,24 @@ operate, trust, and measure — with durable, conversational per-PR sessions, no
 3. **Review**
    - Durable per-PR sessions: threads, messages, turns, findings, generations; replies resume with
      context (ADR-0012).
-   - Manual first: `jury:pr-review`/`jury:branch-review` labels and Check Run actions; slash command/UI
-     fallback; automatic reviews only by policy.
+   - Manual first: `jury:pr-review`/`jury:branch-review` labels and Check Run actions; UI picker for
+     specific reviewers; no slash commands; automatic reviews only by policy.
    - Reviewer catalog per org, with SME ownership and admin approval; per-repo bindings with
-     required/optional, path/language/label scope, and budgets (ADR-0016).
+     `required`/`default`/`capability` selection, path/language/label scope, and budgets (ADR-0016).
+   - Capability registry + `jury:cap:<id>` labels (built-in/custom, one-level groups, every installed
+     repo); a capability label alone defaults to PR review; capability reviewers run only when requested.
    - No-reviewers/no-match/required-unavailable fallback comments; never a misleading clean review.
    - Multi-agent routing by explicit request, repo bindings, paths, languages, labels, and
      availability (ADR-0013).
    - User-defined agents with instructions, rules, provider/model binding, parameters, and scope.
    - Agent versions, activation, rollback, and run-time snapshots.
    - Parallel agent execution with per-provider concurrency limits.
-   - PR review by default; explicit branch review compares the PR branch to the default branch and uses an incrementally updated graph
-     (ADR-0014).
-   - Knowledge system: packs/skills, repo docs at SHA, allowlisted live doc links with per-run snapshots, capability/repo/reviewer grants, retrieval with citations.
+   - PR review by default: strict T0 diff-only (diff/hunks + metadata + thread context), with hard
+     per-turn token/tool/wall-clock caps; no repository file reads, no graph.
+   - **(v1.1)** Explicit branch review compares the PR branch to the default branch and uses an
+     incrementally updated graph (T2, ADR-0014); built only if the benchmark justifies it.
+   - Knowledge system: packs/skills, capability/repo/reviewer grants, retrieval with citations;
+     **(v1.1, T2)** repo docs at SHA and allowlisted live doc links with per-run snapshots.
    - Knowledge packs with immutable versions, grants, and provenance.
    - Grounding: every inline finding must cite code that exists at the reviewed SHA.
    - Cross-reviewer de-duplication, disagreement, and a chair/consensus step.
@@ -52,8 +60,8 @@ operate, trust, and measure — with durable, conversational per-PR sessions, no
    - Publish policy: comment by default; request changes / check conclusion per repo policy.
    - Preview/approve mode for new or sensitive agents.
    - Suppression rules and per-finding feedback.
-   - Guarded agent-only resolution: only Jury Forge resolves its threads after a satisfactory
-     human response; a new reply reopens.
+   - Resolution: `suggest` default (agent proposes, human resolves natively/UI), `auto`/`off`
+     opt-in; SMEs/admins override; a new reply reopens (ADR-0012). No slash commands.
 
 4. **Providers and models**
    - Add a provider with base URL + key; validate and fetch `/models`; no free-text model entry
@@ -61,19 +69,21 @@ operate, trust, and measure — with durable, conversational per-PR sessions, no
    - Model catalog enriched with context window, prices, capabilities, and supported endpoint;
      unknown models flagged. Pricing from provider `/models`, registry, or audited admin override.
    - Encrypted, write-only, origin-bound, rotatable keys; per-provider health/refresh.
-   - CommandCode, OpenAI-compatible, Anthropic-compatible, and local model servers.
+   - OpenAI-compatible, Anthropic-compatible, and local model servers (named vendors are examples,
+     not requirements).
 
 5. **Control**
    - Roles: owner, admin, **SME**, maintainer, member, viewer, auditor (scoped to org/repo/domain).
    - Audit stream with export; every trigger, turn, tool call, model call, reply, resolution, and human override.
    - V1 website control plane: setup, session inbox/detail, reviewer studio, repositories/bindings, providers/models, settings/roles, audit.
-   - Token and cost budgets per session/turn/repo with estimates and alerts.
+   - Hard per-turn caps from the first release; token and cost budgets per session/turn/repo with
+     estimates and alerts.
    - Data retention and deletion for sessions, messages, graph, and raw responses.
    - Secret redaction before prompts leave the perimeter.
    - Egress policy and key-to-provider binding; resolution guard.
 
 6. **Measure**
-   - An evaluation benchmark of labelled PRs with precision/recall, acceptance, and false-positive
+   - An evaluation harness v0 from the first release, then a benchmark of labelled PRs with precision/recall, acceptance, and false-positive
      metrics.
    - Per-agent scorecards and session outcomes.
    - OpenTelemetry traces, Prometheus metrics, structured logs, and cost/latency dashboards.
@@ -99,6 +109,7 @@ operate, trust, and measure — with durable, conversational per-PR sessions, no
 | A central billing/metering service | BYOK; no reseller. | Maybe an optional support offering. |
 | Full IDE integration | The PR is the primary surface. | Later. |
 | Air-gapped install | Valuable but a large ops surface; local models reduce the gap. | After v1. |
+| Repo graph / branch review in the first release | Unproven value, highest cost; benchmark first (ADR-0018). | v1.1, benchmark-gated. |
 | Mobile app | Responsive web is enough. | Not planned. |
 | i18n beyond English | Focus; add when there is demand. | v1.x. |
 
@@ -112,9 +123,14 @@ release.
 - Compose install with Postgres, one worker, and one UI.
 - GitHub App setup and installation-level availability (no repo toggle).
 - Provider add → `/models` discovery → one agent bound to a catalog model.
-- Manual `/jury pr-review` on a PR → diff context → agent turn with one tool → one posted review.
+- Reviewer catalog with one repo binding using `required`/`default`/`capability` selection
+  (built-in capability IDs only; registry + labels in v1); no binding = unavailable; no-reviewers
+  fallback.
+- Manual `jury:pr-review` label, Check Run action, or UI picker on a PR → **strict diff-only** context → agent
+  turn with hard token/tool/wall-clock caps → one posted review.
+- Evaluation harness v0 (≈20 labelled PRs, deterministic stub-model CI).
 - A user reply in the thread → a second turn with the session context alive.
-- Guarded resolve after a satisfactory reply; a new reply reopens.
+- `suggest` resolution: the agent proposes, the human resolves natively/UI; `auto`/`off` opt-in; SME/admin override; a new reply reopens.
 - Session/turn/tool-call records, a basic session timeline, and health/readiness.
 - A deterministic test suite and a clean-machine install test.
 

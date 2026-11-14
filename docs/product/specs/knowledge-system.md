@@ -27,6 +27,10 @@ pasted into one giant prompt.
 All sources carry a **trust label**. External docs, repo docs, and packs are untrusted data; they
 never become instructions.
 
+**Tier rule:** PR review (T0) may use reviewer instructions/rules, org conventions, granted knowledge
+packs, and prior findings/session memory. Repository docs at SHA, live doc links, and the repository
+graph are T2 branch-review sources; a T0 turn does not read repository files or the graph.
+
 ## 2. Knowledge pack format
 
 Keep the PoC’s portable shape, extended for capabilities and discovery:
@@ -149,7 +153,7 @@ explicit reviewer grant adds or overrides.
 - URL ingestion is SSRF-safe and admin-only; no PR/user/model-supplied URLs.
 - Knowledge access is tenant/repo/reviewer-scoped; a user cannot query a repo’s knowledge without
   repo access.
-- Signed packs (optional) verify origin; unsigned packs are allowed but labelled.
+- Signed packs (optional, v1.1) verify origin; unsigned packs are allowed but labelled.
 - Retention/delete applies to packs, snapshots, and chunks.
 - The posted review never exposes pack names/hashes or `never_quote` content; run detail does.
 
@@ -180,11 +184,11 @@ explicit reviewer grant adds or overrides.
 
 | ID | Question | Default |
 | -- | -------- | ------- |
-| Q-046 | Do we auto-include `AGENTS.md`/`CONTRIBUTING.md` or require a repo setting? | Opt-in per repo, as the PoC. |
-| Q-047 | Are doc links live-fetched or snapshotted? | Live fetch with allowlist/SSRF/cache guards; always snapshot the fetched copy for audit. |
-| Q-048 | Can packs be granted by capability automatically? | Yes, capability grant; explicit reviewer grant overrides. |
-| Q-049 | Do we support `.claude/skills/` manifests unchanged? | Yes, unknown fields accepted. |
-| Q-050 | How is retrieval ranked? | Hybrid lexical + graph relevance; embeddings later. |
-| Q-051 | Do we sign packs in v1? | Optional signing; unsigned labelled. |
-| Q-052 | What is the default knowledge budget? | 64K tokens per reviewer, configurable. |
-| Q-053 | Can an SME approve a pack? | SME drafts in domain; admin approves org-wide. |
+| KN-01 | Do we auto-include `AGENTS.md`/`CONTRIBUTING.md` or require a repo setting? | Opt-in per repo, as the PoC. |
+| KN-02 | Are doc links live-fetched or snapshotted? | Live fetch with allowlist/SSRF/cache guards; always snapshot the fetched copy for audit. |
+| KN-03 | Can packs be granted by capability automatically? | Yes, capability grant; explicit reviewer grant overrides. |
+| KN-04 | Do we support `.claude/skills/` manifests unchanged? | Yes, unknown fields accepted. |
+| KN-05 | How is retrieval ranked? | Hybrid lexical + graph relevance; embeddings later. |
+| KN-06 | Do we sign packs in v1? | Not in v1; signed packs are v1.1 (ADR-0018), unsigned labelled. |
+| KN-07 | What is the default knowledge budget? | 64K tokens per reviewer, configurable. |
+| KN-08 | Can an SME approve a pack? | SME drafts in domain; admin approves org-wide. |

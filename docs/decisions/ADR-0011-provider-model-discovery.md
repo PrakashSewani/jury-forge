@@ -38,7 +38,7 @@ budgeting and capability checks.
   against a different base URL.
 - If a provider has no `/models`, the default is to reject; a signed provider manifest is the only
   fallback, and it is audited.
-- CommandCode is supported as an OpenAI-compatible provider; verify
+- CommandCode is an *example* OpenAI-compatible provider (not a requirement); verify
   `https://api.commandcode.ai/provider/v1/models` (or `/v1/models`) in the spike.
 
 ## Consequences

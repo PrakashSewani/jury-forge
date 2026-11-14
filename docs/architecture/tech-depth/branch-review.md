@@ -35,8 +35,8 @@ default branch (compare SHA)
 - Contracts: exported APIs, types, configs, migrations, feature flags.
 - Tests: changed, missing, skipped, flaky.
 - Cross-file/dependency impact via the graph.
-- Functional/behavioral impact is **analyzed**, not executed by default. A capability agent may use
-  sandbox `tests.run`/`build.run` if the repo opts in.
+- Functional/behavioral impact is **analyzed**, not executed by default. A later capability may
+  use sandbox `tests.run`/`build.run` if the repo opts in.
 
 ## Graph needs
 

@@ -1,4 +1,4 @@
-# ADR-0012: PR sessions and agent-only resolution
+# ADR-0012: PR sessions and resolution modes
 
 - Status: proposed
 - Date: 2026-11-15
@@ -11,8 +11,8 @@
 
 The PoC posts one review per run and stops. The owner wants every PR to have a session: Jury Forge
 comments, the user replies, and Jury Forge responds with context alive. The session must survive
-restarts and multi-day waits. Only Jury Forge should resolve its conversations after a satisfactory
-user response.
+restarts and multi-day waits. Resolution defaults to `suggest` (the agent proposes; a human
+resolves natively), with `auto`/`off` opt-in; only `auto` uses the guarded bot resolve.
 
 ## Options
 
@@ -33,14 +33,25 @@ user response.
 - The session belongs to the **PR**, not the trigger user. It is visible to repo readers; the
   trigger user is audit. Mentions of humans are requests for human input, not bot instructions.
   Roles/visibility are in [`../product/specs/session-capacity-and-visibility.md`](../product/specs/session-capacity-and-visibility.md).
-- **Only Jury Forge resolves its own threads programmatically.** `resolve_thread` is a guarded tool:
-  bot-owned thread, human response after the last question/finding, evidence that the finding is
-  addressed, verifier/confidence threshold, summary posted, audit event. A new human reply reopens.
-- Humans can resolve in GitHub UI; the session records that as a human action and does not fight it.
+- **Resolution modes:** `resolve: suggest | auto | off` (default **`suggest`**), configurable per
+  instance/repo.
+- **`suggest` (default):** the agent posts a proposed resolution summary (“this looks resolved
+  because …”) and waits. The thread is resolved by a **human** using GitHub’s native **Resolve
+  conversation** or the Jury Forge UI. A normal “thanks/fixed” reply does not resolve. There is no
+  slash command.
+- **`auto` (opt-in):** the agent may resolve its own bot-owned thread when the evidence guard passes
+  (human response after the last question/finding, evidence, verifier/confidence, summary, audit). A
+  new human reply reopens.
+- **`off`:** the agent never resolves; humans resolve natively or in the UI.
+- **Humans can always resolve manually.** The session records that as a human action and does not
+  fight it.
 - **Human override:** owner/admin can resolve/reopen/dismiss any thread; SME can do so in their
   domain/assigned repos; maintainer can reopen to challenge; author/member reply only; auditor
   read-only. An override requires a reason, is audited, and the agent does not auto-re-resolve
   without new evidence.
+- **Safeguard:** the wrong-resolution rate (resolved threads later reopened or overridden) is a
+  benchmark and scorecard metric. In `suggest`, the human is the resolver, so the metric measures the
+  proposal quality; in `auto`, it measures the guard.
 - A PR merge/close archives the session; retention is configurable (default 90 days).
 
 ## Consequences
@@ -73,5 +84,5 @@ evidence; no resolution without a human response; every external effect has an i
 
 - Verify GitHub event names, reply mutation, resolve mutation, and permissions.
 - Define the satisfaction/guard criteria with examples (fixed, won't fix, duplicate, question).
-- Decide whether a user must explicitly confirm before resolve (default: agent judges with evidence;
-  explicit confirmation for ambiguous cases).
+- Track the wrong-resolution rate (resolved then reopened/overridden) in the benchmark and scorecards;
+  tune the guard's evidence threshold, not the ownership model.

@@ -9,7 +9,7 @@
 ## Owner directive
 
 Default to **diff-only** PR review. If the user asks for a **branch review**, build a graph /
-knowledge base against the repository so context is not repeated. **Update it on every review run.**
+knowledge base against the repository so context is not repeated. **Update it on every branch/T2 review run.**
 
 ## Problem
 
@@ -52,7 +52,7 @@ Repository
 | Trigger | Work |
 | ------- | ---- |
 | First review for a repo | Full index at the PR head SHA (or the default branch if the head is unavailable), then incremental for the PR. |
-| Every review run | Incremental update at the generation SHA: changed files + reverse dependencies; reuse unchanged summaries/symbols by content hash. |
+| Every branch/T2 review run | Incremental update at the generation SHA: changed files + reverse dependencies; reuse unchanged summaries/symbols by content hash. |
 | Push to default branch | Incremental update of changed files; mark affected symbols/tests; no full rebuild unless the parser version changes. |
 | Manual "Rebuild index" | Full rebuild, with progress and cancellation. |
 | Parser/schema version bump | Full rebuild in the background; old index remains readable until replaced. |
@@ -99,15 +99,15 @@ Exposed to agents as tools and to the context planner as ranked sources:
 
 ## 5. Branch review
 
-- Triggered by `/jury branch-review`, the UI, or `mode: branch` in repo config.
+- Triggered by the `jury:branch-review` label or Branch review action, the UI, or `mode: branch` in repo config.
 - **Base = the repository’s default branch**, not the PR’s base. The review covers the complete
   branch delta vs default: all changed files, functions, tests, and configs.
 - The index is updated first; the planner builds a coverage plan and the agents can query the graph
   as context. Untouched files are context, not a review target.
-- A capability agent may use graph queries, test inspection, static analysis, and (if the repo
-  enables it) a sandboxed test/build run to compare behavior.
+- A capability agent may use graph queries, test inspection, and static analysis. When the later
+  sandbox test-run mode lands, it may compare behavior by running tests if the repo enables it.
 - “Compare functionality” is static analysis of the behavioral change: contracts, callers, tests,
-  config, and docs. It does not execute code/tests in v1; a sandboxed test-run mode is a later
+  config, and docs. It does not execute code/tests in v1 or v1.1; a sandboxed test-run mode is a later
   capability.
 - Before starting, show an estimate: files, symbols, tokens, cost, expected time; allow cancel.
 - Output is still a review (findings + summary), not a repository report; the difference is depth.
@@ -177,9 +177,9 @@ Exposed to agents as tools and to the context planner as ranked sources:
 
 | ID | Question | Default |
 | -- | -------- | ------- |
-| Q-029 | Which languages are deep-symbol in v1? | TS/JS first; Python/Go next. |
-| Q-030 | Is Postgres adjacency enough, or do we need a graph DB? | Postgres; revisit at 10M edges. |
-| Q-031 | Do we generate model summaries for every symbol, or only on demand? | On demand + cache; no full summarization at first. |
-| Q-032 | Do we add embeddings in v1? | No; after the graph + benchmark prove value. |
-| Q-033 | How long do we keep old index versions? | Last 5 commits + 30 days. |
-| Q-034 | Do we index private repos on install, or on first review? | On first review; opt-in full pre-index later. |
+| KG-01 | Which languages are deep-symbol in v1? | TS/JS first; Python/Go next. |
+| KG-02 | Is Postgres adjacency enough, or do we need a graph DB? | Postgres; revisit at 10M edges. |
+| KG-03 | Do we generate model summaries for every symbol, or only on demand? | On demand + cache; no full summarization at first. |
+| KG-04 | Do we add embeddings in v1? | No; after the graph + benchmark prove value. |
+| KG-05 | How long do we keep old index versions? | Last 5 commits + 30 days. |
+| KG-06 | Do we index private repos on install, or on first review? | On first review; opt-in full pre-index later. |

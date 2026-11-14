@@ -330,7 +330,7 @@ New attack surface and controls:
 | Threat | Control |
 | ------ | ------- |
 | Prompt injection in a user reply/comment | Untrusted-data labels, nonce delimiters, output validation; injection cannot trigger a resolve or a tool outside the allowlist. |
-| Premature/incorrect resolve | Server-side resolution guard: bot-owned thread, human response, evidence, verifier/confidence, summary, audit. |
+| Premature/incorrect resolve | `suggest` default: the agent proposes, the human resolves natively/UI. `auto` (opt-in) uses the server-side guard: bot-owned thread, human response, evidence, verifier, summary, audit. SME/admin can override with a reason. |
 | Session hijack | Tenant/repo scoping, session authorization, short-lived tokens, audit; no session id in URLs without auth. |
 | Bot loop | Ignore self, mention/reply requirement, debounce/coalesce, turn/tool/rate limits. |
 | Provider key exfiltration | Envelope encryption, write-only, origin-bound, no copy-to-arbitrary-URL, re-auth for rotation. |
@@ -342,8 +342,8 @@ New attack surface and controls:
 | Sandbox escape / untrusted test execution | Ephemeral non-root container, no secrets, network off, CPU/memory/time caps, command allowlist, no push; opt-in per repo. |
 | GitHub permission overreach | Least-privilege App permissions; installation-scoped tokens; verify reply/resolve mutations. |
 
-Resolution is an authorization decision, not a model output. The model may request it; the server
-guard decides. See [`agentic-review.md`](agentic-review.md) and
+Resolution is an authorization decision, not a model output. In `suggest`, the human resolves;
+in `auto`, the server guard decides; in `off`, only humans resolve. See [`agentic-review.md`](agentic-review.md) and
 [`../product/specs/agentic-review-sessions.md`](../product/specs/agentic-review-sessions.md).
 
 ## 16. Session visibility and roles (2026-11-15)
@@ -356,11 +356,12 @@ guard decides. See [`agentic-review.md`](agentic-review.md) and
   repos; maintainer (repo write) triggers/replies and requests reviewers; binding by maintainer is
   opt-in (`allowMaintainerBindings`, default off); member with repo read views/replies where GitHub
   permits; viewer read-only; auditor sees audit/export.
-- **Reviewer binding authorization:** no reviewer runs without a repo binding; only admin/SME
-  (domain)/maintainer (approved catalog, own repo) can bind; every binding/approval/role change is
-  audited. An actor cannot bind a reviewer to a repo they cannot access.
+- **Reviewer binding authorization:** no reviewer runs without a repo binding; admin/SME
+  (domain) bind by default; a maintainer may bind an approved catalog reviewer to their own repo only
+  when `allowMaintainerBindings` is on. Every binding/approval/role change is audited. An actor cannot
+  bind a reviewer to a repo they cannot access.
 - **Required reviewer unavailable:** the run is blocked with a configuration fallback; never a
-  partial or clean review. Optional unavailable is noted.
+  partial or clean review. A `default`/`capability` reviewer that is unavailable is noted.
 - **Fallback comments:** no reviewers/no match/required-unavailable are issue comments, not reviews;
   deduped by policy version; no secrets or model internals beyond reviewer name/domain.
 - **Capability labels:** a `jury:cap:*` label is a request, never a grant. It can only select from

@@ -203,7 +203,7 @@ All require session + role; all mutations are audited.
 
 ## 10. Acceptance criteria
 
-- [ ] Adding a valid CommandCode/OpenAI key fetches a model list and stores the provider encrypted.
+- [ ] Adding a valid OpenAI-compatible key (e.g. CommandCode, OpenAI) fetches a model list and stores the provider encrypted.
 - [ ] An invalid key is rejected and nothing is stored.
 - [ ] The agent editor has no free-text model field; only catalog entries are selectable.
 - [ ] A model missing from the catalog cannot be saved via the API.

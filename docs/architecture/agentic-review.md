@@ -63,7 +63,7 @@ GitHub (PR, review comments, issue comments, pushes)
 | **Turn Queue** | Durable jobs, leases, retries, DLQ, cancellation, fairness. | No session logic. |
 | **Agent Runtime** | Plan, select agents, run loop/subgraphs, tools, chair, guardrails. | No GitHub credentials beyond the writer. |
 | **Agent Router** | Select agents by explicit request, config, path/language/label, availability, budget. | Not a prompt. |
-| **Context Service** | Diff, repo graph, instructions, packs, prior findings; token budget; manifest. | Not the source of truth for code. |
+| **Context Service** | Diff (T0); branch delta + repo graph (T2); instructions, packs, prior findings; token budget; manifest. | Not the source of truth for code. |
 | **Provider Gateway** | Provider/model catalog, key encryption, origin binding, calls, retries, usage/cost. | No prompt policy. |
 | **Resolution Guard** | Check evidence, user response, bot ownership, confidence before resolve. | No free-form model decision without checks. |
 | **GitHub Writer** | Reply in thread, post PR comment, resolve/reopen, label, check. | No agent planning. |
@@ -107,9 +107,9 @@ Resolution
 | `pull_request.labeled` | If a `jury:*` mode/capability label is added, enqueue one turn; coalesce multiple labels. |
 | `pull_request.unlabeled` | If a mode label was removed, cancel a queued turn (and before publish where possible). |
 | `check_run.requested_action` | If action `review` or `context`, enqueue the turn (primary manual trigger). |
-| `pull_request.synchronize` | Advance generation; enqueue `reindex`; mark findings `needs_recheck`; no auto-post unless policy. |
+| `pull_request.synchronize` | Advance generation; mark findings `needs_recheck`; enqueue a background index refresh only for branch review/graph; no auto-post unless policy. |
 | `pull_request.closed` | Archive session. |
-| `issue_comment.created` on PR | If `/jury` or mention, enqueue PR-level turn; ignore bot. |
+| `issue_comment.created` on PR | If Jury Forge is mentioned, enqueue a PR-level turn; no slash commands; ignore bot. |
 | `pull_request_review_comment.created` | If reply to a Jury Forge thread, enqueue thread turn; ignore bot. |
 | `pull_request_review_comment.edited/deleted` | Update stored message; no automatic turn unless it changes the question. |
 | `pull_request_review.submitted` | Add context; respond only if mentioned/policy. |
@@ -178,13 +178,13 @@ See [`../product/specs/repo-knowledge-graph.md`](../product/specs/repo-knowledge
 ADR-0014.
 
 - Postgres adjacency tables + content-addressed object storage; optional vector store later.
-- Index version per `(repo, commit)`; incremental update on every review run and default-branch push.
-- Context Service uses summaries first, expands via tools, records a manifest.
-- Branch review is explicit, estimated, cancellable; PR review uses the graph for targeted context.
+- Index version per `(repo, commit)`; incremental update on every branch/T2 review run and default-branch push.
+- In T2, Context Service uses summaries first, expands via tools, and records a manifest; T0 uses the diff only.
+- Context tiers: **T0** diff (PR review, strict), **T1** bounded reads (rejected for PR review, ADR-0019), **T2** graph (branch review, explicit, estimated, cancellable, v1.1 per ADR-0018).
 
 ## 8. Resolution guard
 
-`resolve_thread` is a tool with a server-side guard:
+`resolve_thread` is used only in `auto` mode, with a server-side guard. `suggest` (default) posts a proposal and waits for a human to resolve natively/UI; `off` never resolves.
 
 1. The thread was created by Jury Forge.
 2. A human message follows the last agent finding/question.
@@ -204,7 +204,8 @@ human resolution and does not auto-reopen.
   [`security.md`](security.md).
 - Prompt injection can at most produce a bad draft; it cannot resolve a thread, publish to another
   repo, or read a key.
-- Tools are read-only and bounded; no shell, no arbitrary network, no code execution.
+- Tools are read-only and bounded; no shell, no arbitrary network, no code execution in v1. A
+  sandboxed, opt-in test/build mode is later.
 - Provider keys: envelope encryption, write-only, origin-bound.
 - GitHub App tokens: installation-scoped, least privilege, short-lived.
 - Rate limits: per session/turn/agent; bot-loop protection; mention/reply requirement.

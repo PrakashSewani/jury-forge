@@ -71,7 +71,7 @@ forever.
 | ---- | ----- | ------ | ------------- |
 | `resolve` | request | repository, PR, head/base SHA, installation, config snapshot | `request_id` |
 | `fetch` | SHA | diff, changed files, metadata, instructions | `(run_id, sha)` |
-| `index` | SHA | symbol/test/dependency index or a cache hit | `(repo_id, sha)` |
+| `index` | SHA | symbol/test/dependency index or a cache hit; **T2 branch review only** | `(repo_id, sha)` |
 | `plan` | context + budget | token-budgeted context manifest | `(run_id, plan_hash)` |
 | `review` | plan + reviewer versions | per-reviewer raw output + usage | `(run_id, reviewer_version_id)` |
 | `ground` | raw findings + SHA | verified findings + evidence | `(run_id, finding_id)` |
@@ -202,8 +202,8 @@ Agentic review adds session-scoped jobs on top of the queue:
 
 | Job | Trigger | Idempotency |
 | --- | ------- | ----------- |
-| `session.turn` | `/jury`, user reply, push, policy | `(session_id, generation, event_id)` |
-| `index.incremental` | review run, default-branch push | `(repo_id, sha)` |
+| `session.turn` | mode/capability label, Check Run action, UI, user reply, push, policy | `(session_id, generation, event_id)` |
+| `index.incremental` | branch/T2 review run, default-branch push | `(repo_id, sha)` |
 | `index.full` | manual rebuild / parser upgrade | `(repo_id, sha, parser_version)` |
 | `model.refresh` | schedule / manual | `(provider_id, day)` |
 | `session.archive` | merge/close / retention | `session_id` |

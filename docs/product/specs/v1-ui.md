@@ -22,8 +22,9 @@ bindings, providers, and audit explainable. The diff itself can link to GitHub.
 | **Sessions** | Inbox/list with filters (repo, state, author, agent, waiting) | ✓ |
 | **Session detail** | Timeline, messages, agent runs, tool calls, findings, resolve/reopen override, link to GitHub, cost | ✓ |
 | **Reviewers** | Catalog list, status, owner, capabilities, bound repos | ✓ |
+| **Capabilities** | Built-in/custom registry, one-level groups, label sync/status, SME draft/admin approval | ✓ |
 | **Reviewer editor** | Create/edit stepper: basics, capabilities, model, instructions, tools, knowledge, availability, test/activate | ✓ |
-| **Repositories** | List, bindings (required/optional, scopes), no enable toggle, no-reviewer status | ✓ |
+| **Repositories** | List, bindings (required/default/capability, scopes), no enable toggle, no-reviewer status | ✓ |
 | **Providers** | Add/verify/refresh, model catalog (context/price/capabilities), status/key rotation | ✓ |
 | **Settings** | Org defaults: capacity, budgets, visibility, roles, retention | ✓ |
 | **Audit** | Triggers, bindings, approvals, resolutions, provider changes, exports | ✓ |
@@ -40,8 +41,9 @@ bindings, providers, and audit explainable. The diff itself can link to GitHub.
   - findings (severity, file/line, evidence, confidence),
   - agent replies and human replies,
   - resolution / override / reopen, with actor and reason.
-- Actions: reply, ask a follow-up, pause, retrigger, run branch review, resolve/reopen (role-gated),
-  link to GitHub thread.
+- Actions: reply, ask a follow-up, pause, retrigger, run branch review (v1.1), resolve/reopen via the UI
+  (role-gated), link to GitHub thread. `suggest` is the default: the agent proposes, the human
+  resolves natively/UI; `auto` is opt-in. No slash commands.
 - Cost strip: tokens in/out/cache, model, provider, estimated vs actual cost.
 - Knowledge strip: sources used, hashes, dropped/withheld (v1.1).
 - “View on GitHub” deep link.
@@ -65,7 +67,7 @@ The stepper in [`reviewer-assignment-and-roles.md`](reviewer-assignment-and-role
 ## Repositories
 
 - No enable/disable toggle for agentic review.
-- Show binding status: which reviewers are required/optional, scopes, and whether the repo has any
+- Show binding status: which reviewers are required/default/capability, scopes, and whether the repo has any
   reviewers at all.
 - “No reviewers configured” badge, with a link to bind.
 - “Preview jury” for a sample PR (which reviewers would run and why).
@@ -121,8 +123,8 @@ The stepper in [`reviewer-assignment-and-roles.md`](reviewer-assignment-and-role
 
 | ID | Question | Default |
 | -- | -------- | ------- |
-| Q-054 | Do we need a full diff viewer in v1? | No; link to GitHub; add later. |
-| Q-055 | Can users reply from the website in v1? | Yes, via GitHub API; same thread. |
-| Q-056 | Do we show cost in v1? | Yes, if pricing is known; otherwise token counts. |
-| Q-057 | Do we ship a command palette? | Yes, if cheap; not a blocker. |
-| Q-058 | Do we build analytics in v1? | No; basic session list only. |
+| UI-01 | Do we need a full diff viewer in v1? | No; link to GitHub; add later. |
+| UI-02 | Can users reply from the website in v1? | Yes, via GitHub API; same thread. |
+| UI-03 | Do we show cost in v1? | Yes, if pricing is known; otherwise token counts. |
+| UI-04 | Do we ship a command palette? | Yes, if cheap; not a blocker. |
+| UI-05 | Do we build analytics in v1? | No; basic session list only. |

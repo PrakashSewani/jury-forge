@@ -42,10 +42,10 @@ named reviewer) signs off. "Looks good" is not evidence.
 - [ ] A GitHub App can be created, installed, and verified; no per-repo enable toggle is required.
 - [ ] A provider key is validated; `/models` is fetched; an agent binds to a catalog model (no free text).
 - [ ] A webhook is verified, persisted, and enqueued.
-- [ ] Manual `jury:pr-review`/`jury:branch-review` label or Check Run action starts a session; one agent uses one tool and publishes one review.
-- [ ] A reviewer catalog entry is bound to the repo as required; no binding means unavailable.
+- [ ] Manual `jury:pr-review`/`jury:branch-review` label or Check Run action starts a session; one agent publishes one review (PR review is strict T0; no file tools).
+- [ ] A reviewer catalog entry is bound with `required`/`default`/`capability` selection (built-in capability IDs); no binding means unavailable.
 - [ ] A human reply resumes the session and produces a second agent response with prior context.
-- [ ] A guarded resolve works after a satisfactory reply; a new reply reopens.
+- [ ] `suggest` resolution works: the agent proposes, the human resolves natively/UI; `auto` is opt-in and guarded; a new reply reopens.
 - [ ] No-reviewers/no-match fallback comment is posted with setup/retrigger instructions; no review posted.
 - [ ] Session, turn, tool call, finding, and publish records are visible in the timeline.
 - [ ] A duplicate delivery does not create a duplicate turn; a failed turn is retryable/idempotent.
@@ -63,10 +63,10 @@ named reviewer) signs off. "Looks good" is not evidence.
 - [ ] Credential-to-origin binding; a key cannot be sent to an arbitrary URL.
 - [ ] Egress policy blocks private/loopback/link-local/metadata ranges; SSRF tests pass.
 - [ ] Secret/PII redaction is tested against a corpus; a pre-send manifest exists.
-- [ ] Prompt-injection corpus does not change the published verdict or trigger a resolve; trust
+- [ ] Prompt-injection corpus does not change the published verdict or trigger a resolution; trust
       labels and nonce delimiters are in place for diffs, comments, and replies.
 - [ ] Findings are grounded: file/line/evidence checks reject fabricated claims.
-- [ ] The resolution guard rejects: bot-unauthored thread, no human response, no evidence, low
+- [ ] The `auto` resolution guard rejects: bot-unauthored thread, no human response, no evidence, low
       confidence; a positive path resolves and reopens correctly.
 - [ ] Provider keys are encrypted, write-only, origin-bound, rotatable; no copy-to-arbitrary-URL.
 - [ ] Model catalog calls are SSRF-safe; invalid keys store nothing.
@@ -91,16 +91,20 @@ checklist.
 - [ ] Deduplication rate ≤ target; disagreement is surfaced; role overlap is measured.
 - [ ] Confidence is calibrated (precision per bucket).
 - [ ] Suggested fixes apply cleanly; no auto-apply.
-- [ ] Token and cost estimates are within X% of actual; budgets enforce per turn/session/repo.
+- [ ] Hard token/tool/wall-clock caps are enforced; currency estimates are within X% when pricing is known.
 - [ ] Agent versioning, activation gates, rollback, run-time snapshots, and prompt hashes work.
-- [ ] The agent router selects by explicit/repo binding/path/language/label and records why; skipped
-      agents are explained.
-- [ ] Reviewer catalog approval and required/optional bindings are enforced; an unbound reviewer
-      never runs.
-- [ ] PR review is the default; `/jury branch-review` compares the PR branch to the default branch, uses the graph, and shows an estimate/cancel.
-- [ ] The repo graph updates incrementally; a second run reuses unchanged summaries and context.
-- [ ] Knowledge sources (packs, repo docs at SHA, allowlisted live doc links with per-run snapshots) are versioned, scoped, cited, and retrieved under a token budget.
-- [ ] `never_quote` content is never sent; no grant = no injection; stale snapshots are marked.
+- [ ] The router honours `required`/`default`/`capability` selection and path/language/label scope;
+      capability reviewers never run without a request; skipped agents are explained.
+- [ ] Reviewer catalog approval and required/default/capability bindings are enforced; an unbound
+      reviewer never runs; capability labels never grant an unbound reviewer.
+- [ ] PR review is the default and strict T0 (no repository file reads/graph); branch review (v1.1) is T2 and explicit.
+- [ ] Capability labels are `jury:cap:<id>` (groups, immutable IDs, every-repo sync, disabled fallback).
+- [ ] Benchmark compares strict diff-only against a single strong-model baseline; the graph is built
+      only if the result justifies it (ADR-0018).
+- [ ] *(v1.1 gate)* the `jury:branch-review` label or Branch review action compares the PR branch to the default branch, uses the graph, shows an estimate/cancel; the graph updates incrementally and a second run reuses unchanged summaries.
+- [ ] *(v1.1 gate)* repo docs at SHA are read for T2; allowlisted live doc links are fetched with per-run snapshots; stale snapshots are marked.
+- [ ] Knowledge packs are versioned, scoped, cited, and retrieved under a token budget.
+- [ ] `never_quote` content is never sent; no grant = no injection.
 - [ ] Feedback capture works; agent/session scorecards exist.
 - [ ] The dogfood repository runs on itself and the team uses the sessions.
 - [ ] A prompt/model/agent change without a benchmark is blocked by process.

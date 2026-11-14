@@ -49,7 +49,8 @@ one phase `in progress`.
   chain prompt in `.pi/prompts/`.
 - **Capability intake (2026-11-15):** the owner shifted the product to an **agentic reviewer** with
   per-PR sessions, manual-first triggering, dynamic multi-agent routing, provider/model discovery,
-  encrypted keys, diff-first + context graph reviews, and agent-only resolution. Captured in:
+  encrypted keys, strict diff-only PR review, graph-backed branch review (v1.1), and resolution
+  modes (`suggest` default). Captured in:
   - `docs/product/specs/agentic-review-sessions.md`
   - `docs/product/specs/provider-model-discovery.md`
   - `docs/product/specs/repo-knowledge-graph.md`
@@ -76,20 +77,35 @@ one phase `in progress`.
 - No product code, no dependencies, no secrets. The live queries were read-only; no instance
   configuration was changed.
 
+**Owner decisions from the capability review (2026-11-15):**
+
+- `jury:pr-review` is **strict T0 diff-only** (no repository file reads, no graph). Branch review is the full-context path (T2); ADR-0019 is **rejected**.
+- Resolution defaults to **`suggest`**: the agent proposes, a human resolves natively in GitHub or the UI; `auto`/`off` are opt-in. No `/jury resolve`.
+- **No slash commands in PR conversations.** Triggers are labels, Check Run actions, and the UI picker.
+- Reviewer selection modes: `required` (always), `default` (plain review), `capability` (only when requested). Required overrides capability gating.
+- Capabilities are first-class tenant objects: immutable `jury:cap:<id>` labels, one-level groups, SME-drafted/admin-approved custom capabilities, all active labels synced to every installed repo; disabled labels remain with a capability fallback.
+- Hard per-turn token/tool/wall-clock caps; currency best-effort when pricing is known.
+- CommandCode is an example provider, not a requirement.
+
+**Capability/architecture review (2026-11-15, second pass):** ADR-0018 adds release tiering, eval harness v0, and hard caps in Phase 1. ADR-0019 was proposed and then rejected by the owner (strict T0). ADR-0012 is amended to `suggest` default with SME/admin override. Tiers, scope, roadmap, gates, capability registry/labels, and the backlog specs are aligned to these decisions. ADRs stay `proposed`/`rejected` until formally accepted at G0.
+
 **Blocked by:**
 
-- The owner's further capability list (`docs/product/capabilities.md`, Q-001) — the 2026-11-15 set is
-  captured, but more may follow.
-- Owner decisions on the harness spike (Q-021), trigger surface (Q-022), resolution semantics
-  (Q-023), automatic policy (Q-024), graph languages (Q-025), and the existing deployment/storage/
-  runtime/tenancy questions (Q-002–Q-005).
+- G0 sign-off: the owner approves or amends ADR-0010–0019 and the specs before implementation.
+- The owner's final capability list (Q-001) may add or change scope before the gate.
+
+**Backlog (2026-11-15):** eight candidate items (B-01–B-08: shadow mode, per-repo provider allowlist,
+local/CLI diff review, large-PR handling, reviewers-as-code, history-seeded conventions, MCP surface,
+PR walkthrough) are recorded in `capabilities.md` §13 with a capability breakdown and one spec each under
+`product/specs/` (shadow-mode, provider-allowlist, local-cli-review, large-pr-handling,
+reviewers-as-code, history-seeded-conventions, mcp-surface, pr-walkthrough); questions live
+inside each spec (`SH-`, `PA-`, `CLI-`, `LP-`, `RC-`, `HS-`, `MCP-`, `PW-`). They are not committed,
+not in any tier, and do not block G0.
 
 **Next action:**
 
-The owner reviews the agentic specs and ADRs, approves the harness spike (ADR-0010), the manual
-trigger/router (ADR-0013), the session/resolution model (ADR-0012), provider discovery (ADR-0011),
-the incremental graph (ADR-0014), capacity/roles/visibility (ADR-0015), and reviewer catalog/bindings/fallback (ADR-0016). Implementation follows
-the G0 gate; the first build is the manual conversational walking skeleton.
+Owner G0 sign-off on ADR-0010–0019 and the specs. After the gate, the first build is the manual
+conversational walking skeleton; ADR-0019 is rejected and PR review stays strict T0.
 
 **Next evidence (optional):** the live instance is currently unconfigured (0 reviewers, 0 enabled
 repositories). Enabling one repository and adding one reviewer with a key would produce a fresh
@@ -98,9 +114,9 @@ UI gap.
 
 ## G0 checklist
 
-- [ ] Owner has read `docs/product/vision.md`, `scope.md`, the three specs, and `analysis/flaws.md`.
-- [ ] Owner has answered Q-001–Q-005 and Q-021–Q-028 (or recorded defaults).
-- [ ] Owner has approved or amended ADR-0001–0003 and the agentic ADRs 0010–0014.
+- [ ] Owner has read `docs/product/vision.md`, `scope.md`, `capabilities.md`, the specs index, and `analysis/flaws.md`.
+- [ ] Owner has answered Q-001–Q-031 (or recorded defaults); backlog spec questions are optional.
+- [ ] Owner has approved or amended ADR-0001–0003 and ADR-0010–0019 (ADR-0019 is rejected).
 - [ ] Agent chain and skills are usable in the owner's harness.
 - [ ] No unresolved contradiction between docs.
 
@@ -119,12 +135,14 @@ UI gap.
 | ADR-0009 | accepted (owner directive) | MIT licence, no CLA. |
 | ADR-0010 | proposed | Agent runtime harness: LangGraph.js spike, thin runner fallback. |
 | ADR-0011 | proposed | Provider/model discovery; no free-text model; encrypted keys. |
-| ADR-0012 | proposed | PR sessions and agent-only resolution. |
+| ADR-0012 | proposed | PR sessions; `suggest` default resolution, `auto`/`off` opt-in, SME/admin override. |
 | ADR-0013 | proposed | Manual-first triggering and dynamic agent routing. |
-| ADR-0014 | proposed | Diff-first review with an incremental repository graph. |
+| ADR-0014 | proposed | Strict diff-only PR review; branch review + graph in v1.1. |
 | ADR-0015 | proposed | Session capacity, interface, roles, and visibility. |
 | ADR-0016 | proposed | Reviewer catalog, repo bindings, SME roles, fallback. |
 | ADR-0017 | proposed | Knowledge sources, snapshots, grants, retrieval. |
+| ADR-0018 | proposed | Release tiering; eval harness + hard caps in Phase 1; graph/branch review v1.1. |
+| ADR-0019 | rejected | T1 bounded reads for PR review; owner chose strict T0. |
 
 ## How to update this file
 

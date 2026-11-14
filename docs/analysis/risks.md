@@ -33,12 +33,12 @@ Likelihood / impact: H = high, M = medium, L = low.
 | R-024 | The PoC's stale docs are inherited as truth                          | M   | M   | This knowledge base marks PoC facts and explicitly separates "what was" from "what will be". | Docs         | Every doc review |
 | R-025 | Over-engineering the first release                                   | H   | M   | Milestone gates, a walking skeleton, "smallest thing that proves the wedge" rule. | Architect    | Each milestone |
 | R-026 | Agent loop cost/latency explodes | H | M | Per-turn/session budgets, tool caps, graph context reuse, model routing, cancellation. | AI pipeline | First agentic milestone |
-| R-027 | Premature or wrong resolution destroys trust | M | H | Resolution guard, evidence/user-response thresholds, false-resolve metric, reopen. | Product/security | Before beta |
+| R-027 | Premature or wrong resolution destroys trust | M | H | `suggest` default (human resolves); `auto` guard with evidence/user-response thresholds; false-resolve metric; reopen. | Product/security | Before beta |
 | R-028 | Prompt injection in user replies or comments | H | H | Trust labels, nonce delimiters, tool allowlist, resolve guard, injection corpus. | Security | Every prompt/tool change |
 | R-029 | GitHub review-thread/reply/resolve permissions or APIs are insufficient | M | H | Spike the exact events/mutations; fallback to PR comments; least-privilege App permissions. | Backend | Phase 1 spike |
 | R-030 | Provider model catalog drifts or a provider is down | M | M | Live `/models`, cache + staleness, deprecation states, health checks, explicit config errors. | Platform | First provider release |
-| R-031 | Repo graph is stale or wrong | M | H | Commit-scoped index, incremental validation, stale badge, rebuild, benchmark. | AI pipeline | Phase 3 spike |
-| R-032 | Manual trigger is undiscoverable | H | M | `/jury` command, label, check/details link, UI affordance, docs; measure first-trigger rate. | Product | First onboarding test |
+| R-031 | Repo graph is stale or wrong | M | H | Commit-scoped index, incremental validation, stale badge, rebuild, benchmark. | AI pipeline | v1.1 build |
+| R-032 | Manual trigger is undiscoverable | H | M | Mode/capability labels, Check Run/details link, UI affordance, docs; no slash commands; measure first-trigger rate. | Product | First onboarding test |
 | R-033 | Session/conversation data retention or privacy fails | M | H | Retention policy, scoping, redaction, export/delete, audit. | Security | Before beta |
 | R-034 | Harness lock-in or licence surprise | M | H | MIT/Apache-only, session of record in Postgres, harness adapter, licence review. | Architect | ADR-0010 spike |
 

@@ -37,17 +37,22 @@ persisted conversation** — not a one-shot review.
 - Shared contracts (schemas), error taxonomy, OpenAPI generation.
 - Provider onboarding: key validation, `/models` discovery, encrypted storage, catalog (ADR-0011).
 - GitHub App setup, webhook ingress, queue, manual `jury:pr-review`/`jury:branch-review` labels + Check Run actions on an installed repo.
-- Reviewer catalog + per-repo binding: one approved reviewer bound as required; no binding = unavailable (ADR-0016).
+- Reviewer catalog + per-repo binding with selection modes (`required`/`default`/`capability`; Phase 1 uses built-in capability IDs only); no binding = unavailable (ADR-0016).
 - One agent bound to a catalog model; PR review is diff-only; one review publish.
-- Per-PR session, one thread reply, and a guarded resolve after a human reply (ADR-0012).
+- Per-PR session, one thread reply, and **`suggest` resolution** (agent proposes, human resolves natively/UI; `auto`/`off` opt-in; SME/admin override; ADR-0012).
+- PR review is **strict T0 diff-only**; hard per-turn token/wall-clock caps (and tool-call caps for
+  tool-enabled modes) (ADR-0018; ADR-0019 rejected for PR review).
+- **Evaluation harness v0:** ≈20 labelled PRs (seeded bugs, clean, adversarial), deterministic stub-model
+  CI, first baseline of a single strong-model prompt. Review-logic changes are measured from here.
 - No-reviewers/no-match fallback comment with setup/retrigger instructions.
 - Minimal control plane UI: setup, provider/model catalog, reviewer studio, repo bindings, session inbox/timeline, fallback status.
 - Session/turn/tool-call/finding records, a basic session timeline, health/readiness, logs.
 - A clean-machine install test and a deterministic test suite.
 
 **Exit gate (G1):** a new operator installs on a clean Linux host, adds a provider key, sees the
-model catalog, triggers `/jury pr-review` on a test PR, replies to the thread, gets a second agent
-response, and sees a guarded resolve. The PoC can be turned off.
+model catalog, triggers the `jury:pr-review` label or Check Run action on a test PR, replies to the thread, gets a
+second agent response, and resolves it natively in `suggest` mode. A runaway-loop test proves the hard caps stop a turn, and the
+evaluation harness v0 runs in CI. The PoC can be turned off.
 
 ## Phase 2 — Trust and security
 
@@ -61,7 +66,7 @@ response, and sees a guarded resolve. The PoC can be turned off.
 - Secret/PII redaction and a pre-send manifest.
 - Trust-labelled prompts, nonce delimiters, output validation.
 - Prompt-injection defenses for **user replies and PR comments**, not only diffs.
-- Resolution guard: bot-owned thread, human response, evidence, verifier, audit (ADR-0012).
+- Resolution modes: `suggest` default; `auto` guarded (bot-owned thread, human response, evidence, verifier, audit); SME/admin override (ADR-0012).
 - Audit stream with export; retention and deletion for sessions/messages/graph.
 - Preview/approve mode; suppression rules.
 - Session revocation, re-auth for sensitive actions, security headers.
@@ -77,21 +82,24 @@ red-team exercise finds no S1 issues.
 
 **Deliverables:**
 
-- Repository knowledge graph: symbols, imports, references, tests, configs, ownership; incremental
-  update on every review run and default-branch push (ADR-0014).
+- Benchmark v1 first: strict diff-only PR review vs a single strong-model baseline; decide on
+  evidence whether the graph is built (ADR-0018). Repository knowledge graph (symbols, imports,
+  references, tests, configs, ownership; incremental update; ADR-0014) is **v1.1 and benchmark-gated**.
 - Token-aware context planner with a manifest and cost estimate; context reuse via content hashes.
-- Multi-agent router: explicit request > repo bindings > path/language/label scope > availability;
-  record why each agent ran or was skipped (ADR-0013/ADR-0016).
-- PR review default; explicit branch review compares the PR branch to the default branch, with estimate/cancel.
+- Multi-agent router with `required`/`default`/`capability` selection, path/language/label scope, and
+  availability; record why each agent ran or was skipped (ADR-0013/ADR-0016).
+- Capability registry + `jury:cap:<id>` labels (built-in/custom, one-level groups, every installed
+  repo); capability labels alone default to PR review; no slash commands.
+- PR review default (strict T0 diff-only). Explicit branch review (default-branch comparison + graph
+  diff, estimate/cancel) is **v1.1**.
 - Structured output, repair, grounding, verification, confidence.
 - Deduplication, disagreement, optional chair/consensus.
 - Suggested fixes with patch validation.
 - Evaluation benchmark (golden PRs, metrics, scorecards).
 - Agent versioning, activation gates, rollback, run-time snapshots.
 - Feedback capture and agent scorecards.
-- Knowledge system: packs/skills, repo docs at SHA, allowlisted live doc links with per-run snapshots, capability/repo/reviewer grants, retrieval with citations.
+- Knowledge system: packs/skills, capability/repo/reviewer grants, retrieval with citations. Repo docs at SHA (T2), live doc links with snapshots, and the Knowledge UI are v1.1.
 - Knowledge-pack retrieval (not wholesale injection).
-- Branch review (default-branch comparison + graph diff) is v1.1, not the first quality milestone.
 
 **Exit gate (G3):** the benchmark beats the baseline on precision, recall, grounding, and
 acceptance; the dogfood repo runs on itself; cost per accepted finding is within budget.
@@ -130,11 +138,16 @@ matrix; the operations docs are complete; the security checklist is green.
 **Exit gate (G5):** the owner signs off; the release checklist is complete; no open S1/S2 security
 issues; the docs are consistent.
 
+## v1.1 (benchmark-gated)
+
+Repository knowledge graph, branch review, repo docs at SHA (T2), live doc links with snapshots,
+Knowledge UI, GHES, signed packs (ADR-0018). Each enters only with benchmark evidence or an owner decision.
+
 ## Post-v1
 
 Ordered by expected demand, not committed:
 
-1. GitHub Enterprise Server (if not in v1).
+1. GitHub Enterprise Server (v1.1).
 2. GitLab adapter.
 3. OIDC/SSO and group-to-role mapping.
 4. Kubernetes/Helm.

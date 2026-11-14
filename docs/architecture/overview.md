@@ -149,12 +149,14 @@ is a durable unit within a session.
 | Roles + trust boundaries | Proposed | ADR-0008 |
 | Agent runtime harness | Proposed (spike) | ADR-0010 |
 | Provider/model discovery | Proposed | ADR-0011 |
-| PR sessions + agent-only resolution | Proposed | ADR-0012 |
+| PR sessions + `suggest` resolution (auto/off opt-in) | Proposed | ADR-0012 |
 | Manual-first trigger + dynamic routing | Proposed | ADR-0013 |
-| Diff-first + incremental repo graph | Proposed | ADR-0014 |
+| Diff-only PR review + branch review with incremental graph (v1.1) | Proposed | ADR-0014 |
 | Session capacity, interface, roles, visibility | Proposed | ADR-0015 |
 | Reviewer catalog, repo bindings, SME roles, fallback | Proposed | ADR-0016 |
 | Knowledge sources, snapshots, grants, retrieval | Proposed | ADR-0017 |
+| Release tiering, eval-first sequencing | Proposed | ADR-0018 |
+| PR review T1 bounded reads | Rejected (strict T0) | ADR-0019 |
 
 Read next: [`agentic-review.md`](agentic-review.md) → [`components.md`](components.md) →
 [`job-pipeline.md`](job-pipeline.md) → [`security.md`](security.md) →

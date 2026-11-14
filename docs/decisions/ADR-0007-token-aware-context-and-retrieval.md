@@ -4,8 +4,8 @@
 - Date: 2026-11-14
 - Owners: AI pipeline + architecture
 - Supersedes: the PoC's D-010 byte budgets (as the primary strategy)
-- Revisit trigger: the Phase 3 benchmark shows retrieval does not improve precision/recall enough to
-  justify the index cost.
+- Revisit trigger: the branch-review benchmark shows retrieval does not improve precision/recall
+  enough to justify the index cost.
 
 ## Context
 
@@ -26,10 +26,15 @@ product's main differentiator.
 
 ## Decision
 
-Option 3 for v1, with option 4 deferred behind a benchmark. The context planner uses a model
-registry (window, tokenizer, price) and a repository index (symbols, imports, tests, configs) to
-select context within a token and cost budget. It produces a manifest of what was included/omitted
-and why. Byte counts remain as a secondary safety bound, not the primary strategy.
+> **Note (2026-11-15):** [ADR-0018](ADR-0018-release-tiering-and-quality-first-sequencing.md)
+> sequences the repository index/graph and branch review into v1.1; [ADR-0019](ADR-0019-pr-review-context-tiers.md)
+> rejects file reads for PR review. PR review is strict T0 diff-only; token budgets still apply.
+
+Token budgets for v1; the deterministic repository index (symbols, imports, tests, configs) is
+branch-review context (T2) in v1.1. Option 4 (embeddings/RAG) stays deferred behind the benchmark.
+The context planner uses a model registry (window, tokenizer, price) and, for T2, the index to select
+context within a token and cost budget. It produces a manifest of what was included/omitted and why.
+Byte counts remain as a secondary safety bound, not the primary strategy.
 
 ## Consequences
 

@@ -4,7 +4,7 @@
 - Date: 2026-11-15
 - Owners: AI pipeline + security
 - Supersedes: the PoC’s knowledge-pack-only model
-- Revisit trigger: retrieval quality/benchmark, or a demand for live external doc fetching.
+- Revisit trigger: retrieval quality/benchmark, or a provider requiring a different document source.
 
 ## Context
 
@@ -50,8 +50,13 @@ capability-based knowledge; reproducible versions; safe URL ingestion.
 **Harder:** ingestion/refresh jobs; chunking/ranking; grants/precedence UX; token budgets; signing;
 snapshot storage; citation accuracy; stale-source handling.
 
-**Invariants:** untrusted data never becomes instructions; only admin-allowlisted URLs are fetched; every live fetch is snapshotted for audit; no grant =
-no injection; every citation resolves; `never_quote` is never sent.
+**Invariants:** untrusted data never becomes instructions; only admin-allowlisted URLs are fetched;
+every live fetch is snapshotted for audit; no grant means no injection; every citation resolves;
+`never_quote` is never sent.
+
+> **Tier note (2026-11-15):** T0 PR review may use reviewer instructions, org conventions, granted
+> packs, and prior findings. Repository docs at SHA, live doc links, and the repository graph are T2
+> branch-review sources (ADR-0018/ADR-0019).
 
 ## Security and operations
 
@@ -59,7 +64,7 @@ no injection; every citation resolves; `never_quote` is never sent.
 - Packs/doc links/repo docs are untrusted; prompt-injection defenses apply.
 - Secret-like patterns are redacted; `never_quote` is stored but withheld.
 - Knowledge is tenant/repo/reviewer-scoped; access follows repo access.
-- Signed packs are optional; unsigned packs are labelled.
+- Signed packs are optional in v1.1; unsigned packs are labelled.
 - Refresh failures mark stale, not break the review.
 
 ## Evidence
@@ -71,6 +76,6 @@ no injection; every citation resolves; `never_quote` is never sent.
 ## Follow-ups
 
 - Define chunking/ranking and citation format.
-- Build the knowledge library/grants UI and retrieval preview.
+- Build the knowledge library/grants UI and retrieval preview (v1.1).
 - Define the capability-grant UX.
 - Benchmark knowledge impact; add embeddings only if justified.

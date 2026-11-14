@@ -15,7 +15,7 @@ The product has two user interfaces:
 
 | Surface | Role |
 | ------- | ---- |
-| **GitHub** | The primary conversation: start via a Check Run action (`PR review` / `Branch review`), the `jury:pr-review` label, or `/jury pr-review`; reply in the thread, receive reviews, resolve/reopen. Most users never leave the PR. |
+| **GitHub** | The primary conversation: start via Check Run actions (`PR review` / `Branch review` (v1.1)), mode labels (`jury:pr-review`/`jury:branch-review` (v1.1)), or capability labels (`jury:cap:<id>`); reply in the thread, receive reviews, resolve natively/UI. No slash commands. Most users never leave the PR. |
 | **Website** | The control plane and deep view: onboarding, session inbox, session timeline, agents, providers/models, policy, roles, audit, costs, branch review, exports. |
 | **API/CLI** | Later: automation, CI, scripts. Same auth/roles. |
 
@@ -49,8 +49,9 @@ open
 1. Friday: PR opens, user asks for a review; session `open`, agent posts; state `waiting_for_user`.
 2. Friday–Tuesday: no agent, no worker slot, no memory; just rows and a thread index.
 3. Tuesday: user replies; webhook resolves the session; a turn is queued; a worker rehydrates.
-4. If the PR head changed: update the graph delta, mark affected findings `needs_recheck`, answer
-   the comment, do a focused recheck, and offer a branch review rather than silently running one.
+4. If a branch/T2 review is active and the PR head changed: update the graph delta, mark affected
+   findings `needs_recheck`, answer the comment, do a focused recheck, and offer a branch review
+   rather than silently running one.
 
 ## 3. Capacity and concurrency
 
@@ -104,6 +105,9 @@ admin-only. A session belongs to the **PR**, not to the user who triggered it.
 
 - **Visibility never exceeds GitHub repo visibility.** A user without repo read access sees
   nothing, even if they are an org member.
+- **Shadow-mode exception (backlog B-01):** shadow findings/reports are visible only to maintainers,
+  SMEs, admins, and auditors — not PR authors or plain members. This is an explicit exception to the
+  repo-read rule until the reviewer is promoted to live.
 - Use the user’s installation access (`GET /user/installations/{id}/repositories`) and/or
   `GET /repos/{owner}/{repo}` with the user token to decide. Cache the result briefly.
 - Org-wide visibility is the default when the app is installed on an org; a repo can restrict it
@@ -163,8 +167,8 @@ still provider-driven).
 
 | ID | Question | Default |
 | -- | -------- | ------- |
-| Q-035 | Can a repo restrict org-wide visibility? | Yes, later; org-wide default. |
-| Q-036 | Can any org member with repo read reply, or only write? | Read can view; reply if GitHub allows; trigger requires write. |
-| Q-037 | Do we show a session to a mentioned external collaborator who is not an org member? | Only if they have repo access. |
-| Q-038 | Are budgets per org, per repo, or both? | Both; org default + repo override. |
-| Q-039 | Do we allow admin price overrides for known models? | Yes, audited, with a warning. |
+| SC-01 | Can a repo restrict org-wide visibility? | Yes, later; org-wide default. |
+| SC-02 | Can any org member with repo read reply, or only write? | Read can view; reply if GitHub allows; trigger requires write. |
+| SC-03 | Do we show a session to a mentioned external collaborator who is not an org member? | Only if they have repo access. |
+| SC-04 | Are budgets per org, per repo, or both? | Both; org default + repo override. |
+| SC-05 | Do we allow admin price overrides for known models? | Yes, audited, with a warning. |

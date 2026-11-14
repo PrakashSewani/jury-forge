@@ -1,4 +1,4 @@
-# ADR-0014: Diff-first review with an incremental repository graph
+# ADR-0014: Diff-only PR review with an incremental repository graph
 
 - Status: proposed
 - Date: 2026-11-15
@@ -9,8 +9,8 @@
 ## Context
 
 The owner wants PR reviews to be diff-only by default. For branch reviews, the product must build
-a graph/knowledge base of the repository so context is not repeated, and update it on every review
-run. The PoC only had the diff plus optional literal reference paths; it could not see callers,
+a graph/knowledge base of the repository so context is not repeated, and update it on every
+branch/T2 review run. The PoC only had the diff plus optional literal reference paths; it could not see callers,
 tests, or the rest of the repository unless the operator listed paths.
 
 ## Options
@@ -23,17 +23,22 @@ tests, or the rest of the repository unless the operator listed paths.
 
 ## Decision
 
+> **Note (2026-11-15):** [ADR-0018](ADR-0018-release-tiering-and-quality-first-sequencing.md)
+> sequences the graph and branch review into v1.1 (benchmark-gated). [ADR-0019](ADR-0019-pr-review-context-tiers.md)
+> proposed bounded reads for PR review and was **rejected**; PR review remains strict T0 diff-only.
+> The decisions below stand.
+
 - **PR review is diff-only.** It sends the PR diff/hunks and metadata; no graph, no full files.
 - **Branch review uses the graph.** It compares the branch to the default branch and provides the
   graph as context.
 - **The review target is the branch delta vs the repository default branch.** The graph is context,
   not a second review target; a branch review does not audit untouched files.
-- **Branch review is explicit** (`/jury branch-review`, UI, config) and shows an estimate; it uses the
+- **Branch review is explicit** (the `jury:branch-review` label or Branch review action, UI, config) and shows an estimate; it uses the
   graph and can query the repository within budget.
 - **The graph is a first-class service:** nodes/edges for files, symbols, imports/references, tests,
   configs, docs, ownership, conventions, prior findings; content-hash summaries and cached slices.
 - **Postgres adjacency** is the first store; object storage for blobs; vector store optional later.
-- **Incremental updates:** on every review run at the generation SHA and on default-branch pushes,
+- **Incremental updates:** on every branch/T2 review run at the generation SHA and on default-branch pushes,
   re-parse only changed files + reverse dependencies; reuse unchanged summaries by content hash;
   version by `(repo, commit)`; per-repo lock; stale index visible.
 - **No repeated full context:** summaries first, expand via tools; context manifest records what was
@@ -43,7 +48,7 @@ tests, or the rest of the repository unless the operator listed paths.
 
 ## Consequences
 
-**Easier:** branch review without re-indexing; related code for PR review; lower context cost;
+**Easier:** branch review without re-indexing; related code for branch review; lower context cost;
 explainable context; a foundation for retrieval and evaluation.
 
 **Harder:** parser/indexer maintenance; incremental correctness; graph schema/migrations; language

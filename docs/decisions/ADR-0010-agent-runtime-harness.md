@@ -68,7 +68,7 @@ harness; the harness cannot resolve a thread without the server-side guard.
 
 ## Follow-ups
 
-- 3-day spike: a PR session with two agents, a user reply, a tool call, and a guarded resolve.
+- 3-day spike: a PR session with two agents, a user reply, a tool call, a `suggest` proposal, and a guarded `auto` resolve test.
 - Compare LangGraph.js and the thin runner on: durable resume, testability, provider integration,
   bundle/ops, and developer experience.
 - Record the chosen harness in a new ADR or update this one to accepted.

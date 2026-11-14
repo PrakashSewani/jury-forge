@@ -469,7 +469,7 @@ runbook.
 dashboard, no cross-org view, no central billing.
 **Instead:** a tenant model with multiple installations per instance (while keeping single-tenant
 deployment possible), or a clear "one instance per org" product decision with export/import.
- 
+
 ### F-039 — No backup, restore, or migration rollback
 
 **Severity:** S2

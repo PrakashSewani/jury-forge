@@ -29,14 +29,14 @@ Jury Forge starts again from the product, not from the deployment target:
 - **A jury, not a slot machine.** Multiple specialist agents, grounded findings, explicit
   disagreements, and a verdict you can audit.
 - **A conversation, not a comment.** Every PR gets a durable session; the author can reply, ask,
-  fix, and the jury responds with context alive. Only Jury Forge resolves its threads, after a
-  satisfactory response.
+  fix, and the jury responds with context alive. Resolution is human by default (`suggest`);
+  guarded auto-resolve is opt-in.
 - **Manual-first.** Ask on any PR in an installed account/org. No repo enable/disable toggles;
   automatic review is opt-in config-as-code.
 - **Models you can actually use.** Add a provider key, fetch its model catalog, bind agents to
   catalog models — no free-text model entry, keys encrypted.
-- **Diff-first with a memory.** Default reviews stay on the diff; context reviews use an
-  incrementally updated repository knowledge graph so context is reused, not rebuilt.
+- **Diff-only PR review, graph-backed branch review (v1.1).** PR reviews stay on the diff;
+  branch reviews use an incrementally updated repository graph so context is reused, not rebuilt.
 - **Open source, MIT.** Fork it, extend it, run it commercially, no open-core trap.
 
 ## What this repository contains today
