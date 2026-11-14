@@ -43,8 +43,8 @@ post a misleading clean review.
   roles.
 - **SME** — domain-scoped reviewer ownership: draft/edit/test/version reviewers in their domain;
   bind their domain reviewers to assigned repos; no provider/billing.
-- **Maintainer** — bind approved reviewers to their repo, set required/optional/scope, trigger,
-  reply, context review.
+- **Maintainer** — trigger, reply, context review, request reviewers; bind approved reviewers only
+  if the org enables `allowMaintainerBindings` (default off).
 - **Member** — repo read; view and reply where GitHub permits.
 - **Viewer** — read-only.
 - **Auditor** — audit/export.
@@ -72,8 +72,8 @@ required.
 
 ## Consequences
 
-**Easier:** precise per-repo juries; SME ownership; maintainers self-serve within an approved
-catalog; no silent clean reviews; personal installs stay simple.
+**Easier:** precise per-repo juries; SME ownership; admins control bindings; maintainers can request/
+self-serve only when enabled; no silent clean reviews; personal installs stay simple.
 
 **Harder:** role/scope UX; approval workflow; binding precedence; availability checks; fallback
 comment lifecycle; policy versioning; audits; notifications.
@@ -83,8 +83,8 @@ posted as a normal review; all binding/approval/role changes audited; visibility
 
 ## Security and operations
 
-- Only admin/SME (domain) can create/approve reviewers; only maintainer/admin can bind; every change
-  audited.
+- Only admin/SME (domain) can create/approve reviewers; admin/SME bind by default; maintainer
+  binding is opt-in (`allowMaintainerBindings`). Every change audited.
 - A reviewer cannot be bound to a repo the actor cannot access.
 - Required reviewer failures surface as configuration errors, not silent skips.
 - Fallback comments contain no secrets or model details beyond the reviewer name/domain.

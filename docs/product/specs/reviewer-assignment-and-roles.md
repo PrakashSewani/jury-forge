@@ -94,7 +94,7 @@ Rules:
 | **Owner** | org / personal install | Everything, including providers, billing, delete, transfer ownership |
 | **Admin** | org / repo | Providers/models, org policy, budgets, visibility, approve reviewer catalog, manage bindings/roles |
 | **SME** | domain + assigned repos | Create/edit/test/version reviewers in their domain; own/curate reviewers; bind their domain reviewers to assigned repos; not providers/billing |
-| **Maintainer** | repo write | Bind approved reviewers to the repo, set required/optional/scope, trigger, reply, context review |
+| **Maintainer** | repo write | Trigger, reply, context review, request reviewers; bind approved reviewers only if the org enables maintainer binding |
 | **Member** | repo read (org member) | View sessions; reply where GitHub permits |
 | **Viewer** | repo read | Read-only |
 | **Auditor** | org | Audit/export, no configuration |
@@ -106,7 +106,7 @@ Rules:
 - **Admin-only:** provider keys, model allowlist, budgets, visibility, reviewer approval, role
   changes.
 - **SME:** domain authority, not billing/provider authority.
-- **Maintainer:** can choose from the approved catalog, not create a new org-wide reviewer.
+- **Maintainer:** can choose from the approved catalog and request bindings, but cannot create an org-wide reviewer. Binding is admin/SME by default; `allowMaintainerBindings` can enable it.
 - Every binding/role/approval change is audited.
 
 ### Domain examples
@@ -255,8 +255,8 @@ Rules:
 ## 10. Acceptance criteria
 
 - [ ] A reviewer exists in the catalog but is not used on a repo without a binding.
-- [ ] An admin/SME/maintainer can bind a reviewer with required/optional and path/language/label
-      scopes; the change is audited.
+- [ ] An admin/SME can bind a reviewer with required/optional and path/language/label scopes; the
+      change is audited. A maintainer can bind only when `allowMaintainerBindings` is on.
 - [ ] `jury:review` runs required + matching optional reviewers for the repo.
 - [ ] `jury:security` runs required + security-domain optional reviewers.
 - [ ] No bindings → fallback comment with setup/retrigger instructions; no review posted.

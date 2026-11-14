@@ -351,8 +351,9 @@ guard decides. See [`agentic-review.md`](agentic-review.md) and
 - **Session belongs to the PR**, not the trigger user. Participants (author, commenters, mentioned
   humans, maintainers) are stored and shown; the trigger user is audit.
 - **Role mapping:** owner/admin configure; **SME** owns domain reviewers and binds them to assigned
-  repos; maintainer (repo write) can bind approved reviewers to their repo and trigger/reply; member
-  with repo read can view/reply where GitHub permits; viewer read-only; auditor sees audit/export.
+  repos; maintainer (repo write) triggers/replies and requests reviewers; binding by maintainer is
+  opt-in (`allowMaintainerBindings`, default off); member with repo read views/replies where GitHub
+  permits; viewer read-only; auditor sees audit/export.
 - **Reviewer binding authorization:** no reviewer runs without a repo binding; only admin/SME
   (domain)/maintainer (approved catalog, own repo) can bind; every binding/approval/role change is
   audited. An actor cannot bind a reviewer to a repo they cannot access.
