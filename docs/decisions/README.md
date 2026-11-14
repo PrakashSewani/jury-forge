@@ -44,6 +44,7 @@ new one, never rewritten. The index below is the source of truth for status.
 | [ADR-0014](ADR-0014-repo-knowledge-graph.md) | Diff-first review with an incremental repository graph | proposed | 2026-11-15 |
 | [ADR-0015](ADR-0015-session-capacity-and-visibility.md) | Session capacity, interface, roles, and visibility | proposed | 2026-11-15 |
 | [ADR-0016](ADR-0016-reviewer-catalog-and-roles.md) | Reviewer catalog, repo bindings, SME roles, and fallback | proposed | 2026-11-15 |
+| [ADR-0017](ADR-0017-knowledge-sources-and-retrieval.md) | Knowledge sources, snapshots, grants, and retrieval | proposed | 2026-11-15 |
 
 ## Conventions
 

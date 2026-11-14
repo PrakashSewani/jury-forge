@@ -51,11 +51,14 @@ written to be read by humans and agents. Start at the layer you need; do not rea
   - [`repo-knowledge-graph.md`](product/specs/repo-knowledge-graph.md) — diff-first + context graph, incremental updates.
   - [`session-capacity-and-visibility.md`](product/specs/session-capacity-and-visibility.md) — interface, concurrency, roles, visibility, budgets.
   - [`reviewer-assignment-and-roles.md`](product/specs/reviewer-assignment-and-roles.md) — reviewer catalog, repo bindings, SME/admin roles, fallback.
+  - [`knowledge-system.md`](product/specs/knowledge-system.md) — skills/docs/doc links, snapshots, grants, retrieval, citations.
+  - [`v1-ui.md`](product/specs/v1-ui.md) — v1 website control plane and session UI scope.
 
 ### 4. Architecture
 
 - [`architecture/overview.md`](architecture/overview.md) — the target system in one page.
 - [`architecture/agentic-review.md`](architecture/agentic-review.md) — PR sessions, turns, agent harness, routing, resolution, provider/graph integration.
+- [`architecture/tech-depth/branch-review.md`](architecture/tech-depth/branch-review.md) — deferred branch-review design (default branch comparison, graph diff, open questions).
 - [`architecture/components.md`](architecture/components.md) — services, responsibilities, boundaries.
 - [`architecture/data-model.md`](architecture/data-model.md) — target entities and storage choices.
 - [`architecture/job-pipeline.md`](architecture/job-pipeline.md) — webhook to verdict, reliably.

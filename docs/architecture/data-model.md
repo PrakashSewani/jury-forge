@@ -115,7 +115,11 @@ token/cost budgets, model allowlist, data policy, fork policy, suppression rules
 | `packs` | `id`, `org_id`, `slug`, `name`, `created_at`, `archived_at` | Stable identity. |
 | `pack_versions` | `id`, `pack_id`, `hash`, `manifest`, `body`, `bytes`, `token_estimate`, `signature`, `created_by`, `created_at` | Immutable; unique `(pack_id, hash)`. |
 | `pack_documents` | `id`, `version_id`, `path`, `bytes`, `tokens`, `text`, `never_quote` | Only manifest + docs. |
-| `pack_grants` | `id`, `pack_id`, `scope_type`, `scope_id`, `precedence`, `pinned_version_id`, `enabled`, `created_at` | Global/repo/reviewer; pin or latest. |
+| `pack_grants` | `id`, `pack_id`, `scope_type`, `scope_id`, `precedence`, `pinned_version_id`, `enabled`, `created_at` | Global/repo/reviewer/capability; pin or latest. |
+| `knowledge_sources` | `id`, `org_id`, `kind` (`pack`/`url`/`repo-doc`/`convention`), `name`, `owner_user_id`, `status`, `created_at` | Unified source identity. |
+| `knowledge_snapshots` | `id`, `source_id`, `url`, `content_hash`, `title`, `text`, `fetched_at`, `status` | URL snapshots; no live fetch at review time. |
+| `knowledge_citations` | `id`, `turn_id`, `source_id`, `version_id`, `path`, `tokens`, `created_at` | What was injected and where it came from. |
+| `reviewer_knowledge_bindings` | `reviewer_version_id`, `source_id`, `mode`, `enabled` | Explicit reviewer knowledge. |
 | `pack_chunks` | `id`, `version_id`, `path`, `chunk_index`, `text`, `tokens`, `embedding_ref` | For relevance retrieval (optional). |
 
 ## Budgets and usage

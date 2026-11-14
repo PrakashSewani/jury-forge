@@ -55,8 +55,11 @@ one phase `in progress`.
   - `docs/product/specs/repo-knowledge-graph.md`
   - `docs/product/specs/session-capacity-and-visibility.md`
   - `docs/product/specs/reviewer-assignment-and-roles.md`
+  - `docs/product/specs/knowledge-system.md`
+  - `docs/product/specs/v1-ui.md`
+  - `docs/architecture/tech-depth/branch-review.md`
   - `docs/architecture/agentic-review.md`
-  - `docs/decisions/ADR-0010` … `ADR-0016`
+  - `docs/decisions/ADR-0010` … `ADR-0017`
   - `docs/product/capabilities.md`, `docs/product/scope.md`, `docs/delivery/roadmap.md`
 
 **Verified:**
@@ -121,6 +124,7 @@ UI gap.
 | ADR-0014 | proposed | Diff-first review with an incremental repository graph. |
 | ADR-0015 | proposed | Session capacity, interface, roles, and visibility. |
 | ADR-0016 | proposed | Reviewer catalog, repo bindings, SME roles, fallback. |
+| ADR-0017 | proposed | Knowledge sources, snapshots, grants, retrieval. |
 
 ## How to update this file
 

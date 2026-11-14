@@ -99,6 +99,8 @@ checklist.
       never runs.
 - [ ] PR review is the default; `/jury branch-review` compares the PR branch to the default branch, uses the graph, and shows an estimate/cancel.
 - [ ] The repo graph updates incrementally; a second run reuses unchanged summaries and context.
+- [ ] Knowledge sources (packs, repo docs, doc-link snapshots) are versioned, scoped, cited, and retrieved under a token budget.
+- [ ] `never_quote` content is never sent; no grant = no injection; stale snapshots are marked.
 - [ ] Feedback capture works; agent/session scorecards exist.
 - [ ] The dogfood repository runs on itself and the team uses the sessions.
 - [ ] A prompt/model/agent change without a benchmark is blocked by process.

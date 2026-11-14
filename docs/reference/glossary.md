@@ -78,5 +78,11 @@ Shared vocabulary. When a term is ambiguous, this page wins.
 | **Capability label** | `jury:cap:<tag>`; requests a capability group within the repo’s bound/approved reviewers. Narrows optional reviewers; required reviewers always run; never grants an unbound reviewer. |
 | **Capability agent** | A reviewer with tools to verify behavior (graph, tests, static analysis, optional sandbox run). |
 | **Sandbox run** | Opt-in, isolated execution of tests/builds for a capability agent; no secrets, network off, resource caps. |
-| **PR review** | Review the PR diff plus targeted repository context. |
+| **PR review** | Review only the PR diff/hunks plus metadata; no graph, no full files. |
 | **Branch review** | Compare the PR branch to the repository default branch and review the full branch delta against the context graph. |
+| **Knowledge source** | A pack, repo doc, doc-link snapshot, org convention, or graph used by a reviewer. |
+| **Doc-link snapshot** | A content-hashed copy of an allowlisted external URL, ingested/refreshed outside the review turn. |
+| **Knowledge grant** | A scoped attachment (org/repo/reviewer/capability) with precedence and pin/latest. |
+| **Knowledge citation** | The source/version/hash/path recorded for injected knowledge. |
+| **Human override** | An SME/admin/owner resolution/reopen/dismissal with a reason, audited; the agent respects it. |
+| **Single-tenant** | One organisation/personal account per instance in v1; multi-org is later. |

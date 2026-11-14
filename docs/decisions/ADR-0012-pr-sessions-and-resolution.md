@@ -37,6 +37,10 @@ user response.
   bot-owned thread, human response after the last question/finding, evidence that the finding is
   addressed, verifier/confidence threshold, summary posted, audit event. A new human reply reopens.
 - Humans can resolve in GitHub UI; the session records that as a human action and does not fight it.
+- **Human override:** owner/admin can resolve/reopen/dismiss any thread; SME can do so in their
+  domain/assigned repos; maintainer can reopen to challenge; author/member reply only; auditor
+  read-only. An override requires a reason, is audited, and the agent does not auto-re-resolve
+  without new evidence.
 - A PR merge/close archives the session; retention is configurable (default 90 days).
 
 ## Consequences

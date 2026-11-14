@@ -243,6 +243,24 @@ If any condition fails, the agent asks a focused question or leaves the thread o
 reply after resolution reopens the thread and starts a new turn. The UI shows who resolved a thread
 and why; it never presents a bot resolution as a human one.
 
+### Human override
+
+The agent validates; **SMEs and higher-level roles can overwrite**.
+
+| Actor | Can override |
+| ----- | ------------ |
+| Owner / Admin | Resolve, reopen, or dismiss any thread in the org, with a reason |
+| SME | Resolve/reopen/dismiss in their domain and assigned repos, with a reason |
+| Maintainer | Reopen a thread to challenge it; cannot mark it resolved on the bot’s behalf |
+| Author / member | Reply only; GitHub UI resolution is recorded as a human action |
+| Auditor | Read-only |
+
+- An override requires a reason and is audited with actor, role, thread, and evidence.
+- The agent sees the override in its session context and does not auto-re-resolve without new
+  evidence or a new human request.
+- A human resolution in GitHub UI is recorded as a human override; the bot does not fight it.
+- Resolution state is never silently changed by a model; only the guard or an authorized human.
+
 ## 6. Multi-agent routing
 
 An **agent definition** is a versioned configuration with:

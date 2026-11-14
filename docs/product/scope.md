@@ -17,6 +17,8 @@ operate, trust, and measure — with durable, conversational per-PR sessions, no
    - Upgrade path with expand/contract migrations and a rollback procedure.
 
 2. **Connect**
+   - **Single-tenant v1:** one organisation or personal account per instance, one GitHub
+     installation, many repositories. Multi-org/multi-installation is later.
    - GitHub App (manifest flow) for GitHub.com; GitHub Enterprise Server if the install spike is
      clean.
    - Installation-level availability: manual review on any PR in an installed account/org, with no
@@ -41,6 +43,7 @@ operate, trust, and measure — with durable, conversational per-PR sessions, no
    - Parallel agent execution with per-provider concurrency limits.
    - PR review by default; explicit branch review compares the PR branch to the default branch and uses an incrementally updated graph
      (ADR-0014).
+   - Knowledge system: packs/skills, repo docs at SHA, allowlisted doc-link snapshots, capability/repo/reviewer grants, retrieval with citations.
    - Knowledge packs with immutable versions, grants, and provenance.
    - Grounding: every inline finding must cite code that exists at the reviewed SHA.
    - Cross-reviewer de-duplication, disagreement, and a chair/consensus step.
@@ -62,7 +65,8 @@ operate, trust, and measure — with durable, conversational per-PR sessions, no
 
 5. **Control**
    - Roles: owner, admin, **SME**, maintainer, member, viewer, auditor (scoped to org/repo/domain).
-   - Audit stream with export; every trigger, turn, tool call, model call, reply, and resolution.
+   - Audit stream with export; every trigger, turn, tool call, model call, reply, resolution, and human override.
+   - V1 website control plane: setup, session inbox/detail, reviewer studio, repositories/bindings, providers/models, settings/roles, audit.
    - Token and cost budgets per session/turn/repo with estimates and alerts.
    - Data retention and deletion for sessions, messages, graph, and raw responses.
    - Secret redaction before prompts leave the perimeter.

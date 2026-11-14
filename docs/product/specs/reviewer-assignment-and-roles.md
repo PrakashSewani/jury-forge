@@ -331,12 +331,22 @@ selected   = required ∪ optional, capped by policy
 
 **Label lifecycle**
 
-- Applying a label triggers one turn; the label is not a standing subscription for every future push.
-- Multiple labels added together are debounced/coalesced into one turn.
+- Labels can be applied **when the PR is created or at any point in its lifecycle** by anyone with
+  GitHub triage/write access. GitHub sends the labels on `pull_request.opened` and later
+  `pull_request.labeled`/`unlabeled` events; the app handles both.
+- Applying a label enqueues **one turn**. It is not a standing subscription for every future push.
+- Multiple labels added together (or within the debounce window) are coalesced into one turn.
+- Removing a mode label before the turn starts cancels the queued turn. Removing it during a turn
+  cancels before the next provider call/publish where possible; otherwise the turn finishes and the
+  session records the label change.
 - To retrigger, remove/re-add the label, click the Check Run action, or use `/jury pr-review`.
+- Labels persist after a run. They do not automatically re-run on every push; if you want that, use
+  repo policy `auto: true` or a future “watch” label.
 - The app creates the two mode labels on install; capability labels can be created on demand.
 - Labels do not grant repo-level enablement. Repo-level enablement is admin/SME binding or
   `.jury-forge.yml`; labels only request within it.
+- Applying a label is a request, not a grant. The app ignores labels from users without repo
+  triage/write if policy says so.
 
 **Security and audit**
 

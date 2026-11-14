@@ -86,6 +86,10 @@ Status key: **Proven** (the PoC shipped a version), **Planned** (in the target p
 | Global / repository / reviewer grants | Proven | Keep. |
 | Precedence and path-scoped apply | Proven | Keep. |
 | Provenance (`slug@hash`, injected bytes) | Proven | Keep; add token counts. |
+| Repo docs (AGENTS/CONTRIBUTING/ADRs/docs) at SHA | Planned | Index + retrieve relevant sections; opt-in per repo. |
+| Doc-link snapshots (allowlisted URLs) | Planned | Ingest/snapshot; no live fetch at review time; refresh/stale. |
+| Capability-scoped knowledge grants | Planned | Org/repo/reviewer/capability; precedence; pin/latest. |
+| Retrieval + citations | Planned | Relevant chunks under token budget; cite source/hash/path. |
 | Never-quote files | Proven | Keep; audit. |
 | Pinned versions / channels | Planned | Reproducible reviews. |
 | Signed packs | Planned | Supply-chain trust. |
@@ -205,6 +209,8 @@ Status key: **Proven** (the PoC shipped a version), **Planned** (in the target p
 | Per-repo reviewer catalog + required/optional bindings | Owner, 2026-11-15 | Planned | [`specs/reviewer-assignment-and-roles.md`](specs/reviewer-assignment-and-roles.md) |
 | SME/admin reviewer ownership and approval | Owner, 2026-11-15 | Planned | [`specs/reviewer-assignment-and-roles.md`](specs/reviewer-assignment-and-roles.md) |
 | No-reviewers fallback + retrigger | Owner, 2026-11-15 | Planned | [`specs/reviewer-assignment-and-roles.md`](specs/reviewer-assignment-and-roles.md) |
+| Reviewer knowledge basis (skills/docs/links) | Owner, 2026-11-15 | Planned | [`specs/knowledge-system.md`](specs/knowledge-system.md) |
+| V1 website control plane + session UI | Owner, 2026-11-15 | Planned | [`specs/v1-ui.md`](specs/v1-ui.md) |
 | Provider model discovery, no free text | Owner, 2026-11-15 | Planned | [`specs/provider-model-discovery.md`](specs/provider-model-discovery.md) |
 | Encrypted provider keys | Owner, 2026-11-15 | Planned | [`specs/provider-model-discovery.md`](specs/provider-model-discovery.md) |
 | Only Jury Forge resolves conversations | Owner, 2026-11-15 | Planned | [`specs/agentic-review-sessions.md`](specs/agentic-review-sessions.md) |

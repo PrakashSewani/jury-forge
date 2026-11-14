@@ -104,7 +104,8 @@ Resolution
 | ------------ | -------------- |
 | `pull_request.opened` | Create a neutral `Jury Forge` check run with `PR review` / `Branch review` actions; create a session only if policy/trigger. |
 | `pull_request.ready_for_review` | Same as opened if policy. |
-| `pull_request.labeled` | If `jury:pr-review` or `jury:branch-review`, enqueue the turn (manual trigger). |
+| `pull_request.labeled` | If a `jury:*` mode/capability label is added, enqueue one turn; coalesce multiple labels. |
+| `pull_request.unlabeled` | If a mode label was removed, cancel a queued turn (and before publish where possible). |
 | `check_run.requested_action` | If action `review` or `context`, enqueue the turn (primary manual trigger). |
 | `pull_request.synchronize` | Advance generation; enqueue `reindex`; mark findings `needs_recheck`; no auto-post unless policy. |
 | `pull_request.closed` | Archive session. |

@@ -41,6 +41,7 @@ persisted conversation** — not a one-shot review.
 - One agent bound to a catalog model; PR review is diff-only; one review publish.
 - Per-PR session, one thread reply, and a guarded resolve after a human reply (ADR-0012).
 - No-reviewers/no-match fallback comment with setup/retrigger instructions.
+- Minimal control plane UI: setup, provider/model catalog, reviewer studio, repo bindings, session inbox/timeline, fallback status.
 - Session/turn/tool-call/finding records, a basic session timeline, health/readiness, logs.
 - A clean-machine install test and a deterministic test suite.
 
@@ -88,7 +89,9 @@ red-team exercise finds no S1 issues.
 - Evaluation benchmark (golden PRs, metrics, scorecards).
 - Agent versioning, activation gates, rollback, run-time snapshots.
 - Feedback capture and agent scorecards.
+- Knowledge system: packs/skills, repo docs at SHA, allowlisted doc-link snapshots, capability/repo/reviewer grants, retrieval with citations.
 - Knowledge-pack retrieval (not wholesale injection).
+- Branch review (default-branch comparison + graph diff) is v1.1, not the first quality milestone.
 
 **Exit gate (G3):** the benchmark beats the baseline on precision, recall, grounding, and
 acceptance; the dogfood repo runs on itself; cost per accepted finding is within budget.
