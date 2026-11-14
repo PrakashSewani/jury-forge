@@ -87,6 +87,22 @@ These are secondary; they matter only after quality and trust.
 - Repeat use after 30 days.
 - Operator-reported NPS and qualitative "would you go back?".
 
+## First live case study (2026-10-19)
+
+One real auto review on `jury-forge-guinea-pig#3`:
+
+- 8 findings, all 8 valid against the PR code, 8 inline; 45 seconds.
+- One reviewer (`Testing`) failed with a provider 401; a manual try run after the config fix produced
+  9 findings, all 9 valid, and published nothing.
+- 2,306 + 5,802 tokens for the completed auto reviewer; 2,296 + 7,428 for the manual reviewer.
+- One critical issue (`src/server.ts:78` key leak) and SQL injection in `src/exporter.ts` were
+  outside the diff and never seen.
+
+This is a case study, not a benchmark: one PR, one day, two reviewers, no labelled ground truth
+beyond a manual check of the diff. It shows the product can produce genuinely useful findings, and
+it shows the reliability, attribution, and context gaps the new product must close. Full detail:
+[`../poc/live-instance.md`](../poc/live-instance.md).
+
 ## The comparison with the PoC
 
 We will run the same benchmark on the PoC and on Jury Forge, and publish the delta:

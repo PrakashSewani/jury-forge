@@ -47,6 +47,16 @@ runtime.
 Small PRs, a single check command, docs with each slice, and mutation-checked fixes produced a
 repository that stayed understandable under rapid change.
 
+### 7. The live loop actually worked
+
+The live instance produced one real auto review on 2026-10-19: 8 inline findings on a PR, all 8
+valid against the code, including command injection, SSRF, path traversal, broken authz, an unkeyed
+signature, and a leaked key. The Testing reviewer failed with a provider 401 in that run; the
+operator fixed the configuration and used **Try a reviewer** to re-run it, producing 9 more valid
+findings without publishing anything. That is the product working as intended — and a clear
+picture of the reliability, attribution, and context gaps that remain. See
+[`live-instance.md`](live-instance.md).
+
 ## What did not work
 
 ### 1. The runtime dictated the product
