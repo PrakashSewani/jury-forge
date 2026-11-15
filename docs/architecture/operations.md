@@ -40,11 +40,14 @@ tar -xzf jury-forge-vX.Y.Z.tar.gz && cd jury-forge-vX.Y.Z
 
 # 2. Generate .env and secret files (0600, refuses to overwrite, prints fingerprints only)
 jury-forge init
-#    Optional: freeze the origin now instead of setting it in the browser.
-#    jury-forge init --domain jury.example.com
+#    Optional: pre-seed the origin for the setup wizard (does not freeze it).
+#    jury-forge init --origin-hint jury.example.com
+#    Optional: freeze the origin now (pre-provisioned/air-gapped only; equivalent to PUBLIC_URL).
+#    jury-forge init --freeze-origin jury.example.com
 $EDITOR .env                 # usually nothing to change; set PUBLIC_URL only to freeze the origin
 
-# 3. Start the stack; migrations run once as a one-shot service/job
+# 3. Run migrations once (one-shot, safe to re-run), then start the stack
+docker compose run --rm app jury-forge migrate
 docker compose up -d
 
 # 4. Verify the host before creating anything on GitHub
@@ -55,12 +58,13 @@ The git fallback is `git clone --branch vX.Y.Z` of a **signed tag**, then `jury-
 use `curl … | sh`; ADR-0020 records why and the one allowed alternative (download, verify, then
 execute an explicit script).
 
-Then reach setup on the **loopback listener** (`SETUP_BIND`, default `127.0.0.1:8080`) — via an SSH
+Then reach setup on the **loopback listener** (`SETUP_BIND`; Compose binds `0.0.0.0:8080` inside the
+container and publishes `127.0.0.1:8080:8080`; a native install binds `127.0.0.1:8080`) — via an SSH
 tunnel, `curl` on the host, or `jury-forge setup domain <host>` — enter the bootstrap token printed
 once by the app on first boot (`docker compose logs app | grep 'setup token'`; re-print with
-`jury-forge setup token`), and follow the wizard: **set and validate the domain** → claim as owner
-with GitHub OAuth → create/verify the GitHub App → pick the installation → add a provider key → bind
-the first reviewer → post the first review.
+`jury-forge setup token`), and follow the wizard: **set and validate the domain** → create/verify the
+GitHub App → pick the installation → claim as owner with GitHub OAuth → add a provider key → bind the
+first reviewer → post the first review.
 
 The domain is set in the wizard (ADR-0021), so there is nothing to edit in `.env` for a normal
 install. `PUBLIC_URL` exists only to freeze the origin for pre-provisioned/air-gapped deployments.
@@ -86,7 +90,7 @@ body-rewriting proxy; see [`deployment.md`](deployment.md#2-the-public-surface-g
 A single-container "all-in-one" image can bundle app, worker, scheduler, and a local Postgres for a
 demo, but it is not the recommended production deployment until it is proven.
 
-### Kubernetes / Helm (v1, secondary target)
+### Kubernetes / Helm (v1.x, secondary target)
 
 One chart over the same images; Compose remains the reference. The chart deploys app, worker,
 scheduler, and a migration Job only — **no bundled Postgres/Redis/object storage**. TLS terminates
@@ -112,7 +116,10 @@ upgrade → rollback). Air-gapped install is **not** in v1.
 ### First-run checklist
 
 - [ ] The origin was set and validated in setup (or `PUBLIC_URL` is set intentionally to freeze it).
-- [ ] `https://<origin>` serves the dashboard; any other `Host` returns `421`.
+- [ ] Migrations ran before the app started (`jury-forge migrate`).
+- [ ] The GitHub App was created before the owner claim.
+- [ ] The setup listener was reachable on host loopback only.
+- [ ] TLS issued after the origin was saved; any other `Host` returns `421`.
 - [ ] Secrets generated (`openssl rand -base64 32`), not defaults.
 - [ ] Database password is strong; Postgres is not publicly exposed.
 - [ ] Encryption key backed up separately from the database.
@@ -132,7 +139,7 @@ refuses to start with a missing/invalid critical value.
 | Variable | Required | Notes |
 | -------- | -------- | ----- |
 | `PUBLIC_URL` | no | Optional: **freezes** the origin (pre-provisioned/air-gapped). Normally unset and configured in setup (ADR-0021). |
-| `SETUP_BIND` | no | Loopback listener for pre-origin bootstrap; default `127.0.0.1:8080`. |
+| `SETUP_BIND` | no | Bootstrap listener. Compose binds `0.0.0.0:8080` inside the container and publishes `127.0.0.1:8080:8080`; a native install binds `127.0.0.1:8080`. The host publish is the loopback boundary. |
 | `DATABASE_URL` / `DATABASE_URL_FILE` | yes | Postgres connection; TLS by default. Prefer the file form — a DSN in env leaks the password via `docker inspect`. |
 | `ENCRYPTION_KEY` / `ENCRYPTION_KEY_FILE` | yes | Root key; prefer the file form (Docker secret), never logged. |
 | `SESSION_SECRET` / `SESSION_SECRET_FILE` | yes | Cookie signing/encryption; file form preferred. |

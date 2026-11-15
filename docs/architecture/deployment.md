@@ -49,9 +49,11 @@ The origin (e.g. `https://review.example.com`) is:
   CSRF checks, and webhook URLs all use the stored origin;
 - **not behind SSO or a bot-challenge/WAF** on the webhook and OAuth paths.
 
-Before an origin exists, setup is served on a **loopback-only** listener (`SETUP_BIND`, default
-`127.0.0.1:8080`) protected by the bootstrap token: SSH tunnel, `curl` on the host, or
-`jury-forge setup domain <host>`. The bootstrap surface is never exposed publicly.
+Before an origin exists, setup is served on a **loopback-only** listener (`SETUP_BIND`). In Compose
+the app binds `0.0.0.0:8080` inside the container and publishes `127.0.0.1:8080:8080` on the host;
+a native install binds `127.0.0.1:8080`. The host publish is the loopback boundary. The listener is
+protected by the bootstrap token: SSH tunnel, `curl` on the host, or `jury-forge setup domain <host>`.
+The bootstrap surface is never exposed publicly.
 
 | Purpose | URL | Required |
 | ------- | --- | -------- |
@@ -192,7 +194,7 @@ services:
       ROLE: app
       # PUBLIC_URL is optional: set it only to freeze the origin (pre-provisioned/air-gapped).
       # Without it, the origin is written by setup (ADR-0021).
-      SETUP_BIND: 127.0.0.1:8080        # loopback-only bootstrap before an origin exists
+      SETUP_BIND: 0.0.0.0:8080          # inside the container; host publish is the loopback boundary
       DATABASE_URL_FILE: /run/secrets/database_url
       ENCRYPTION_KEY_FILE: /run/secrets/encryption_key
       SESSION_SECRET_FILE: /run/secrets/session_secret
@@ -202,7 +204,7 @@ services:
     secrets: [database_url, encryption_key, session_secret]
     networks: [internal]
     expose: ["3000"]
-    ports: ["127.0.0.1:8080:8080"]     # loopback-only bootstrap listener (SETUP_BIND)
+    ports: ["127.0.0.1:8080:8080"]     # host loopback only; do not publish on 0.0.0.0
     read_only: true
     tmpfs: [/tmp]
     cap_drop: [ALL]
@@ -310,9 +312,12 @@ Secrets use **files**, not environment values: Compose interpolates env into `do
 ```
 
 The `ask` endpoint returns `200` only for the single configured origin and `403` otherwise, so a
-stranger's domain cannot obtain a certificate here. If the operator uses a fixed domain instead
-(model C, or a pre-provisioned `PUBLIC_URL`), replace `:443` with the literal site address and drop
-`on_demand_tls`; no other change is needed.
+stranger's domain cannot obtain a certificate here. The origin is saved after pre-save DNS/port
+validation and before TLS issuance; `ask` authorizes `public_url` only. During setup the UI shows
+`tls_pending` until Caddy issues; `ready` waits for issuance, but the origin does not need to be
+re-entered if issuance is slow or blocked. If the operator uses a fixed domain instead (model C, or a
+pre-provisioned `PUBLIC_URL`), replace `:443` with the literal site address and drop `on_demand_tls`;
+no other change is needed.
 
 Request bodies are capped at the app (webhook ≤ 25 MB, knowledge pack ≤ 50 MB) and the proxy must
 not impose a smaller limit. Do not enable response compression on `/api/webhooks/*` or SSE paths.
@@ -429,9 +434,9 @@ allowlist, so webhook security is signature verification + rate limiting, not IP
 - TLS 1.2+ (prefer 1.3), HSTS after the first successful HTTPS request, `X-Content-Type-Options:
   nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `frame-ancestors 'none'`, and a CSP
   that allows only same-origin scripts/data.
-- **On-demand certificates are authorized, not open:** Caddy `ask`s the app, which returns `200` only
-  for the stored origin (single host, rate-limited); `:80` serves ACME HTTP-01 and redirects. No wildcard
-  by default.
+- **On-demand certificates are authorized, not open:** the origin is saved after DNS/port validation
+  and before TLS issuance; Caddy `ask`s the app, which returns `200` only for the stored origin
+  (single host, rate-limited). `:80` serves ACME HTTP-01 and redirects. No wildcard by default.
 - **Host enforcement:** any request whose `Host` is not the stored origin gets `421 Misdirected
   Request`; never build a redirect, OAuth URL, or link from `Host`. The loopback bootstrap listener
   is the only exception.

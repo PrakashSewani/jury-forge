@@ -36,10 +36,11 @@ named reviewer) signs off. "Looks good" is not evidence.
 ## G1 — Walking skeleton
 
 - [ ] Stack ADRs accepted (runtime, deployment, storage, queue, auth, harness).
-- [ ] A clean Linux host can install from the README in ≤ 60 minutes.
+- [ ] A clean Ubuntu 24.04 host with Docker 24+/Compose v2 installed reaches a first review in ≤15 min median / ≤60 min p90 from a verified bundle; Docker install, DNS, provider account, and org admin work are measured separately.
+- [ ] The setup listener is reachable on host loopback only; it is not reachable on the host's public interface.
 - [ ] The app, worker, scheduler, Postgres, and UI start; `/healthz` and `/readyz` pass.
-- [ ] Migrations run; the schema version is reported.
-- [ ] A GitHub App can be created, installed, and verified; no per-repo enable toggle is required.
+- [ ] Migrations run before the app starts; the schema version is reported.
+- [ ] The GitHub App is created, installed, and verified before the owner claim; no per-repo enable toggle is required.
 - [ ] A provider key is validated; `/models` is fetched; an agent binds to a catalog model (no free text).
 - [ ] A webhook is verified, persisted, and enqueued.
 - [ ] Manual `jury:pr-review` label or Check Run action starts a session; one built-in reviewer publishes one review (PR review is strict T0; no file tools).

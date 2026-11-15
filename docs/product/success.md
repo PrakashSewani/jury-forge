@@ -88,11 +88,14 @@ per repo and per reviewer; no surprise overruns.
 
 | Metric | Definition | v1 target |
 | ------ | ---------- | --------- |
-| Time to first review (new install) | `git clone` → first posted review | ≤ 15 min median, ≤ 60 min p90 (setup spec) |
+| Install-to-first-review | Verified bundle on host + Docker 24+/Compose v2 installed → first review visible on the test PR | ≤ 15 min median, ≤ 60 min p90 (setup spec) |
 | Upgrade time | Old version → new version, no downtime | ≤ 10 min |
 | Restore time | Backup → working instance | ≤ 30 min |
 | Install success rate | Clean-machine installs that succeed without manual DB edits | ≥ 90% on the support matrix |
 | Support bundle completeness | Diagnostics that answer a failure without a call | 100% of documented failure modes |
+
+Prerequisites (Docker installation, DNS propagation, provider account/key, GitHub org admin work,
+test repo/PR creation) are measured separately and are not inside the install-to-first-review target.
 
 ## Security metrics
 

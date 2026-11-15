@@ -131,12 +131,11 @@ reviewers-as-code, history-seeded-conventions, mcp-surface, pr-walkthrough); que
 inside each spec (`SH-`, `PA-`, `CLI-`, `LP-`, `RC-`, `HS-`, `MCP-`, `PW-`). They are not committed,
 not in any tier, and do not block G0.
 
-**Next action (2026-11-15):** the owner supplies the quality-spike inputs in
-`docs/analysis/quality-spike-2026-11-15.md` §8: an experiment provider and model (key via environment
-variable only, with prices), five public PRs with a named ground-truth author, and written permission
-to send those public diffs to that provider. Until then, Workstream A cannot produce a GO, NO-GO, or
-CHANGE DIRECTION decision. Install-readiness fixes (B1–B3, D1) are a separate doc-edit step after
-this gate.
+**Next action (2026-11-15):** merge the setup-ordering fix PR (`docs/fix-setup-ordering`); then start
+Phase 1 (walking skeleton) with the stack ADRs. The quality spike is deferred, not cancelled: its
+inputs are in `docs/analysis/quality-spike-2026-11-15.md` §8, and it should run after the walking
+skeleton (or as a synthetic parallel track). Installability is still unproven; the setup docs are
+fixed, not the product.
 
 **Next action (earlier):**
 
@@ -183,6 +182,14 @@ stays strict T0.
   default for explicit manual triggers and edited in place, and there is no progress-comment stream;
   failure and cancellation are visible. The capability row is in `capabilities.md` §6 and the metrics
   are in `success.md`.
+- **Setup fixes (2026-11-15, sixth pass):** B1 — the GitHub App is created before the owner claim,
+  and a claim without an App returns `setup_step_out_of_order`; B2 — the origin is saved after
+  DNS/port validation and TLS issuance is post-save, with `ask` authorizing `public_url` only;
+  C1 — one install-to-first-review definition (prerequisites measured separately) shared by
+  `first-run-setup.md` and `success.md`; C2 — migrations run before `docker compose up -d`; C3 —
+  `init --origin-hint` pre-seeds and `--freeze-origin` sets `PUBLIC_URL`; D1 — Compose binds
+  `0.0.0.0:8080` inside the container and publishes `127.0.0.1:8080:8080`. The install-readiness doc
+  has a Resolution section. Installability remains unproven; no timing was measured.
 
 **Docs added 2026-11-15 (setup/deployment):**
 
@@ -241,7 +248,8 @@ UI gap.
 
 - [ ] Owner has read `docs/product/vision.md`, `scope.md`, `capabilities.md`, the specs index, and `analysis/flaws.md`.
 - [ ] Owner has answered Q-001–Q-036 (or recorded defaults); backlog spec questions are optional.
-- [ ] Owner has approved or amended ADR-0001–0003 and ADR-0010–0019 (ADR-0019 is rejected).
+- [ ] Owner has approved or amended ADR-0001–0003, ADR-0010–0019, and ADR-0023 (ADR-0019 is rejected).
+- [x] Direction approved: ADR-0023 and the trust-loop docs merged in PR #2 (2026-11-15).
 - [ ] Agent chain and skills are usable in the owner's harness.
 - [ ] No unresolved contradiction between docs.
 

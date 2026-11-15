@@ -45,8 +45,10 @@ an owner with re-authentication.
   pre-provisioned, or operator-managed config). Otherwise `instance.public_url` in Postgres.
   Otherwise the instance is unconfigured and only bootstrap is available.
 - **Bootstrap access is never public.** Before an origin exists, setup is served on a loopback
-  listener (`SETUP_BIND`, default `127.0.0.1:8080`) protected by the bootstrap token. The operator
-  uses SSH port-forwarding, `curl` on the host, or `jury-forge setup domain <host>`.
+  listener (`SETUP_BIND`). Compose binds `0.0.0.0:8080` inside the container and publishes
+  `127.0.0.1:8080:8080`; a native install binds `127.0.0.1:8080`. The host publish is the loopback
+  boundary. The operator uses SSH port-forwarding, `curl` on the host, or `jury-forge setup domain
+  <host>`.
 - **One origin, no path.** `https://<host>` only; no sub-path (`/jury-forge` is unsupported).
 - **TLS is on-demand.** Caddy serves `:443` with `tls { on_demand }` and an `ask` endpoint that
   authorizes **only** the configured origin; issuance is rate-limited (Caddy interval/burst plus an
@@ -59,6 +61,17 @@ an owner with re-authentication.
   audit `origin.changed`; update the GitHub App's hook, callback, and redirect URLs via `PATCH /app`
   (the App updates its own settings with a JWT); invalidate sessions (host-only cookies already
   die); keep a banner until a webhook self-test succeeds against the new origin.
+
+## Clarification (2026-11-15): setup order and TLS
+
+The implementation order is **origin → GitHub App → owner claim → provider → jury → first review**.
+The App must exist before the claim because the claim uses its OAuth client; the origin must exist
+before the App because the manifest records its URLs.
+
+The origin is saved after **pre-save DNS/port validation** and before **TLS issuance**. Caddy's `ask`
+endpoint authorizes the saved `public_url` only; TLS issuance is post-save and gates `ready`, not the
+save. This resolves the validation cycle: the app never asks Caddy to issue for a host it has not
+stored, and a slow or blocked TLS issuance does not force the operator to re-enter a valid origin.
 
 ## Consequences
 
@@ -76,8 +89,10 @@ instance; sub-path hosting is out for v1.
 
 - Host-header injection is the primary risk this closes: without a stored origin, an attacker can
   shape OAuth redirects and password-reset style links with `Host`.
-- Bootstrap listener binds to loopback by default; exposing it requires an explicit env change and
-  is logged as a warning by `doctor`. The bootstrap token remains single-use, expiring, rate-limited.
+- Bootstrap listener is loopback-only: Compose binds `0.0.0.0:8080` inside the container and
+  publishes `127.0.0.1:8080:8080`; a native install binds `127.0.0.1:8080`. The host publish is the
+  loopback boundary. Exposing it requires an explicit env change and is logged as a warning by
+  `doctor`. The bootstrap token remains single-use, expiring, rate-limited.
 - The TLS `ask` endpoint is on the internal network, answers only "is this the configured domain?",
   and is rate-limited; it never issues a certificate for any other name.
 - On-demand issuance is capped per domain and per instance to avoid ACME rate-limit abuse.
@@ -95,7 +110,7 @@ instance; sub-path hosting is out for v1.
 
 ## Follow-ups
 
-- Spike: Caddy `on_demand_tls` `ask` behaviour when the app is not yet reachable (cold start) and
-  when the origin changes; confirm no certificate is issued for an unconfigured host.
+- Spike: Caddy `on_demand_tls` `ask` behaviour after the origin is saved but before TLS issuance,
+  and when the origin changes; confirm no certificate is issued for an unconfigured host.
 - Decide whether a wildcard certificate is worth offering for air-gapped/proxied installs.
 - Confirm the exact GitHub `PATCH /app` fields required to move hook/callback/redirect URLs.
