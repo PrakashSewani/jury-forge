@@ -61,7 +61,7 @@ Likelihood / impact: H = high, M = medium, L = low.
 - The target user has a GitHub organisation or personal account and can create a GitHub App.
 - The target user is willing to pay model providers directly (BYOK).
 - The target user values privacy/control enough to trade setup effort for it.
-- A single-node deployment is acceptable for the first release; Kubernetes can wait.
+- A single-node deployment is acceptable for the first release; Helm ships in v1 as a secondary target (ADR-0022), which adds a chart + support matrix as a risk.
 - GitHub is the first forge; multi-forge is a later adapter, not a first-release feature.
 
 See [`assumptions.md`](assumptions.md) and [`open-questions.md`](open-questions.md).

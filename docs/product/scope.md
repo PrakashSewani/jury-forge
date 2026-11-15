@@ -15,10 +15,15 @@ operate, trust, and measure — with durable, conversational per-PR sessions, no
 ### In scope
 
 1. **Install and operate**
-   - One-command Docker Compose install on Linux (amd64 and arm64).
+   - One-command Docker Compose install on Linux (amd64 and arm64), from a signed release bundle
+     (ADR-0020).
    - PostgreSQL as the source of truth; a durable job queue and at least one worker.
    - Environment validation, health/readiness, a support bundle, and documented backup/restore.
    - Upgrade path with expand/contract migrations and a rollback procedure.
+   - **Kubernetes via Helm (v1, secondary):** same images, external Postgres/S3, ingress TLS,
+     `kind` e2e gate (ADR-0022). Compose remains the reference install.
+   - **MVP is a single operator:** the claimed owner signs in with GitHub; member invites and roles
+     are v1.
 
 2. **Connect**
    - **Single-tenant v1:** one organisation or personal account per instance, one GitHub
@@ -103,7 +108,7 @@ operate, trust, and measure — with durable, conversational per-PR sessions, no
 | Arbitrary host shell / unsandboxed code execution | Too risky for v1. | Opt-in sandboxed `tests.run`/`build.run` capability later, with isolation/resource caps. |
 | A graph database as a required dependency | Postgres adjacency is enough for v1. | Revisit at large graph scale. |
 | Multi-forge (GitLab/Gitea/Bitbucket) | GitHub first; the adapter interface is designed for later. | v1.1+ based on demand. |
-| Kubernetes/Helm as the primary install | Compose is the reference; K8s is a later adapter. | After Compose operations are solid. |
+| Kubernetes/Helm as the **reference** install | Compose is the reference; Helm is a supported secondary target in v1 (ADR-0022). | Revisit only if the chart becomes the dominant install path. |
 | A hosted SaaS with customer code | Contradicts the privacy thesis. | A demo instance only. |
 | A reviewer/pack marketplace | Local templates and packs first. | After the core is trusted. |
 | A central billing/metering service | BYOK; no reseller. | Maybe an optional support offering. |

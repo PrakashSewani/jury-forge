@@ -195,15 +195,24 @@ cross-tenant tests, a lint rule or code review checklist.
 ## 5. Authentication and session design
 
 - **User auth:** GitHub OAuth first; OIDC/SSO later. Authorization code flow with state; PKCE if
-  the provider supports it.
+  the provider supports it. **OAuth login is part of MVP**, not only the owner claim: the same
+  GitHub App can request user authorization on install (`request_oauth_on_install`), otherwise a
+  second OAuth app is configured. The callback is `{ORIGIN}/api/auth/github/callback`, built from the
+  stored origin (never from `Host`), and the origin must match exactly. See
+  [`deployment.md`](deployment.md#2-the-public-surface-github-requires).
 - **Sessions:** random 256-bit token, stored hashed, HttpOnly/Secure/SameSite=Lax, configurable
   TTL (default 7 days, shorter for admins), idle timeout, revocation, session list.
 - **CSRF:** SameSite plus an origin check plus a CSRF token for state-changing forms. Do not rely
   on `Sec-Fetch-Site` alone.
 - **API tokens:** scoped, hashed, expiring, last-used tracking, revocable; never a user session.
-- **Re-auth:** required for credential changes, role changes, data export/delete, and SSO changes.
+- **Origin pinning:** the public origin is an instance setting; requests with any other `Host` are
+  rejected (`421`) and are never used to build OAuth redirects, CSRF origin checks, or links. This
+  closes host-header injection. Bootstrap runs on a loopback-only listener (ADR-0021).
+- **Re-auth:** required for credential changes, role changes, data export/delete, SSO changes, and
+  **origin changes**.
 - **First-run:** a bootstrap token with rate limits and expiry; the first owner is created
-  explicitly, not by racing the first visitor.
+  explicitly, not by racing the first visitor. Claiming requires a GitHub OAuth identity; the token
+  only proves host-level access. See [`first-run-setup`](../product/specs/first-run-setup.md).
 - **Access re-check:** sensitive actions re-check forge installation access; membership changes
   revoke sessions.
 

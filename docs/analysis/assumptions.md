@@ -28,7 +28,7 @@ false, the plan changes. Each has a validation method and an owner.
 | A-021 | GitHub Apps can reply to and resolve review threads with acceptable permissions. | Medium | Platform spike (events, GraphQL mutations, permissions). | Fall back to PR-level comments; no thread resolve. |
 | A-022 | Provider `/models` is reliable enough to be the only model source. | Medium | Provider conformance tests; fallback manifest. | Add a signed provider manifest as a first-class path. |
 | A-023 | The repo graph materially improves branch review quality. | Medium | Benchmark diff vs graph-assisted. | Keep diff-only; make branch review optional. |
-| A-024 | Docker Compose is enough for the first agentic release. | High | Install spike + 10× load test. | Add K8s/Helm earlier. |
+| A-024 | Docker Compose is enough for the first agentic release. | High | Install spike + 10× load test. | **Owner decided 2026-11-15:** Helm added in v1 (ADR-0022); air-gapped still later. |
 
 ## Assumptions we reject
 

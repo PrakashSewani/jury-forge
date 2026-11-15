@@ -1,6 +1,7 @@
 # ADR-0003: Docker Compose is the reference deployment
 
-- Status: proposed
+- Status: proposed (amended 2026-11-15 by ADR-0022: Helm/Kubernetes ships in v1 as a secondary
+  target; Compose remains the reference. Air-gapped stays out of v1.)
 - Date: 2026-11-14
 - Owners: architecture + operations
 - Supersedes: —
@@ -24,14 +25,16 @@ reproducible on a VPS, homelab, or on-prem VM, with a path to external Postgres 
 ## Decision
 
 Option 1 is the reference. Option 2 is supported as a clearly labelled evaluation/personal mode
-after it is proven. Option 3 is deferred to post-v1.
+after it is proven. Option 3 ships in v1 as a **secondary** target per ADR-0022 (Helm chart, external
+Postgres/S3 only, ingress terminates TLS); it does not replace Compose as the reference path.
 
 ## Consequences
 
 **Easier:** install, TLS, backup, local development, on-prem, no cloud account.
 
 **Harder:** horizontal scaling is manual (add worker replicas on the host); HA requires external
-Postgres and a second host; the operator owns OS patching.
+Postgres and a second host; the operator owns OS patching. A second install path (Helm) adds a
+support matrix and a chart API to maintain (ADR-0022).
 
 **Constraints:** no sticky sessions; app/worker/scheduler are stateless; migrations run as a
 one-shot command; all state is in Postgres/object storage.

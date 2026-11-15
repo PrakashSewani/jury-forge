@@ -107,6 +107,54 @@ not in any tier, and do not block G0.
 Owner G0 sign-off on ADR-0010–0019 and the specs. After the gate, the first build is the manual
 conversational walking skeleton; ADR-0019 is rejected and PR review stays strict T0.
 
+**Docs added 2026-11-15 (setup/deployment):**
+
+- `docs/product/specs/first-run-setup.md` — preflight, bootstrap token, GitHub OAuth owner claim and
+  login, App/installation selection, provider, first reviewer, first review, recovery, funnel.
+- `docs/architecture/deployment.md` — rewritten: deployment matrix, GitHub-facing URL contract
+  (webhook/OAuth/manifest), per-service ports/health/persistence, hardened Compose sketch, existing
+  LB and external-service variants, egress, secrets, lifecycle, backups, sizing, open decisions.
+- Aligned `capabilities.md`, `roadmap.md`, `security.md`, `operations.md`, `specs/README.md` so
+  **GitHub OAuth login is MVP** and the public-origin requirement is explicit.
+
+**Gap fixes 2026-11-15 (second pass):**
+
+- ADR-0020 (install/update channel): signed release bundle, verify before extract; removed
+  `curl | sh` from the docs. Ops install now uses `jury-forge verify` + `init`.
+- Secrets use `*_FILE` paths (Docker secrets) in the reference Compose file; env-value secrets
+  removed from the example.
+- `TRUSTED_PROXIES` pinned to the Compose subnet (not `172.16.0.0/12`); reference `Caddyfile` added
+  (webhook/SSE no-buffering, body limits, headers).
+- Artefact storage clarified: the driver is optional (local volume default), the capability is not.
+- Enterprise first-run blockers documented: org IP allowlist, SAML SSO, OAuth app restrictions,
+  repo access policy, edge blocking — with typed errors and preflight warnings.
+- Upgrade path: `--dry-run`, expected write pause, maintenance page, rollback safety conditions.
+- Backup baseline stated (24 h RPO / 4 h RTO, proposed) instead of "TBD"; DEP-04/DEP-05 flagged for
+  owner decision.
+- MVP limit stated: single operator, no invites; roles in v1. Local/evaluation mode defaults to the
+  fixture forge; branch-review egress hosts added.
+
+**Owner answers 2026-11-15 (third pass):**
+
+- Support matrix confirmed: Ubuntu 24.04 LTS, Docker 24+/Compose v2, amd64 + arm64 (Q-012/DEP-05).
+- Backup baseline accepted: daily dump, 24 h RPO / 4 h RTO; WAL/PITR is the team/HA upgrade (DEP-04).
+- Sub-path hosting decided unsupported (DEP-08); subdomain only.
+- GitHub App permissions pinned to least privilege in the setup spec (contents read; pull requests,
+  issues, checks write; metadata read; events listed). `members: read` stays out until org-role
+  mapping ships.
+- **Domain is a setup step:** new ADR-0021 — origin stored in Postgres, entered and validated in
+  setup before the GitHub App, loopback-only bootstrap (`SETUP_BIND`), on-demand TLS with an `ask`
+  allowlist, host enforcement (`421`), owner origin-change flow via `PATCH /app`. `PUBLIC_URL` env
+  only freezes the origin.
+- Signing tool chosen: minisign; releases hosted on GitHub Releases; no project download domain.
+- Bare LAN/IP origins rejected (DEP-10); local/homelab uses the evaluation mode with a fixture forge
+  or a tunnel + real domain.
+- **Advanced deployment models in v1 — decided (Option 2, 2026-11-15):** A–D plus **E (Helm) in v1**
+  (ADR-0022); F (air-gapped) stays out of v1. Updated ADR-0003, ADR-0022, capabilities/scope tiers,
+  roadmap Phase 4, G4 gate, support matrix, deployment/operations docs, and the setup spec.
+  Kubernetes 1.29+/Helm 3.14+, ingress-nginx tested, `kind` e2e required; chart ships no databases and
+  no on-demand TLS; Compose stays the reference.
+
 **Next evidence (optional):** the live instance is currently unconfigured (0 reviewers, 0 enabled
 repositories). Enabling one repository and adding one reviewer with a key would produce a fresh
 run and a full dashboard state; it is not required for G0, but it would close the remaining live

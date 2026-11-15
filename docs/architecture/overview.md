@@ -93,7 +93,8 @@ Postgres-compatible store later, but the reference deployment is Compose with se
 
 ### Setup
 
-1. Operator installs and configures `PUBLIC_URL`, secrets, database, and provider keys.
+1. Operator installs, generates secrets, starts the stack, and enters the public origin in setup;
+   the origin is stored, not read from a header (ADR-0021).
 2. A bootstrap token authorizes the first owner.
 3. The owner creates a GitHub App via the manifest flow; the app credentials are encrypted.
 4. The owner installs the app; the installation is discovered or explicitly selected.

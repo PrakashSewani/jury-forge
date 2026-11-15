@@ -114,6 +114,8 @@ checklist.
 ## G4 — Operations and release
 
 - [ ] Clean-machine install and upgrade pass on the support matrix (amd64, arm64).
+- [ ] The Helm chart installs, upgrades, and rolls back on `kind` and one managed cluster; ingress keeps
+      webhook/OAuth paths out of SSO; `helm test` passes; `values.schema.json` rejects bad values (ADR-0022).
 - [ ] Backup and restore drill passes within the target time.
 - [ ] Migration expand/contract and rollback are tested; a pre-upgrade backup is automatic.
 - [ ] `jury-forge doctor` diagnoses the documented failure modes.

@@ -37,6 +37,7 @@ persisted conversation** — not a one-shot review.
 - Shared contracts (schemas), error taxonomy, OpenAPI generation.
 - Provider onboarding: key validation, `/models` discovery, encrypted storage, catalog (ADR-0011).
 - GitHub App setup, webhook ingress, queue, manual `jury:pr-review`/`jury:branch-review` labels + Check Run actions on an installed repo.
+- **GitHub OAuth dashboard login** (same App) and first-owner claim, with sessions and the origin contract: the domain is set and validated in setup (ADR-0021) before the App is created; `PUBLIC_URL` only freezes it.
 - Reviewer catalog + per-repo binding with selection modes (`required`/`default`/`capability`; Phase 1 uses built-in capability IDs only); no binding = unavailable (ADR-0016).
 - One agent bound to a catalog model; PR review is diff-only; one review publish.
 - Per-PR session, one thread reply, and **`suggest` resolution** (agent proposes, human resolves natively/UI; `auto`/`off` opt-in; SME/admin override; ADR-0012).
@@ -49,7 +50,7 @@ persisted conversation** — not a one-shot review.
 - Session/turn/tool-call/finding records, a basic session timeline, health/readiness, logs.
 - A clean-machine install test and a deterministic test suite.
 
-**Exit gate (G1):** a new operator installs on a clean Linux host, adds a provider key, sees the
+**Exit gate (G1):** a new operator installs on a clean Linux host, signs in with GitHub to claim the instance, adds a provider key, sees the
 model catalog, triggers the `jury:pr-review` label or Check Run action on a test PR, replies to the thread, gets a
 second agent response, and resolves it natively in `suggest` mode. A runaway-loop test proves the hard caps stop a turn, and the
 evaluation harness v0 runs in CI. The PoC can be turned off.
@@ -111,6 +112,9 @@ acceptance; the dogfood repo runs on itself; cost per accepted finding is within
 **Deliverables:**
 
 - Backups, restore drill, upgrade/rollback, migration safety.
+- **Helm chart (v1, ADR-0022):** app/worker/scheduler/migration Job, `existingSecret`, ingress rules
+  without SSO on webhook/OAuth paths, NetworkPolicy/PDB/securityContext, `values.schema.json`,
+  `helm test`, and a `kind` e2e (install → setup → dry run → upgrade → rollback).
 - `jury-forge` CLI: install, migrate, doctor, backup, restore, rotate-key, export/import,
   create-admin, reconcile.
 - Metrics, traces, dashboards, alerts, SLOs, support bundle.
@@ -150,13 +154,12 @@ Ordered by expected demand, not committed:
 1. GitHub Enterprise Server (v1.1).
 2. GitLab adapter.
 3. OIDC/SSO and group-to-role mapping.
-4. Kubernetes/Helm.
-5. Outbound integrations (Slack, Teams, PagerDuty) and a signed webhook catalogue.
-6. Cross-repository context for platform teams.
-7. Multi-installation/multi-tenant improvements.
-8. Air-gapped install.
-9. A plugin model (out-of-process; no arbitrary code in the core).
-10. A reviewer/pack registry (only if the core is trusted).
+4. Outbound integrations (Slack, Teams, PagerDuty) and a signed webhook catalogue.
+5. Cross-repository context for platform teams.
+6. Multi-installation/multi-tenant improvements.
+7. Air-gapped install.
+8. A plugin model (out-of-process; no arbitrary code in the core).
+9. A reviewer/pack registry (only if the core is trusted).
 
 ## Milestone map
 

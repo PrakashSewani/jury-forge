@@ -47,6 +47,9 @@ new one, never rewritten. The index below is the source of truth for status.
 | [ADR-0017](ADR-0017-knowledge-sources-and-retrieval.md) | Knowledge sources, snapshots, grants, and retrieval | proposed | 2026-11-15 |
 | [ADR-0018](ADR-0018-release-tiering-and-quality-first-sequencing.md) | Release tiering and quality-first sequencing | proposed | 2026-11-15 |
 | [ADR-0019](ADR-0019-pr-review-context-tiers.md) | PR review context tiers (T1 bounded reads) — rejected; strict T0 | rejected | 2026-11-15 |
+| [ADR-0020](ADR-0020-install-and-update-channel.md) | Install and update channel: signed release bundle, no pipe-to-shell | proposed | 2026-11-15 |
+| [ADR-0021](ADR-0021-runtime-configured-origin.md) | Runtime-configured public origin (domain is a setup step) | proposed | 2026-11-15 |
+| [ADR-0022](ADR-0022-helm-chart-in-v1.md) | Helm chart as a v1 deployment target | proposed | 2026-11-15 |
 
 ## Conventions
 

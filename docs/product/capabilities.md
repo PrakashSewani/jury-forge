@@ -16,10 +16,10 @@ says *when*. PR review is strict T0 (diff-only); branch review uses T2 (graph). 
 
 | Tier | Capabilities |
 | ---- | ------------ |
-| **MVP / Phase 1** | Compose install + bootstrap; GitHub App setup; provider add + `/models` discovery + encrypted keys; reviewer catalog + repo binding with `required`/`default`/`capability` selection (built-in capability IDs; registry + labels in v1); manual trigger via labels/Check Run/UI (no slash); **PR review strict T0 diff-only**; one posted review; reply → next turn; **`suggest` resolution** (human resolves natively/UI; `auto`/`off` opt-in); SME/admin override; no-reviewers fallback; session/turn/tool records + basic timeline; **hard per-turn token/tool/time caps**; **evaluation harness v0**; health/readiness. |
-| **v1** | Roles/SME/audit/retention; redaction, injection defences, egress policy; router with explanations; reviewer catalog approval + bindings; **capability registry + `jury:cap:<id>` labels (built-in/custom, one-level groups, every installed repo)**; grounding, dedupe, chair, confidence, suggested fixes; benchmark + baseline + scorecards; budgets with estimates and alerts; agent versions; packs (grants, provenance, retrieval); backup/restore/upgrade; observability; full control-plane UI except Knowledge. |
+| **MVP / Phase 1** | Compose install + bootstrap; GitHub App setup; **GitHub OAuth dashboard login + first-owner claim**; provider add + `/models` discovery + encrypted keys; reviewer catalog + repo binding with `required`/`default`/`capability` selection (built-in capability IDs; registry + labels in v1); manual trigger via labels/Check Run/UI (no slash); **PR review strict T0 diff-only**; one posted review; reply → next turn; **`suggest` resolution** (human resolves natively/UI; `auto`/`off` opt-in); SME/admin override; no-reviewers fallback; session/turn/tool records + basic timeline; **hard per-turn token/tool/time caps**; **evaluation harness v0**; health/readiness. |
+| **v1** | **Helm chart for Kubernetes 1.29+ (secondary target, ADR-0022)**; roles/SME/audit/retention; redaction, injection defences, egress policy; router with explanations; reviewer catalog approval + bindings; **capability registry + `jury:cap:<id>` labels (built-in/custom, one-level groups, every installed repo)**; grounding, dedupe, chair, confidence, suggested fixes; benchmark + baseline + scorecards; budgets with estimates and alerts; agent versions; packs (grants, provenance, retrieval); backup/restore/upgrade; observability; full control-plane UI except Knowledge. |
 | **v1.1** | Repository knowledge graph + incremental updates; branch review; repo docs at SHA (T2); allowlisted live doc links + snapshots; Knowledge UI; GHES; signed packs. |
-| **Later** | Per `scope.md`: multi-forge, SSO, Kubernetes, air-gapped, outbound integrations, sandboxed `tests.run`/`build.run`, plugin model. |
+| **Later** | Per `scope.md`: multi-forge, SSO, air-gapped, outbound integrations, sandboxed `tests.run`/`build.run`, plugin model. |
 
 The graph and branch review enter v1.1 only if the benchmark shows strict T0 PR review leaves
 meaningful recall on the table (ADR-0018).
@@ -29,7 +29,9 @@ meaningful recall on the table (ADR-0018).
 | Capability | Status | Notes |
 | ---------- | ------ | ----- |
 | One-command local install (container/Compose) | Planned | Reference path; must be tested on a clean machine. |
-| Guided first-run wizard | Proven | PoC: setup code → GitHub App manifest → install → claim. |
+| Guided first-run wizard | Proven | PoC: setup code → GitHub App manifest → install → claim. Spec: [`specs/first-run-setup.md`](specs/first-run-setup.md). |
+| GitHub OAuth dashboard login | Planned (MVP) | Same GitHub App (`request_oauth_on_install`) or a separate OAuth app; login is required in MVP — the first owner is claimed through it. Sessions, roles, and re-auth harden in v1. |
+| Public origin contract (domain set in setup, webhook/OAuth paths) | Planned (MVP) | The origin is entered and validated in setup **before** the App step (ADR-0021), stored in Postgres; `PUBLIC_URL` only freezes it. GitHub calls `POST /api/webhooks/github` and `GET /api/auth/github/callback` on that HTTPS origin. |
 | Private GitHub App per instance | Proven | Keep; support multiple installations and GHES later. |
 | First-run protection | Proven | Replace `SETUP_CODE` with a rate-limited bootstrap token and recovery flow. |
 | Readiness checklist computed from state | Proven | Keep; derive from database, not client state. |
@@ -140,7 +142,7 @@ meaningful recall on the table (ADR-0018).
 | ---------- | ------ | ----- |
 | Instance settings with bounds | Proven | Keep. |
 | Per-repository / branch policy | Planned | Severity thresholds, publish mode, budgets, required reviewers. |
-| Roles and membership | Planned | Owner/admin/**SME**/maintainer/member/viewer/auditor; scoped to org/repo/domain. |
+| Roles and membership | Planned (v1) | Owner/admin/**SME**/maintainer/member/viewer/auditor; scoped to org/repo/domain. **MVP has a single operator (the claimed owner) and no invites** — login exists, roles do not. |
 | Audit trail | Proven (basic) | Replace with append-only audit + export. |
 | Data retention and deletion | Planned | Per data class; export/delete. |
 | Approval workflow for prompt changes | Planned | Four-eyes for security reviewers. |
@@ -179,7 +181,7 @@ meaningful recall on the table (ADR-0018).
 | Metrics, traces, structured logs | Planned | OpenTelemetry; no vendor lock-in. |
 | Health and readiness | Planned | Dependency checks, degraded state. |
 | Horizontal worker scaling | Planned | Queue-based; stateless workers. |
-| Kubernetes / Helm | Deferred | After Compose is solid. |
+| Kubernetes / Helm | Planned (v1) | Secondary target (ADR-0022): chart deploys app/worker/scheduler/migrations only; external Postgres+S3; ingress TLS; `kind` e2e gate. Compose stays the reference. |
 | Air-gapped install | TBD | Local model + mirrored images; forge connectivity caveat. |
 | Multi-installation / multi-tenant | TBD | One instance per org first. |
 
