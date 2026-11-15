@@ -1,0 +1,11 @@
+{
+  "name": "jury-forge-quality-spike",
+  "version": "0.0.0",
+  "private": true,
+  "description": "THROWAWAY analysis harness. Not part of the Jury Forge product. See README.md.",
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "test": "node --test test/unit.test.mjs"
+  }
+}
