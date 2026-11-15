@@ -1,5 +1,9 @@
 # Architecture: agentic review
 
+> **Scope note (ADR-0023):** the v1 build is the **trust loop** (sessions, three built-in reviewers,
+> diff + repository instructions, verdict/dissent, receipt, progress, feedback). The catalog,
+> capability registry, knowledge system, graph, and branch review described here are **v1.x**.
+
 This is the target architecture for agentic PR sessions. It extends
 [`overview.md`](overview.md); the product contract is in
 [`../product/specs/agentic-review-sessions.md`](../product/specs/agentic-review-sessions.md).

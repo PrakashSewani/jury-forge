@@ -6,6 +6,10 @@
 - Related: ADR-0013 (trigger/routing), ADR-0016 (reviewer catalog/bindings)
 - Parent: [`agentic-review-sessions.md`](agentic-review-sessions.md)
 
+> **Direction (ADR-0023):** v1 has three built-in reviewers (Security, Correctness, Tests) and simple
+> `required`/`default` bindings. The catalog, capability registry, SME/admin approval, and full
+> reviewer studio below are **v1.x**; keep them as the target, not the first release.
+
 ## Owner directives
 
 - Reviewers are **specific to repositories**. Not every reviewer is available everywhere.
@@ -60,13 +64,13 @@ read, graph, and test tools are **branch review (T2) only**.
 | `file.read` | Read a file slice at the SHA | T2 only |
 | `tests.inspect` | Find tests, coverage, skipped tests | T2 only |
 | `static.analyze` | Run/read static analysis results | T2, optional |
-| `tests.run` | Run tests in a sandbox | Later (post-v1.1), **off**, opt-in per repo |
-| `build.run` | Build in a sandbox | Later (post-v1.1), **off**, opt-in per repo |
+| `tests.run` | Run tests in a sandbox | Later (post-v1.x), **off**, opt-in per repo |
+| `build.run` | Build in a sandbox | Later (post-v1.x), **off**, opt-in per repo |
 
 - The **agent decides which tools to use** for its task, within its instructions, budget, and the
   repo’s policy. A branch/T2 “capability reviewer” can inspect contracts, callers, and tests; when
   `tests.run` lands, it can run the relevant tests and include the result as evidence.
-- `tests.run`/`build.run` are later (post-v1.1), not implied by branch review. They require an
+- `tests.run`/`build.run` are later (post-v1.x), not implied by branch review. They require an
   opt-in repo policy, a sandbox, and a resource budget.
 - Sandbox rules: ephemeral container, non-root, no secrets, network off by default, CPU/memory/time
   caps, command allowlist, no push/merge, output captured and redacted. Untrusted repo code is
@@ -87,8 +91,9 @@ Create reviewer
   3. Model
   4. Instructions & rules
   5. Tools & sandbox
-  6. Availability (bind to repos)   ← role-gated; can be skipped and done later
-  7. Test & activate
+  6. Knowledge (v1.x)              ← attach packs/doc links; inherited grants are read-only
+  7. Availability (bind to repos)   ← role-gated; can be skipped and done later
+  8. Test & activate
 ```
 
 ### 1. Basics
@@ -135,13 +140,22 @@ Create reviewer
 
 - T0 fixed tools: `diff.read` only (plus thread/finding tools).
 - T2 fixed tools: `file.read` and `tests.inspect`; optional `graph.query`, `static.analyze`.
-- Sandbox tools: `tests.run`, `build.run` (later, post-v1.1). They are **off by default**, require the repo to
+- Sandbox tools: `tests.run`, `build.run` (later, post-v1.x). They are **off by default**, require the repo to
   opt into the sandbox, and show a warning: “Running repository code requires an isolated sandbox and
   a resource budget.”
 - A capability label can request the reviewer; it cannot enable a sandbox tool.
 - Show the tool budget: max calls, max wall time, max tokens.
 
-### 6. Availability (bind to repos)
+### 6. Knowledge (v1.x)
+
+- Attach knowledge packs, allowlisted doc links, and org conventions; inherited repo/capability
+  grants are shown read-only.
+- Preview the effective knowledge and token estimate for a sample diff.
+- Set the reviewer's knowledge budget; default to “retrieve relevant sections”.
+- In Phase 1/v1 this step is hidden or read-only; repo docs at SHA, live doc links, and the Knowledge
+  UI are v1.x (ADR-0018).
+
+### 7. Availability (bind to repos)
 
 - Role-gated:
   - **Personal install / Owner / Admin:** can bind to any repo in the installation.
@@ -152,7 +166,7 @@ Create reviewer
 - A reviewer can be saved as a draft without a binding; it simply cannot run anywhere until bound.
 - This step can be skipped and done from **Repositories → <repo> → Reviewers**.
 
-### 7. Test & activate
+### 8. Test & activate
 
 - **Try on a PR** (no publish) with the reviewer’s current draft.
 - Preview: “This reviewer would run on repos X; requestable by labels Y; tools Z.”
@@ -265,7 +279,7 @@ ownership. They are not GitHub labels; GitHub labels are the two review modes an
 
 - `jury:pr-review` — strict **T0 diff-only** PR review: PR diff/hunks + metadata + thread context;
   no repository file reads, no graph.
-- `jury:branch-review` — **v1.1** complete branch review: compares the PR branch to the repository
+- `jury:branch-review` — **v1.x** complete branch review: compares the PR branch to the repository
   default branch and reviews the full branch delta against the repo context graph (T2).
 - **Capability labels:** `jury:cap:<capability-id>` request a capability group. They only select
   from reviewers already bound/approved for the repo; they never enable an unbound reviewer, bypass
@@ -467,13 +481,32 @@ Rules:
 
 ## 8. Personal vs org setup
 
+### Default jury on install (proposed, Q-036)
+
+The first interaction on a repo without a binding is currently the no-reviewers fallback. That is
+honest, but it is a poor first value. Proposed:
+
+- **Starter jury:** on install, bind one starter reviewer as `default` to the repositories the
+  operator selects (opt-out, not silent). It is a normal catalog reviewer and a normal binding;
+  there is no special case in the router or the audit.
+- **New repos:** a repo added later starts unbound; the fallback comment carries a one-click
+  **“Bind starter jury”** action for a maintainer/admin, then the same comment updates to the
+  queued turn.
+- **No bypass:** the starter jury is subject to paths, budgets, provider policy, and required
+  bindings. It never turns a capability request into a default review.
+- **Visible:** the setup checklist and the repo page show “starter jury bound” and how to replace
+  it.
+
+This turns first value from a failure message into a review. It is recorded as an owner decision
+because it changes the install default.
+
 ### Personal install
 
 1. Install app on personal account.
 2. Add provider key → model catalog.
 3. Create a reviewer from a template (or blank), bind it to selected repos.
 4. Installer is Owner/Admin; collaborators are Maintainer/Member/Viewer.
-5. First trigger with no binding → fallback comment; then configure and retrigger.
+5. First trigger with no binding → fallback comment; the fallback offers **Bind starter jury** (Q-036) before asking for a manual retrigger.
 
 ### Org install
 

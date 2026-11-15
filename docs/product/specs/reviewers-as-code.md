@@ -100,7 +100,7 @@ stays active; a webhook miss is covered by the manual sync and a periodic reconc
 
 ## Rollout
 
-Backlog; target v1.1 if promoted. Requires the reviewer catalog and versioning. Docs: a "reviewers in
+Backlog; target v1.x if promoted. Requires the reviewer catalog and versioning. Docs: a "reviewers in
 git" guide and an example config repository layout.
 
 ## Open questions

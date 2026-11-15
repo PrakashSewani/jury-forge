@@ -201,14 +201,15 @@ write-only, origin-bound, catalog fetched, `hasKey` only in responses. Setup add
 - A local-model shortcut (Ollama/vLLM base URL) that runs the same discovery call.
 - A failure path that keeps nothing: no partial provider row, no key fragment in logs.
 
-### Stage 5 — First reviewer and binding
+### Stage 5 — Default jury and binding
 
-- **Starter reviewer**: pick from the local templates (security, backend, frontend, tests, docs) or
-  start from a blank reviewer; the built-in capability IDs are used in Phase 1 (no custom registry
-  yet).
-- **Binding**: bind on one repository with `required` or `default`; show the resolved jury preview
-  ("this PR would run: security, backend"). No binding means no reviewer, and the UI must say so.
-- **Policy**: `.jury-forge.yml` is shown read-only if present; the setup step only reports what it
+- **Default jury:** in MVP, one built-in reviewer; in v1, the three built-in reviewers —
+  **Security, Correctness, Tests** — with the option to deselect one. They are editable later; there
+  is no catalog or capability registry in v1.
+- **Binding:** bind the jury to one repository with `required`/`default` and optional path scopes;
+  show the resolved jury preview (“this PR would run: Security, Correctness, Tests”). No binding
+  means no reviewer, and the UI must say so with a one-click **Bind default jury** action.
+- **Policy:** `.jury-forge.yml` is shown read-only if present; the setup step only reports what it
   will do. Automatic review stays off.
 
 ### Stage 6 — First review (the gate that matters)
@@ -217,10 +218,13 @@ write-only, origin-bound, catalog fetched, `hasKey` only in responses. Setup add
   (created by the operator), or a **dry run** against a bundled fixture diff using the configured
   provider (no forge writes). The dry run exists so a provider/quota failure is caught before a real
   PR is touched; it is labelled and does not create a session.
-- Trigger through the real path (`jury:pr-review` label, Check Run, or UI picker), then show a live
-  progress view: turn started, tool calls, findings, publish.
-- Success shows the posted review link, per-turn token/cost, and a "setup complete" state →
-  `ready`.
+- Trigger through the real path (`jury:pr-review` label, Check Run, or UI picker), then show the same
+  progress the user will see in production: the **Check Run** moves
+  `queued → in_progress → completed`, the session timeline fills in, and the review appears once.
+  For this explicit manual trigger, the placeholder comment is on by default and is edited in place,
+  not posted as a series.
+- Success shows the posted review link, per-turn token/cost, and (in v1) the review receipt, then a
+  “setup complete” state → `ready`.
 - Failure shows the typed error (`provider_auth_failed`, `github_rate_limited`, `no_reviewers`,
   cap exceeded) with the next action, and leaves state `claimed`.
 
@@ -241,7 +245,7 @@ Presented as a checklist with "remind me later" (advisory, not gating `ready`):
 | **Compose, public host** (default) | HTTPS, set in Stage 1.5 (or frozen by `PUBLIC_URL`) | Full flow above. |
 | **Compose, external Postgres/S3** | HTTPS | Stage 0 validates the external endpoints; no local volumes. |
 | **All-in-one / local** (post-G1, Q-030) | `http://localhost:PORT` | Manifest flow unavailable; **fixture forge is the default demo path** (no tunnel, deterministic, doubles as the eval harness entry); manual app entry for a real local App; tunnel documented, not bundled. Labelled "evaluation only". |
-| **Kubernetes / Helm** (v1, ADR-0022) | HTTPS via ingress | Same flow; bootstrap via `kubectl port-forward svc/app 8080:8080` (never through the ingress); `values.origin` may freeze the origin; no on-demand TLS, no bundled databases. |
+| **Kubernetes / Helm** (v1.x, ADR-0022/ADR-0023) | HTTPS via ingress | Same flow; bootstrap via `kubectl port-forward svc/app 8080:8080` (never through the ingress); `values.origin` may freeze the origin; no on-demand TLS, no bundled databases. |
 | **Pre-provisioned / air-gapped** (out of v1) | Any | Secrets supplied by env/files; no manifest; provider is local; forge is GHES or a mirror. |
 
 ### Recovery paths (first-class, not docs-only)

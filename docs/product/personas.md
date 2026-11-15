@@ -3,6 +3,10 @@
 The product is for teams that review code seriously. These personas are the lens for scope and UX
 decisions; they are not a market segmentation exercise.
 
+> **Priority (ADR-0023):** **P1** is the primary buyer, **P2** the approver, **P3** the daily user, and
+> **P6** the proof (audit/receipt). **P4** is served by the labelled evaluation mode, not a supported
+> v1 install. **P5** is a v1.x platform persona.
+
 ## P1 — The platform engineer who owns the review bot
 
 **Context:** runs the internal developer platform for a 20–200 person engineering organisation.
@@ -61,7 +65,11 @@ suppression rules, reviewer versions, feedback, a diff view.
 **What loses:** hallucinated findings, duplicate comments from five reviewers, a bot that blocks a
 merge on a nit, prompt changes with no diff or rollback.
 
-## P4 — The solo developer / small team
+## P4 — The solo developer / small team (evaluation mode in v1)
+
+> **v1 status (ADR-0023):** not a supported install. The labelled evaluation mode (fixture forge,
+> local model) is a taste of the product, not a promise. The supported v1 install assumes a public
+> HTTPS origin, a GitHub App, and a small team.
 
 **Context:** one to five people, a VPS or a homelab, a personal GitHub account, a favorite model
 provider or a local model. Wants a second pair of eyes without a subscription.
@@ -79,7 +87,10 @@ local model path, a clear "this costs about X" estimate.
 **What loses:** a Kubernetes prerequisite, a required cloud account, a complex role model, a
 metered SaaS.
 
-## P5 — The AI platform / developer-experience team
+## P5 — The AI platform / developer-experience team (v1.x)
+
+> **v1 status (ADR-0023):** a v1.x persona. The provider registry, org templates, multi-installation,
+> and cross-team measurement are not in the trust loop.
 
 **Context:** standardises AI tooling across many teams and repos; wants a vendor-neutral review
 layer that can route to different models and gateways.

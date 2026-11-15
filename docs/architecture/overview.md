@@ -1,5 +1,10 @@
 # Architecture overview
 
+> **Scope note (ADR-0023):** this is the target architecture, not the v1 build. V1 is the **trust
+> loop** — Compose, GitHub App, provider, three built-in reviewers, diff + repository instructions,
+> a verdict with dissent, a receipt, and a durable session. The graph, catalog, knowledge, Helm, and
+> multi-forge components below are **v1.x**.
+
 This is the target architecture for Jury Forge. It is **vendor-neutral and self-hosted first**. It
 is deliberately independent of the PoC's Cloudflare runtime. The stack choices are proposed in
 ADRs and require the owner's approval; the boundaries below are the durable part.

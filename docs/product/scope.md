@@ -1,151 +1,170 @@
 # Scope
 
 Scope is a decision, not a wish list. This page defines the first release (v1) and the explicit
-non-goals. It will be revised when the owner provides the final capability list.
+non-goals. The deciding direction is [ADR-0023](../decisions/ADR-0023-product-direction.md): v1 is
+the **trust loop**, not the platform.
 
-## v1: the first release
+## The v1 goal
 
-**Goal:** a self-hosted, MIT-licensed GitHub PR review jury that a small team can install,
-operate, trust, and measure — with durable, conversational per-PR sessions, not one-shot reviews.
+**A self-hosted, MIT-licensed GitHub review layer that a small team can install, operate, trust, and
+audit — and that proves its quality before it grows into a platform.**
 
-> **Proposed re-tiering (ADR-0018, pending owner approval):** the list below is the *union* of v1
-> and v1.1. Items tagged **(v1.1)** ship after the benchmark exists; the tier map is in
-> [`capabilities.md`](capabilities.md#release-tiers-proposed-adr-0018-pending-owner-approval).
+The unit of value is a **review decision**, not a review comment: a default jury, an evidence-backed
+verdict with visible dissent, a durable conversation, and a receipt for everything that left the
+perimeter.
 
-### In scope
+## Who v1 is for
 
-1. **Install and operate**
-   - One-command Docker Compose install on Linux (amd64 and arm64), from a signed release bundle
-     (ADR-0020).
-   - PostgreSQL as the source of truth; a durable job queue and at least one worker.
-   - Environment validation, health/readiness, a support bundle, and documented backup/restore.
-   - Upgrade path with expand/contract migrations and a rollback procedure.
-   - **Kubernetes via Helm (v1, secondary):** same images, external Postgres/S3, ingress TLS,
-     `kind` e2e gate (ADR-0022). Compose remains the reference install.
-   - **MVP is a single operator:** the claimed owner signs in with GitHub; member invites and roles
-     are v1.
+Primary: **20–200 person engineering organisations with a platform or security function and private
+GitHub repositories.** The platform engineer installs it; the security lead approves it; the staff
+engineer uses it. Solo/homelab is served by the labelled evaluation mode, not a supported v1 install.
 
-2. **Connect**
-   - **Single-tenant v1:** one organisation or personal account per instance, one GitHub
-     installation, many repositories. Multi-org/multi-installation is later.
-   - GitHub App (manifest flow) for GitHub.com; GitHub Enterprise Server **(v1.1)**.
-   - Installation-level availability: manual review on any PR in an installed account/org, with no
-     per-repo enable toggle (ADR-0013).
-   - Config-as-code (`.jury-forge.yml`) for automatic review policy, agent scopes, and pr/branch
-     mode; default `auto: false`.
-   - Repository discovery, policy display, and installation events; no webview enable/disable gate
-     for agentic review.
+## v1: the trust loop
 
-3. **Review**
-   - Durable per-PR sessions: threads, messages, turns, findings, generations; replies resume with
-     context (ADR-0012).
-   - Manual first: `jury:pr-review`/`jury:branch-review` labels and Check Run actions; UI picker for
-     specific reviewers; no slash commands; automatic reviews only by policy.
-   - Reviewer catalog per org, with SME ownership and admin approval; per-repo bindings with
-     `required`/`default`/`capability` selection, path/language/label scope, and budgets (ADR-0016).
-   - Capability registry + `jury:cap:<id>` labels (built-in/custom, one-level groups, every installed
-     repo); a capability label alone defaults to PR review; capability reviewers run only when requested.
-   - No-reviewers/no-match/required-unavailable fallback comments; never a misleading clean review.
-   - Multi-agent routing by explicit request, repo bindings, paths, languages, labels, and
-     availability (ADR-0013).
-   - User-defined agents with instructions, rules, provider/model binding, parameters, and scope.
-   - Agent versions, activation, rollback, and run-time snapshots.
-   - Parallel agent execution with per-provider concurrency limits.
-   - PR review by default: strict T0 diff-only (diff/hunks + metadata + thread context), with hard
-     per-turn token/tool/wall-clock caps; no repository file reads, no graph.
-   - **(v1.1)** Explicit branch review compares the PR branch to the default branch and uses an
-     incrementally updated graph (T2, ADR-0014); built only if the benchmark justifies it.
-   - Knowledge system: packs/skills, capability/repo/reviewer grants, retrieval with citations;
-     **(v1.1, T2)** repo docs at SHA and allowlisted live doc links with per-run snapshots.
-   - Knowledge packs with immutable versions, grants, and provenance.
-   - Grounding: every inline finding must cite code that exists at the reviewed SHA.
-   - Cross-reviewer de-duplication, disagreement, and a chair/consensus step.
-   - One consolidated response per turn; inline comments, overflow summary, and resolution state.
-   - Per-finding confidence, evidence, and optional suggested fixes.
-   - Publish policy: comment by default; request changes / check conclusion per repo policy.
-   - Preview/approve mode for new or sensitive agents.
-   - Suppression rules and per-finding feedback.
-   - Resolution: `suggest` default (agent proposes, human resolves natively/UI), `auto`/`off`
-     opt-in; SMEs/admins override; a new reply reopens (ADR-0012). No slash commands.
+### 1. Install and operate
 
-4. **Providers and models**
-   - Add a provider with base URL + key; validate and fetch `/models`; no free-text model entry
-     (ADR-0011).
-   - Model catalog enriched with context window, prices, capabilities, and supported endpoint;
-     unknown models flagged. Pricing from provider `/models`, registry, or audited admin override.
-   - Encrypted, write-only, origin-bound, rotatable keys; per-provider health/refresh.
-   - OpenAI-compatible, Anthropic-compatible, and local model servers (named vendors are examples,
-     not requirements).
+- One-command Docker Compose install on Linux (amd64 and arm64), from a signed release bundle
+  (ADR-0020). Compose is the only supported v1 install.
+- PostgreSQL as the source of truth; a durable job queue and at least one worker.
+- Environment validation, health/readiness, a support bundle, and documented backup/restore.
+- Upgrade path with expand/contract migrations and a rollback procedure.
+- **MVP is a single operator:** the claimed owner signs in with GitHub. v1 adds owner, maintainer, and
+  reader; the wider role model is v1.x.
 
-5. **Control**
-   - Roles: owner, admin, **SME**, maintainer, member, viewer, auditor (scoped to org/repo/domain).
-   - Audit stream with export; every trigger, turn, tool call, model call, reply, resolution, and human override.
-   - V1 website control plane: setup, session inbox/detail, reviewer studio, repositories/bindings, providers/models, settings/roles, audit.
-   - Hard per-turn caps from the first release; token and cost budgets per session/turn/repo with
-     estimates and alerts.
-   - Data retention and deletion for sessions, messages, graph, and raw responses.
-   - Secret redaction before prompts leave the perimeter.
-   - Egress policy and key-to-provider binding; resolution guard.
+### 2. Connect
 
-6. **Measure**
-   - An evaluation harness v0 from the first release, then a benchmark of labelled PRs with precision/recall, acceptance, and false-positive
-     metrics.
-   - Per-agent scorecards and session outcomes.
-   - OpenTelemetry traces, Prometheus metrics, structured logs, and cost/latency dashboards.
-   - A dogfood repository that runs the product on itself.
+- **Single-tenant v1:** one organisation or personal account per instance, one GitHub installation,
+  many repositories.
+- GitHub App (manifest flow) for GitHub.com. GHES is v1.x.
+- Installation-level availability: a review on any PR in an installed account/org, with no per-repo
+  enable toggle (ADR-0013). The reviewer binding is the enablement.
+- Manual first: `jury:pr-review` label, Check Run action, or UI picker. No slash commands.
+- Config-as-code (`.jury-forge.yml`) for automatic review, default `auto: false`; org defaults are
+  v1.x.
 
-7. **Deliver**
-   - MIT licence, `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`.
-   - Signed container images, SBOM, changelog, and SemVer releases.
-   - Documentation for install, upgrade, backup, security model, and troubleshooting.
+### 3. Review
 
-### Explicitly out of scope for v1
+- **Diff-only by default** for any repository with a bound/default jury: diff/hunks + PR metadata +
+  thread context.
+- **Repository instruction files** (`AGENTS.md`, `CONTRIBUTING.md`) at the base SHA, capped and
+  trust-labelled as instructions-only. No other repository file is read at T0 (Q-032).
+- **A default jury of three built-in reviewers: Security, Correctness, Tests.** Editable and
+  versioned; no catalog, capability registry, or SME approval in v1.
+- **One review per turn** with:
+  - composition (who ran/skipped and why);
+  - per-finding provenance (reviewer, model, evidence, confidence);
+  - preserved dissent and an explainable chair rule;
+  - a verdict that respects the repo policy (advisory by default).
+- **Hard per-turn token/tool/wall-clock caps**; a turn that hits a cap stops and says so.
+- **Progress and completion** via the Check Run (queued → in progress → completed) plus the review
+  itself; for explicit manual triggers, one placeholder comment is posted by default and edited in
+  place (never a series) ([`specs/review-progress-and-completion.md`](specs/review-progress-and-completion.md)).
+- **A review receipt** for every published review: provider, model, tokens, redactions, withheld
+  files, context, policy, verdict, resolver.
+- **No-reviewers/no-match/required-unavailable fallback comments**; never a misleading clean review.
+- **A durable per-PR session** (ADR-0012): threads, messages, turns, findings, generations; a reply
+  resumes with context.
+- **Resolution:** `suggest` default (agent proposes, human resolves natively/UI); `auto`/`off` opt-in;
+  a new reply reopens. SME/admin override is v1.x; owner/maintainer override is v1.
+- **Feedback:** one-click valid / wrong / fixed / duplicate on each finding.
+- **Stalled sessions:** flagged after 7 days, archived after 30, never auto-resolved or silently
+  dropped.
+- **Branch review and the repository graph are v1.x**, benchmark-gated (ADR-0014/ADR-0018). A
+  one-click “deep review” is the path, not an automatic upgrade.
+
+### 4. Providers and models
+
+- Add a provider with base URL + key; validate and fetch `/models`; no free-text model entry
+  (ADR-0011).
+- Model catalog enriched with context window, prices, capabilities, and supported endpoint; unknown
+  models flagged.
+- Encrypted, write-only, origin-bound, rotatable keys; per-provider health/refresh.
+- OpenAI-compatible, Anthropic-compatible, and local model servers.
+- One provider per instance in v1; per-repo provider allowlists are v1.x (Q-033).
+
+### 5. Control and proof
+
+- **Roles:** owner, maintainer, reader. The wider model (SME, admin, viewer, auditor) is v1.x.
+- **Minimal control plane:** setup, overview, sessions, the three reviewers, providers, audit,
+  settings (caps, retention, verdict policy).
+- **Audit stream with export:** every trigger, turn, tool call, model call, reply, resolution,
+  override, and receipt.
+- **Secret redaction** before prompts leave the perimeter; a per-review egress/redaction receipt.
+- **Egress policy and key-to-provider binding; resolution guard.**
+- **Data retention and deletion** for sessions, messages, and raw responses.
+- **Budgets:** token caps are hard; currency is best-effort when pricing is known.
+
+### 6. Measure
+
+- **Evaluation harness v0** from the first release: ≈20 labelled PRs, deterministic stub-model CI.
+- **A quality spike before the control-plane breadth:** 3–5 real repositories, strict T0 vs a strong
+  single-model baseline. Publish the method and the scorecard.
+- **A public benchmark at launch** (v1): precision, recall, acceptance, false positives, grounding.
+- OpenTelemetry traces, Prometheus metrics, structured logs, and cost/latency dashboards.
+- A dogfood repository that runs the product on itself.
+
+### 7. Deliver
+
+- MIT licence, `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`.
+- Signed container images, SBOM, changelog, and SemVer releases.
+- Documentation for install, upgrade, backup, security model, and troubleshooting.
+
+## Deferred to v1.x
+
+These are designed for, not built in v1. They return only with a benchmark result or an owner
+decision.
+
+| Capability | Why it waits | Tier |
+| ---------- | ------------ | ---- |
+| Reviewer catalog, reviewer studio, org approval | Three built-in reviewers prove the loop; the catalog is a platform feature | v1.x |
+| Capability registry and `jury:cap:*` labels | The request/grant model is good, but not needed for the first review | v1.x |
+| SME, admin, viewer, auditor roles | Owner/maintainer/reader is enough for a small team | v1.x |
+| Knowledge packs, doc links, retrieval UI | Repo instruction files cover the first need | v1.x |
+| Repository graph and branch review | Highest cost; benchmark first | v1.x (benchmark-gated) |
+| Helm / Kubernetes | Compose is the reference; Helm adds a support matrix | v1.x |
+| Per-repo provider allowlists / data zones | The egress receipt proves v1; the policy follows | v1.x |
+| Multi-forge (GitLab/Gitea/Bitbucket) | GitHub is the wedge; the adapter boundary stays | v1.x+ |
+| Analytics suite, scorecards UI, notifications | The benchmark and the inbox are enough for v1 | v1.x |
+| SSO/OIDC, multi-installation, air-gapped | Enterprise surfaces after the trust loop is proven | Later |
+
+## Explicitly out of scope
 
 | Out of scope | Why | Revisit |
 | ------------ | --- | ------- |
 | Auto-fix / auto-merge | Human judgment stays in the loop; risk is too high. | After suggested fixes are proven and there is a strong safety model. |
 | Code generation / agentic coding | Different product; dilutes the wedge. | Not planned. |
-| Arbitrary host shell / unsandboxed code execution | Too risky for v1. | Opt-in sandboxed `tests.run`/`build.run` capability later, with isolation/resource caps. |
-| A graph database as a required dependency | Postgres adjacency is enough for v1. | Revisit at large graph scale. |
-| Multi-forge (GitLab/Gitea/Bitbucket) | GitHub first; the adapter interface is designed for later. | v1.1+ based on demand. |
-| Kubernetes/Helm as the **reference** install | Compose is the reference; Helm is a supported secondary target in v1 (ADR-0022). | Revisit only if the chart becomes the dominant install path. |
+| Arbitrary host shell / unsandboxed code execution | Too risky for v1. | Opt-in sandboxed `tests.run`/`build.run` later, with isolation/resource caps. |
+| A graph database as a required dependency | Postgres adjacency is enough when the graph lands. | Revisit at large graph scale. |
 | A hosted SaaS with customer code | Contradicts the privacy thesis. | A demo instance only. |
-| A reviewer/pack marketplace | Local templates and packs first. | After the core is trusted. |
+| A reviewer/pack marketplace | The trust loop comes first. | After the core is trusted. |
 | A central billing/metering service | BYOK; no reseller. | Maybe an optional support offering. |
-| Full IDE integration | The PR is the primary surface. | Later. |
-| Air-gapped install | Valuable but a large ops surface; local models reduce the gap. | After v1. |
-| Repo graph / branch review in the first release | Unproven value, highest cost; benchmark first (ADR-0018). | v1.1, benchmark-gated. |
-| Mobile app | Responsive web is enough. | Not planned. |
+| Full IDE integration, mobile app | The PR is the primary surface. | Later. |
 | i18n beyond English | Focus; add when there is demand. | v1.x. |
 
 ## MVP vs v1
 
-We use **MVP** for the smallest build that proves the wedge, and **v1** for the first supported
-release.
+**MVP** is the smallest build that proves the runtime and the loop; **v1** is the first release we
+would support for a team that depends on it.
 
 ### MVP (the walking skeleton)
 
 - Compose install with Postgres, one worker, and one UI.
 - GitHub App setup and installation-level availability (no repo toggle).
-- Provider add → `/models` discovery → one agent bound to a catalog model.
-- Reviewer catalog with one repo binding using `required`/`default`/`capability` selection
-  (built-in capability IDs only; registry + labels in v1); no binding = unavailable; no-reviewers
-  fallback.
-- Manual `jury:pr-review` label, Check Run action, or UI picker on a PR → **strict diff-only** context → agent
-  turn with hard token/tool/wall-clock caps → one posted review.
-- Evaluation harness v0 (≈20 labelled PRs, deterministic stub-model CI).
-- A user reply in the thread → a second turn with the session context alive.
-- `suggest` resolution: the agent proposes, the human resolves natively/UI; `auto`/`off` opt-in; SME/admin override; a new reply reopens.
-- Session/turn/tool-call records, a basic session timeline, and health/readiness.
-- A deterministic test suite and a clean-machine install test.
+- Provider add → `/models` discovery → one built-in reviewer bound to a catalog model.
+- Manual `jury:pr-review` label, Check Run action, or UI picker → strict diff-only → one review.
+- Per-PR session; one reply; `suggest` resolution; basic timeline.
+- One-click feedback on findings.
+- Check Run progress and completion; a failure path that says why.
+- Evaluation harness v0 and a clean-machine install test.
 
-The MVP proves the **agentic loop and the self-hosted runtime**, not the quality thesis. It must
-include the session/reply/resolve path; a one-shot review is not the product.
+The MVP proves the **self-hosted runtime and the conversational loop**, not the full quality thesis.
+It must include the session/reply/resolve path; a one-shot review is not the product.
 
-### v1
+### v1 (the trust loop)
 
-The full in-scope list above. v1 is not "MVP plus a few features"; it is the first release we would
-support for a team that depends on it.
+The v1 sections above. The additions over MVP are: the three-reviewer default jury, the jury verdict
+and dissent, the review receipt, stalled-session policy, audit/export, backup/restore, reader role,
+the quality spike, and the public benchmark.
 
 ## De-scoping rules
 
@@ -153,6 +172,7 @@ support for a team that depends on it.
 - If a capability cannot be measured, it waits for the benchmark.
 - If a capability requires a central service, it is out unless the owner explicitly overrides.
 - If a capability creates a security risk we cannot mitigate, it does not ship.
+- If a capability only makes the product broader, not more defensible, it goes to v1.x.
 
 ## Change control
 

@@ -1,5 +1,11 @@
 # Product vision
 
+> **Direction (ADR-0023, proposed):** Jury Forge is the **auditable AI review layer for code that
+> cannot leave your perimeter** — a default jury, an evidence-backed verdict with visible dissent,
+> a durable conversation, and a receipt a security team can audit. V1 ships only that trust loop;
+> the platform features (catalog, capabilities, knowledge packs, graph, Helm, seven roles) are v1.x.
+> The text below is the longer thesis; where it describes a broader platform, ADR-0023 wins.
+
 ## The short version
 
 Jury Forge is a **self-hosted, agentic AI code-review jury** for teams that will not send their

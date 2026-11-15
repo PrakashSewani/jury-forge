@@ -89,7 +89,7 @@ existing run.
 
 ## Rollout
 
-Backlog; v1 or v1.1 if promoted. Requires instance API authentication and the change-set abstraction
+Backlog; v1.x if promoted. Requires instance API authentication and the change-set abstraction
 (the review pipeline must not depend on forge types). Documented as the "try it without GitHub" path.
 
 ## Open questions

@@ -47,6 +47,8 @@ written to be read by humans and agents. Start at the layer you need; do not rea
 - [`product/success.md`](product/success.md) — what "better than the PoC" means, measurably.
 - [`product/specs/`](product/specs/) — one spec per approved capability (template and index).
   - [`agentic-review-sessions.md`](product/specs/agentic-review-sessions.md) — per-PR sessions, manual triggers, routing, resolution.
+  - [`jury-output.md`](product/specs/jury-output.md) — jury composition, finding provenance, deliberation, dissent, and verdict.
+  - [`review-progress-and-completion.md`](product/specs/review-progress-and-completion.md) — Check Run progress, completion, placeholder comment, failure/cancel.
   - [`provider-model-discovery.md`](product/specs/provider-model-discovery.md) — provider keys, `/models`, catalog, no free text.
   - [`repo-knowledge-graph.md`](product/specs/repo-knowledge-graph.md) — PR review is diff-only; branch review uses the graph (v1.1).
   - [`session-capacity-and-visibility.md`](product/specs/session-capacity-and-visibility.md) — interface, concurrency, roles, visibility, budgets.

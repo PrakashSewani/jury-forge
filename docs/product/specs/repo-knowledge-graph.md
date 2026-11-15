@@ -6,6 +6,10 @@
 - Related: ADR-0014
 - Parent: [`agentic-review-sessions.md`](agentic-review-sessions.md)
 
+> **Direction (ADR-0023):** the repository graph and branch review are **v1.x**, benchmark-gated. V1
+> is strict diff + repository instruction files. This spec is the target for the next quality step,
+> not the first release.
+
 ## Owner directive
 
 Default to **diff-only** PR review. If the user asks for a **branch review**, build a graph /
@@ -107,7 +111,7 @@ Exposed to agents as tools and to the context planner as ranked sources:
 - A capability agent may use graph queries, test inspection, and static analysis. When the later
   sandbox test-run mode lands, it may compare behavior by running tests if the repo enables it.
 - “Compare functionality” is static analysis of the behavioral change: contracts, callers, tests,
-  config, and docs. It does not execute code/tests in v1 or v1.1; a sandboxed test-run mode is a later
+  config, and docs. It does not execute code/tests in v1 or v1.x; a sandboxed test-run mode is a later
   capability.
 - Before starting, show an estimate: files, symbols, tokens, cost, expected time; allow cancel.
 - Output is still a review (findings + summary), not a repository report; the difference is depth.

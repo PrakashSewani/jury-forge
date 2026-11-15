@@ -16,13 +16,13 @@ says *when*. PR review is strict T0 (diff-only); branch review uses T2 (graph). 
 
 | Tier | Capabilities |
 | ---- | ------------ |
-| **MVP / Phase 1** | Compose install + bootstrap; GitHub App setup; **GitHub OAuth dashboard login + first-owner claim**; provider add + `/models` discovery + encrypted keys; reviewer catalog + repo binding with `required`/`default`/`capability` selection (built-in capability IDs; registry + labels in v1); manual trigger via labels/Check Run/UI (no slash); **PR review strict T0 diff-only**; one posted review; reply → next turn; **`suggest` resolution** (human resolves natively/UI; `auto`/`off` opt-in); SME/admin override; no-reviewers fallback; session/turn/tool records + basic timeline; **hard per-turn token/tool/time caps**; **evaluation harness v0**; health/readiness. |
-| **v1** | **Helm chart for Kubernetes 1.29+ (secondary target, ADR-0022)**; roles/SME/audit/retention; redaction, injection defences, egress policy; router with explanations; reviewer catalog approval + bindings; **capability registry + `jury:cap:<id>` labels (built-in/custom, one-level groups, every installed repo)**; grounding, dedupe, chair, confidence, suggested fixes; benchmark + baseline + scorecards; budgets with estimates and alerts; agent versions; packs (grants, provenance, retrieval); backup/restore/upgrade; observability; full control-plane UI except Knowledge. |
-| **v1.1** | Repository knowledge graph + incremental updates; branch review; repo docs at SHA (T2); allowlisted live doc links + snapshots; Knowledge UI; GHES; signed packs. |
-| **Later** | Per `scope.md`: multi-forge, SSO, air-gapped, outbound integrations, sandboxed `tests.run`/`build.run`, plugin model. |
+| **MVP / Phase 1** | Compose install + bootstrap; GitHub App setup; **GitHub OAuth login + first-owner claim**; provider add + `/models` discovery + encrypted keys; **one built-in reviewer** bound to a catalog model; manual trigger via `jury:pr-review` label, Check Run action, or UI picker (no slash); **PR review strict T0 diff-only + repo instruction files**; one posted review; reply → next turn; **`suggest` resolution**; one-click feedback; **Check Run progress and completion**; session/turn/tool records + basic timeline; hard per-turn token/tool/time caps; evaluation harness v0; health/readiness. |
+| **v1 — the trust loop** | **Three built-in reviewers: Security, Correctness, Tests**; jury composition + per-finding provenance + preserved dissent + explainable verdict; **review receipt** (provider, model, tokens, redactions, withheld, context, policy, resolver); stalled-session policy; audit stream + export; backup/restore; owner/maintainer/reader; minimal control plane (setup, overview, sessions, reviewers, providers, audit, settings); secret redaction + origin-bound keys; **quality spike + public benchmark**. |
+| **v1.x** | Reviewer catalog + studio + approval; capability registry + `jury:cap:*` labels; SME/admin/viewer/auditor roles; knowledge packs, doc links, retrieval UI; repository graph + branch review (benchmark-gated); Helm; per-repo provider allowlists/data zones; analytics/scorecards; notifications; GHES; signed packs. |
+| **Later** | Multi-forge (GitLab/Gitea/Bitbucket); SSO/OIDC; multi-installation; air-gapped; MCP; CLI; marketplace; cross-repo context. |
 
-The graph and branch review enter v1.1 only if the benchmark shows strict T0 PR review leaves
-meaningful recall on the table (ADR-0018).
+The graph and branch review enter v1.x only if the benchmark shows strict T0 PR review leaves
+meaningful recall on the table (ADR-0018/ADR-0023).
 
 ## 1. Onboarding and installation
 
@@ -46,7 +46,7 @@ meaningful recall on the table (ADR-0018).
 | GitHub pull-request events | Proven | opened, reopened, synchronize, ready_for_review. |
 | Draft PR handling | Proven | Skip drafts. |
 | Webhook signature verification and de-duplication | Proven | Keep. |
-| Fork PR policy | Planned | Skip / restricted / approve; least privilege. |
+| Fork PR policy + OSS mode | Planned (v1.x) | Skip / restricted / approve; explicit visibility for external contributors; no secrets or fork code execution; a maintainer can invite a review on a fork PR. |
 | Repository discovery and enablement | Proven | Manual refresh; add installation events. No per-repo enable toggle for agentic review (ADR-0013). |
 | Manual review trigger (Check Run action, labels, UI picker) | Planned | Available on any PR in an installed repo; Check Run + mode/capability labels; no slash commands; reviewer picker unsupported for arbitrary apps. |
 | Automatic review policy (config-as-code) | Planned | `.jury-forge.yml`; default off; manual bypasses the allowlist. |
@@ -65,19 +65,19 @@ meaningful recall on the table (ADR-0018).
 | Multiple agents per turn, in parallel | Proven | Keep; add limits, routing, and a deliberation stage. |
 | Agent templates | Proven | Seven starters; keep as local prefill. |
 | Agent versions and prompt diffs | Planned | Draft → active, rollback, prompt hash, run snapshot. |
-| Reviewer catalog + approval | Planned | Org catalog; SME drafts/owns, admin approves; maintainer binds approved reviewers only when `allowMaintainerBindings` is on (ADR-0016). |
-| Per-repo reviewer bindings | Planned | Required/optional, path/language/label scope, budget; no binding = not available. |
+| Reviewer catalog + approval | Planned (v1.x) | Org catalog; SME drafts/owns, admin approves; maintainer binds approved reviewers only when `allowMaintainerBindings` is on (ADR-0016). |
+| Per-repo reviewer bindings | Planned (v1.x) | Required/optional, path/language/label scope, budget; no binding = not available. |
 | No-reviewers / no-match fallback | Planned | Comment with setup/retrigger; never a misleading clean review. |
-| Capability agents + tool policy | Planned (T2, v1.1) | Graph/tests/static tools for branch review; agent chooses verification; sandbox `tests.run`/`build.run` are later. |
-| Reviewer creation studio (capabilities, model, tools, availability) | Planned | Capability tags, catalog model/endpoint, tool policy, optional repo binding, test/activate. |
-| Capability labels (`jury:cap:*`) | Planned | Request a capability group only within the repo’s bound/approved reviewers. |
-| Dynamic agent availability (repo/path/language/label scope) | Planned | Router selects the jury; no per-repo enable toggle (ADR-0013). |
+| Capability agents + tool policy | Planned (T2, v1.x) | Graph/tests/static tools for branch review; agent chooses verification; sandbox `tests.run`/`build.run` are later. |
+| Reviewer creation studio (capabilities, model, tools, availability) | Planned (v1.x) | Capability tags, catalog model/endpoint, tool policy, optional repo binding, test/activate. |
+| Capability labels (`jury:cap:*`) | Planned (v1.x) | Request a capability group only within the repo’s bound/approved reviewers. |
+| Dynamic agent availability (repo/path/language/label scope) | Planned (v1.x) | Router selects the jury; no per-repo enable toggle (ADR-0013). |
 | Path scope (include/exclude globs) | Proven | Keep; enforce at output. |
-| Reference context paths | Proven; T2 v1.1 | Keep for branch review; PR review is strict diff-only (T0). |
-| Cross-agent de-duplication and disagreement | Planned | The "jury" step. |
-| Chair / consensus verdict | Planned | Configurable; not every team wants it. |
-| Confidence and evidence per finding | Planned | Grounding and scoring. |
-| Suggested fixes (validated diff suggestions) | Planned | Never auto-merge. |
+| Reference context paths | Proven; T2 v1.x | Keep for branch review; PR review is strict diff-only (T0). |
+| Cross-agent de-duplication and disagreement | Planned (v1) | The "jury" step. |
+| Chair / consensus verdict | Planned (v1) | Configurable; not every team wants it. |
+| Confidence and evidence per finding | Planned (v1) | Grounding and scoring. |
+| Suggested fixes (validated diff suggestions) | Planned (v1.x; Q-035) | Proposed, never auto-applied or auto-merged; validated against the reviewed SHA and the diff; acceptance measured. |
 | Agent marketplace | Out (v1) | Local templates and packs only. |
 
 ## 4. Context and code intelligence
@@ -89,7 +89,7 @@ meaningful recall on the table (ADR-0018).
 | Priority file ordering | Proven | Keep; model-aware. |
 | Repository instruction files | Proven | `AGENTS.md` / `CONTRIBUTING.md`, opt-in. |
 | Reference file fetch | Proven | Literal roots; add retrieval. |
-| Symbol / import / dependency index | Planned (v1.1, benchmark-gated) | Potential quality differentiator; justify with the benchmark before building (ADR-0018). |
+| Symbol / import / dependency index | Planned (v1.x, benchmark-gated) | Potential quality differentiator; justify with the benchmark before building (ADR-0018). |
 | Bounded on-demand file reads for PR review (T1) | Rejected | Owner chose strict T0; file reads/graph are branch review only (ADR-0019 rejected). |
 | Test impact analysis | Planned | Map changes to tests. |
 | CODEOWNERS awareness | Planned | Route findings to owners. |
@@ -105,13 +105,13 @@ meaningful recall on the table (ADR-0018).
 | Global / repository / reviewer grants | Proven | Keep. |
 | Precedence and path-scoped apply | Proven | Keep. |
 | Provenance (`slug@hash`, injected bytes) | Proven | Keep; add token counts. |
-| Repo docs (AGENTS/CONTRIBUTING/ADRs/docs) at SHA | Planned | Index + retrieve relevant sections; opt-in per repo. |
-| Live doc links (allowlisted) + per-run snapshot | Planned (v1.1) | Live fetch at turn time with SSRF/rate/size guards; store the fetched copy for audit; stale fallback. |
+| Repo docs (AGENTS/CONTRIBUTING/ADRs/docs) at SHA | Planned (v1.x; v1 reads only AGENTS.md/CONTRIBUTING.md as instructions) | Index + retrieve relevant sections; opt-in per repo. |
+| Live doc links (allowlisted) + per-run snapshot | Planned (v1.x) | Live fetch at turn time with SSRF/rate/size guards; store the fetched copy for audit; stale fallback. |
 | Capability-scoped knowledge grants | Planned | Org/repo/reviewer/capability; precedence; pin/latest. |
 | Retrieval + citations | Planned | Relevant chunks under token budget; cite source/hash/path. |
 | Never-quote files | Proven | Keep; audit. |
 | Pinned versions / channels | Planned | Reproducible reviews. |
-| Signed packs | Planned (v1.1) | Supply-chain trust. |
+| Signed packs | Planned (v1.x) | Supply-chain trust. |
 | Authenticated upload API | Planned | CI and automation. |
 | Relevance retrieval inside packs | Planned | Don't inject whole docs. |
 | Pack marketplace / sharing | Out (v1) | Not a marketplace. |
@@ -121,15 +121,18 @@ meaningful recall on the table (ADR-0018).
 | Capability | Status | Notes |
 | ---------- | ------ | ----- |
 | One consolidated review per run | Proven | Keep. |
+| Check Run progress and completion | Planned (MVP) | `queued` → `in_progress` → `completed`; the review is the completion; for manual triggers, one placeholder comment on by default, edited in place; no comment stream. See [`specs/review-progress-and-completion.md`](specs/review-progress-and-completion.md). |
 | Inline comments on changed lines | Proven | Keep. |
 | Multi-line findings | Proven | Keep. |
 | Summary with per-reviewer attribution | Proven | Keep. |
+| Jury composition, dissent, and verdict | Planned (v1) | One review with per-reviewer provenance, preserved dissent, and an explainable chair rule; see [`specs/jury-output.md`](specs/jury-output.md). |
 | Overflow to summary with `file:line` | Proven | Keep; budget the body. |
 | Resolution buckets | Proven | Keep; stable fingerprints. |
 | Token usage per reviewer | Proven | Keep; add cost. |
 | Publish modes (comment / request changes / check / label) | Partly proven | PoC has instance-wide blocking; make per-policy. |
 | Preview and edit before publish | Planned | For new prompts and sensitive repos. |
 | Suppression / known false positives | Planned | Per repo and per finding. |
+| Per-finding feedback (valid / wrong / fixed / duplicate) | Planned (MVP) | One-click signal on the finding; feeds the benchmark and the reviewer scorecard. |
 | Review threading and resolution | Planned | Respect GitHub conversation state; `suggest` default (human resolves natively/UI), `auto`/`off` opt-in (ADR-0012). |
 | Resolution policy (`suggest`/`auto`/`off`) + SME/admin override | Planned (MVP) | `suggest` default: agent proposes, human resolves natively/UI; `auto` guarded; SMEs/admins override; wrong-resolution rate measured (ADR-0012). |
 | Conversational PR sessions | Planned | Per-PR session, thread replies, context alive across days (ADR-0012). |
@@ -142,10 +145,11 @@ meaningful recall on the table (ADR-0018).
 | ---------- | ------ | ----- |
 | Instance settings with bounds | Proven | Keep. |
 | Per-repository / branch policy | Planned | Severity thresholds, publish mode, budgets, required reviewers. |
-| Roles and membership | Planned (v1) | Owner/admin/**SME**/maintainer/member/viewer/auditor; scoped to org/repo/domain. **MVP has a single operator (the claimed owner) and no invites** — login exists, roles do not. |
+| Roles and membership | Planned (v1: owner/maintainer/reader; v1.x: SME/admin/viewer/auditor) | The wider model is scoped to org/repo/domain. **MVP has a single operator (the claimed owner) and no invites** — login exists, roles do not. |
 | Audit trail | Proven (basic) | Replace with append-only audit + export. |
 | Data retention and deletion | Planned | Per data class; export/delete. |
 | Approval workflow for prompt changes | Planned | Four-eyes for security reviewers. |
+| Egress and redaction receipt | Planned (v1; Q-033) | Per repo/turn: provider, model, tokens, redactions, withheld files, policy decision; the operator's privacy proof. |
 | Cost budgets and alerts | Planned | Per repo/instance/period; estimates and alerts in v1. |
 | Hard per-turn caps (tokens, tool calls, wall-clock) | Planned (MVP) | Server-enforced stop with a recorded reason; bounds spend and injection blast radius. |
 
@@ -181,7 +185,7 @@ meaningful recall on the table (ADR-0018).
 | Metrics, traces, structured logs | Planned | OpenTelemetry; no vendor lock-in. |
 | Health and readiness | Planned | Dependency checks, degraded state. |
 | Horizontal worker scaling | Planned | Queue-based; stateless workers. |
-| Kubernetes / Helm | Planned (v1) | Secondary target (ADR-0022): chart deploys app/worker/scheduler/migrations only; external Postgres+S3; ingress TLS; `kind` e2e gate. Compose stays the reference. |
+| Kubernetes / Helm | Planned (v1.x) | Secondary target (ADR-0022): chart deploys app/worker/scheduler/migrations only; external Postgres+S3; ingress TLS; `kind` e2e gate. Compose stays the reference. |
 | Air-gapped install | TBD | Local model + mirrored images; forge connectivity caveat. |
 | Multi-installation / multi-tenant | TBD | One instance per org first. |
 
@@ -211,11 +215,11 @@ meaningful recall on the table (ADR-0018).
 | Manual-first triggering | Planned | `jury:pr-review`/`jury:branch-review` labels + Check Run actions + UI picker; no slash commands; no repo enable toggle. |
 | Reviewer catalog + repo bindings | Planned | `required`/`default`/`capability` selection per repo; SME-owned/approved catalog; admin/SME bind, maintainer opt-in (ADR-0016). |
 | No-reviewers fallback | Planned | Comment with setup/retrigger; no review posted. |
-| Capability registry + `jury:cap:<id>` labels | Planned (v1) | Built-in/custom, one-level groups, every installed repo, SME draft/admin approve; capability reviewers only when requested. |
-| Dynamic agent availability/router | Planned | Scope by repo/path/language/label; explicit request wins; record why. |
-| PR review default + branch review | Planned (PR review MVP; branch review v1.1) | PR review is strict T0 diff-only; `jury:branch-review` compares to the default branch and reviews the full delta against context; estimate; cancellable. |
-| Repository knowledge graph | Planned (v1.1) | Symbols/imports/tests/configs/docs/owners/findings; incremental updates; benchmark-gated (ADR-0018). |
-| Context reuse across runs | Planned (session reuse MVP; graph summaries v1.1) | Reuse thread/session state and diff; graph summaries/content hashes only when the graph lands. |
+| Capability registry + `jury:cap:<id>` labels | Planned (v1.x) | Built-in/custom, one-level groups, every installed repo, SME draft/admin approve; capability reviewers only when requested. |
+| Dynamic agent availability/router | Planned (v1.x) | Scope by repo/path/language/label; explicit request wins; record why. |
+| PR review default + branch review | Planned (PR review MVP; branch review v1.x) | PR review is strict T0 diff-only; `jury:branch-review` compares to the default branch and reviews the full delta against context; estimate; cancellable. |
+| Repository knowledge graph | Planned (v1.x) | Symbols/imports/tests/configs/docs/owners/findings; incremental updates; benchmark-gated (ADR-0018). |
+| Context reuse across runs | Planned (session reuse MVP; graph summaries v1.x) | Reuse thread/session state and diff; graph summaries/content hashes only when the graph lands. |
 | Session inbox / conversation UI | Planned | Timeline, agent activity, tool calls, findings, cost, resolve state. |
 | Dockerized backend + UI | Planned | Compose reference; Postgres/queue/object storage; no Cloudflare. |
 
@@ -252,14 +256,18 @@ meaningful recall on the table (ADR-0018).
 > requirements. **Status: Backlog** — not in any release tier and not in `scope.md` until the owner
 > promotes one. Promotion follows "How a capability becomes a feature" below (row here, spec, ADR if
 > durable, owner approval). Do not implement from this table.
+>
+> **Tier note (ADR-0023):** the “suggested tier if promoted” column was written against the earlier
+> platform-shaped v1. Under ADR-0023, read “v1” as **v1.x** unless the owner explicitly promotes the
+> item into the trust loop.
 
 | ID | Item | Suggested tier if promoted | Why | Entry criteria / notes |
 | -- | ---- | -------------------------- | --- | ---------------------- |
 | B-01 ([spec](specs/shadow-mode.md)) | **Shadow mode** — reviewers run on live PRs without posting; findings stored and compared with what human reviewers said and did | v1 | Builds operator trust before go-live; feeds the benchmark with real data; safe way to trial a new reviewer version. Preview/approve is per-publish and does not cover it. | Needs the session/finding store and the benchmark metrics (ADR-0018). Must document retention of unpublished findings and the cost of unpublished runs (budgeted). |
 | B-02 ([spec](specs/provider-allowlist.md)) | **Per-repo provider allowlist (data classification)** — each repo is tagged with the providers/local models allowed to see its code | v1 | Clearest expression of the privacy thesis (e.g. "payments repo: local model only"). Egress policy and key-origin binding exist; repo-to-provider binding is not explicit. | Extends ADR-0011 and `security.md` egress policy; the router and reviewer binding must refuse a disallowed model with a visible reason, not fall back silently. |
-| B-03 ([spec](specs/local-cli-review.md)) | **Local/CLI review of a diff** — e.g. `jury-forge review --diff` on a local branch or in CI, no PR or GitHub App required | v1 or v1.1 | Lets people evaluate without the forge setup; same entry point can drive the evaluation harness; second input path beyond the forge. | Must stay forge-agnostic at the boundary (non-negotiable 8); document how local runs are audited and whether they create sessions. No hosted service. |
+| B-03 ([spec](specs/local-cli-review.md)) | **Local/CLI review of a diff** — e.g. `jury-forge review --diff` on a local branch or in CI, no PR or GitHub App required | v1.x | Lets people evaluate without the forge setup; same entry point can drive the evaluation harness; second input path beyond the forge. | Must stay forge-agnostic at the boundary (non-negotiable 8); document how local runs are audited and whether they create sessions. No hosted service. |
 | B-04 ([spec](specs/large-pr-handling.md)) | **Large-PR handling** — when a PR exceeds the caps, say so and suggest a split or review order instead of truncating silently or failing | v1 | Hard caps exist (ADR-0018); the user-facing behaviour is unspecified. A silent partial review is a trust failure. | Spec the message, the "what was and was not reviewed" manifest, and the interaction with the no-misleading-clean-review rule. |
-| B-05 ([spec](specs/reviewers-as-code.md)) | **Reviewers-as-code** — reviewer definitions, bindings, and policy exported or synced as YAML in git | v1.1 | Versions, diffs, and four-eyes review via the normal PR flow; fits the audit story. UI studio remains. | Must not bypass catalog approval (ADR-0016): synced definitions land as drafts and still need SME/admin approval. Define conflict rules between UI and git. |
+| B-05 ([spec](specs/reviewers-as-code.md)) | **Reviewers-as-code** — reviewer definitions, bindings, and policy exported or synced as YAML in git | v1.x | Versions, diffs, and four-eyes review via the normal PR flow; fits the audit story. UI studio remains. | Must not bypass catalog approval (ADR-0016): synced definitions land as drafts and still need SME/admin approval. Define conflict rules between UI and git. |
 | B-06 ([spec](specs/history-seeded-conventions.md)) | **Seed conventions from history** — mine past human review comments into a draft knowledge pack for SME approval | Later | Speeds up "knows our standards". | Quality and privacy risks: review comments are untrusted data and may hold secrets or personal data; redaction and SME approval are mandatory. Needs the knowledge system (ADR-0017). |
 | B-07 ([spec](specs/mcp-surface.md)) | **MCP surface** — expose findings to IDE/coding agents; let reviewers consume operator-configured MCP tools | Later | High demand from AI platform teams. | Widens the attack surface and egress; wait until the security phase (G2) is signed off. Tools must go through the same read-only, bounded, audited tool policy. |
 | B-08 ([spec](specs/pr-walkthrough.md)) | **PR walkthrough / description generation** | Later (only if adoption feedback asks) | Competitors treat it as table stakes; cheap. | Not review; keep out of the wedge unless justified. Output is a proposal, never auto-written to the PR body without an explicit action. |
