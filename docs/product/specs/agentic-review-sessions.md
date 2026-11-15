@@ -6,6 +6,10 @@
 - Principles: 2 (trustworthy review), 3 (prompt is not a boundary), 5 (boring operations), 7 (extensible), 8 (fail visibly), 11 (wedge)
 - Related: ADR-0010 (harness), ADR-0011 (provider discovery), ADR-0012 (sessions/resolution), ADR-0013 (manual trigger/routing), ADR-0014 (repo graph)
 
+> **Direction (ADR-0023):** v1 is the trust loop: a three-reviewer default jury, diff + repository
+> instruction files, Check Run progress, a verdict with dissent, a receipt, and a durable session.
+> The catalog, capability labels, branch review, and graph described below are v1.x.
+
 ## Owner directives captured
 
 1. **Agentic reviewer, not a single LLM call.** A review is a loop with tools, context, verification,
@@ -112,6 +116,23 @@ There is **no per-session process to suspend**. `waiting_for_user` and long idle
 compute; a reply is the wake-up. Only storage/retention/UI noise justify aging a session. See
 [`session-capacity-and-visibility.md`](session-capacity-and-visibility.md).
 
+### 2.1 Review contract
+
+A short, visible contract sets expectations in the PR and the session UI:
+
+- **What Jury Forge does:** reviews the change with the bound jury, grounds findings in the diff,
+  answers replies, and proposes resolutions in `suggest`.
+- **What it does not do:** merge, push fixes, resolve threads in `suggest`/`off`, or review files
+  outside the selected mode.
+- **How to ask:** a mode label, the Check Run action, the UI picker, or an `@jury-forge` mention.
+- **How to answer:** reply in the thread; a reply reopens a resolved thread.
+- **If nobody replies:** the session waits in `waiting_for_user`; after the configured idle window
+  it is summarized and surfaced to maintainers, then archived per retention (see
+  [`session-capacity-and-visibility.md`](session-capacity-and-visibility.md)).
+
+The contract is shown on the Check Run details page and in the session detail; it is not repeated as
+a noisy PR comment.
+
 ## 3. Triggers
 
 ### Manual (always available)
@@ -122,11 +143,11 @@ installation-level; it is not gated by a per-repo enable toggle.
 Surfaces, in order of preference:
 
 1. **GitHub Check Run action (primary).** On PR open/synchronize, the app creates a neutral
-   `Jury Forge` check run with action buttons `PR review` and `Branch review` (Checks API `actions`;
-   max 3, label ≤ 20 chars). Clicking a button sends `check_run.requested_action` to the app and
-   starts the turn. No comment is posted just to trigger. Requires `checks: write`.
+   `Jury Forge` check run with the action button `PR review` (and `Branch review` in v1.x; Checks API
+   `actions`; max 3, label ≤ 20 chars). Clicking a button sends `check_run.requested_action` to the app
+   and starts the turn. No comment is posted just to trigger. Requires `checks: write`.
 2. **PR label (modes):** `jury:pr-review` (strict T0: PR diff/hunks + metadata + thread context;
-   no repository file reads, no graph) and `jury:branch-review` (v1.1: complete branch review against the
+   no repository file reads, no graph) and `jury:branch-review` (v1.x: complete branch review against the
    repo context graph, T2). One click in the sidebar; the app listens to `pull_request.labeled`.
    These two labels are **modes**.
    **Capability labels** `jury:cap:<id>` request a capability group **within the reviewers already
@@ -216,8 +237,8 @@ ingest event
 | `reopen_thread` | Reopen on new evidence | Guard: human reply or new failure |
 | `update_finding` | Mark addressed/verified/dismissed/reopened | Guard: evidence + actor |
 | `check_ci` | Read check runs/status for the SHA | T2 only |
-| `tests.run` | Run selected tests in a sandbox | Later (post-v1.1); opt-in repo policy; isolated, no secrets, network off, resource caps |
-| `build.run` | Build in a sandbox | Later (post-v1.1); opt-in repo policy; same isolation |
+| `tests.run` | Run selected tests in a sandbox | Later (post-v1.x); opt-in repo policy; isolated, no secrets, network off, resource caps |
+| `build.run` | Build in a sandbox | Later (post-v1.x); opt-in repo policy; same isolation |
 
 No arbitrary shell, no code execution, no network fetch by default. Static-analysis tools are T2
 optional; sandboxed test/build tools can be added later behind an explicit capability.
@@ -321,8 +342,14 @@ Two review modes, both session turns:
 - Sends **only the PR diff/hunks** plus PR metadata; no repository graph, no full files.
 - Fast and cheap; it is the "review these diffs" mode.
 - It does not answer "who calls this?" — that is branch review’s job.
+- **Default rule:** diff-only is the default for any repository with a bound/default jury. There is
+  no per-repo enable toggle; the binding is the enablement (ADR-0013/ADR-0016). Branch review is
+  explicit and never the default on a plain `jury:pr-review` or on PR open.
+- **Mode recommendation (proposed):** the Check Run details/UI may recommend branch review when the
+  diff touches auth/payments/infra, exceeds a size threshold, or changes a public contract. The
+  recommendation is advisory; it never upgrades the mode automatically.
 
-### `jury:branch-review` — complete branch review (v1.1)
+### `jury:branch-review` — complete branch review (v1.x)
 
 - Compares the PR branch to the **repository’s default branch**, not just the latest PR diff.
 - Reviews the complete branch delta (all changed files/functions vs default) against the repository
@@ -434,7 +461,8 @@ See [`provider-model-discovery.md`](provider-model-discovery.md).
 
 - the `jury:pr-review` label or Check Run action, `jury:cap:security` + `jury:cap:tests` labels, the `jury:branch-review` label or Branch review action, the UI session status, pause in the UI,
   resume in the UI, GitHub Resolve conversation / UI, reopen in the UI, the UI session explanation.
-- Labels `jury:pr-review`, `jury:full`, `jury:pause` as an alternative to comments.
+- Mode labels `jury:pr-review`/`jury:branch-review`, `jury:cap:<id>` capability labels, and UI
+  pause/resume actions. There is no `jury:full` or `jury:pause` label; pause/resume is a UI action.
 - A GitHub Check “Jury Forge: ready” with a details link so users discover the command without a
   noisy comment on every PR.
 - Optional “suggest” comment on PR open (repo policy, default off).

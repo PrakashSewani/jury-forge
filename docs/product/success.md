@@ -17,12 +17,27 @@ This is deliberately not "reviews generated". A review nobody trusts is noise.
 | Time to first reply | Trigger → first agent reply | ≤ 60 s p50, ≤ 3 min p95 |
 | Time to resolution | First review → thread resolved | ≤ 2 human turns median |
 | Turns per session | Agent turns before resolve/archive | ≤ 5 median |
-| False-resolve rate | Resolved threads a human reopens or disputes | ≤ 2% |
+| False-resolve rate (`auto` only) | Bot-resolved threads a human reopens or disputes | ≤ 2% |
+| Proposal acceptance (`suggest`) | Proposed resolutions a human confirms | ≥ 80% |
 | Reopen rate | Resolved threads reopened | ≤ 5% |
-| Context reuse | Turns using cached graph summaries / total turns | ≥ 60% |
-| Agent selection override | Manual agent choice vs router choice | ≤ 20% |
+| Context reuse | Turns reusing session/diff cache (T0) or graph summaries (T2) / total turns | ≥ 60% |
+| Agent selection override (v1.x) | Manual reviewer choice vs router choice | ≤ 20% |
 | Model catalog freshness | Providers refreshed in the last 24h | 100% |
 | Session cost | Provider cost per session | Visible; within budget |
+
+## Progress and completion metrics
+
+The Check Run is the progress surface; the review is the completion. No comment stream.
+
+| Metric | Definition | v1 target |
+| ------ | ---------- | --------- |
+| Time to first status | Trigger → Check Run `in_progress` | ≤ 10 s p95 |
+| Time to completion | Trigger → review posted | ≤ 3 min p50, ≤ 10 min p95 |
+| Status visibility | Sessions where progress is visible without asking / total | 100% |
+| Placeholder comment count | Placeholder comments per session/generation | ≤ 1 |
+| Duplicate review/comment rate | Duplicate publishes or placeholder comments | 0 |
+| Stuck status rate | `in_progress` beyond 2× p95 | 0 (janitor fails it visibly) |
+| Failure remedy | Failures with a named next action / all failures | 100% |
 
 ## Quality metrics
 
@@ -73,7 +88,7 @@ per repo and per reviewer; no surprise overruns.
 
 | Metric | Definition | v1 target |
 | ------ | ---------- | --------- |
-| Time to first review (new install) | `git clone` → first posted review | ≤ 60 min |
+| Time to first review (new install) | `git clone` → first posted review | ≤ 15 min median, ≤ 60 min p90 (setup spec) |
 | Upgrade time | Old version → new version, no downtime | ≤ 10 min |
 | Restore time | Backup → working instance | ≤ 30 min |
 | Install success rate | Clean-machine installs that succeed without manual DB edits | ≥ 90% on the support matrix |
@@ -126,7 +141,7 @@ We will run the same benchmark on the PoC and on Jury Forge, and publish the del
 | Precision | To be measured | +15 points |
 | Recall | To be measured | +15 points |
 | Grounding | Line-existence only | 100% evidence-verified |
-| Time to first review | To be measured | ≤ 60 s p50 |
+| Time to first review | To be measured | ≤ 60 s p50, ≤ 3 min p95 |
 | Cost visibility | Token usage only | Pre-run estimate + per-run cost |
 | Stuck runs | No recovery | 0 (janitor + replay) |
 | Install | Cloudflare account | Compose on a VPS |

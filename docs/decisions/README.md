@@ -43,13 +43,14 @@ new one, never rewritten. The index below is the source of truth for status.
 | [ADR-0013](ADR-0013-manual-trigger-and-agent-routing.md) | Manual-first triggering and dynamic agent routing | proposed | 2026-11-15 |
 | [ADR-0014](ADR-0014-repo-knowledge-graph.md) | Diff-only PR review + branch review with an incremental graph (v1.1) | proposed | 2026-11-15 |
 | [ADR-0015](ADR-0015-session-capacity-and-visibility.md) | Session capacity, interface, roles, and visibility | proposed | 2026-11-15 |
-| [ADR-0016](ADR-0016-reviewer-catalog-and-roles.md) | Reviewer catalog, repo bindings, SME roles, and fallback | proposed | 2026-11-15 |
+| [ADR-0016](ADR-0016-reviewer-catalog-and-roles.md) | Reviewer catalog, repo bindings, SME roles, and fallback (v1.x per ADR-0023) | proposed | 2026-11-15 |
 | [ADR-0017](ADR-0017-knowledge-sources-and-retrieval.md) | Knowledge sources, snapshots, grants, and retrieval | proposed | 2026-11-15 |
 | [ADR-0018](ADR-0018-release-tiering-and-quality-first-sequencing.md) | Release tiering and quality-first sequencing | proposed | 2026-11-15 |
 | [ADR-0019](ADR-0019-pr-review-context-tiers.md) | PR review context tiers (T1 bounded reads) — rejected; strict T0 | rejected | 2026-11-15 |
 | [ADR-0020](ADR-0020-install-and-update-channel.md) | Install and update channel: signed release bundle, no pipe-to-shell | proposed | 2026-11-15 |
 | [ADR-0021](ADR-0021-runtime-configured-origin.md) | Runtime-configured public origin (domain is a setup step) | proposed | 2026-11-15 |
-| [ADR-0022](ADR-0022-helm-chart-in-v1.md) | Helm chart as a v1 deployment target | proposed | 2026-11-15 |
+| [ADR-0022](ADR-0022-helm-chart-in-v1.md) | Helm chart as a v1 deployment target (moved to v1.x by ADR-0023) | proposed | 2026-11-15 |
+| [ADR-0023](ADR-0023-product-direction.md) | Product direction: the auditable review layer, not a review platform | proposed | 2026-11-15 |
 
 ## Conventions
 

@@ -8,8 +8,8 @@ named reviewer) signs off. "Looks good" is not evidence.
 | Gate | When | Question | Owner |
 | ---- | ---- | -------- | ----- |
 | **G0** | End of Phase 0 | Do we agree on the product, scope, architecture, and risks? | Owner |
-| **G1** | End of Phase 1 | Can the new runtime replace the PoC end to end? | Architect |
-| **G2** | End of Phase 2 | Is it safe for a real team? | Security lead |
+| **G1** | End of Phase 1 | Does the self-hosted runtime do a conversational review with visible progress? | Architect |
+| **G2** | End of Phase 2 | Is the review decision defensible: evidence, dissent, receipt, audit? | Security lead |
 | **G3** | End of Phase 3 | Is the jury measurably better? | AI pipeline + owner |
 | **G4** | End of Phase 4 | Can an operator run, upgrade, and recover it? | Ops + owner |
 | **G5** | Release | Is it a product, not a project? | Owner |
@@ -42,8 +42,10 @@ named reviewer) signs off. "Looks good" is not evidence.
 - [ ] A GitHub App can be created, installed, and verified; no per-repo enable toggle is required.
 - [ ] A provider key is validated; `/models` is fetched; an agent binds to a catalog model (no free text).
 - [ ] A webhook is verified, persisted, and enqueued.
-- [ ] Manual `jury:pr-review`/`jury:branch-review` label or Check Run action starts a session; one agent publishes one review (PR review is strict T0; no file tools).
-- [ ] A reviewer catalog entry is bound with `required`/`default`/`capability` selection (built-in capability IDs); no binding means unavailable.
+- [ ] Manual `jury:pr-review` label or Check Run action starts a session; one built-in reviewer publishes one review (PR review is strict T0; no file tools).
+- [ ] The reviewer is bound to a repo with `required`/`default`; no binding means unavailable.
+- [ ] The Check Run moves `queued → in_progress → completed`; the review is the completion; no duplicate comment.
+- [ ] One-click finding feedback is recorded.
 - [ ] A human reply resumes the session and produces a second agent response with prior context.
 - [ ] `suggest` resolution works: the agent proposes, the human resolves natively/UI; `auto` is opt-in and guarded; a new reply reopens.
 - [ ] No-reviewers/no-match fallback comment is posted with setup/retrigger instructions; no review posted.
@@ -57,7 +59,10 @@ named reviewer) signs off. "Looks good" is not evidence.
 ## G2 — Trust and security
 
 - [ ] Roles and scopes are enforced server-side; an authorization test exists per mutating route.
-- [ ] Owner/admin/SME/maintainer/member/viewer/auditor permissions are enforced; SME domain scope and reviewer binding authorization are tested.
+- [ ] Owner/maintainer/reader permissions are enforced server-side; the wider role model (SME/admin/viewer/auditor) is v1.x.
+- [ ] The three-reviewer default jury produces a verdict with composition, per-finding provenance, and preserved dissent.
+- [ ] A review receipt records provider, model, tokens, redactions, withheld sources, context, policy, verdict, and resolver.
+- [ ] A stale session is flagged after 7 days and archived after 30; it is never auto-resolved or silently dropped.
 - [ ] A required reviewer that is unavailable blocks the review with a fallback; no partial/clean review.
 - [ ] Tenant-scoped queries; cross-tenant tests pass.
 - [ ] Credential-to-origin binding; a key cannot be sent to an arbitrary URL.
@@ -97,12 +102,12 @@ checklist.
       capability reviewers never run without a request; skipped agents are explained.
 - [ ] Reviewer catalog approval and required/default/capability bindings are enforced; an unbound
       reviewer never runs; capability labels never grant an unbound reviewer.
-- [ ] PR review is the default and strict T0 (no repository file reads/graph); branch review (v1.1) is T2 and explicit.
+- [ ] PR review is the default and strict T0 (no repository file reads/graph); branch review (v1.x) is T2 and explicit.
 - [ ] Capability labels are `jury:cap:<id>` (groups, immutable IDs, every-repo sync, disabled fallback).
 - [ ] Benchmark compares strict diff-only against a single strong-model baseline; the graph is built
       only if the result justifies it (ADR-0018).
-- [ ] *(v1.1 gate)* the `jury:branch-review` label or Branch review action compares the PR branch to the default branch, uses the graph, shows an estimate/cancel; the graph updates incrementally and a second run reuses unchanged summaries.
-- [ ] *(v1.1 gate)* repo docs at SHA are read for T2; allowlisted live doc links are fetched with per-run snapshots; stale snapshots are marked.
+- [ ] *(v1.x gate)* the `jury:branch-review` label or Branch review action compares the PR branch to the default branch, uses the graph, shows an estimate/cancel; the graph updates incrementally and a second run reuses unchanged summaries.
+- [ ] *(v1.x gate)* repo docs at SHA are read for T2; allowlisted live doc links are fetched with per-run snapshots; stale snapshots are marked.
 - [ ] Knowledge packs are versioned, scoped, cited, and retrieved under a token budget.
 - [ ] `never_quote` content is never sent; no grant = no injection.
 - [ ] Feedback capture works; agent/session scorecards exist.

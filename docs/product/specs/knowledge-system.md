@@ -6,6 +6,10 @@
 - Related: ADR-0017 (knowledge sources), ADR-0014 (repo graph)
 - Parent: [`agentic-review-sessions.md`](agentic-review-sessions.md)
 
+> **Direction (ADR-0023):** v1 reads only `AGENTS.md`/`CONTRIBUTING.md` at the base SHA as capped
+> instructions, plus one org conventions pack. Packs, doc links, retrieval UI, and graph-backed
+> knowledge below are **v1.x**.
+
 ## Owner directive
 
 Reviewers need a **knowledge basis**: skills, docs, doc links, Markdown files, conventions, and
@@ -30,6 +34,14 @@ never become instructions.
 **Tier rule:** PR review (T0) may use reviewer instructions/rules, org conventions, granted knowledge
 packs, and prior findings/session memory. Repository docs at SHA, live doc links, and the repository
 graph are T2 branch-review sources; a T0 turn does not read repository files or the graph.
+
+**T0 instruction-file exception (proposed; owner decision pending, Q-032).** The strict T0 rule
+creates a product surprise: a default PR review can follow org conventions but cannot read the
+repository's own `AGENTS.md`/`CONTRIBUTING.md`. The proposed fix is a narrow exception, not a general
+file read: fetch those two files at the PR base SHA, cap them (for example 8 KB each), trust-label
+them, and inject them as *instructions context* only. No other repository file is readable at T0.
+This preserves the diff-only rule for code context while making "knows our conventions" true. It
+needs an owner decision because it touches the strict-T0 directive.
 
 ## 2. Knowledge pack format
 
@@ -153,7 +165,7 @@ explicit reviewer grant adds or overrides.
 - URL ingestion is SSRF-safe and admin-only; no PR/user/model-supplied URLs.
 - Knowledge access is tenant/repo/reviewer-scoped; a user cannot query a repo’s knowledge without
   repo access.
-- Signed packs (optional, v1.1) verify origin; unsigned packs are allowed but labelled.
+- Signed packs (optional, v1.x) verify origin; unsigned packs are allowed but labelled.
 - Retention/delete applies to packs, snapshots, and chunks.
 - The posted review never exposes pack names/hashes or `never_quote` content; run detail does.
 
@@ -189,6 +201,6 @@ explicit reviewer grant adds or overrides.
 | KN-03 | Can packs be granted by capability automatically? | Yes, capability grant; explicit reviewer grant overrides. |
 | KN-04 | Do we support `.claude/skills/` manifests unchanged? | Yes, unknown fields accepted. |
 | KN-05 | How is retrieval ranked? | Hybrid lexical + graph relevance; embeddings later. |
-| KN-06 | Do we sign packs in v1? | Not in v1; signed packs are v1.1 (ADR-0018), unsigned labelled. |
+| KN-06 | Do we sign packs in v1? | Not in v1; signed packs are v1.x (ADR-0018), unsigned labelled. |
 | KN-07 | What is the default knowledge budget? | 64K tokens per reviewer, configurable. |
 | KN-08 | Can an SME approve a pack? | SME drafts in domain; admin approves org-wide. |

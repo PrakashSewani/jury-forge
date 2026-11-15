@@ -6,6 +6,10 @@
 - Related: ADR-0012 (sessions), ADR-0013 (trigger/routing), ADR-0015 (capacity/visibility, proposed)
 - Parent: [`agentic-review-sessions.md`](agentic-review-sessions.md)
 
+> **Direction (ADR-0023):** v1 roles are owner/maintainer/reader; the wider role model below is
+> v1.x. Capacity, session lifecycle, the stalled-session policy, and the GitHub conversation surface
+> remain v1.
+
 ## 1. Interface: website + GitHub, not the harness
 
 The **harness is internal**. It is the agent runtime (LangGraph.js or a thin turn runner) that
@@ -15,7 +19,7 @@ The product has two user interfaces:
 
 | Surface | Role |
 | ------- | ---- |
-| **GitHub** | The primary conversation: start via Check Run actions (`PR review` / `Branch review` (v1.1)), mode labels (`jury:pr-review`/`jury:branch-review` (v1.1)), or capability labels (`jury:cap:<id>`); reply in the thread, receive reviews, resolve natively/UI. No slash commands. Most users never leave the PR. |
+| **GitHub** | The primary conversation: start via Check Run actions (`PR review` / `Branch review` (v1.x)), mode labels (`jury:pr-review`/`jury:branch-review` (v1.x)), or capability labels (`jury:cap:<id>`); reply in the thread, receive reviews, resolve natively/UI. No slash commands. Most users never leave the PR. |
 | **Website** | The control plane and deep view: onboarding, session inbox, session timeline, agents, providers/models, policy, roles, audit, costs, branch review, exports. |
 | **API/CLI** | Later: automation, CI, scripts. Same auth/roles. |
 
@@ -52,6 +56,21 @@ open
 4. If a branch/T2 review is active and the PR head changed: update the graph delta, mark affected
    findings `needs_recheck`, answer the comment, do a focused recheck, and offer a branch review
    rather than silently running one.
+
+### Stalled sessions (proposed)
+
+A bot question with no answer is worse than no question. The session is not a process, but it still
+needs an owner:
+
+- After **7 days** in `waiting_for_user` with no human reply, the session is summarized, flagged
+  `needs human` in the inbox, and included in the weekly digest. One short nudge comment is allowed;
+  the bot does not repeat it.
+- After **30 days** (or PR inactivity, whichever the org configures), the session is archived with a
+  reason. A later reply restores it and starts a turn; nothing is deleted silently.
+- A direct agent question is always flagged in the inbox; a review that merely awaits resolution is
+  not.
+- The bot never auto-resolves, closes the PR, or drops the thread to clear the queue.
+- Thresholds are org/repo configurable; the defaults are visible in settings.
 
 ## 3. Capacity and concurrency
 
@@ -100,11 +119,15 @@ admin-only. A session belongs to the **PR**, not to the user who triggered it.
 | Admin | repo/org admin | ✓ | ✓ | ✓ | ✓ |
 | Maintainer | repo write / maintain | ✓ | ✓ | ✓ | repo policy only |
 | Member | org member with repo read | ✓ | ✓ | — | — |
-| Viewer | repo read, not org member | ✓ | — | — | — |
+| Viewer | repo read, not org member | ✓ | GitHub-native only | — | — |
 | Auditor | explicit role | ✓ audit | — | — | audit export |
 
 - **Visibility never exceeds GitHub repo visibility.** A user without repo read access sees
   nothing, even if they are an org member.
+- **The product cannot be stricter than GitHub on comments.** A viewer with repo read can still
+  comment natively in GitHub; a `—` above means Jury Forge does not expose the action and does not
+  respond to that user, not that GitHub blocks them. Product actions (trigger, configure, resolve
+  via the Jury Forge UI) are role-gated; GitHub-native actions are governed by GitHub.
 - **Shadow-mode exception (backlog B-01):** shadow findings/reports are visible only to maintainers,
   SMEs, admins, and auditors — not PR authors or plain members. This is an explicit exception to the
   repo-read rule until the reviewer is promoted to live.
