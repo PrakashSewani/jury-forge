@@ -95,3 +95,22 @@ Only then can Workstream B's protocol run on five clean hosts with timings and a
 - **First-review timing:** not measured. No value is given.
 - **Recommended before any timing claim:** fix B1 and B2 in the specs, and add the missing steps in
   §4 to the install doc. These are documentation changes and need no code.
+
+## 8. Resolution (2026-11-15)
+
+The blockers and contradictions above were fixed in the setup-ordering docs change. The findings are
+kept as the record of what the dry run observed; this section records the disposition.
+
+| Item | Disposition |
+| ---- | ----------- |
+| B1 | **Fixed.** Stage 2 is now the GitHub App and installation; Stage 3 is the first owner claim via the App's OAuth. The order invariant is stated in `first-run-setup.md`; a claim without an App returns `setup_step_out_of_order`; acceptance criterion 20 covers it. |
+| B2 | **Fixed.** The origin is saved after pre-save DNS/port validation and before TLS issuance; `ask` authorizes `public_url` only; TLS issuance and host pinning run post-save and gate `ready`; acceptance criteria 16 and 22 cover it. ADR-0021 has a clarification section. |
+| B3 | **Expected, not fixed.** There is no runnable build in this phase. The install test stays blocked until a walking skeleton exists. |
+| C1 | **Fixed.** One definition: install-to-first-review starts when the verified bundle is on the host and Docker/Compose are installed, stops when the first review is visible. Docker install, DNS propagation, provider account/key, GitHub org admin work, and test repo/PR creation are measured separately. `success.md` and `first-run-setup.md` now match. |
+| C2 | **Fixed.** The operations install block runs `docker compose run --rm app jury-forge migrate` before `docker compose up -d`. |
+| C3 | **Fixed.** `jury-forge init --origin-hint <host>` pre-seeds the setup origin without freezing it; `--freeze-origin <host>` sets `PUBLIC_URL` for pre-provisioned/air-gapped installs. |
+| D1 | **Addressed in docs, verify with a build.** Compose binds `0.0.0.0:8080` inside the container and publishes `127.0.0.1:8080:8080`; the host publish is the loopback boundary. G1 now has an explicit reachability check. |
+| A1–A13 | **Partially fixed.** C1 now separates prerequisites; the remaining ambiguities (Docker install steps, minisign, bootstrap token log line, tunnel command, default provider, webhook reachability, DNS propagation, org blockers, host sizing) belong in the Phase 1 install doc. |
+
+**Status after resolution:** installability remains **unproven**. No timing was measured, no runnable
+build exists, and this section is a documentation disposition, not a test result.
