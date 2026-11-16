@@ -100,9 +100,9 @@ install.
 ### Quality gate
 
 *Amended 2026-11-16 (owner): the pre-v1 quality spike is dropped.* Quality is measured once v1 is
-built, by replaying real reviews (strict T0 jury vs a strong single-model baseline at equal token
+built, by replaying real reviews (diff-only jury, T0/T0+, vs a strong single-model baseline at equal token
 budget) with ground truth from per-finding feedback and appeals. Publish the method and the
-scorecard. If T0 leaves too much recall on the table, branch review moves into v1 and something else
+scorecard. If diff-only leaves too much recall on the table, branch review moves into v1 and something else
 is cut — likely the reviewer studio breadth, not the receipt or the jury output.
 
 ## Consequences
@@ -141,10 +141,11 @@ is cut — likely the reviewer studio breadth, not the receipt or the jury outpu
 
 ## Follow-ups
 
-1. Owner approves or amends this ADR at G0.
-2. Align `vision.md`, `scope.md`, `capabilities.md`, `roadmap.md`, `personas.md`, and
-   `first-run-setup.md` to the trust-loop v1.
-3. Decide Q-032–Q-036 (T0 instruction exception, provider allowlist tier, ICP, suggested-fixes tier,
-   starter/default jury).
+1. ~~Owner approves or amends this ADR at G0.~~ **Accepted at G0, 2026-11-16.**
+2. ~~Align `vision.md`, `scope.md`, `capabilities.md`, `roadmap.md`, `personas.md`, and
+   `first-run-setup.md` to the trust-loop v1.~~ **Done in the 2026-11-16 consolidation pass.**
+3. ~~Decide Q-032–Q-036 (T0 instruction exception, provider allowlist tier, ICP, suggested-fixes tier,
+   starter/default jury).~~ **Answered at G0**; see the closed table in
+   [`../analysis/open-questions.md`](../analysis/open-questions.md).
 4. Write the replay benchmark spec (Phase 3); no pre-v1 spike.
 5. Re-tier the deferred capabilities explicitly as v1.x, not as “v1 with a note.”

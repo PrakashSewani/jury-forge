@@ -161,7 +161,8 @@ Rules:
 
 ## 5. Retrieval and the code index (T2 branch review)
 
-PR review (T0) is strict diff-only and does not use an index. Branch review (T2, v1.1) uses a
+PR review is diff-only and does not use an index; from v1 its hunks are expanded to the enclosing
+function inside the same file (T0+, ADR-0025). Branch review (T2, v1.1) uses a
 deterministic, explainable index:
 
 - **Symbol graph:** definitions, exports, and references. "Who calls this function?" is the most
@@ -236,8 +237,10 @@ Rules:
 
 ### Tool policy
 
-**Tier rule:** PR review is strict T0 and has no repository read/graph tools. The tools below are
-for branch review (T2) and future explicit modes; a capability label selects reviewers, not tools.
+**Tier rule:** PR review has no repository read/graph tools: it sees the diff, and from v1 the hunk
+is expanded to its enclosing function inside that same file (T0+, ADR-0025); no file outside the
+diff is read. The tools below are for branch review (T2) and future explicit modes; a capability
+label selects reviewers, not tools.
 
 Where the provider supports tools, a branch/capability reviewer may call:
 
@@ -432,7 +435,7 @@ and an **agent turn** on top:
   asks a question, or resolves a bot-owned thread after a satisfactory human response.
 - The session keeps the conversation across turns and days; the graph keeps repository context
   between turns and runs.
-- PR review is strict diff-only (T0); branch review is explicit and graph-backed (T2).
+- PR review is diff-only (T0 in the MVP, T0+ from v1, ADR-0025); branch review is explicit and graph-backed (T2).
 - The harness/state model, routing, resolution guard, and data model are in
   [`agentic-review.md`](agentic-review.md) and
   [`../product/specs/agentic-review-sessions.md`](../product/specs/agentic-review-sessions.md).

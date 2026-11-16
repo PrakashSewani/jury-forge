@@ -57,7 +57,8 @@ required.
 
 ### Triggers
 
-- `jury:pr-review` — **strict T0 diff-only** PR review: the PR diff/hunks + metadata + thread context; no repository file reads, no graph.
+- `jury:pr-review` — **diff-only** PR review: the PR diff/hunks (T0+ enclosing-function expansion
+  from v1, ADR-0025) + metadata + thread context; no file outside the diff is read, no graph.
 - `jury:branch-review` — complete branch review: compare the PR branch to the repository default branch and review the full branch delta against the repo context graph (T2); static functional/behavioral impact, no code execution in v1/v1.1.
 - Check Run actions (`PR review`, `Branch review`) — same turns.
 - **No slash commands in PR conversations.** Specific reviewers are selected via the UI picker; capability labels select capability groups.

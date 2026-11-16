@@ -31,17 +31,17 @@ pasted into one giant prompt.
 All sources carry a **trust label**. External docs, repo docs, and packs are untrusted data; they
 never become instructions.
 
-**Tier rule:** PR review (T0) may use reviewer instructions/rules, org conventions, granted knowledge
-packs, and prior findings/session memory. Repository docs at SHA, live doc links, and the repository
-graph are T2 branch-review sources; a T0 turn does not read repository files or the graph.
+**Tier rule:** PR review is diff-only (strict T0 in the MVP, T0+ from v1). It sends the diff hunks,
+may expand a hunk to its enclosing function inside that same file, and may read the two instruction
+files described below; it never reads other repository files or the graph. Branch review (T2) is where
+repository docs at SHA, live doc links, and the repository graph are sourced.
 
-**T0 instruction-file exception (proposed; owner decision pending, Q-032).** The strict T0 rule
-creates a product surprise: a default PR review can follow org conventions but cannot read the
-repository's own `AGENTS.md`/`CONTRIBUTING.md`. The proposed fix is a narrow exception, not a general
-file read: fetch those two files at the PR base SHA, cap them (for example 8 KB each), trust-label
-them, and inject them as *instructions context* only. No other repository file is readable at T0.
-This preserves the diff-only rule for code context while making "knows our conventions" true. It
-needs an owner decision because it touches the strict-T0 directive.
+**T0 instruction-file exception (accepted at G0, Q-032).** The diff-only rule creates a product
+surprise: a default PR review can follow org conventions but cannot read the repository's own
+`AGENTS.md`/`CONTRIBUTING.md`. The accepted fix is a narrow exception, not a general file read: fetch
+those two files at the PR base SHA, cap them (8 KB each by default), trust-label them, and inject them
+as *instructions context* only. No other repository file is readable for code context. This preserves
+the diff-only rule while making "knows our conventions" true.
 
 ## 2. Knowledge pack format
 

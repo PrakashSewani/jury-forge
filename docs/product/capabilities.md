@@ -12,7 +12,7 @@ Status key: **Proven** (the PoC shipped a version), **Planned** (in the target p
 ## Release tiers (accepted at G0, 2026-11-16; ADR-0018/0023/0024/0025)
 
 Nothing below is removed from the owner's list; it is sequenced. Status above says *what*; the tier
-says *when*. PR review is T0+ (diff hunks expanded to the enclosing function, ADR-0025); branch review uses T2 (graph). T1 bounded reads stay rejected.
+says *when*. PR review is diff-only: strict **T0** in the MVP, **T0+** from v1 (hunks expanded to the enclosing function inside files already in the diff, ADR-0025); branch review uses T2 (graph). T1 bounded reads stay rejected.
 
 **Tier names:** **v1.1** = *depth* (quality and reach), **v1.2** = *platform* (org scale). **v1.x**
 means either. Older docs that say v1.1 for the graph, branch review, or GHES are still correct.
@@ -101,7 +101,7 @@ shows T0+ PR review leaves meaningful recall on the table (ADR-0018/ADR-0023).
 | Repository instruction files | Proven | `AGENTS.md` / `CONTRIBUTING.md`, opt-in. |
 | Reference file fetch | Proven | Literal roots; add retrieval. |
 | Symbol / import / dependency index | Planned (v1.1, measurement-gated) | Potential quality differentiator; justify with the benchmark before building (ADR-0018). |
-| Bounded on-demand file reads for PR review (T1) | Rejected | Owner chose strict T0; file reads/graph are branch review only (ADR-0019 rejected). T0+ (enclosing-function expansion of files already in the diff) is proposed in ADR-0025. |
+| Bounded on-demand file reads for PR review (T1) | Rejected | T1 rejected (ADR-0019): no reads of files outside the diff and no graph. T0+ (enclosing-function expansion of files already in the diff) is accepted for v1 (ADR-0025). |
 | Test impact analysis | Planned | Map changes to tests. |
 | CODEOWNERS awareness | Planned | Route findings to owners. |
 | Semantic retrieval / embeddings | TBD | Evaluate after symbol graph + benchmark. |
@@ -228,7 +228,7 @@ shows T0+ PR review leaves meaningful recall on the table (ADR-0018/ADR-0023).
 | No-reviewers fallback | Planned | Comment with setup/retrigger; no review posted. |
 | Capability registry + `jury:cap:<id>` labels | Planned (v1.x) | Built-in/custom, one-level groups, every installed repo, SME draft/admin approve; capability reviewers only when requested. |
 | Dynamic agent availability/router | Planned (v1.x) | Scope by repo/path/language/label; explicit request wins; record why. |
-| PR review default + branch review | Planned (PR review MVP; branch review v1.x) | PR review is strict T0 diff-only; `jury:branch-review` compares to the default branch and reviews the full delta against context; estimate; cancellable. |
+| PR review default + branch review | Planned (PR review MVP; branch review v1.x) | PR review is diff-only (strict T0 in the MVP, T0+ from v1); `jury:branch-review` compares to the default branch and reviews the full delta against context; estimate; cancellable. |
 | Repository knowledge graph | Planned (v1.1) | Symbols/imports/tests/configs/docs/owners/findings; incremental updates; measurement-gated (ADR-0018). |
 | Context reuse across runs | Planned (session reuse MVP; graph summaries v1.x) | Reuse thread/session state and diff; graph summaries/content hashes only when the graph lands. |
 | Session inbox / conversation UI | Planned | Timeline, agent activity, tool calls, findings, cost, resolve state. |

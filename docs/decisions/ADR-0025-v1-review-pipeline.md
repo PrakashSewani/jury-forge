@@ -1,10 +1,14 @@
 # ADR-0025: v1 review pipeline — T0+ context, verifier, code-first chair, model roles
 
-- Status: accepted (G0, 2026-11-16; large-PR fitting + coverage manifest in MVP)
+- Status: accepted (G0, 2026-11-16; large-PR fitting + coverage manifest in MVP; T0+, verifier,
+  code-first chair, and model roles in v1)
 - Date: 2026-11-16
 - Owners: architecture + review quality
-- Amends: ADR-0019 (rejection of T1 stays; T0+ is narrower), ADR-0011 (model roles), ADR-0023 (v1 scope)
-- Closes (proposed): Q-037, Q-038, Q-040, Q-041, Q-044
+- Amends: ADR-0007 (PR review context), ADR-0011 (model roles), ADR-0014 (PR review stays
+  diff-only; expansion reads only files already in the diff), ADR-0016 (capability definitions),
+  ADR-0018 (tiers), ADR-0019 (rejection of T1 stays; T0+ is narrower), ADR-0023 (v1 scope)
+- Closes: Q-037, Q-038, Q-040, Q-041, Q-044 (accepted at G0; see their rows in
+  [`../analysis/open-questions.md`](../analysis/open-questions.md))
 - Revisit trigger: the Phase 3 replay benchmark, or cost per accepted finding above budget.
 
 ## Context
@@ -29,6 +33,11 @@ file. The enclosing unit is found with tree-sitter; if no parser exists for the 
 fallback is ±20 lines. The cap is 200 lines per hunk. No file outside the diff is read. The
 expansion is deterministic and listed in the coverage manifest. T1 (reads of arbitrary files)
 stays rejected.
+
+**Tier:** the MVP stays at strict T0 (diff hunks only, ADR-0018). T0+ ships in **v1**; MVP code must
+not read file content beyond the hunks. Wherever an older document says "PR review reads no
+repository files", the precise rule from v1 onward is: **no file outside the diff is read**. T0+, not
+T1, is the v1 default.
 
 ### 2. Large-PR fitting and a coverage manifest
 

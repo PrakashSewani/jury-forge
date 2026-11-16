@@ -146,8 +146,9 @@ Surfaces, in order of preference:
    `Jury Forge` check run with the action button `PR review` (and `Branch review` in v1.x; Checks API
    `actions`; max 3, label ≤ 20 chars). Clicking a button sends `check_run.requested_action` to the app
    and starts the turn. No comment is posted just to trigger. Requires `checks: write`.
-2. **PR label (modes):** `jury:pr-review` (strict T0: PR diff/hunks + metadata + thread context;
-   no repository file reads, no graph) and `jury:branch-review` (v1.x: complete branch review against the
+2. **PR label (modes):** `jury:pr-review` (diff-only: strict T0 in the MVP, T0+ enclosing-function
+   expansion from v1, ADR-0025; PR diff/hunks + metadata + thread context; no file outside the
+   diff, no graph) and `jury:branch-review` (v1.x: complete branch review against the
    repo context graph, T2). One click in the sidebar; the app listens to `pull_request.labeled`.
    These two labels are **modes**.
    **Capability labels** `jury:cap:<id>` request a capability group **within the reviewers already

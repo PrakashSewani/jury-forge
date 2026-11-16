@@ -4,7 +4,7 @@ The path from documentation to a first supported release. Each phase has a goal,
 an exit gate. The owner approves each gate before the next phase starts. The deciding direction is
 [ADR-0023](../decisions/ADR-0023-product-direction.md): v1 is the **trust loop**, not the platform.
 
-## Phase 0 — Product definition and documentation (current)
+## Phase 0 — Product definition and documentation — **done, G0 passed 2026-11-16**
 
 **Goal:** agree on what we are building, why, and the architecture that can deliver it.
 
@@ -27,8 +27,9 @@ architecture, approved the scope and principles, and approved or amended ADR-002
 
 ## Phase 1 — Walking skeleton
 
-> **Split (2026-11-16):** **Phase 1a — technology and approach** (decisions only, no code) accepts
-> the stack ADRs and the engineering approach. **Phase 1b** builds the walking skeleton below.
+> **Split (2026-11-16):** **Phase 1a — technology and approach** (decisions only, no code) accepted
+> the stack ADRs and the engineering approach on 2026-11-16. **Phase 1b** builds the walking
+> skeleton below and has not started; it waits for the owner's go.
 > The work-package breakdown for every phase (MVP → v1.2) is in
 > [`implementation-plan.md`](implementation-plan.md).
 
@@ -112,7 +113,7 @@ the branch-review question on evidence.
 
 **Deliverables:**
 
-- **Benchmark v1 via replay** on the dogfood and pilot repos: strict T0 jury vs a single
+- **Benchmark v1 via replay** on the dogfood and pilot repos: diff-only jury (T0/T0+) vs a single
   strong-model baseline at equal token budget; precision, recall, grounding, acceptance, false
   positives, latency, cost. Ground truth comes from per-finding feedback and appeal outcomes.
 - **Public scorecard** for the v1 launch.

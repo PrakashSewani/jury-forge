@@ -2,11 +2,11 @@
 
 - Status: **accepted by the owner (Phase 1a, 2026-11-16)** as ADR-0026, with ADR-0003/0004/0005/0006/0010/0020 accepted. No code has been written.
 - Inputs: accepted ADRs 0001, 0002, 0007–0009, 0011–0018, 0021–0025; the specs; the deep dive.
-- Decides: ADR-0003, 0004, 0005, 0006, 0010, 0020 (still `proposed`) and the decisions that have
-  no ADR yet. On approval, each section becomes an ADR (ADR-0026 onwards) or flips an existing one
-  to `accepted`.
+- Decides: ADR-0003, 0004, 0005, 0006, 0010, 0020 and the areas that had no ADR yet. Those decisions
+  are recorded as ADR-0026 or as amendments to the existing ADRs (ADR-0003/0004/0005/0006/0010/0020
+  are accepted; ADR-0010 is accepted as amended: a thin turn runner, no harness in v1).
 - Evidence: package versions and licences resolved live from the npm registry on 2026-11-16
-  (§13). Node v24.22.1 was observed locally.
+  (§13). Node v24.19.0 was observed locally (`node -v`), with pnpm 12.4.2.
 
 ---
 

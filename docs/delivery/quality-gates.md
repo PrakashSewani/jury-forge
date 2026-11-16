@@ -14,22 +14,26 @@ named reviewer) signs off. "Looks good" is not evidence.
 | **G4** | End of Phase 4 | Can an operator run, upgrade, and recover it? | Ops + owner |
 | **G5** | Release | Is it a product, not a project? | Owner |
 
-## G0 — Documentation and product definition
+## G0 — Documentation and product definition — **passed 2026-11-16**
 
-- [ ] `docs/product/vision.md`, `personas.md`, `principles.md`, `scope.md` are written and
+Evidence: the owner accepted ADR-0007, 0008, 0011–0018, 0021–0025 and the default answers to Q-028
+and Q-032–Q-048; a link check (0 broken) and a consistency pass across the docs were run. Checks:
+
+- [x] `docs/product/vision.md`, `personas.md`, `principles.md`, `scope.md` are written and
       internally consistent.
-- [ ] `docs/product/capabilities.md` reflects the owner's input, with TBDs explicit.
-- [ ] `docs/analysis/flaws.md` has an S1/S2 register with evidence.
-- [ ] `docs/architecture/overview.md`, `components.md`, `data-model.md`, `job-pipeline.md`,
+- [x] `docs/product/capabilities.md` reflects the owner's input, with TBDs explicit.
+- [x] `docs/analysis/flaws.md` has an S1/S2 register with evidence.
+- [x] `docs/architecture/overview.md`, `components.md`, `data-model.md`, `job-pipeline.md`,
       `security.md`, `ai-pipeline.md`, `operations.md` are written.
-- [ ] ADR-0001 (self-hosted/MIT/vendor-neutral) and ADR-0002 (PoC is reference) are accepted.
-- [ ] The proposed ADRs (deployment, storage, runtime, queue, security) are reviewed, with the
-      blocking questions answered or explicitly deferred.
-- [ ] `docs/delivery/roadmap.md`, `status.md`, `ways-of-working.md`, `quality-gates.md` exist.
-- [ ] `README.md`, `AGENTS.md`, `LICENSE` exist; MIT is correct.
-- [ ] The agent chain and skills are documented and usable.
-- [ ] No product code has been written.
-- [ ] The owner has signed off.
+- [x] ADR-0001 (self-hosted/MIT/vendor-neutral) and ADR-0002 (PoC is reference) are accepted.
+- [x] The proposed ADRs (deployment, storage, runtime, queue, security) are reviewed, with the
+      blocking questions answered or explicitly deferred. The remaining stack ADRs were accepted in
+      Phase 1a.
+- [x] `docs/delivery/roadmap.md`, `status.md`, `ways-of-working.md`, `quality-gates.md` exist.
+- [x] `README.md`, `AGENTS.md`, `LICENSE` exist; MIT is correct.
+- [x] The agent chain and skills are documented and usable.
+- [x] No product code has been written (the quality spike was removed; the tree is docs only).
+- [x] The owner has signed off.
 
 **Evidence:** a review note from the owner, a link check, and a consistency check across docs.
 
@@ -112,7 +116,7 @@ checklist.
       capability reviewers never run without a request; skipped agents are explained.
 - [ ] Reviewer catalog approval and required/default/capability bindings are enforced; an unbound
       reviewer never runs; capability labels never grant an unbound reviewer.
-- [ ] PR review is the default and strict T0 (no repository file reads/graph); branch review (v1.x) is T2 and explicit.
+- [ ] PR review is the default and diff-only (strict T0 in the MVP; T0+ from v1 expands within the diffed files only, never outside the diff); branch review (v1.x) is T2 and explicit.
 - [ ] Capability labels are `jury:cap:<id>` (groups, immutable IDs, every-repo sync, disabled fallback).
 - [ ] Benchmark compares strict diff-only against a single strong-model baseline; the graph is built
       only if the result justifies it (ADR-0018).

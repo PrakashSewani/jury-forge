@@ -187,8 +187,8 @@ ADR-0014.
 
 - Postgres adjacency tables + content-addressed object storage; optional vector store later.
 - Index version per `(repo, commit)`; incremental update on every branch/T2 review run and default-branch push.
-- In T2, Context Service uses summaries first, expands via tools, and records a manifest; T0 uses the diff only.
-- Context tiers: **T0** diff (PR review, strict), **T1** bounded reads (rejected for PR review, ADR-0019), **T2** graph (branch review, explicit, estimated, cancellable, v1.1 per ADR-0018).
+- In T2, Context Service uses summaries first, expands via tools, and records a manifest; T0/T0+ uses the diff only, with expansion confined to the diffed files.
+- Context tiers: **T0** diff only (MVP PR review, strict), **T0+** enclosing-function expansion inside diffed files (v1 PR review, ADR-0025), **T1** bounded reads of arbitrary files (rejected for PR review, ADR-0019), **T2** graph (branch review, explicit, estimated, cancellable, v1.1 per ADR-0018).
 
 ## 8. Resolution guard
 

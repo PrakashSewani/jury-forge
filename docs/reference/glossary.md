@@ -12,7 +12,7 @@ Shared vocabulary. When a term is ambiguous, this page wins.
 | **Model roles** | `reasoning` (jurors, verifier, appeals) and `fast` (classification, summaries) instance models (ADR-0025). |
 | **Preset** | `quick`, `standard`, or `deep` jury size and model choice, with a cost estimate (S7). |
 | **Repo memory** | Per-repo suppressions and human-confirmed facts learned from feedback (S4). |
-| **T0+** | PR review context: diff hunks expanded to their enclosing function or class in files already in the diff (ADR-0025). |
+| **T0+** | v1 PR review context: diff hunks expanded to their enclosing function or class in files already in the diff (ADR-0025). No file outside the diff is read. |
 | **Verifier** | A non-voting step that marks each grounded finding confirmed, unconfirmed, or wrong before the chair (ADR-0025). |
 | **v1.1 / v1.2** | Post-v1 tiers: v1.1 = depth (branch review, graph, analyzers, GHES, CLI); v1.2 = platform (catalog, roles, packs, OIDC, Helm, GitLab). |
 | **Artifact / artefact** | A stored byte payload: raw diff, provider response, report, export. Lives in object storage, referenced from Postgres. |
@@ -91,8 +91,8 @@ Shared vocabulary. When a term is ambiguous, this page wins.
 | **Capability label** | `jury:cap:<id>`; requests a capability group within the repo’s bound/approved reviewers. Capability bindings only; required reviewers always run; never grants an unbound reviewer. |
 | **Capability agent** | A branch/T2 reviewer with tools to verify behavior (graph, tests, static analysis); a sandbox run is later. |
 | **Sandbox run** | Later, opt-in, isolated execution of tests/builds for a capability agent; no secrets, network off, resource caps. |
-| **PR review** | Strict T0: PR diff/hunks + metadata + thread context; no repository file reads, no graph. |
-| **T0 / T1 / T2** | Context tiers: T0 diff (PR review); T1 bounded reads (rejected for PR review); T2 repository graph (branch review). |
+| **PR review** | Diff-only: PR diff/hunks + metadata + thread context, with no graph. Strict T0 in the MVP; T0+ from v1. Never reads a file outside the diff. |
+| **T0 / T0+ / T1 / T2** | Context tiers: T0 diff only (MVP PR review); T0+ enclosing-function expansion inside diffed files (v1 PR review, ADR-0025); T1 bounded reads of arbitrary files (rejected for PR review, ADR-0019); T2 repository graph (branch review). |
 | **Resolution modes** | `suggest` (default: agent proposes, human resolves natively/UI), `auto` (bot resolves after guard), `off` (humans only). |
 | **Branch review** | v1.1: compare the PR branch to the repository default branch and review the full branch delta against the context graph. |
 | **Shadow mode** | A reviewer binding that runs the full pipeline but publishes nothing; findings are stored unpublished and compared with human review (B-01, backlog). |

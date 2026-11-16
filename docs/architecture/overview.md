@@ -147,22 +147,25 @@ is a durable unit within a session.
 | -------- | ------ | --- |
 | Self-hosted, MIT, vendor-neutral | Accepted by owner directive | ADR-0001 |
 | PoC is reference only | Accepted | ADR-0002 |
-| Compose-first deployment | Proposed | ADR-0003 |
-| PostgreSQL source of truth | Proposed | ADR-0004 |
-| TypeScript-first runtime | Proposed | ADR-0005 |
-| Queue + worker job model | Proposed | ADR-0006 |
-| Token-aware context + retrieval | Proposed | ADR-0007 |
-| Roles + trust boundaries | Proposed | ADR-0008 |
-| Agent runtime harness | Proposed (spike) | ADR-0010 |
-| Provider/model discovery | Proposed | ADR-0011 |
-| PR sessions + `suggest` resolution (auto/off opt-in) | Proposed | ADR-0012 |
-| Manual-first trigger + dynamic routing | Proposed | ADR-0013 |
-| Diff-only PR review + branch review with incremental graph (v1.1) | Proposed | ADR-0014 |
-| Session capacity, interface, roles, visibility | Proposed | ADR-0015 |
-| Reviewer catalog, repo bindings, SME roles, fallback | Proposed | ADR-0016 |
-| Knowledge sources, snapshots, grants, retrieval | Proposed | ADR-0017 |
-| Release tiering, eval-first sequencing | Proposed | ADR-0018 |
-| PR review T1 bounded reads | Rejected (strict T0) | ADR-0019 |
+| Compose-first deployment | Accepted (Phase 1a) | ADR-0003 |
+| PostgreSQL source of truth | Accepted (Phase 1a) | ADR-0004 |
+| TypeScript-first runtime | Accepted (Phase 1a) | ADR-0005 |
+| Queue + worker job model | Accepted (Phase 1a) | ADR-0006 |
+| Token-aware context + retrieval | Accepted (G0) | ADR-0007 |
+| Roles + trust boundaries | Accepted (G0) | ADR-0008 |
+| Agent runtime harness | Accepted as amended (Phase 1a): thin runner, no harness | ADR-0010 |
+| Provider/model discovery | Accepted (G0) | ADR-0011 |
+| PR sessions + `suggest` resolution (auto/off opt-in) | Accepted (G0) | ADR-0012 |
+| Manual-first trigger + dynamic routing | Accepted (G0) | ADR-0013 |
+| Diff-only PR review + branch review with incremental graph (v1.1) | Accepted (G0) | ADR-0014 |
+| Session capacity, interface, roles, visibility | Accepted (G0) | ADR-0015 |
+| Reviewer catalog, repo bindings, SME roles, fallback | Accepted (G0) | ADR-0016 |
+| Knowledge sources, snapshots, grants, retrieval | Accepted (G0) | ADR-0017 |
+| Release tiering, eval-first sequencing | Accepted (G0) | ADR-0018 |
+| PR review T1 bounded reads | Rejected; T0+ accepted instead | ADR-0019, ADR-0025 |
+| Conversation safety, finding identity, evidence-gated resolution | Accepted (G0) | ADR-0024 |
+| v1 review pipeline: T0+, verifier, code-first chair, model roles | Accepted (G0) | ADR-0025 |
+| v1 stack | Accepted (Phase 1a) | ADR-0026 |
 
 Read next: [`agentic-review.md`](agentic-review.md) → [`components.md`](components.md) →
 [`job-pipeline.md`](job-pipeline.md) → [`security.md`](security.md) →

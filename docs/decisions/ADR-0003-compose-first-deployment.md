@@ -25,8 +25,9 @@ reproducible on a VPS, homelab, or on-prem VM, with a path to external Postgres 
 ## Decision
 
 Option 1 is the reference. Option 2 is supported as a clearly labelled evaluation/personal mode
-after it is proven. Option 3 ships in v1 as a **secondary** target per ADR-0022 (Helm chart, external
-Postgres/S3 only, ingress terminates TLS); it does not replace Compose as the reference path.
+after it is proven. Option 3 ships as a **secondary** target: ADR-0022 as amended by ADR-0023 moves
+the Helm chart to **v1.2** (external Postgres/S3 only, ingress terminates TLS); it does not replace
+Compose as the reference path.
 
 ## Consequences
 

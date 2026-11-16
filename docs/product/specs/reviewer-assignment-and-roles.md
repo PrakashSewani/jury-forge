@@ -277,8 +277,8 @@ ownership. They are not GitHub labels; GitHub labels are the two review modes an
 
 ### Labels (primary, as requested)
 
-- `jury:pr-review` — strict **T0 diff-only** PR review: PR diff/hunks + metadata + thread context;
-  no repository file reads, no graph.
+- `jury:pr-review` — **diff-only** PR review: PR diff/hunks (T0+ expansion from v1, ADR-0025) +
+  metadata + thread context; no file outside the diff is read, no graph.
 - `jury:branch-review` — **v1.x** complete branch review: compares the PR branch to the repository
   default branch and reviews the full branch delta against the repo context graph (T2).
 - **Capability labels:** `jury:cap:<capability-id>` request a capability group. They only select
@@ -353,8 +353,8 @@ selected   = required
 
 | Labels | Result |
 | ------ | ------ |
-| `jury:pr-review` | Required + default bindings; strict T0. |
-| `jury:pr-review` + `jury:cap:security` | Required + security-capability bindings; strict T0. |
+| `jury:pr-review` | Required + default bindings; diff-only (T0 in the MVP, T0+ from v1). |
+| `jury:pr-review` + `jury:cap:security` | Required + security-capability bindings; diff-only. |
 | `jury:branch-review` + `jury:cap:tests` + `jury:cap:performance` | Required + testing/performance bindings; full branch vs default. |
 | `jury:cap:security` alone | Default PR mode + security-capability bindings. |
 | `jury:pr-review` + `jury:branch-review` | Branch review wins; session notes the conflict. |
