@@ -1,14 +1,15 @@
 # ADR-0023: Product direction — the auditable review layer, not a review platform
 
-- Status: proposed (the owner delegated the direction call; final approval at G0)
+- Status: accepted (G0, 2026-11-16)
 - Date: 2026-11-15
 - Owners: product + architecture
 - Re-scopes: the v1 application of ADR-0016/ADR-0018 (it does not supersede their decisions; it
   narrows what ships first)
-- Revisit trigger: the quality spike, the first 10 installs, or a security/platform buyer who
+- Revisit trigger: the Phase 3 replay benchmark, the first 10 installs, or a security/platform buyer who
   requires a deferred capability before adopting.
-- Terminology: **v1.x** means any post-v1 release; the older **v1.1** label is a subset. Where older
-docs say v1.1, read v1.x under this ADR.
+- Terminology: **v1.x** means any post-v1 release. *Amended 2026-11-16:* **v1.1 = depth** (branch
+  review, graph, analyzers, GHES, CLI, replay) and **v1.2 = platform** (catalog, capability labels,
+  roles, packs, OIDC, Helm, GitLab). See `product/capabilities.md` release tiers.
 
 ## Context
 
@@ -98,8 +99,9 @@ install.
 
 ### Quality gate
 
-Before the control-plane breadth is built, run a **quality spike**: 3–5 real repositories, strict T0
-vs a strong single-model baseline, seeded with the PoC's missed findings. Publish the method and the
+*Amended 2026-11-16 (owner): the pre-v1 quality spike is dropped.* Quality is measured once v1 is
+built, by replaying real reviews (strict T0 jury vs a strong single-model baseline at equal token
+budget) with ground truth from per-finding feedback and appeals. Publish the method and the
 scorecard. If T0 leaves too much recall on the table, branch review moves into v1 and something else
 is cut — likely the reviewer studio breadth, not the receipt or the jury output.
 
@@ -116,7 +118,7 @@ is cut — likely the reviewer studio breadth, not the receipt or the jury outpu
 
 - Less breadth than platform competitors; teams with unusual reviewer needs wait for v1.x.
 - The opinionated default jury may not fit every codebase; it is editable, but it is not a catalog.
-- Diff-only still misses callers/tests; the quality spike may force branch review earlier than
+- Diff-only still misses callers/tests; the Phase 3 replay may force branch review earlier than
   planned.
 - Solo/homelab users are explicitly not the v1 ICP; the evaluation mode is a taste, not a promise.
 - Dropping Helm from v1 narrows enterprise appeal; it returns in v1.x.
@@ -144,5 +146,5 @@ is cut — likely the reviewer studio breadth, not the receipt or the jury outpu
    `first-run-setup.md` to the trust-loop v1.
 3. Decide Q-032–Q-036 (T0 instruction exception, provider allowlist tier, ICP, suggested-fixes tier,
    starter/default jury).
-4. Write the benchmark spec and run the quality spike before the control-plane breadth.
+4. Write the replay benchmark spec (Phase 3); no pre-v1 spike.
 5. Re-tier the deferred capabilities explicitly as v1.x, not as “v1 with a note.”

@@ -17,6 +17,11 @@ The pipeline is organised around those three properties.
 
 ## 2. Stages
 
+> **v1 order (ADR-0025, proposed):** `resolve → fetch → plan(T0+) → review* → ground (code) →
+> verify (model, non-voting) → chair (code) → summarise (fast model) → publish → evaluate`. T0+
+> expands hunks to the enclosing function; the chair is deterministic; the stage text below is
+> amended by [ADR-0025](../decisions/ADR-0025-v1-review-pipeline.md) where they differ.
+
 ```
 resolve → fetch → index (T2 only) → plan → review* → ground → jury → publish → evaluate
                                    │
@@ -81,7 +86,9 @@ depending on policy.
 ### `jury`
 
 Deduplicate, merge attribution, surface disagreements, assign confidence, and produce the publish
-plan. Optionally a chair model makes the final severity call within policy bounds.
+plan. **In v1 this is code only (ADR-0025 §4):** fingerprint merge, highest confirmed severity
+capped by policy, agreement ratio, ranking, noise budget, suppressions. A model writes only the
+summary and dissent text.
 
 ### `publish`
 
@@ -110,6 +117,10 @@ Every model used by the product is described by a registry entry:
 
 The registry is operator-overridable and versioned. Unknown models fail closed or use a
 conservative default with a warning.
+
+**Model roles (ADR-0025 §5):** the instance binds a `reasoning` model (jurors, verifier, appeals)
+and a `fast` model (reply intent, summaries, risk explanation). Prompts keep a stable prefix order
+so provider prompt caching applies.
 
 The live **provider catalog** is the source of which model IDs exist for a key; the registry only
 enriches metadata. An agent can bind only to a catalog entry (ADR-0011). See

@@ -3,6 +3,10 @@
 Questions that need an owner decision. Each has a **default assumption** so work can continue, and
 a **close condition** so it does not float forever. Do not silently resolve these in code.
 
+> **G0 (2026-11-16):** the owner accepted the default assumptions for **Q-028 and Q-032–Q-048**;
+> they are closed and binding. Technology-related questions (for example Q-025 languages) move to
+> Phase 1a.
+
 | ID    | Question | Why it matters | Default assumption | Close condition |
 | ----- | -------- | -------------- | ------------------ | --------------- |
 | Q-001 | What are the final product capabilities the owner will provide? | The architecture and roadmap are provisional until they are known. | The 2026-11-15 agentic set: per-PR sessions, manual-first labels/Check Run/UI, capability-selectable reviewers, provider/model discovery, encrypted keys, **strict diff-only PR review**, branch review + graph in v1.1, `suggest` resolution with SME/admin override, Docker. | Owner delivers further capabilities; `docs/product/capabilities.md` is updated and an ADR records the scope. |
@@ -32,15 +36,27 @@ a **close condition** so it does not float forever. Do not silently resolve thes
 | Q-025 | Which languages get deep symbols in v1.1? | Parser/indexing effort. | TS/JS first; Python/Go next; file/import/test graph for others. | Indexer spike + ADR-0014. |
 | Q-026 | Graph store: Postgres adjacency vs a graph database? | Operational simplicity vs graph query power. | Postgres first; extract at measured scale. | ADR-0014. |
 | Q-027 | Session/message retention? | Code-bearing conversations accumulate. | 90 days after merge/close; configurable. | Retention ADR + delete flow. |
-| Q-028 | Who can trigger/resolve besides the bot? | Abuse and authorization. | Trigger: repo write/org role. Resolve: owner/admin any; SME in domain; maintainer reopen only; author/auditor read; every action audited. | Authz matrix + ADR-0012. |
+| Q-028 | Who can trigger/resolve besides the bot? | Abuse and authorization. | Proposed answer: ADR-0024 §1 (write roles trigger; PR author replies on its own threads; others and bots never start a turn; forks skipped by default). Trigger: repo write/org role. Resolve: owner/admin any; SME in domain; maintainer reopen only; author/auditor read; every action audited. | Authz matrix + ADR-0012. |
 | Q-029 | How do we differ from existing self-hostable AI reviewers (e.g. Qodo PR-Agent)? | Positioning, and which capabilities are table stakes vs differentiating. | Differentiators are the privacy/audit story, reviewer catalog with SME ownership, and guarded resolution; breadth is not. | Competitor teardown doc in `docs/analysis/` with sourced feature/licence comparison. |
 | Q-030 | Is a single-container evaluation mode (one image, embedded or bundled Postgres) in the first release? | The Compose + Postgres + queue install is heavy for the small-team persona. | Documented as a labelled evaluation mode after the Compose path passes G1 (ADR-0003 option 2); not a separate architecture. | Clean-machine install spike with timings. |
 | Q-031 | What are the default per-turn token/tool/wall-clock caps? | Bounds cost and injection blast radius. | Conservative defaults, operator-configurable; token/wall-clock are hard; tool caps apply to tool-enabled modes; currency only when priced. | Benchmark v0 results. |
 | Q-032 | Does strict T0 allow `AGENTS.md`/`CONTRIBUTING.md` as a capped instruction input? | The default PR review currently cannot read the repo's own conventions, which contradicts the "knows our standards" promise. | **ADR-0023 (proposed) includes this:** a narrow T0 exception — fetch only those two files at the base SHA, cap ~8 KB each, trust-label them as instructions context; no other repo file read. | Owner confirms at G0; update the T0 tool list and knowledge-system. |
 | Q-033 | Is the per-repo provider allowlist (B-02) in v1 or still backlog? | Egress policy and origin-bound keys exist, but per-repo data zones are the security buyer's proof. | **ADR-0023 (proposed):** the egress/redaction receipt is v1; the per-repo allowlist stays v1.x unless the first security buyer requires it. | Owner decides at G0; update capabilities tiers and security.md egress section if promoted. |
 | Q-034 | Who is the primary ICP: 20–200 person org with a platform/security function, or the solo developer/homelab? | The v1 install (public domain, GitHub App, OAuth, Postgres) serves the former; P4 needs the evaluation mode. | **ADR-0023 (proposed):** primary ICP is the 20–200 person org with a platform/security function; P4 is served by the labelled evaluation mode, not a supported v1 install. | Owner confirms at G0; update vision/personas and the setup mode table. |
-| Q-035 | Are validated suggested fixes MVP or v1? | The owner named "suggest fixes"; the current tier puts them in v1. | **ADR-0023 (proposed):** one-click feedback is v1; validated suggested fixes are v1.x, not MVP. Move earlier only if the owner accepts the extra scope. | Owner confirms at G0; update capabilities.md §6 and the MVP list. |
+| Q-035 | Are validated suggested fixes MVP or v1? | The owner named "suggest fixes"; the current tier puts them in v1. | **Updated 2026-11-16 (Q-042):** single-hunk GitHub `suggestion` blocks validated against the reviewed SHA are v1; multi-file fixes v1.x; never MVP. | Owner confirms at G0; update capabilities.md §6 and the MVP list. |
 | Q-036 | Should a starter/default jury auto-bind on install and on newly added repos? | The first interaction on an unbound repo is currently a "no reviewers configured" fallback, not a review. | **ADR-0023 (proposed):** a three-reviewer default jury on install (opt-out) and a one-click "bind starter jury" action on the fallback. | Owner confirms at G0; update reviewer-assignment §8, first-run setup, and scope. |
+| Q-037 | Does PR review expand each hunk to its enclosing function (T0+)? | Strict T0 cuts hunks mid-function; PR-Agent's dynamic context does this cheaply. Reads only files already in the diff. | Yes, capped ~200 lines/hunk, deterministic, recorded in the coverage manifest. | Owner at G0; amend ADR-0019 rejection note. |
+| Q-038 | Add a non-voting Verifier step before the chair? | Drops ungrounded findings; the market's precision lever. | Yes, v1. | Owner at G0; update ai-pipeline.md. |
+| Q-039 | Are jury charges (natural-language pass/fail checks) v1? | CodeRabbit pre-merge checks are table stakes for gating. | Yes, v1, max 10 per repo by default. | Owner at G0. |
+| Q-040 | Promote large-PR handling (B-04) to v1? | Silent partial reviews destroy trust. | Yes: deterministic fitting + coverage manifest. | Owner at G0. |
+| Q-041 | Ingest existing CI SARIF results as juror evidence in v1? | Precision without running code. | Yes, read-only from the PR's check runs. Running analyzers ourselves is v1.x with an ADR. | Owner at G0. |
+| Q-042 | Validated GitHub `suggestion` blocks in v1 (instead of v1.x)? | Table stakes in Copilot. | Yes, single-hunk only, applied-cleanly check in code. | Owner at G0; update Q-035. |
+| Q-043 | Check Run merge-gate policy options? | Teams want gating without bot approvals. | `neutral` default; opt-in `failure` on unresolved critical or failed charge. | Owner at G0. |
+| Q-044 | Instance model roles (`reasoning`/`fast`)? | Replies and classification on a cheap model halve cost. | Yes, v1. | Owner at G0; update ADR-0011. |
+| Q-045 | Egress preview in v1 (replay stays v1.x)? | Security buyer's demo moment. | Yes. | Owner at G0. |
+| Q-046 | Default retention? | Privacy promise needs numbers. | Raw prompts/responses 30 d; findings/receipts 1 y; configurable. | Owner at G0; update security.md. |
+| Q-047 | First forge after GitHub? | Self-host buyers often run GitLab. | GHES, then GitLab self-managed. | Owner at G0; update roadmap v1.x order. |
+| Q-048 | v1 hardware floor? | Footprint is a self-host buying criterion. | 2 vCPU / 4 GB / 20 GB for ≤20 devs, release-gated. | Owner at G0; update deployment.md. |
 
 Backlog-specific questions are tracked inside their specs, not as global Q-IDs:
 `SH-01…` (shadow mode), `PA-01…` (provider allowlist), `CLI-01…` (local CLI),

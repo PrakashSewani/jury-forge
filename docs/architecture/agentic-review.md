@@ -104,6 +104,10 @@ Resolution
 
 ## 3. GitHub event mapping
 
+> Trigger authorization, bot-loop limits, comment versioning, re-anchoring after push, finding
+> fingerprints, and the `auto` resolution guard are defined in
+> [ADR-0024](../decisions/ADR-0024-conversation-safety-and-finding-identity.md).
+
 | GitHub event | Session effect |
 | ------------ | -------------- |
 | `pull_request.opened` | Create a neutral `Jury Forge` check run with `PR review` / `Branch review` actions; create a session only if policy/trigger. |

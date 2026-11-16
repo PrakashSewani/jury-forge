@@ -30,27 +30,37 @@ new one, never rewritten. The index below is the source of truth for status.
 | --- | ----- | ------ | ---- |
 | [ADR-0001](ADR-0001-self-hosted-mit-vendor-neutral.md) | Self-hosted, MIT, vendor-neutral product | accepted | 2026-11-14 |
 | [ADR-0002](ADR-0002-poc-is-reference-only.md) | The Cloudflare PoC is reference only | accepted | 2026-11-14 |
-| [ADR-0003](ADR-0003-compose-first-deployment.md) | Docker Compose is the reference deployment | proposed | 2026-11-14 |
-| [ADR-0004](ADR-0004-postgres-source-of-truth.md) | PostgreSQL is the source of truth | proposed | 2026-11-14 |
-| [ADR-0005](ADR-0005-typescript-first-runtime.md) | TypeScript-first runtime for v1 | proposed | 2026-11-14 |
-| [ADR-0006](ADR-0006-queue-and-stateless-workers.md) | Queue and stateless workers, not per-run actors | proposed | 2026-11-14 |
-| [ADR-0007](ADR-0007-token-aware-context-and-retrieval.md) | Token-aware context and repository retrieval | proposed | 2026-11-14 |
-| [ADR-0008](ADR-0008-roles-and-trust-boundaries.md) | Roles and trust boundaries | proposed | 2026-11-14 |
+| [ADR-0003](ADR-0003-compose-first-deployment.md) | Docker Compose is the reference deployment | accepted | 2026-11-14 |
+| [ADR-0004](ADR-0004-postgres-source-of-truth.md) | PostgreSQL is the source of truth | accepted | 2026-11-14 |
+| [ADR-0005](ADR-0005-typescript-first-runtime.md) | TypeScript-first runtime for v1 | accepted | 2026-11-14 |
+| [ADR-0006](ADR-0006-queue-and-stateless-workers.md) | Queue and stateless workers, not per-run actors | accepted | 2026-11-14 |
+| [ADR-0007](ADR-0007-token-aware-context-and-retrieval.md) | Token-aware context and repository retrieval | accepted | 2026-11-14 |
+| [ADR-0008](ADR-0008-roles-and-trust-boundaries.md) | Roles and trust boundaries | accepted | 2026-11-14 |
 | [ADR-0009](ADR-0009-mit-no-cla.md) | MIT licence, no CLA | accepted | 2026-11-14 |
-| [ADR-0010](ADR-0010-agent-runtime-harness.md) | Agent runtime harness | proposed | 2026-11-15 |
-| [ADR-0011](ADR-0011-provider-model-discovery.md) | Provider and model discovery | proposed | 2026-11-15 |
-| [ADR-0012](ADR-0012-pr-sessions-and-resolution.md) | PR sessions and resolution modes (`suggest` default) | proposed | 2026-11-15 |
-| [ADR-0013](ADR-0013-manual-trigger-and-agent-routing.md) | Manual-first triggering and dynamic agent routing | proposed | 2026-11-15 |
-| [ADR-0014](ADR-0014-repo-knowledge-graph.md) | Diff-only PR review + branch review with an incremental graph (v1.1) | proposed | 2026-11-15 |
-| [ADR-0015](ADR-0015-session-capacity-and-visibility.md) | Session capacity, interface, roles, and visibility | proposed | 2026-11-15 |
-| [ADR-0016](ADR-0016-reviewer-catalog-and-roles.md) | Reviewer catalog, repo bindings, SME roles, and fallback (v1.x per ADR-0023) | proposed | 2026-11-15 |
-| [ADR-0017](ADR-0017-knowledge-sources-and-retrieval.md) | Knowledge sources, snapshots, grants, and retrieval | proposed | 2026-11-15 |
-| [ADR-0018](ADR-0018-release-tiering-and-quality-first-sequencing.md) | Release tiering and quality-first sequencing | proposed | 2026-11-15 |
+| [ADR-0010](ADR-0010-agent-runtime-harness.md) | Agent runtime: thin turn runner + `ai` SDK gateway (no harness in v1) | accepted as amended | 2026-11-15 |
+| [ADR-0011](ADR-0011-provider-model-discovery.md) | Provider and model discovery | accepted | 2026-11-15 |
+| [ADR-0012](ADR-0012-pr-sessions-and-resolution.md) | PR sessions and resolution modes (`suggest` default) | accepted | 2026-11-15 |
+| [ADR-0013](ADR-0013-manual-trigger-and-agent-routing.md) | Manual-first triggering and dynamic agent routing | accepted | 2026-11-15 |
+| [ADR-0014](ADR-0014-repo-knowledge-graph.md) | Diff-only PR review + branch review with an incremental graph (v1.1) | accepted | 2026-11-15 |
+| [ADR-0015](ADR-0015-session-capacity-and-visibility.md) | Session capacity, interface, roles, and visibility | accepted | 2026-11-15 |
+| [ADR-0016](ADR-0016-reviewer-catalog-and-roles.md) | Reviewer catalog, repo bindings, SME roles, and fallback (v1.2) | accepted | 2026-11-15 |
+| [ADR-0017](ADR-0017-knowledge-sources-and-retrieval.md) | Knowledge sources, snapshots, grants, and retrieval | accepted | 2026-11-15 |
+| [ADR-0018](ADR-0018-release-tiering-and-quality-first-sequencing.md) | Release tiering and quality-first sequencing | accepted | 2026-11-15 |
 | [ADR-0019](ADR-0019-pr-review-context-tiers.md) | PR review context tiers (T1 bounded reads) — rejected; strict T0 | rejected | 2026-11-15 |
-| [ADR-0020](ADR-0020-install-and-update-channel.md) | Install and update channel: signed release bundle, no pipe-to-shell | proposed | 2026-11-15 |
-| [ADR-0021](ADR-0021-runtime-configured-origin.md) | Runtime-configured public origin (domain is a setup step) | proposed | 2026-11-15 |
-| [ADR-0022](ADR-0022-helm-chart-in-v1.md) | Helm chart as a v1 deployment target (moved to v1.x by ADR-0023) | proposed | 2026-11-15 |
-| [ADR-0023](ADR-0023-product-direction.md) | Product direction: the auditable review layer, not a review platform | proposed | 2026-11-15 |
+| [ADR-0020](ADR-0020-install-and-update-channel.md) | Install and update channel: signed release bundle, no pipe-to-shell | accepted | 2026-11-15 |
+| [ADR-0021](ADR-0021-runtime-configured-origin.md) | Runtime-configured public origin (domain is a setup step) | accepted | 2026-11-15 |
+| [ADR-0022](ADR-0022-helm-chart-in-v1.md) | Helm chart (moved to v1.2 by ADR-0023) | accepted as amended | 2026-11-15 |
+| [ADR-0023](ADR-0023-product-direction.md) | Product direction: the auditable review layer, not a review platform | accepted | 2026-11-15 |
+| [ADR-0024](ADR-0024-conversation-safety-and-finding-identity.md) | Conversation safety, finding identity, and evidence-gated resolution | accepted | 2026-11-16 |
+| [ADR-0025](ADR-0025-v1-review-pipeline.md) | v1 review pipeline: T0+ context, verifier, code-first chair, model roles | accepted | 2026-11-16 |
+| [ADR-0026](ADR-0026-v1-stack.md) | v1 stack: HTTP/UI, GitHub client, parsing, crypto, observability, testing, layout | accepted | 2026-11-16 |
+
+**Phase 1a (2026-11-16):** the stack ADRs were accepted from
+[`../architecture/technical-approach.md`](../architecture/technical-approach.md).
+
+**G0 (2026-11-16):** the owner accepted the product and behaviour decisions. The stack ADRs
+(0003, 0004, 0005, 0006, 0010, 0020) stay `proposed` on purpose: they are the input to Phase 1,
+*technology and approach*, where each one is re-evaluated against alternatives before it is accepted.
 
 ## Conventions
 

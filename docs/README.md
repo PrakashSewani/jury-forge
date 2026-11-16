@@ -36,6 +36,8 @@ written to be read by humans and agents. Start at the layer you need; do not rea
 - [`analysis/inherit-reject.md`](analysis/inherit-reject.md) — the keep / reject / rethink ledger.
 - [`analysis/open-questions.md`](analysis/open-questions.md) — questions the owner must answer.
 - [`analysis/assumptions.md`](analysis/assumptions.md) — assumptions we are currently making.
+- [`analysis/competitive-landscape-2026-11-16.md`](analysis/competitive-landscape-2026-11-16.md) — Copilot, CodeRabbit, Greptile, PR-Agent, Kodus compared.
+- [`analysis/capability-deep-dive-2026-11-16.md`](analysis/capability-deep-dive-2026-11-16.md) — capability-by-capability gaps and recommendations.
 
 ### 3. Product
 
@@ -48,9 +50,10 @@ written to be read by humans and agents. Start at the layer you need; do not rea
 - [`product/specs/`](product/specs/) — one spec per approved capability (template and index).
   - [`agentic-review-sessions.md`](product/specs/agentic-review-sessions.md) — per-PR sessions, manual triggers, routing, resolution.
   - [`jury-output.md`](product/specs/jury-output.md) — jury composition, finding provenance, deliberation, dissent, and verdict.
+  - [`standout-features.md`](product/specs/standout-features.md) — appeal, verified-fixed, noise budget, repo memory, signed receipt, presets, fix handoff, risk score, charges, and more.
   - [`review-progress-and-completion.md`](product/specs/review-progress-and-completion.md) — Check Run progress, completion, placeholder comment, failure/cancel.
   - [`provider-model-discovery.md`](product/specs/provider-model-discovery.md) — provider keys, `/models`, catalog, no free text.
-  - [`repo-knowledge-graph.md`](product/specs/repo-knowledge-graph.md) — PR review is diff-only; branch review uses the graph (v1.1).
+  - [`repo-knowledge-graph.md`](product/specs/repo-knowledge-graph.md) — PR review is T0+; branch review uses the graph (v1.1).
   - [`session-capacity-and-visibility.md`](product/specs/session-capacity-and-visibility.md) — interface, concurrency, roles, visibility, budgets.
   - [`reviewer-assignment-and-roles.md`](product/specs/reviewer-assignment-and-roles.md) — reviewer catalog, repo bindings (required/default/capability), capability registry, SME/admin roles, fallback.
   - [`knowledge-system.md`](product/specs/knowledge-system.md) — skills/docs/doc links, snapshots, grants, retrieval, citations.
@@ -60,6 +63,7 @@ written to be read by humans and agents. Start at the layer you need; do not rea
 ### 4. Architecture
 
 - [`architecture/overview.md`](architecture/overview.md) — the target system in one page.
+- [`architecture/technical-approach.md`](architecture/technical-approach.md) — Phase 1a stack decisions, repo layout, runtime flows, and the Phase 1b plan.
 - [`architecture/agentic-review.md`](architecture/agentic-review.md) — PR sessions, turns, agent harness, routing, resolution, provider/graph integration.
 - [`architecture/tech-depth/branch-review.md`](architecture/tech-depth/branch-review.md) — deferred branch-review design (default branch comparison, graph diff, open questions).
 - [`architecture/components.md`](architecture/components.md) — services, responsibilities, boundaries.
@@ -76,6 +80,7 @@ written to be read by humans and agents. Start at the layer you need; do not rea
 ### 5. Delivery
 
 - [`delivery/roadmap.md`](delivery/roadmap.md) — phases and milestones.
+- [`delivery/implementation-plan.md`](delivery/implementation-plan.md) — work packages for every phase, MVP → v1.2, with exit evidence.
 - [`delivery/status.md`](delivery/status.md) — the live tracker and handoff.
 - [`delivery/agent-chain.md`](delivery/agent-chain.md) — how the specialist agents hand off.
 - [`delivery/ways-of-working.md`](delivery/ways-of-working.md) — docs, PRs, ADRs, reviews.

@@ -1,6 +1,6 @@
 # ADR-0004: PostgreSQL is the source of truth
 
-- Status: proposed
+- Status: accepted (Phase 1a, 2026-11-16): Postgres 17 (16 tested) as the only datastore, including queue and artefacts; Kysely; SQL migrations (`technical-approach.md` §3.2)
 - Date: 2026-11-14
 - Owners: architecture
 - Supersedes: —

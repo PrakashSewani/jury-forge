@@ -43,7 +43,10 @@ named reviewer) signs off. "Looks good" is not evidence.
 - [ ] The GitHub App is created, installed, and verified before the owner claim; no per-repo enable toggle is required.
 - [ ] A provider key is validated; `/models` is fetched; an agent binds to a catalog model (no free text).
 - [ ] A webhook is verified, persisted, and enqueued.
-- [ ] Manual `jury:pr-review` label or Check Run action starts a session; one built-in reviewer publishes one review (PR review is strict T0; no file tools).
+- [ ] Manual `jury:pr-review` label or Check Run action starts a session; one built-in reviewer publishes one review (T0 diff + base-SHA instruction files; no file tools).
+- [ ] ADR-0024 safety core: a non-collaborator comment, a bot comment, and Jury Forge's own comment start no turn; a fork PR is skipped; thread/session turn budgets stop with a hand-off message; fingerprints are stable across two runs.
+- [ ] A large PR produces a coverage manifest and a first-line partial-coverage note; nothing is silently dropped.
+- [ ] The licence check rejects a BSL/SSPL/EE dependency.
 - [ ] The reviewer is bound to a repo with `required`/`default`; no binding means unavailable.
 - [ ] The Check Run moves `queued → in_progress → completed`; the review is the completion; no duplicate comment.
 - [ ] One-click finding feedback is recorded.
@@ -78,6 +81,12 @@ named reviewer) signs off. "Looks good" is not evidence.
 - [ ] Model catalog calls are SSRF-safe; invalid keys store nothing.
 - [ ] Session turns are serialized; a reply during a turn coalesces; no parallel turns.
 - [ ] Rate limits and bot-loop protection (ignore self, mention/reply, debounce) are tested.
+- [ ] Re-anchoring corpus (rebase, rename, reformat, force-push) passes; doubtful anchors become `outdated`.
+- [ ] Verifier drops fabricated findings in the stub corpus; the chair output is identical for identical inputs.
+- [ ] Appeal, verified-fixed, suppression (never `critical`), and repo-fact confirmation paths work end to end.
+- [ ] Receipts verify offline; tampering or a deleted receipt breaks the chain.
+- [ ] Egress preview matches the payload actually sent (redacted).
+- [ ] Budgets at session/repo/installation/requester scope fail closed with a Check Run reason.
 - [ ] Audit events are written for every trigger, turn, tool call, model call, reply, and resolve.
 - [ ] Retention/deletion works and is tested.
 - [ ] Sessions can be revoked; sensitive actions require re-auth.
@@ -90,8 +99,8 @@ checklist.
 
 ## G3 — Review quality
 
-- [ ] The evaluation benchmark exists: labelled PRs, seeded issues, clean PRs, adversarial PRs.
-- [ ] Baseline measured (single strong model, and the PoC if feasible).
+- [ ] The evaluation harness v0 runs in CI with a stub model; the replay benchmark (Phase 3) uses dogfood and pilot repos.
+- [ ] Baseline measured by replay: a single strong model at equal token budget.
 - [ ] Precision ≥ target, recall ≥ target, false-positive rate ≤ target, grounding = 100% for
       inline findings.
 - [ ] Deduplication rate ≤ target; disagreement is surfaced; role overlap is measured.
@@ -120,9 +129,11 @@ checklist.
 ## G4 — Operations and release
 
 - [ ] Clean-machine install and upgrade pass on the support matrix (amd64, arm64).
-- [ ] The Helm chart installs, upgrades, and rolls back on `kind` and one managed cluster; ingress keeps
+- [ ] *(v1.2 gate)* The Helm chart installs, upgrades, and rolls back on `kind` and one managed cluster; ingress keeps
       webhook/OAuth paths out of SSO; `helm test` passes; `values.schema.json` rejects bad values (ADR-0022).
-- [ ] Backup and restore drill passes within the target time.
+- [ ] Backup and restore drill passes within the target time, including the signing and encryption keys; the restored receipt chain verifies.
+- [ ] Upgrade from N-1 with seeded data, then rollback, passes in CI.
+- [ ] The sizing floor (2 vCPU / 4 GB / 20 GB, ≤20 devs) is met under the load test.
 - [ ] Migration expand/contract and rollback are tested; a pre-upgrade backup is automatic.
 - [ ] `jury-forge doctor` diagnoses the documented failure modes.
 - [ ] Metrics, traces, logs, dashboards, alerts, and SLOs are documented and tested.

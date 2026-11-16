@@ -1,6 +1,6 @@
 # ADR-0016: Reviewer catalog, repo bindings, SME roles, and fallback
 
-- Status: proposed
+- Status: accepted (G0, 2026-11-16; catalog, capability labels, and SME roles ship in v1.2)
 - Date: 2026-11-15
 - Owners: product + platform + security
 - Supersedes: the PoC's opt-out reviewer model and per-repo enablement

@@ -1,6 +1,6 @@
 # ADR-0020: Install and update channel
 
-- Status: proposed
+- Status: accepted (Phase 1a, 2026-11-16): minisign-signed bundle, cosign-signed multi-arch images, SBOM + provenance, bash CLI wrapper; no pipe-to-shell (`technical-approach.md` §3.13, §18)
 - Date: 2026-11-15
 - Owners: operations + security
 - Supersedes: —

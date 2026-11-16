@@ -28,10 +28,13 @@ diff itself can link to GitHub.
 | **Providers** | Add/verify/refresh, model catalog, key rotation, health | ✓ |
 | **Settings** | Caps, retention, verdict policy, workspace name; three roles | ✓ |
 | **Audit** | Triggers, turns, model calls, receipts, resolutions, overrides, exports | ✓ |
+| **Memory** | Repo suppressions and human-confirmed facts: view, edit, expire, purge (S4) | ✓ |
+| **Egress preview** | Exact redacted payload for a repo before the first provider call | ✓ |
+| **Scorecard** | Simple per-juror and per-rule table: posted, accepted, wrong, appealed | ✓ |
 | **Capabilities** | Capability registry, labels, SME/admin approval | v1.x |
 | **Reviewer studio** | Full 8-step create/approve/version flow | v1.x |
 | **Knowledge** | Packs/doc links, grants, retrieval preview | v1.x |
-| **Analytics** | Reviewer scorecards, acceptance, cost trends | v1.x |
+| **Analytics** | Advanced scorecards, acceptance, cost trends | v1.2 |
 
 ## Session detail (the core screen)
 
@@ -48,8 +51,10 @@ diff itself can link to GitHub.
   - resolution / override / reopen, with actor and reason.
 - **Jury panel:** composition, deliberation (merged duplicates, disagreements), chair rule and
   verdict, per-finding provenance; see [`jury-output.md`](jury-output.md).
-- **Receipt panel:** provider, model, tokens, redactions, withheld files, context, policy, verdict,
-  resolver; download JSON; link from the PR review.
+- **Receipt panel:** provider, model, tokens, redactions, withheld files, coverage manifest, verifier
+  counts, chair rules, suppressions, preset/estimate, signature status; download JSON; link from the
+  PR review.
+- **Appeals and rechecks:** appeal outcomes and "verified fixed" events in the timeline.
 - Actions: reply, ask a follow-up, pause, retrigger, resolve/reopen via the UI (role-gated), link to
   GitHub thread. `suggest` is the default: the agent proposes, the human resolves natively/UI;
   `auto` is opt-in. No slash commands.
@@ -96,9 +101,10 @@ The full 8-step studio (capabilities, knowledge, tools, availability, approval) 
 
 ## Settings (v1)
 
-- Per-turn token/tool/wall-clock caps.
-- Retention for sessions, messages, raw responses.
-- Verdict policy: advisory default; check/request-changes opt-in.
+- Per-turn token/tool/wall-clock caps; session/repo/installation/requester budgets.
+- Retention for sessions, messages, raw responses (defaults 30 d raw / 1 y findings and receipts).
+- Verdict policy: advisory default; check/request-changes opt-in; Check Run merge-gate policy.
+- Model roles: `reasoning` and `fast`; default preset.
 - Workspace name, origin, GitHub App status.
 - Roles: owner, maintainer, reader.
 

@@ -1,6 +1,6 @@
 # ADR-0007: Token-aware context and repository retrieval
 
-- Status: proposed
+- Status: accepted (G0, 2026-11-16; PR review context is T0+ per ADR-0025)
 - Date: 2026-11-14
 - Owners: AI pipeline + architecture
 - Supersedes: the PoC's D-010 byte budgets (as the primary strategy)

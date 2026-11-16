@@ -37,10 +37,15 @@ Likelihood / impact: H = high, M = medium, L = low.
 | R-028 | Prompt injection in user replies or comments | H | H | Trust labels, nonce delimiters, tool allowlist, resolve guard, injection corpus. | Security | Every prompt/tool change |
 | R-029 | GitHub review-thread/reply/resolve permissions or APIs are insufficient | M | H | Spike the exact events/mutations; fallback to PR comments; least-privilege App permissions. | Backend | Phase 1 spike |
 | R-030 | Provider model catalog drifts or a provider is down | M | M | Live `/models`, cache + staleness, deprecation states, health checks, explicit config errors. | Platform | First provider release |
-| R-031 | Repo graph is stale or wrong | M | H | Commit-scoped index, incremental validation, stale badge, rebuild, benchmark. | AI pipeline | v1.1 build |
+| R-031 | Repo graph is stale or wrong | M | H | Commit-scoped index, incremental validation, stale badge, rebuild, replay measurement. | AI pipeline | v1.1 build |
 | R-032 | Manual trigger is undiscoverable | H | M | Mode/capability labels, Check Run/details link, UI affordance, docs; no slash commands; measure first-trigger rate. | Product | First onboarding test |
 | R-033 | Session/conversation data retention or privacy fails | M | H | Retention policy, scoping, redaction, export/delete, audit. | Security | Before beta |
 | R-034 | Harness lock-in or licence surprise | M | H | MIT/Apache-only, session of record in Postgres, harness adapter, licence review. | Architect | ADR-0010 spike |
+| R-035 | Re-anchoring after rebase/reformat attaches a finding to the wrong code | M | H | Exact-then-fuzzy anchor match, `outdated` on doubt, re-anchor test corpus (ADR-0024 §5). | AI pipeline | Phase 2 |
+| R-036 | Verifier adds cost/latency without precision gain | M | M | One call per review, verifier drop-rate metric, preset can disable it in `quick` (ADR-0025). | Review quality | Phase 3 replay |
+| R-037 | Tree-sitter coverage is uneven, so T0+ helps some languages only | H | L | ±20-line fallback recorded in the coverage manifest; add grammars by demand. | AI pipeline | Phase 2 |
+| R-038 | Repo memory suppresses a real bug | M | H | Suppressions are visible, expire (90 d default), never suppress `critical`; owner can purge; listed in the receipt. | Product | Phase 2 |
+| R-039 | v1 scope is too large for one maintainer | H | H | Cut order recorded in `capabilities.md`; MVP is safety-first; never cut ADR-0024, verifier, coverage, receipt. | Owner | Each phase gate |
 
 ## The three risks that deserve a standing agenda item
 

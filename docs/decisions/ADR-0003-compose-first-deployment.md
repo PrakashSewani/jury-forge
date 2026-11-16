@@ -1,7 +1,7 @@
 # ADR-0003: Docker Compose is the reference deployment
 
-- Status: proposed (amended 2026-11-15 by ADR-0022: Helm/Kubernetes ships in v1 as a secondary
-  target; Compose remains the reference. Air-gapped stays out of v1.)
+- Status: accepted (Phase 1a, 2026-11-16): Compose with 4 containers + one-shot migrate; Caddy TLS;
+  Helm is v1.2 (ADR-0022/0023). Details: `architecture/technical-approach.md` §3.13.
 - Date: 2026-11-14
 - Owners: architecture + operations
 - Supersedes: —

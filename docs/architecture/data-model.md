@@ -85,7 +85,7 @@ token/cost budgets, model allowlist, data policy, fork policy, suppression rules
 | `session_participants` | `id`, `session_id`, `user_id`, `github_login`, `role`, `joined_at` | PR author, commenters, mentioned humans, maintainers; visibility is repo-scoped. |
 | `session_mentions` | `id`, `session_message_id`, `mentioned_login`, `kind` (`human`/`agent`), `created_at` | A human mention is a request for human input, not a bot instruction. |
 | `session_turns` | `id`, `session_id`, `trigger`, `mode`, `requested_capabilities`, `generation`, `status`, `input`, `plan`, `output`, `cost_micros`, `started_at`, `finished_at` | Durable unit of work; serialized per session; labels/tags recorded for provenance. |
-| `session_findings` | `id`, `session_id`, `thread_id`, `agent_run_id`, `file`, `line`, `severity`, `status`, `fingerprint`, `evidence` | `status` = open/addressed/verified/dismissed/resolved/reopened. |
+| `session_findings` | `id`, `session_id`, `thread_id`, `agent_run_id`, `file`, `line`, `severity`, `status`, `fingerprint`, `anchor_hash`, `agreement`, `verifier_verdict`, `evidence` | `status` = open/fix_candidate/verified_fixed/outdated/addressed/dismissed/resolved/reopened. |
 | `tool_calls` | `id`, `turn_id`, `agent_run_id`, `tool`, `input`, `output`, `tokens`, `latency_ms`, `status` | Bounded; read-only tools in v1. |
 | `resolutions` | `id`, `thread_id`, `actor_type`, `actor_id`, `mode` (`suggest`/`auto`/`off`), `evidence`, `confidence`, `created_at` | In `suggest`, actor is the human who resolved; in `auto`, the bot resolution is guarded. |
 | `agent_definitions` | `id`, `org_id`, `name`, `slug`, `role`, `created_at`, `archived_at` | Stable identity. |
@@ -96,6 +96,15 @@ token/cost budgets, model allowlist, data policy, fork policy, suppression rules
 | `index_nodes` | `id`, `index_id`, `kind`, `key`, `path`, `symbol`, `summary`, `content_hash`, `metadata` | File/symbol/test/config/doc/owner/finding. |
 | `index_edges` | `index_id`, `from_id`, `to_id`, `kind`, `metadata` | imports/references/tests/owns/documents/relates_to. |
 | `context_manifests` | `id`, `turn_id`, `index_id`, `included`, `omitted`, `tokens`, `bytes`, `reasons` | What the model saw and why. |
+| `coverage_manifests` | `id`, `turn_id`, `files` (path, state `reviewed`/`expanded`/`summarised`/`skipped`/`excluded`, reason, tokens) | ADR-0025 §2; part of the receipt. |
+| `finding_fingerprints` | `fingerprint`, `repository_id`, `category`, `path`, `anchor_hash`, `first_seen_turn_id`, `last_state` | ADR-0024 §4; unique `(repository_id, fingerprint)`. Code-assigned only. |
+| `message_versions` | `id`, `session_message_id`, `body_hash`, `body`, `observed_at`, `answered_by_turn_id` | ADR-0024 §3; a turn answers one version. |
+| `appeals` | `id`, `finding_id`, `appellant_user_id`, `argument_message_id`, `outcome` (`upheld`/`downgraded`/`withdrawn`/`escalated`), `votes`, `turn_id` | S1; one appeal per finding. |
+| `suppressions` | `id`, `repository_id`, `fingerprint`, `category`, `path_glob`, `reason`, `source` (`feedback`/`appeal`/`reaction`), `created_by`, `expires_at`, `revoked_at` | S4; never applies to `critical`. |
+| `repo_facts` | `id`, `repository_id`, `text`, `source_appeal_id`, `confirmed_by`, `confirmed_at`, `expires_at` | S4 positive memory; human-confirmed only. |
+| `review_receipts` | `id`, `turn_id`, `canonical_json`, `hash`, `prev_hash`, `signature`, `key_id`, `created_at` | S5; append-only hash chain per installation. |
+| `jury_charges` | `id`, `repository_id`, `charge_id`, `text`, `source_sha` | S12; read from base-SHA `.jury-forge.yml`. |
+| `charge_results` | `id`, `turn_id`, `charge_id`, `result` (`pass`/`fail`/`n_a`), `evidence` | S12; Check Run line items. |
 
 ### Session invariants
 
@@ -129,7 +138,7 @@ token/cost budgets, model allowlist, data policy, fork policy, suppression rules
 
 | Entity | Key fields | Notes |
 | ------ | ---------- | ----- |
-| `budgets` | `id`, `org_id`, `scope_type`, `scope_id`, `period` (`day`/`week`/`month`), `token_limit`, `cost_limit_micros`, `action` (`warn`/`block`), `created_at` | Hard or soft. |
+| `budgets` | `id`, `org_id`, `scope_type` (`session`/`repo`/`installation`/`requester`), `scope_id`, `period` (`day`/`week`/`month`), `token_limit`, `cost_limit_micros`, `action` (`warn`/`block`), `created_at` | Hard or soft; `block` fails closed (ADR-0024 §7). |
 | `usage_rollups` | `org_id`, `scope_type`, `scope_id`, `period_start`, `tokens`, `cost_micros`, `runs` | Materialised for dashboards. |
 | `model_registry` | `provider`, `model`, `context_window`, `max_output`, `tokenizer`, `input_price`, `output_price`, `capabilities`, `updated_at` | Operator-overridable. |
 

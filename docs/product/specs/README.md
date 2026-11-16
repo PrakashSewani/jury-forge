@@ -16,6 +16,7 @@ failure modes, rollout, and open questions.
 | [`agentic-review-sessions.md`](agentic-review-sessions.md) | Durable per-PR sessions, manual triggers, dynamic routing, resolution modes (`suggest` default), PR/branch review | draft for owner review |
 | [`review-progress-and-completion.md`](review-progress-and-completion.md) | Check Run progress, completion signal, manual-trigger placeholder comment, failure/cancel behaviour | draft for owner review |
 | [`jury-output.md`](jury-output.md) | Jury composition, finding provenance, deliberation, dissent, chair verdict, and output display | draft for owner review |
+| [`standout-features.md`](standout-features.md) | Appeal, verified-fixed, noise budget, repo memory, signed receipt, presets, fix handoff, risk score, reactions, instruction compatibility | draft for owner review |
 | [`provider-model-discovery.md`](provider-model-discovery.md) | Provider onboarding, `/models` discovery, model catalog, encrypted keys | draft for owner review |
 | [`repo-knowledge-graph.md`](repo-knowledge-graph.md) | Incremental repository graph for branch review (v1.x) and context reuse | draft for owner review |
 | [`session-capacity-and-visibility.md`](session-capacity-and-visibility.md) | Interface, concurrency, lifecycle, roles, visibility, budgets | draft for owner review |

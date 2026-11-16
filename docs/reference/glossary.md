@@ -5,10 +5,20 @@ Shared vocabulary. When a term is ambiguous, this page wins.
 | Term | Meaning |
 | ---- | ------- |
 | **ADR** | Architecture Decision Record. One durable choice, with context, options, decision, and consequences. |
+| **Anchor hash** | Hash of the whitespace-normalised anchored lines ±2 lines; used to re-locate a finding after a push (ADR-0024). |
+| **Appeal** | A PR author's dispute of a finding; the jury re-examines it and the finding is upheld, downgraded, or withdrawn (S1). |
+| **Coverage manifest** | The per-review list of files reviewed, expanded, summarised, skipped, or excluded, with reasons (ADR-0025). |
+| **Jury charge** | A natural-language pass/fail check defined per repo, shown as a Check Run line item (S12). |
+| **Model roles** | `reasoning` (jurors, verifier, appeals) and `fast` (classification, summaries) instance models (ADR-0025). |
+| **Preset** | `quick`, `standard`, or `deep` jury size and model choice, with a cost estimate (S7). |
+| **Repo memory** | Per-repo suppressions and human-confirmed facts learned from feedback (S4). |
+| **T0+** | PR review context: diff hunks expanded to their enclosing function or class in files already in the diff (ADR-0025). |
+| **Verifier** | A non-voting step that marks each grounded finding confirmed, unconfirmed, or wrong before the chair (ADR-0025). |
+| **v1.1 / v1.2** | Post-v1 tiers: v1.1 = depth (branch review, graph, analyzers, GHES, CLI); v1.2 = platform (catalog, roles, packs, OIDC, Helm, GitLab). |
 | **Artifact / artefact** | A stored byte payload: raw diff, provider response, report, export. Lives in object storage, referenced from Postgres. |
 | **Audit event** | An append-only record of a mutation or a security-relevant decision. Not the same as activity. |
 | **Budget** | A token or cost limit for a scope and period, with a warn or block action. |
-| **Chair** | An optional final step that merges/downgrades/verdicts findings within policy; it cannot invent findings. |
+| **Chair** | The deterministic, code-only step that merges, ranks, and applies policy to verified findings; a model writes only its summary text (ADR-0025). |
 | **Context manifest** | The record of what the model saw: included files/slices, omitted files, token counts, reasons. |
 | **Context planner** | The component that selects what each reviewer sees within a token/cost budget. |
 | **Dead letter** | A job that exhausted its retries and is waiting for an operator to replay or discard. |
@@ -16,7 +26,7 @@ Shared vocabulary. When a term is ambiguous, this page wins.
 | **Egress policy** | The allowlist and IP/redirect rules that decide which outbound requests are permitted. |
 | **Evaluation benchmark** | A labelled set of PRs used to measure precision, recall, grounding, and cost. |
 | **Finding** | A single review claim: file, line, severity, category, title, body, evidence, confidence, optional suggestion. |
-| **Fingerprint** | A stable identifier for a finding across runs, used for resolution tracking and suppression. |
+| **Fingerprint** | A stable, code-assigned identifier for a finding: `sha256(repo, category, path, anchor_hash)`; used for dedup, resolution tracking, and suppression (ADR-0024). |
 | **Forge adapter** | The interface that normalizes a source-control provider (GitHub, GitLab, Gitea). |
 | **Generation** | A monotonically increasing number per PR; newer generations supersede older runs. |
 | **Grounding** | Verifying a finding against the actual code at the reviewed SHA. |

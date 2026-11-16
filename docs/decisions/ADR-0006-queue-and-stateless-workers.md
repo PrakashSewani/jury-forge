@@ -1,6 +1,6 @@
 # ADR-0006: Queue and stateless workers, not per-run actors
 
-- Status: proposed
+- Status: accepted (Phase 1a, 2026-11-16): graphile-worker behind a `JobQueue` port, pg-boss fallback; per-session `queue_name`, `job_key` debounce (`technical-approach.md` §3.3)
 - Date: 2026-11-14
 - Owners: architecture
 - Supersedes: the PoC's D-006 (per-run Durable Object)

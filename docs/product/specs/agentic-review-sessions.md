@@ -245,10 +245,29 @@ optional; sandboxed test/build tools can be added later behind an explicit capab
 
 ### Loop limits
 
-- Max turns per session: configurable (for example 20) before requiring an explicit human command.
+> **Binding rules: [ADR-0024](../../decisions/ADR-0024-conversation-safety-and-finding-identity.md).**
+> Only write-access users trigger reviews; the PR author may reply on its own Jury Forge threads;
+> others and all bots never start a turn; fork PRs are skipped by default (MVP). Self-detection is by
+> App ID. Each thread gets at most 6 agent replies and each session at most 40 turns per generation,
+> then the agent hands off to a human. Each user gets at most 10 reply turns per hour. A turn answers
+> the exact comment version it read.
+
+- Max turns per session: 40 per generation (ADR-0024), then a human hand-off message.
 - Max tokens, tool calls, and wall-clock per turn; currency cap only when pricing is known.
 - A turn that hits a limit posts a short status, stops, and waits — it never silently truncates.
 - A user reply interrupts/queues; it does not run a second turn in parallel with the current one.
+- **Reply intent** is classified first by the `fast` model (dispute / question / fixed / won't-fix /
+  other). Only dispute (an **appeal**, standout S1) and question start a full juror turn.
+- **One voice per thread:** the juror that raised the finding answers; the chair speaks only at PR level.
+
+### After a push (ADR-0024 §5)
+
+- Open findings are re-anchored by `anchor_hash` (exact, then fuzzy within the file).
+- If the anchored code changed, the finding becomes `fix_candidate` and gets a cheap recheck; the
+  result is posted as **"Verified fixed in `<sha>`"** or "Still present" (S2).
+- If the anchor is lost, the finding becomes `outdated` and is not reposted.
+- When an automatic or manual trigger is active, **incremental review** covers only the new commits'
+  diff, and open findings are never repeated.
 
 ## 5. Resolution protocol
 
@@ -265,7 +284,9 @@ commands; a human resolves natively in GitHub or via the Jury Forge UI.
 
 ### `auto` (opt-in)
 
-The agent may call `resolve_thread` only when all guard checks pass:
+The agent may call `resolve_thread` only when all guard checks pass (ADR-0024 §6 is binding: the
+anchored code changed after the finding, the recheck says `fixed` above the threshold, no human
+dispute since, and severity below `critical`):
 
 1. The thread was created by Jury Forge.
 2. There is a human response after the last agent finding/question.

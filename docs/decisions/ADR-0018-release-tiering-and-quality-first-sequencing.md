@@ -1,6 +1,6 @@
 # ADR-0018: Release tiering and quality-first sequencing
 
-- Status: proposed (needs owner approval at G0; changes scope per `scope.md` change control)
+- Status: accepted (G0, 2026-11-16; tiers consolidated to MVP / v1 / v1.1 depth / v1.2 platform in `product/capabilities.md`)
 - Date: 2026-11-15
 - Owners: product + architecture
 - Supersedes: the flat "v1 in scope" list in `docs/product/scope.md` (it is restructured, not

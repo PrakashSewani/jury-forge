@@ -6,7 +6,7 @@
 - Related: ADR-0014
 - Parent: [`agentic-review-sessions.md`](agentic-review-sessions.md)
 
-> **Direction (ADR-0023):** the repository graph and branch review are **v1.x**, benchmark-gated. V1
+> **Direction (ADR-0023):** the repository graph and branch review are **v1.1**, measurement-gated. V1
 > is strict diff + repository instruction files. This spec is the target for the next quality step,
 > not the first release.
 

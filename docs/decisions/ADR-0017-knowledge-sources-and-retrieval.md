@@ -1,6 +1,6 @@
 # ADR-0017: Knowledge sources, snapshots, grants, and retrieval
 
-- Status: proposed
+- Status: accepted (G0, 2026-11-16; v1 = base-SHA instruction files + one conventions pack; the rest v1.2)
 - Date: 2026-11-15
 - Owners: AI pipeline + security
 - Supersedes: the PoC’s knowledge-pack-only model
@@ -64,7 +64,7 @@ every live fetch is snapshotted for audit; no grant means no injection; every ci
 - Packs/doc links/repo docs are untrusted; prompt-injection defenses apply.
 - Secret-like patterns are redacted; `never_quote` is stored but withheld.
 - Knowledge is tenant/repo/reviewer-scoped; access follows repo access.
-- Signed packs are optional in v1.1; unsigned packs are labelled.
+- Signed packs are optional in v1.2; unsigned packs are labelled.
 - Refresh failures mark stale, not break the review.
 
 ## Evidence
@@ -76,6 +76,6 @@ every live fetch is snapshotted for audit; no grant means no injection; every ci
 ## Follow-ups
 
 - Define chunking/ranking and citation format.
-- Build the knowledge library/grants UI and retrieval preview (v1.1).
+- Build the knowledge library/grants UI and retrieval preview (v1.2).
 - Define the capability-grant UX.
 - Benchmark knowledge impact; add embeddings only if justified.

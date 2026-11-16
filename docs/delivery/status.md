@@ -7,8 +7,9 @@ one phase `in progress`.
 
 | Phase | Scope | Status |
 | ----- | ----- | ------ |
-| 0 | Product definition and documentation | **in progress** |
-| 1 | Foundation and walking skeleton | not started |
+| 0 | Product definition and documentation | **done — G0 passed 2026-11-16** |
+| 1a | Technology and approach (decisions only, no code) | **done — accepted 2026-11-16** |
+| 1b | Foundation and walking skeleton (MVP) | **next — waiting for owner go** |
 | 2 | Trust and security | not started |
 | 3 | Review quality | not started |
 | 4 | Operations and release | not started |
@@ -20,17 +21,73 @@ one phase `in progress`.
 
 **Branch:** `docs/poc-analysis-product-foundations`.
 
-**Done this session (2026-11-15, ADR-0023 viability tests):**
+**Done this session (2026-11-16, deep review):**
 
-- **Workstream A (quality spike): BLOCKED, not run.** Pre-registered protocol, prompts (hashed),
-  config, and scoring rules are in `docs/analysis/quality-spike-2026-11-15.md`. Harness plumbing
-  is in `spikes/quality/` (throwaway; 8/8 offline unit checks). No model was called, no dataset
-  exists, and no decision is made.
+- Deep review of docs, ADRs, PoC study, and agent chain. Quality spike removed (owner).
+- Added ADR-0024 (proposed): trigger authz, fork skip in v1, bot-loop and turn budgets, comment
+  versioning, finding fingerprints, re-anchoring after push/force-push, evidence-gated `auto`
+  resolution, enforced token budgets, GitHub write queue.
+- Added `product/specs/standout-features.md`: appeal, verified-fixed, noise budget, repo memory,
+  signed receipt, egress preview/replay. Promoted into the v1 tier pending G0.
+- Owner decisions needed: ADR-0024, SF-01–SF-04.
+- Competitive scan (`analysis/competitive-landscape-2026-11-16.md`: Copilot review, Greptile,
+  CodeRabbit, PR-Agent) added S7–S11 table stakes: jury presets with cost estimate, fix-prompt
+  handoff, deterministic PR risk score, reaction feedback, base-SHA instruction compatibility.
+- Capability deep dive (`analysis/capability-deep-dive-2026-11-16.md`): 14 areas, ~90 rows, with
+  second-pass research (Copilot concepts, CodeRabbit architecture, Greptile self-host, Kodus,
+  PR-Agent compression). Proposes v1 promotions and raises Q-037–Q-048 for G0.
+- Applied the deep dive: ADR-0025 (T0+ context, coverage manifest, evidence ingest, verifier,
+  code-first chair, model roles); v1/v1.x tiers, scope, roadmap, ai-pipeline, open questions, and
+  AGENTS.md preferences updated. All remain `proposed` until G0.
+
+**Implementation plan (2026-11-16):** `docs/delivery/implementation-plan.md` breaks every phase
+into work packages: Phase 1b (48 WPs across M1.0–M1.8), Phase 2 (35), Phase 3 (8), Phase 4 (9),
+Phase 5 (4), v1.1 (12), v1.2 (11). It includes a critical-path diagram, cross-cutting tracks, plan
+risks, and the first steps on go.
+
+**Phase 1a accepted (2026-11-16):** owner approved T-01–T-12; TQ-1–TQ-5 resolved (distroless by
+default, bash CLI, KEK not in backups by default, Postgres 17 bundled / 16 tested, 8 grammars).
+ADR-0003/0004/0005/0006/0020 accepted; ADR-0010 accepted as amended (thin runner); ADR-0026 written.
+The plan was extended with: configuration model, API/error conventions, prompt asset management,
+the MVP schema outline, the CI/CD and release pipeline, the developer environment, and a per-milestone
+definition of done. **Next action:** owner says go for Phase 1b (M1.0 repo and CI, branch
+`feat/walking-skeleton`).
+
+**Phase 1a (2026-11-16):** `docs/architecture/technical-approach.md` drafted: constraints, the
+system shape (4 containers, Postgres only), 12 stack decisions with alternatives (T-01–T-12),
+repository layout with an enforced dependency rule, runtime flows, footprint budgets, a threat→control
+mapping, the Phase 1b milestone plan M1.0–M1.8 with five time-boxed spikes, stack risks, and live
+npm evidence. Notable change: ADR-0010 moves from "spike LangGraph" to a thin turn runner on the
+`ai` SDK. **Next action:** owner approves or amends T-01–T-12 and TQ-1–TQ-5; then the ADRs flip
+and ADR-0026 is written.
+
+**Next action (2026-11-16, before 1a):** owner says "go" to start **Phase 1a — technology and approach**
+(no code). Scope: decide the stack ADRs still `proposed` (0003 deployment, 0004 storage, 0005
+runtime, 0006 queue/workers, 0010 agent harness, 0020 install/update channel), plus the decisions
+that do not have an ADR yet: tree-sitter and grammar packaging, receipt signing and key
+management, GitHub client library and API strategy (REST/GraphQL, write queue), UI framework,
+migrations tool, test strategy (stub model, injection corpus, re-anchor corpus), observability,
+and the repository/monorepo layout. Each one gets options, evidence (licence, maturity, live
+versions), and a recommendation for owner approval.
+
+**G0 passed (2026-11-16):** the owner accepted ADR-0007, 0008, 0011–0018, 0021–0025 and the
+recommended answers to Q-028 and Q-032–Q-048. The stack ADRs stay `proposed` for Phase 1a.
+
+**Consolidation (2026-11-16, owner accepted the direction):** tiers restructured to MVP (safe loop:
+ADR-0024 safety core, coverage manifest, base-SHA instructions moved in), v1 (grouped by jury /
+context / conversation / output / learning / trust / ops), **v1.1 depth**, **v1.2 platform**, Later.
+Aligned: sessions spec, jury-output (verifier, code chair, receipt fields), data model (fingerprints,
+versions, appeals, suppressions, facts, receipts, charges, coverage, budgets), security (base-SHA
+instructions, injection corpus, retention, egress preview, signing), quality gates G1–G4, v1 UI,
+README map, glossary, risks R-035–R-039, v1.1/v1.2 terminology. Link check: no broken relative links.
+
+**Earlier session (2026-11-15, ADR-0023 viability tests):**
+
+- **Workstream A (quality spike): removed 2026-11-16 by the owner.** The harness and protocol were
+  deleted; quality is measured after v1 via replay (`specs/standout-features.md` S6).
 - **Workstream B (install readiness): documentation dry run only.**
   `docs/analysis/install-readiness-2026-11-15.md` records 3 blockers, 1 likely defect, 13
   ambiguities, and 3 contradictions. Installability is **unproven**; no timing was taken.
-- Found and fixed two bugs in the throwaway harness during the offline checks (path normalisation
-  order; a mangled regex and a truncated module that were rewritten).
 
 **Earlier session (2026-11-14/15):**
 
@@ -77,8 +134,6 @@ one phase `in progress`.
 
 **Verified (2026-11-15, this session):**
 
-- `npm test` in `spikes/quality/`: 8 pass, 0 fail (offline; Node v24.19.0; no dependencies).
-- Prompt and config SHA-256 hashes recorded before any run (quality-spike doc §2).
 - Install dry run: file search found no compose file, Caddyfile, CLI, Dockerfile, release tag,
   minisign signature, or public key; cited lines were read and re-checked.
 - Not verified: any model output, any scoring, any install on a host. Nothing here is a "works" claim.
@@ -111,9 +166,6 @@ one phase `in progress`.
 
 **Blocked by (2026-11-15):**
 
-- **Quality spike (Workstream A):** no experiment provider key or model; no approved dataset or
-  human ground truth; no written permission to send diffs to a provider. The guinea-pig PR is
-  contaminated as a case (its findings were already seen). Owner items are in quality-spike §8.
 - **Install readiness (Workstream B):** no runnable build. Doc defects to fix before any timed test:
   B1 Stage 2 needs OAuth credentials that Stage 3 creates; B2 origin TLS validation needs an `ask`
   authorization that does not exist yet; B3 no compose file, CLI, or signed release.
@@ -132,9 +184,7 @@ inside each spec (`SH-`, `PA-`, `CLI-`, `LP-`, `RC-`, `HS-`, `MCP-`, `PW-`). The
 not in any tier, and do not block G0.
 
 **Next action (2026-11-15):** merge the setup-ordering fix PR (`docs/fix-setup-ordering`); then start
-Phase 1 (walking skeleton) with the stack ADRs. The quality spike is deferred, not cancelled: its
-inputs are in `docs/analysis/quality-spike-2026-11-15.md` §8, and it should run after the walking
-skeleton (or as a synthetic parallel track). Installability is still unproven; the setup docs are
+Phase 1 (walking skeleton) with the stack ADRs. Installability is still unproven; the setup docs are
 fixed, not the product.
 
 **Next action (earlier):**
