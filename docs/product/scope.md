@@ -97,9 +97,9 @@ engineer uses it. Solo/homelab is served by the labelled evaluation mode, not a 
 ### 6. Measure
 
 - **Evaluation harness v0** from the first release: ≈20 labelled PRs, deterministic stub-model CI.
-- **A quality spike before the control-plane breadth:** 3–5 real repositories, strict T0 vs a strong
-  single-model baseline. Publish the method and the scorecard.
-- **A public benchmark at launch** (v1): precision, recall, acceptance, false positives, grounding.
+- **Quality is measured after v1 is built**, on real PRs: per-finding feedback, appeal outcomes,
+  and replay against a single-model baseline ([`specs/standout-features.md`](specs/standout-features.md) S6).
+  No pre-v1 spike.
 - OpenTelemetry traces, Prometheus metrics, structured logs, and cost/latency dashboards.
 - A dogfood repository that runs the product on itself.
 
@@ -120,7 +120,7 @@ decision.
 | Capability registry and `jury:cap:*` labels | The request/grant model is good, but not needed for the first review | v1.x |
 | SME, admin, viewer, auditor roles | Owner/maintainer/reader is enough for a small team | v1.x |
 | Knowledge packs, doc links, retrieval UI | Repo instruction files cover the first need | v1.x |
-| Repository graph and branch review | Highest cost; benchmark first | v1.x (benchmark-gated) |
+| Repository graph and branch review | Highest cost; measure first | v1.1 (measurement-gated) |
 | Helm / Kubernetes | Compose is the reference; Helm adds a support matrix | v1.x |
 | Per-repo provider allowlists / data zones | The egress receipt proves v1; the policy follows | v1.x |
 | Multi-forge (GitLab/Gitea/Bitbucket) | GitHub is the wedge; the adapter boundary stays | v1.x+ |
@@ -146,30 +146,44 @@ decision.
 **MVP** is the smallest build that proves the runtime and the loop; **v1** is the first release we
 would support for a team that depends on it.
 
-### MVP (the walking skeleton)
+### MVP (the walking skeleton — the *safe loop*)
 
 - Compose install with Postgres, one worker, and one UI.
 - GitHub App setup and installation-level availability (no repo toggle).
 - Provider add → `/models` discovery → one built-in reviewer bound to a catalog model.
-- Manual `jury:pr-review` label, Check Run action, or UI picker → strict diff-only → one review.
-- Per-PR session; one reply; `suggest` resolution; basic timeline.
+- Manual `jury:pr-review` label, Check Run action, or UI picker → T0 diff review with base-SHA
+  instruction files → one review.
+- Large-PR fitting with a coverage manifest; never a silent partial review.
+- Per-PR session; replies; `suggest` resolution; basic timeline.
+- **ADR-0024 safety core:** trigger authz, self-detection by App ID, bot and fork skip, turn
+  budgets, finding fingerprints. These are cheap, and leaving them out would make the MVP
+  exploitable on any public repo.
 - One-click feedback on findings.
 - Check Run progress and completion; a failure path that says why.
-- Evaluation harness v0 and a clean-machine install test.
+- Evaluation harness v0 (stub model, no real model calls), a licence check, and a clean-machine install test.
 
-The MVP proves the **self-hosted runtime and the conversational loop**, not the full quality thesis.
-It must include the session/reply/resolve path; a one-shot review is not the product.
+The MVP proves the **self-hosted runtime and a safe conversational loop**, not the full quality
+thesis. It must include the session/reply/resolve path; a one-shot review is not the product.
 
 ### v1 (the trust loop)
 
-The v1 sections above. The additions over MVP are: the three-reviewer default jury, the jury verdict
-and dissent, the review receipt, stalled-session policy, audit/export, backup/restore, reader role,
-the quality spike, and the public benchmark.
+The v1 sections above, grouped by theme in `capabilities.md`: jury (three reviewers, verifier,
+code-first chair, presets, model roles), context (T0+, evidence ingest), conversation (the rest of
+ADR-0024, appeal, verified-fixed, incremental review), output (noise budget, risk score, charges,
+suggestions, fix handoff, merge gate), learning (reactions, implicit acceptance, repo memory,
+scorecard), trust (signed receipt, egress preview, redaction, retention, audit, roles), and ops
+(backup/restore, upgrade/rollback, reconciler, sizing).
+
+### v1.1 (depth) and v1.2 (platform)
+
+v1.1 makes reviews better and reaches more places: replay and the scorecard, branch review with a
+callers index, sandboxed analyzers, GHES, CLI. v1.2 adds org scale: catalog and studio, capability
+labels, wider roles, knowledge packs, OIDC, Helm, provider allowlists, GitLab self-managed.
 
 ## De-scoping rules
 
 - If a capability does not improve the first review, the install, or the trust story, it waits.
-- If a capability cannot be measured, it waits for the benchmark.
+- If a capability cannot be measured, it waits for post-v1 measurement (feedback + replay).
 - If a capability requires a central service, it is out unless the owner explicitly overrides.
 - If a capability creates a security risk we cannot mitigate, it does not ship.
 - If a capability only makes the product broader, not more defensible, it goes to v1.x.

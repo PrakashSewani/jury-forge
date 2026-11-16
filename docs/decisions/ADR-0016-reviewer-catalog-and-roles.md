@@ -1,6 +1,6 @@
 # ADR-0016: Reviewer catalog, repo bindings, SME roles, and fallback
 
-- Status: proposed
+- Status: accepted (G0, 2026-11-16; catalog, capability labels, and SME roles ship in v1.2)
 - Date: 2026-11-15
 - Owners: product + platform + security
 - Supersedes: the PoC's opt-out reviewer model and per-repo enablement
@@ -57,7 +57,8 @@ required.
 
 ### Triggers
 
-- `jury:pr-review` — **strict T0 diff-only** PR review: the PR diff/hunks + metadata + thread context; no repository file reads, no graph.
+- `jury:pr-review` — **diff-only** PR review: the PR diff/hunks (T0+ enclosing-function expansion
+  from v1, ADR-0025) + metadata + thread context; no file outside the diff is read, no graph.
 - `jury:branch-review` — complete branch review: compare the PR branch to the repository default branch and review the full branch delta against the repo context graph (T2); static functional/behavioral impact, no code execution in v1/v1.1.
 - Check Run actions (`PR review`, `Branch review`) — same turns.
 - **No slash commands in PR conversations.** Specific reviewers are selected via the UI picker; capability labels select capability groups.

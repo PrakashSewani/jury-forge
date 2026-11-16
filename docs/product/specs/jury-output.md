@@ -73,6 +73,15 @@ Every published finding keeps:
 
 ### Deliberation and dissent
 
+> **v1 mechanics ([ADR-0025](../../decisions/ADR-0025-v1-review-pipeline.md) §4):** findings pass
+> code grounding, then a non-voting **verifier** (`confirmed` / `unconfirmed` / `wrong`), then a
+> **code-only chair**. The chair merges findings by fingerprint (ADR-0024 §4). Severity is the
+> highest among the confirming jurors, capped by policy. Agreement is the number of jurors that
+> flagged the finding divided by the number that saw the file. Findings are ranked by
+> `severity × confidence × agreement`, then the noise budget and suppressions are applied. A model
+> writes only the summary and dissent text. The "chair decision" below is therefore a rule
+> application, recorded in the receipt.
+
 When two or more reviewers run, the chair produces a **deliberation record**:
 
 - **Agreement:** the same issue found by more than one reviewer; merged, with the contributing
@@ -151,6 +160,13 @@ whom, under what policy, with what evidence?” It is the security buyer's artif
 | `redactions` | Count and categories (never the secret values) |
 | `withheld` | Files/sources withheld by policy or `never_quote` |
 | `context` | Sources, versions/hashes, and what was dropped for budget |
+| `coverage` | Coverage manifest: reviewed / expanded (T0+) / summarised / skipped / excluded files, each with a reason |
+| `verifier` | Counts of confirmed / unconfirmed / wrong, and the model used |
+| `chairRules` | The deterministic rules applied and their parameters |
+| `suppressed` | Findings suppressed by repo memory or recurrence (fingerprint + rule id) |
+| `instructions` | Instruction files used: path, base SHA, token count |
+| `preset`, `estimate` | Preset used and the pre-run cost estimate vs actual |
+| `signature`, `prevHash` | Ed25519 signature and the previous receipt hash (chain; S5) |
 | `policy` | Verdict policy and the rules applied |
 | `verdict`, `resolver` | The published verdict and who resolved it |
 | `createdAt` | Timestamp and policy version |

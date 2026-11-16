@@ -1,6 +1,6 @@
 # ADR-0013: Manual-first triggering and dynamic agent routing
 
-- Status: proposed
+- Status: accepted (G0, 2026-11-16; amended by ADR-0024; dynamic routing is v1.2)
 - Date: 2026-11-15
 - Owners: product + architecture
 - Supersedes: the PoC's repository enable/disable and opt-out reviewer model

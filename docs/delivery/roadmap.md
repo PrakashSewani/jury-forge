@@ -4,7 +4,7 @@ The path from documentation to a first supported release. Each phase has a goal,
 an exit gate. The owner approves each gate before the next phase starts. The deciding direction is
 [ADR-0023](../decisions/ADR-0023-product-direction.md): v1 is the **trust loop**, not the platform.
 
-## Phase 0 — Product definition and documentation (current)
+## Phase 0 — Product definition and documentation — **done, G0 passed 2026-11-16**
 
 **Goal:** agree on what we are building, why, and the architecture that can deliver it.
 
@@ -27,6 +27,12 @@ architecture, approved the scope and principles, and approved or amended ADR-002
 
 ## Phase 1 — Walking skeleton
 
+> **Split (2026-11-16):** **Phase 1a — technology and approach** (decisions only, no code) accepted
+> the stack ADRs and the engineering approach on 2026-11-16. **Phase 1b** builds the walking
+> skeleton below and has not started; it waits for the owner's go.
+> The work-package breakdown for every phase (MVP → v1.2) is in
+> [`implementation-plan.md`](implementation-plan.md).
+
 **Goal:** prove the self-hosted runtime and the conversational loop with one built-in reviewer —
 not a one-shot review, and not a platform.
 
@@ -43,8 +49,11 @@ not a one-shot review, and not a platform.
   contract: the domain is set and validated in setup (ADR-0021) before the App is created;
   `PUBLIC_URL` only freezes it.
 - **One built-in reviewer** bound to a catalog model; no catalog, no capability registry in Phase 1.
-- PR review is **strict T0 diff-only** plus `AGENTS.md`/`CONTRIBUTING.md` at the base SHA; hard
-  per-turn token/wall-clock caps (ADR-0018; ADR-0019 rejected for PR review).
+- **ADR-0024 safety core:** trigger authz by `author_association`, self-detection by App ID, bot
+  and fork skip, per-thread and per-session turn budgets, finding fingerprints.
+- **Large-PR fitting + coverage manifest** (ADR-0025 §2); base-SHA instruction files (S11).
+- PR review is **T0 diff-only** plus base-SHA instruction files; hard
+  per-turn token/wall-clock caps (ADR-0018; ADR-0019 rejected for PR review; T0+ arrives in v1).
 - **Check Run progress and completion** (`queued` → `in_progress` → `completed`) and one review per
   turn; optional single placeholder comment for manual triggers
   ([`specs/review-progress-and-completion.md`](../product/specs/review-progress-and-completion.md)).
@@ -54,7 +63,8 @@ not a one-shot review, and not a platform.
 - No-reviewers/no-match fallback comment with setup/retrigger instructions.
 - Session/turn/tool-call/finding records, a basic session timeline, health/readiness, logs.
 - **Evaluation harness v0:** ≈20 labelled PRs (seeded bugs, clean, adversarial), deterministic
-  stub-model CI, first baseline of a single strong-model prompt.
+  stub-model CI for parsing, anchoring, fingerprints, dedup, and budgets. No real model calls.
+- A licence check in CI (no BSL/SSPL/EE dependencies).
 - A clean-machine install test and a deterministic test suite.
 
 **Exit gate (G1):** a new operator installs on a clean Linux host, signs in with GitHub to claim the
@@ -81,14 +91,20 @@ conversation a small team can rely on.
 - **Stalled-session policy:** 7-day flag, 30-day archive, no auto-resolve, no silent drop.
 - **Preview/approve mode** and suppression rules.
 - **Backups, restore drill, upgrade/rollback, migration safety.**
-- **Quality spike (gate):** 3–5 real repositories, strict T0 vs a strong single-model baseline,
-  seeded with the PoC's missed findings. The result decides whether T0 stays the default or branch
-  review is recommended for high-risk PRs.
+- **Conversation safety (ADR-0024):** trigger authz, fork skip, loop/turn budgets, finding
+  fingerprints, re-anchoring after push, evidence-gated resolution, enforced token budgets.
+- **Standout features** ([`specs/standout-features.md`](../product/specs/standout-features.md)):
+  appeal, verified-fixed, noise budget, repo memory, signed receipt, presets + cost estimate, fix
+  handoff, risk score, reaction feedback, instruction compatibility, jury charges, suggestion
+  blocks, merge-gate policy, egress preview.
+- **Review pipeline (ADR-0025):** T0+ context, large-PR fitting + coverage manifest, linked-issue
+  and SARIF evidence, verifier, code-first chair, `reasoning`/`fast` model roles.
+- **Release gates added:** injection corpus, licence check, N-1 upgrade + rollback, restore drill
+  that verifies the receipt chain, sizing floor (2 vCPU / 4 GB / 20 GB).
 - Minimal control plane: setup, overview, sessions, three reviewers, providers, audit, settings.
 
 **Exit gate (G2):** a real team can run a review they can defend; the receipt is complete; the
-injection/SSRF/authz suites pass; the quality spike has a published method and a baseline; the
-security review finds no S1 issues.
+injection/SSRF/authz/bot-loop/re-anchor suites pass; the security review finds no S1 issues.
 
 ## Phase 3 — Quality proof
 
@@ -97,8 +113,9 @@ the branch-review question on evidence.
 
 **Deliverables:**
 
-- **Benchmark v1:** strict T0 vs a single strong-model baseline; precision, recall, grounding,
-  acceptance, false positives, latency, cost.
+- **Benchmark v1 via replay** on the dogfood and pilot repos: diff-only jury (T0/T0+) vs a single
+  strong-model baseline at equal token budget; precision, recall, grounding, acceptance, false
+  positives, latency, cost. Ground truth comes from per-finding feedback and appeal outcomes.
 - **Public scorecard** for the v1 launch.
 - **Context planner** with a manifest and cost estimate; session/diff reuse.
 - **Structured output, repair, grounding, verification, confidence.**
@@ -147,21 +164,27 @@ matrix; the operations docs are complete; the security checklist is green.
 **Exit gate (G5):** the owner signs off; the release checklist is complete; no open S1/S2 security
 issues; the docs are consistent.
 
-## v1.x — platform features (only after the trust loop is proven)
+## v1.1 — depth, and v1.2 — platform (only after the trust loop is proven)
 
-Ordered by expected demand, not committed:
+**v1.1 — depth** (better reviews, more places):
+
+1. Replay tooling and the public scorecard.
+2. **Branch review + callers-of-changed-symbols index**, then the full graph (measurement-gated).
+3. Sandboxed analyzer runs (own ADR); provider fallback; SARIF upload.
+4. **GHES**; CLI `--staged`; `code-review` skill folder; read-only MCP; rule auto-tuning suggestions.
+
+**v1.2 — platform** (org scale):
 
 1. **Reviewer catalog + studio + approval**; per-repo bindings with path/language scopes.
 2. **Capability registry + `jury:cap:*` labels**; SME/admin/viewer/auditor roles.
-3. **Knowledge packs, doc links, retrieval UI**; repo docs at SHA.
-4. **Repository graph + branch review** (benchmark-gated; the next quality step).
-5. **Helm chart** for Kubernetes (ADR-0022 re-scoped).
-6. **Per-repo provider allowlists / data zones** (B-02).
-7. **Analytics/scorecards UI, notifications, GHES, signed packs.**
-8. **Multi-forge** (GitLab, Gitea, Bitbucket).
-9. **SSO/OIDC, multi-installation, air-gapped, MCP, CLI, marketplace, cross-repo context.**
+3. **Knowledge packs, doc links, retrieval UI, signed packs**; history-seeded conventions.
+4. **OIDC; Helm** (ADR-0022 re-scoped); per-repo provider allowlists / data zones (B-02).
+5. Analytics UI, notifications; **GitLab self-managed**.
 
-Each enters only with benchmark evidence, a first-user demand, or an owner decision.
+**Later:** Gitea/Bitbucket, multi-installation, air-gapped, marketplace, cross-repo context,
+IDE/Slack.
+
+Each item enters only with measurement evidence, demand from a first user, or an owner decision.
 
 ## Milestone map
 
@@ -187,12 +210,12 @@ G0 docs + ADR-0023 ──▶ ADRs (runtime/storage/queue/auth) ──▶ M1 walk
                                                            M5 v1 launch
 ```
 
-The quality spike sits at the end of Phase 2 and feeds Phase 3; it can start as soon as M1 produces
-a review. Security and operations harden in parallel, but both must pass before M5.
+There is no pre-v1 quality spike; quality is measured in Phase 3 by replaying real reviews once the
+trust loop exists. Security and operations harden in parallel, but both must pass before M5.
 
 ## What could change the plan
 
-- The quality spike shows T0 is not competitive → branch review moves into v1; cut reviewer-studio
+- Phase 3 replay shows T0 is not competitive → branch review moves into v1; cut reviewer-studio
   breadth or another platform feature, not the verdict or the receipt.
 - The first 10 installs are mostly solo/homelab → revisit the ICP and the local/evaluation path.
 - A security buyer requires per-repo provider allowlists → promote B-02 from v1.x.

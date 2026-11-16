@@ -1,6 +1,10 @@
 # ADR-0010: Agent runtime harness
 
-- Status: proposed
+- Status: **accepted as amended** (Phase 1a, 2026-11-16): **no harness in v1.** A thin turn runner
+  (persisted steps) with a provider gateway on the `ai` SDK replaces the LangGraph spike. The
+  options analysis below is kept for history; the binding decision is
+  [`../architecture/technical-approach.md`](../architecture/technical-approach.md) §3.4.
+  Revisit LangGraph only if v1.1 branch review needs multi-step tool exploration.
 - Date: 2026-11-15
 - Owners: architecture + AI pipeline
 - Supersedes: —

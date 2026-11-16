@@ -1,6 +1,6 @@
 # ADR-0005: TypeScript-first runtime for v1
 
-- Status: proposed
+- Status: accepted (Phase 1a, 2026-11-16): TypeScript 7 on Node 24 LTS, pnpm (`technical-approach.md` §3.1)
 - Date: 2026-11-14
 - Owners: architecture
 - Supersedes: —

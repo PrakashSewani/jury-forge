@@ -1,6 +1,6 @@
 # ADR-0007: Token-aware context and repository retrieval
 
-- Status: proposed
+- Status: accepted (G0, 2026-11-16; PR review context is T0+ per ADR-0025)
 - Date: 2026-11-14
 - Owners: AI pipeline + architecture
 - Supersedes: the PoC's D-010 byte budgets (as the primary strategy)
@@ -28,7 +28,9 @@ product's main differentiator.
 
 > **Note (2026-11-15):** [ADR-0018](ADR-0018-release-tiering-and-quality-first-sequencing.md)
 > sequences the repository index/graph and branch review into v1.1; [ADR-0019](ADR-0019-pr-review-context-tiers.md)
-> rejects file reads for PR review. PR review is strict T0 diff-only; token budgets still apply.
+> rejects reads of arbitrary files for PR review. PR review is diff-only; from v1 its hunks are
+> expanded to the enclosing function inside the same file (T0+, [ADR-0025](ADR-0025-v1-review-pipeline.md)),
+> and no file outside the diff is read. Token budgets still apply.
 
 Token budgets for v1; the deterministic repository index (symbols, imports, tests, configs) is
 branch-review context (T2) in v1.1. Option 4 (embeddings/RAG) stays deferred behind the benchmark.

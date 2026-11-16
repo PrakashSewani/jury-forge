@@ -1,5 +1,10 @@
 # ADR-0019: PR review context tiers — rejected for PR review
 
+> **Note (2026-11-16):** this rejection of **T1** (reads of arbitrary repository files) stands.
+> [ADR-0025](ADR-0025-v1-review-pipeline.md) adds the narrower, accepted **T0+** (expansion to the
+> enclosing function inside files already in the diff). Where this document says "no repository
+> file reads", read it as "no file outside the diff".
+
 - Status: rejected (owner decision, 2026-11-15)
 - Date: 2026-11-15
 - Owners: AI pipeline + architecture
