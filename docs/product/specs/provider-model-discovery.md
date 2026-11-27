@@ -98,7 +98,8 @@ Each entry:
 | `firstSeenAt`, `lastSeenAt` | Jury Forge |
 | `status` | `available`, `stale`, `unknown`, `deprecated` |
 
-- The catalog is cached per provider; refresh on demand and daily.
+- The catalog is cached per provider; refresh on demand and daily (a `worker` cron in the MVP,
+  technical-approach §3.3).
 - Known models are enriched by a **versioned model registry** (JSON, signed or bundled with the
   release). Unknown models are still selectable only if the provider returns them, flagged
   `unknown`, and use conservative limits.

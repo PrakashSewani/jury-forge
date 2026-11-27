@@ -65,7 +65,7 @@ technical-approach differ, technical-approach wins.
 | **Review worker** (`worker`) | Consume jobs, run turns, call providers, publish | One container, 1–N replicas |
 | **Turn runner** | The step pipeline: resolve, fetch, plan, review, ground, verify, chair, summarise, publish, evaluate | A thin, explicit runner; no harness (ADR-0010 as amended, technical-approach §3.4) |
 | **Provider gateway** | Model catalog, encrypted keys, provider calls, usage/cost | A module on the `ai` SDK adapters |
-| **Cron** | Reconciler, retention, stalled sessions, reaction poll | graphile-worker cron inside `worker`; no separate scheduler |
+| **Cron** | Reconciler, retention, stalled sessions, reaction poll, stuck-turn sweep, catalog refresh (technical-approach §3.3) | graphile-worker cron inside `worker`; no separate scheduler |
 | **PostgreSQL** | Durable state, the queue, audit, sessions, artefacts | Bundled (Postgres 17) or operator-managed |
 | **Reverse proxy** | TLS, host routing, security headers | Bundled Caddy with on-demand TLS, or the operator's proxy/LB |
 | **Indexer** (v1.1) | Build and incrementally update the repository graph | Same image, the index worker queue |
@@ -91,8 +91,8 @@ after G1 (Q-030), but the reference deployment is Compose with separate services
    the chair (code) merges by fingerprint and sets severity and agreement (ADR-0025).
 6. The writer replies in the thread/PR through the per-installation write queue; in `auto`, the
    resolution guard may resolve a bot-owned thread after a satisfactory human response.
-7. The turn completes; the session waits, resolves, or archives. Cron applies retention and flags
-   stalled sessions.
+7. The turn completes; the session waits, resolves, or archives. Cron applies retention, flags
+   stalled sessions, and fails turns stuck past 20 min.
 
 ### Setup
 

@@ -257,6 +257,8 @@ Checks (technical-approach §3.12, first-run-setup acceptance criterion 2):
   setup, because both block login or API calls after the fact);
 - provider reachability (no key in logs), and each `local` provider's pinned addresses and whether it
   uses plain HTTP (ADR-0030);
+- setup left incomplete for 7 days or more, with the stage reached (also `jf_setup_incomplete_seconds`
+  on `/metrics`);
 - certificate expiry, disk space, and clock skew.
 
 ### Common failure modes
@@ -315,8 +317,11 @@ scheduler process (none in v1).
 - **Retention (daily):** expires artefacts and other rows past their retention.
 - **Reaction poll (every 5 min, open sessions only):** picks up feedback reactions GitHub sends no
   webhook for.
-- **Provider catalog refresh:** on demand and daily (provider-model-discovery spec); mark
-  stale/removed models; surface affected reviewers; never silently switch a bound model.
+- **Stuck-turn sweep (every 5 min):** a turn `running` longer than 20 min (configurable;
+  `review-progress-and-completion` RP-03) is failed with reason `stuck`, and its Check Run is
+  completed with the remedy, so no Check Run spins forever.
+- **Provider catalog refresh (daily, plus on demand):** mark stale/removed models; surface affected
+  reviewers (`configuration_error`); never silently switch a bound model.
 - **Repository graph (v1.1):** incremental update on branch review and default-branch push; full
   rebuild on parser upgrade or manual action; per-repo lock; stale badge.
 - **Resolution audit:** report bot resolutions, human resolutions, reopens, and false-resolve

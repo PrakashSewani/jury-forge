@@ -84,6 +84,8 @@ Rules:
 | `jf_budget_utilization_ratio` | gauge | org, scope |
 | `jf_egress_blocked_total` | counter | reason |
 | `jf_redactions_total` | counter | kind |
+| `jf_setup_incomplete_seconds` | gauge | stage |
+| `jf_turns_failed_stuck_total` | counter | — |
 
 The metric names are indicative; technical-approach §3.12 fixes the set of signals.
 

@@ -36,7 +36,7 @@ connections to forges, or doing CPU-heavy indexing.
 - Enforce budgets, timeouts, cancellation, and per-provider concurrency.
 - Publish at most one review per turn through the per-installation write queue, checking the stored
   `external_id` first.
-- Run cron: reconciler, retention, stalled sessions, reaction poll.
+- Run the cron jobs of technical-approach §3.3.
 - Emit metrics, traces, and audit events.
 
 **Scaling:** stateless; scale horizontally. Concurrency is bounded by the queue and per-provider
@@ -177,6 +177,10 @@ janitor process; graphile-worker runs these inside `worker` (technical-approach 
 - **Retention** (daily): expire artefacts and other rows past their retention.
 - **Stalled sessions** (hourly): mark sessions waiting 30 days `needs human`.
 - **Reaction poll** (5 min, open sessions): read feedback reactions.
+- **Stuck-turn sweep** (5 min, MVP): fail a turn `running` longer than 20 min (configurable) and
+  complete its Check Run with the reason.
+- **Catalog refresh** (daily, MVP): refresh each provider's `/models`; a removed model marks its
+  reviewers `configuration_error`.
 - The queue retries transient failures with backoff; a job that exhausts its attempts stays
   permanently failed, inspectable and retryable by an admin.
 - Index refresh is v1.1. Alerts come from `/metrics` in the operator's monitoring.

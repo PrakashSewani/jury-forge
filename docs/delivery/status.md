@@ -67,8 +67,18 @@ point to it.
 **Owner decision (2026-11-28): ADR-0031 accepted** (audit Q-B). Its cron premise depends on the
 M1.1 two-worker test (Q-E).
 
-**Owner questions still open from the audit (§4 there):** Q-D is three cron sweeps the specs need, missing from the TA §3.3 list. Q-E is the two-worker cron
-test in M1.1. Q-F is the verifier's failure behaviour.
+**Owner decision (2026-11-28), audit Q-D:** technical-approach §3.3 gains two MVP cron jobs.
+
+- A stuck-turn sweep every 5 min. A turn `running` for more than 20 min (configurable; RP-03 is
+  now decided) is failed, and its Check Run is completed with the reason.
+- A daily catalog refresh.
+
+Abandoned setup is not a cron job: `/metrics` (`jf_setup_incomplete_seconds`) and `doctor` (after
+7 days) report it. The cron lists in `job-pipeline`, `components`, `operations`, `deployment`, and
+`overview` match it, and the summaries in `agentic-review` and ADR-0031 point to §3.3.
+
+**Owner questions still open from the audit (§4 there):** Q-E is the two-worker cron test in M1.1.
+Q-F is the verifier's failure behaviour.
 
 ### Landed earlier this session (2026-11-28, deployment and operations rewrite)
 

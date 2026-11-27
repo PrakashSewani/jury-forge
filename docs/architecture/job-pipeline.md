@@ -38,13 +38,14 @@ without another service.
 | `cron: retention` | Daily | graphile-worker cron | MVP |
 | `cron: stalled sessions` | Hourly | graphile-worker cron | v1 (the stalled-session policy) |
 | `cron: reaction poll` | Every 5 min, open sessions only | graphile-worker cron | v1 (reactions as feedback) |
+| `cron: stuck-turn sweep` | Every 5 min | graphile-worker cron; fails turns `running` > 20 min (RP-03, configurable) | MVP |
+| `cron: catalog refresh` | Daily, staggered per provider | graphile-worker cron (plus the on-demand refresh) | MVP |
 | `index.incremental`, `index.full` | Branch review, default-branch push, parser upgrade | The index worker queue | v1.1 |
 
 Cron runs inside `worker`; there is no separate scheduler process. graphile-worker is designed to
 fire each cron tick once across workers; an M1.1 integration test must prove that with two worker
-replicas. Three sweeps the specs require are not yet on this list: the daily provider-catalog refresh, the
-stuck-turn sweep (20 min, `review-progress-and-completion` RP-03), and the abandoned-setup alert
-(7 days, `first-run-setup`). See audit question Q-D.
+replicas. The list is technical-approach §3.3 (amended 2026-11-28, audit Q-D). Abandoned setup is
+not a cron job: `/metrics` and `doctor` report it.
 
 ## Turn lifecycle
 

@@ -45,8 +45,8 @@ found this; nothing accepted resolves it.
 Option 2, chosen by the owner on 2026-11-28. The v1.2 chart deploys:
 
 - an `app` Deployment (`ROLE=app`);
-- a `worker` Deployment (`ROLE=worker`), whose graphile-worker cron runs the reconciler, retention,
-  stalled-session, and reaction-poll jobs;
+- a `worker` Deployment (`ROLE=worker`), whose graphile-worker cron runs the jobs in
+  technical-approach §3.3;
 - a pre-install/pre-upgrade migration Job.
 
 It needs an external PostgreSQL 17 (16 tested) and no Redis; the S3 artefact adapter is an optional

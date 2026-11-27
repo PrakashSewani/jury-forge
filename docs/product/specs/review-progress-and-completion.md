@@ -241,6 +241,6 @@ Rules:
 | -- | -------- | ------- |
 | RP-01 | Is the placeholder comment on by default for manual triggers? | **Yes** for the label and the UI picker; off for automatic and Check Run triggers; never for a mention, which is a reply turn (MVP spec review, 2026-11-27). A repo can disable it. |
 | RP-02 | Does the Check Run carry the full finding list, or only a summary? | Summary + details link; the review carries the findings. |
-| RP-03 | What is the stuck-turn threshold before the cron sweep fails it? | 2× the p95 completion target (20 min), configurable. |
+| RP-03 | What is the stuck-turn threshold before the cron sweep fails it? | **Decided 2026-11-28 (owner, audit Q-D):** 20 min (2× the p95 completion target), configurable; the sweep runs every 5 min (technical-approach §3.3). |
 | RP-04 | Do we notify Slack/email on completion? | No in v1; GitHub notifications are enough. v1.x. |
 | RP-05 | Does a branch review show a different progress shape (estimate, cancel)? | Yes: estimate before start, cancel action; same completion contract. |

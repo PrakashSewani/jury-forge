@@ -262,7 +262,7 @@ Docker Compose reference (technical-approach §2, §3.13):
 - `caddy` (TLS, on-demand certificates)
 - `migrate` (one-shot SQL migrations)
 - `app` (API + UI + webhook ingest)
-- `worker` (jobs, turns, and cron: reconciler, retention, stalled sessions, reaction poll)
+- `worker` (jobs, turns, and the cron jobs of technical-approach §3.3)
 - `postgres` (state, queue, audit, artefacts)
 
 None in v1: no Redis, no object store, no separate scheduler. The v1.1 index worker is a queue in
