@@ -1,6 +1,8 @@
 # ADR-0022: Helm chart as a v1 deployment target
 
-- Status: accepted as amended (G0, 2026-11-16): Helm ships in **v1.2**, not v1 (ADR-0023)
+- Status: accepted as amended (G0, 2026-11-16): Helm ships in **v1.2**, not v1 (ADR-0023); the
+  component list and support matrix are amended by ADR-0031 (2026-11-28): no scheduler Deployment,
+  cron in `worker`, Postgres 17 (16 tested), S3 optional
 - Date: 2026-11-15
 - Owners: operations + architecture
 - Supersedes: the "Kubernetes/Helm after v1" deferral in ADR-0003 (Compose stays the reference)

@@ -237,14 +237,14 @@ requirement until the spec is updated; do not infer behaviour beyond it.
 | ---------- | ------ | ----- |
 | Container image / Compose stack | Planned | Reference deployment. |
 | PostgreSQL | Planned | Source of truth. |
-| Durable job queue + workers | Planned | Leases, retries, DLQ, cancellation. |
-| Object storage for artefacts | Planned | Raw responses, patches, reports; S3-compatible, optional. |
+| Durable job queue + workers | Planned (MVP) | graphile-worker: per-session order, debounce, retries, cancellation, permanently failed jobs kept for retry (ADR-0006). |
+| Object storage for artefacts | Planned (v1.2) | Optional S3-compatible adapter; v1 keeps artefacts as bounded `bytea` in Postgres (technical-approach §2). |
 | Backups and restore | Planned | Tested drill, not a doc. |
 | Upgrades and migrations | Planned | Expand/contract, rollback, backup-first. |
 | Metrics, traces, structured logs | Planned | OpenTelemetry; no vendor lock-in. |
 | Health and readiness | Planned | Dependency checks, degraded state. |
 | Horizontal worker scaling | Planned | Queue-based; stateless workers. |
-| Kubernetes / Helm | Planned (v1.2) | Secondary target (ADR-0022): chart deploys app/worker/scheduler/migrations only; external Postgres+S3; ingress TLS; `kind` e2e gate. Compose stays the reference. |
+| Kubernetes / Helm | Planned (v1.2) | Secondary target (ADR-0022): no bundled database; external Postgres; ingress TLS; `kind` e2e gate. Compose stays the reference. The chart's component list (ADR-0022 names a separate scheduler) is reconciled with the v1 runtime by [ADR-0031](../decisions/ADR-0031-helm-chart-runtime-shape.md): `app` and `worker` Deployments plus a migration Job, cron in `worker`, S3 optional. |
 | Air-gapped install | TBD | Local model + mirrored images; forge connectivity caveat. |
 | Multi-installation / multi-tenant | TBD | One instance per org first. |
 
@@ -280,7 +280,7 @@ requirement until the spec is updated; do not infer behaviour beyond it.
 | Repository knowledge graph | Planned (v1.1) | Symbols/imports/tests/configs/docs/owners/findings; incremental updates; measurement-gated (ADR-0018). |
 | Context reuse across runs | Planned (session reuse MVP; graph summaries v1.1) | Reuse thread/session state and diff; graph summaries/content hashes only when the graph lands. |
 | Session inbox / conversation UI | Planned (MVP basic timeline; v1 inbox sorted by risk) | Timeline, agent activity, tool calls, findings, cost, resolve state. |
-| Dockerized backend + UI | Planned (MVP) | Compose reference; Postgres/queue/object storage; no Cloudflare. |
+| Dockerized backend + UI | Planned (MVP) | Compose reference: `caddy`, `migrate`, `app`, `worker`, `postgres` (Postgres holds the queue and artefacts); no Cloudflare. |
 
 ## 12. Owner-supplied capabilities
 

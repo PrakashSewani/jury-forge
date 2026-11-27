@@ -152,6 +152,7 @@ Rules:
 | No reviewers bound | `action_required` | Fallback comment (existing) | No turn |
 | Required reviewer unavailable | `action_required` | Required-unavailable fallback | No review |
 | Provider 401/429/5xx | `neutral` with the remedy when the repo `gate` is `neutral` (the default, and always in the MVP); `failure` when the repo opted into a blocking `gate` (v1) | One failure comment with the remedy, or edit the placeholder | Turn failed, retryable |
+| Verifier unavailable (v1; error after retries or `finish=length`) | As the provider row: `neutral` with the remedy, or `failure` under a blocking `gate` | One failure message with the remedy; no findings published (`jury-output` §5) | Turn failed (`verifier_unavailable`), retryable; a retry re-runs only `verify` |
 | Cap exceeded | `neutral`/`failure` per policy | The review/status says the cap was hit; no silent truncation | Turn completed with a cap reason |
 | Label removed | `cancelled` | Placeholder edited to “cancelled” (if it exists) | Turn cancelled |
 | PR merged mid-turn | `cancelled` or `completed` with the partial result | No new comment after archive | Session archived |
@@ -232,7 +233,7 @@ Rules:
 - Status visibility: sessions where the user can see a status without asking / total sessions.
 - Placeholder comment count per session (target ≤ 1).
 - Duplicate review/comment rate (target 0).
-- Stuck `in_progress` rate (target 0; a janitor fails it visibly).
+- Stuck `in_progress` rate (target 0; a cron sweep in `worker` fails it visibly).
 - Failure-to-remedy rate: failures with a named next action / all failures (target 100%).
 
 ## 10. Open questions
@@ -241,6 +242,6 @@ Rules:
 | -- | -------- | ------- |
 | RP-01 | Is the placeholder comment on by default for manual triggers? | **Yes** for the label and the UI picker; off for automatic and Check Run triggers; never for a mention, which is a reply turn (MVP spec review, 2026-11-27). A repo can disable it. |
 | RP-02 | Does the Check Run carry the full finding list, or only a summary? | Summary + details link; the review carries the findings. |
-| RP-03 | What is the stuck-turn threshold before the janitor fails it? | 2× the p95 completion target (20 min), configurable. |
+| RP-03 | What is the stuck-turn threshold before the cron sweep fails it? | **Decided 2026-11-28 (owner, audit Q-D):** 20 min (2× the p95 completion target), configurable; the sweep runs every 5 min (technical-approach §3.3). |
 | RP-04 | Do we notify Slack/email on completion? | No in v1; GitHub notifications are enough. v1.x. |
 | RP-05 | Does a branch review show a different progress shape (estimate, cancel)? | Yes: estimate before start, cancel action; same completion contract. |

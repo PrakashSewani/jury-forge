@@ -63,7 +63,7 @@ Every published finding keeps:
 | `model` | Provider + model from the catalog at turn time |
 | `evidence` | File/line/hunk at the generation SHA, or a knowledge citation |
 | `confidence` | Reviewer confidence, normalized to a shared scale |
-| `severity` | Reviewer severity, normalized by policy |
+| `severity` | `critical` / `high` / `medium` / `low` ([ADR-0032](../../decisions/ADR-0032-finding-severity-scale.md)); the chair takes the highest among confirming jurors, capped by policy |
 | `claim` | What the reviewer asserts, in one sentence |
 | `status` | Raised, merged, disputed, dismissed, accepted |
 
@@ -185,11 +185,19 @@ contract and avoids a second code path.
 
 ## 5. No silent degradation
 
-- If the chair fails, the review publishes the findings with a visible "no chair verdict" note; it
-  does not invent a verdict.
+- The chair is code (ADR-0025 §4). If it fails, that is an internal error: the turn fails visibly
+  and nothing is published as a clean review. It never invents a verdict.
 - If a reviewer fails, the review publishes the rest and names the missing reviewer and why.
 - If the deliberation cannot be computed (for example, missing provenance), the review is held and
   fails visibly; it is not published as a clean review.
+- **If the verifier fails (v1)** — it errors after the gateway's retries, or it stops at the token
+  cap (`finish=length`, no repair; ADR-0029) — **no finding is published**. The turn fails with
+  reason `verifier_unavailable` and is retryable; the Check Run follows the provider-failure row of
+  [`review-progress-and-completion.md`](review-progress-and-completion.md) §5 (`neutral` with the
+  remedy under the default gate, `failure` under a blocking gate); and one failure message gives
+  the remedy. The jurors' step results are stored, so a retry re-runs only `verify`. No receipt is
+  signed, because no review was published. Decided by the owner on 2026-11-28 (architecture audit
+  Q-F): an unverified finding is never published as reviewed.
 - If reviewers disagree and the chair cannot decide, the verdict is `needs human` with the
   disagreement shown.
 
@@ -203,6 +211,8 @@ contract and avoids a second code path.
 - [ ] A chair decision names the rule or evidence used; a `needs human` outcome is possible.
 - [ ] The verdict respects the repo policy (advisory default; check/request-changes opt-in).
 - [ ] A failed reviewer or chair degrades visibly; no clean verdict is fabricated.
+- [ ] (v1) When the verifier fails or hits the token cap, no finding is published, the turn fails
+      with `verifier_unavailable`, and a retry re-runs only `verify` (Q-F).
 - [ ] The session detail can replay the deliberation and the finding provenance.
 - [ ] A human override is recorded and visible in the finding history.
 - [ ] The PR review body and the UI jury panel show the same composition and verdict.

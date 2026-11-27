@@ -11,9 +11,9 @@ phones home.
 
 ## 1. Principles
 
-- **Local first.** Metrics/logs/traces go to the operator's backend or a bundled stack. No project
-  endpoint.
-- **Run-centric.** Every signal can be joined by `org_id`, `repository_id`, `run_id`, `step`,
+- **Local first.** Metrics, logs, and traces go to the operator's own backend; v1 bundles no
+  monitoring stack. No project endpoint.
+- **Turn-centric.** Every signal can be joined by `org_id`, `repository_id`, `turn_id`, `step`,
   `reviewer_version_id`, `provider`, `model`.
 - **No secrets.** Redaction at the logging boundary; tests scan for leaks.
 - **Actionable.** Every alert links to a runbook and a run.
@@ -47,7 +47,8 @@ Structured JSON to stdout by default:
 Rules:
 
 - Never log prompts, diffs, keys, tokens, or full provider responses at `info`.
-- Raw artefacts go to object storage with an explicit retention policy and access control.
+- Raw artefacts go to the `artefacts` table in Postgres (≤ 2 MB each) with an explicit retention
+  policy and access control.
 - Redact known secret patterns and configured sensitive paths.
 - Use a request id propagated from the web/API to the worker via the job payload.
 - A `debug` mode can include more, but it is explicit, time-boxed, and warns.
@@ -64,21 +65,31 @@ Rules:
 | `jf_job_wait_seconds` | histogram | queue |
 | `jf_job_duration_seconds` | histogram | kind, status |
 | `jf_step_duration_seconds` | histogram | step, status |
-| `jf_lease_expiries_total` | counter | queue |
-| `jf_dead_letters_total` | counter | queue, reason |
-| `jf_webhook_events_total` | counter | forge, event, action, result |
+| `jf_queue_age_seconds` | gauge | queue |
+| `jf_jobs_failed_permanently_total` | counter | task |
+| `jf_webhook_deliveries_total` | counter | forge, event, action, result |
+| `jf_turn_duration_seconds` | histogram | trigger, status |
+| `jf_budget_stops_total` | counter | scope |
+| `jf_loop_stops_total` | counter | reason |
+| `jf_verifier_drops_total` | counter | verdict |
+| `jf_coverage_ratio` | histogram | — |
+| `jf_prompt_cache_hit_ratio` | histogram | provider, model |
 | `jf_provider_requests_total` | counter | provider, model, status |
 | `jf_provider_latency_seconds` | histogram | provider, model |
 | `jf_provider_tokens_total` | counter | provider, model, kind |
 | `jf_provider_cost_micros_total` | counter | provider, model, org |
 | `jf_findings_total` | counter | severity, category, status |
 | `jf_publish_total` | counter | forge, status |
-| `jf_stale_runs` | gauge | — |
+| `jf_stale_turns` | gauge | — |
 | `jf_budget_utilization_ratio` | gauge | org, scope |
 | `jf_egress_blocked_total` | counter | reason |
 | `jf_redactions_total` | counter | kind |
+| `jf_setup_incomplete_seconds` | gauge | stage |
+| `jf_turns_failed_stuck_total` | counter | — |
 
-Cardinality rules: never label by `run_id` or `repository_id` on a Prometheus metric; use logs and
+The metric names are indicative; technical-approach §3.12 fixes the set of signals.
+
+Cardinality rules: never label by `turn_id` or `repository_id` on a Prometheus metric; use logs and
 traces for those. Aggregate by org only when tenant cardinality is small; otherwise use rollups.
 
 ### Business metrics (rollups)
@@ -93,20 +104,21 @@ These come from `usage_rollups` and `findings`, not from high-cardinality metric
 
 ## 4. Traces
 
-One trace per webhook/run:
+One trace per webhook/turn (when `OTEL_EXPORTER_OTLP_ENDPOINT` is set; off by default):
 
 ```
 webhook.receive
-└── run.execute (run_id, org, repo, pr, generation)
+└── turn.execute (turn_id, session_id, org, repo, pr, generation)
     ├── step.resolve
     ├── step.fetch
-    ├── step.index
     ├── step.plan
     ├── step.review (reviewer_version_id, provider, model)  × N
     ├── step.ground
-    ├── step.jury
+    ├── step.verify        (v1)
+    ├── step.chair
+    ├── step.summarise     (v1)
     ├── step.publish
-    └── step.record
+    └── step.evaluate      (v1)
 ```
 
 Spans carry: status, duration, token counts, cost, retries, cache hit/miss, error code. Prompt and
@@ -150,8 +162,8 @@ Default alert set (all configurable):
 | Instance down | `/healthz` failing for 2 min | critical |
 | Database unavailable | readiness failing | critical |
 | Queue backlog | depth > threshold for 10 min | warning |
-| Stale runs | `jf_stale_runs > 0` for 10 min | warning |
-| Dead letters | any new dead letter | warning |
+| Stale turns | `jf_stale_turns > 0` for 10 min | warning |
+| Permanently failed jobs | any new one | warning |
 | Publish failures | failure rate > 5% over 15 min | critical |
 | Provider errors | error rate > 20% over 5 min | warning |
 | Budget threshold | utilization > 80% | warning |
@@ -172,15 +184,14 @@ Every alert links to a runbook section.
 | Time to first finding | p95 ≤ 3 min | trace |
 | End-to-end review | p95 ≤ 10 min | trace |
 | API availability | 99.9% monthly | 5xx rate |
-| Stale-run recovery | ≤ 5 min | janitor metric |
+| Stalled-turn recovery | ≤ 5 min after the queue lock timeout | queue metrics |
 
 SLOs are per instance (self-hosted), not a central promise. The docs explain how to measure them.
 
 ## 9. Health endpoints
 
 - `GET /healthz` — liveness: process is up, no dependency checks.
-- `GET /readyz` — readiness: DB reachable, migrations current, queue reachable, object storage
-  writable, encryption key loaded. Returns `200` or `503` with a component breakdown.
+- `GET /readyz` — readiness: DB reachable, migrations current, queue reachable, master key loaded. Returns `200` or `503` with a component breakdown.
 - `GET /metrics` — Prometheus (auth-protected or bound to the internal network).
 - `GET /api/v1/diagnostics` — admin-only summary: version, migration, components, last errors,
   config warnings. The basis of the support bundle.

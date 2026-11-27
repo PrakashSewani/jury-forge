@@ -151,13 +151,12 @@ failures. `doctor` and the setup preflight warn about them; the fix is always an
 | `caddy` | `caddy:2` (pinned by digest) | 1 | `80`, `443` public | HTTP probe | `caddy-data`, `caddy-config` |
 | `migrate` | Jury Forge image, migrate command | one-shot | none | exits `0` | none |
 | `app` | Jury Forge image, `ROLE=app` | 1 | `3000` internal; `127.0.0.1:8080` setup | `/healthz`, `/readyz` | none |
-| `worker` | Jury Forge image, `ROLE=worker` | 1–N | none (`METRICS_BIND` internal) | process + queue heartbeat | none |
+| `worker` | Jury Forge image, `ROLE=worker` | 1–N | none (`METRICS_BIND` internal) | process up; queue lag in `/metrics` and `doctor` | none |
 | `postgres` | `postgres:17` | 1 | `5432` internal | `pg_isready` | `postgres-data` |
 
 These are the four long-running containers plus the one-shot `migrate` of technical-approach §2 and
-§3.13. None in v1: no Redis, no object store, no message broker, and no separate scheduler; cron jobs
-(reconciler, retention, stalled sessions, reaction polling) run inside `worker` (technical-approach
-§3.3).
+§3.13. None in v1: no Redis, no object store, no message broker, and no separate scheduler; the cron jobs
+of technical-approach §3.3 run inside `worker`.
 
 **Artefacts live in Postgres.** Raw diffs, model requests and responses, and exports are stored as
 `bytea` rows in `artefacts`, each at most 2 MB, with `expires_at` and a daily retention job
@@ -401,8 +400,10 @@ the same runtime contract. The constraints that ADR fixes for the chart:
 - **Security defaults:** non-root, read-only, drop-all `securityContext`; default-deny
   NetworkPolicy with explicit egress; no plaintext secret in `values.yaml`; no cluster-admin.
 
-ADR-0022's component list and support matrix were written before technical-approach and are
-reconciled with the v1 runtime when the v1.2 chart is specified; this document does not restate them.
+ADR-0022's component list and support matrix were written before technical-approach.
+[ADR-0031](../decisions/ADR-0031-helm-chart-runtime-shape.md) (accepted 2026-11-28) reconciles them with the v1
+runtime: `app` and `worker` Deployments plus a migration Job, cron in `worker`, external Postgres 17,
+and an optional S3 adapter. This document does not restate them.
 
 ### F. Air-gapped / offline (not in v1)
 
@@ -522,7 +523,8 @@ lock timeout; because each step's result is stored by `(turn_id, step)` and publ
 stored `external_id`, the retry does not repeat side effects (technical-approach §3.3).
 
 **Cron runs inside `worker`** through graphile-worker's built-in cron: reconciler (10 min),
-retention (daily), stalled sessions (hourly), reaction poll (5 min, open sessions only). graphile-worker
+retention (daily), stalled sessions (hourly), reaction poll (5 min, open sessions only), stuck-turn
+sweep (5 min), and catalog refresh (daily) (technical-approach §3.3). graphile-worker
 is designed to fire each cron tick once across all workers; an M1.1 integration test must prove that
 with two worker replicas before more than one replica is documented as safe for cron.
 

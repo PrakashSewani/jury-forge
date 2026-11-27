@@ -14,13 +14,14 @@ architecture must enforce in code.
 | Reviewer prompts and knowledge packs | The operator's review standards and internal knowledge. |
 | Findings, reviews, and audit events | Evidence and reputational risk. |
 | Sessions and API tokens | Account takeover. |
-| The host, database, queue, and object storage | The whole instance. |
+| The host, the database (which also holds the queue and artefacts), and the master key file | The whole instance. |
 
 ## 2. Actors
 
 - **Operator/owner:** installs and administers the instance.
 - **Team member:** uses the dashboard within a role.
-- **Auditor:** read-only access to runs and audit.
+- **Auditor (v1.2):** read-only access to sessions and audit. v1 has owner, maintainer, and reader
+  (ADR-0023, ADR-0028).
 - **Forge:** sends webhooks, receives reviews.
 - **Model provider:** receives prompts, returns output.
 - **Attacker:** an external actor, a malicious contributor, a compromised dependency, a stolen
@@ -33,12 +34,13 @@ architecture must enforce in code.
 │ Operator infrastructure (trusted, but hardened)                     │
 │                                                                     │
 │  Browser ──TLS──▶ Reverse proxy ──▶ Web/API ──▶ Postgres            │
-│                                       │                             │
-│                                       ▼                             │
-│                                   Queue ──▶ Worker ──▶ Object store │
-│                                                │                    │
-│  Forge webhook ──signature──▶ Web/API          │                    │
-│                                                ▼                    │
+│                                                 (state, queue,      │
+│                                                  audit, artefacts)  │
+│                                                     ▲               │
+│  Forge webhook ──signature──▶ Web/API               │               │
+│                                                   Worker            │
+│                                                     │               │
+│                                                     ▼               │
 │                                       Provider gateway ──egress──▶  │
 └─────────────────────────────────────────────────────────────────────┘
                                                      │
@@ -131,7 +133,8 @@ stolen session exfiltrates keys.
 **Controls:**
 
 - Roles and scopes enforced server-side on every route, with a test per mutation.
-- Tenant-scoped queries; row-level security as defense in depth.
+- Tenant-scoped queries through the `store` repository layer, with cross-tenant tests. Row-level
+  security is not used in v1 (technical-approach §3.2); revisit with multi-installation.
 - Sensitive actions require re-authentication and produce audit events.
 - No "everyone is the owner" default; single-operator is an explicit mode.
 - Session revocation, short TTLs, and a session list.
@@ -191,22 +194,25 @@ secrets in the prompt, rate limits.
 
 **Attack/accident:** a query misses `org_id`, exposing another tenant's data.
 
-**Controls:** tenant-scoped repository layer, mandatory `org_id` in queries, row-level security,
-cross-tenant tests, a lint rule or code review checklist.
+**Controls:** tenant-scoped repository layer, mandatory `org_id` in queries, cross-tenant tests,
+a lint rule or code review checklist. Row-level security is not used in v1 (technical-approach
+§3.2).
 
 ## 5. Authentication and session design
 
-- **User auth:** GitHub OAuth first; OIDC/SSO later. Authorization code flow with state; PKCE if
+- **User auth:** GitHub OAuth in v1; OIDC/SSO is v1.2. Authorization code flow with state; PKCE if
   the provider supports it. **OAuth login is part of MVP**, not only the owner claim: the same
   GitHub App can request user authorization on install (`request_oauth_on_install`), otherwise a
   second OAuth app is configured. The callback is `{ORIGIN}/api/auth/github/callback`, built from the
   stored origin (never from `Host`), and the origin must match exactly. See
   [`deployment.md`](deployment.md#2-the-public-surface-github-requires).
-- **Sessions:** random 256-bit token, stored hashed, HttpOnly/Secure/SameSite=Lax, configurable
-  TTL (default 7 days, shorter for admins), idle timeout, revocation, session list.
+- **Sessions:** random 256-bit token, stored hashed, HttpOnly/Secure/SameSite=Lax; idle timeout
+  8 h, absolute 7 d (technical-approach §3.9); re-auth for sensitive actions; revocation; session
+  list.
 - **CSRF:** SameSite plus an origin check plus a CSRF token for state-changing forms. Do not rely
   on `Sec-Fetch-Site` alone.
-- **API tokens:** scoped, hashed, expiring, last-used tracking, revocable; never a user session.
+- **API tokens (v1.2, the API/CLI surface):** scoped, hashed, expiring, last-used tracking,
+  revocable; never a user session.
 - **Origin pinning:** the public origin is an instance setting; requests with any other `Host` are
   rejected (`421`) and are never used to build OAuth redirects, CSRF origin checks, or links. This
   closes host-header injection. Bootstrap runs on a loopback-only listener (ADR-0021).
@@ -248,8 +254,10 @@ Every row is enforced in the service layer, not only in the UI.
 
 ## 7. Secrets and encryption
 
-- **Envelope encryption:** a data key per installation/tenant, wrapped by a KMS/HSM or a local key
-  file with strict permissions. Rotation without re-registering the forge app.
+- **Envelope encryption:** a data key (DEK, AES-256-GCM) per secret, wrapped by the 32-byte master
+  key (KEK) read from `JURY_MASTER_KEY_FILE` (a Docker secret or file, mode 0400; never an env
+  value). `key_id` supports rotation; `jury-forge rotate-key` rewraps the DEKs without
+  re-registering the forge app (technical-approach §3.9). No KMS/HSM in v1.
 - **At rest:** forge credentials and provider keys encrypted; backups encrypted; optional disk
   encryption.
 - **In transit:** TLS everywhere; verify provider certificates; support custom CAs for self-hosted
@@ -306,7 +314,7 @@ A single egress policy module decides whether a request may leave:
 - [ ] TLS terminated with a valid certificate; HSTS.
 - [ ] Strong, unique secrets; no defaults; startup validation refuses weak config.
 - [ ] Database not exposed publicly; least-privilege role.
-- [ ] Queue/object storage private; credentials scoped.
+- [ ] Database private (it also holds the queue and artefacts); credentials scoped.
 - [ ] Container runs as non-root, read-only root FS where possible, no privileged mode.
 - [ ] Network policy: only required egress.
 - [ ] Backups encrypted and tested.
@@ -324,7 +332,7 @@ A single egress policy module decides whether a request may leave:
 2. **Contain:** revoke sessions/tokens, rotate credentials, disable the affected installation or
    reviewer, block the egress destination.
 3. **Eradicate:** patch the vulnerability, rebuild from a clean image, rotate everything touched.
-4. **Recover:** restore from a verified backup if needed, replay failed runs.
+4. **Recover:** restore from a verified backup if needed, retry failed jobs (turn replay is v1.1).
 5. **Learn:** write a blameless post-mortem, add a regression test, update the threat model.
 
 A `SECURITY.md` with a private disclosure channel is required before public launch.
@@ -339,15 +347,16 @@ A `SECURITY.md` with a private disclosure channel is required before public laun
 | F-028 SSRF | Egress policy, DNS/IP checks, no redirects, proxy |
 | F-029 no roles | RBAC matrix, tenant scoping, tests |
 | F-032 no rate limits | Gateway limits, API quotas, budgets |
-| F-035 single env key | Envelope encryption, KMS, rotation |
+| F-035 single env key | Envelope encryption under a file-based master key, rotation |
 | F-027 weak audit | Append-only audit, export, retention |
 | F-039 no backup | Backup/restore, migration safety |
 | F-030 fork abuse | Fork policy, least privilege |
 
 ## 14. Open security decisions
 
-- KMS/HSM vs local key file for the first release (Q-005, ADR-0008).
-- SSO/OIDC in v1 or GitHub OAuth only.
+- *Closed:* KMS/HSM vs a local key file. v1 uses the KEK file (technical-approach §3.9); a KMS
+  adapter is not planned.
+- *Closed:* SSO/OIDC is v1.2; v1 is GitHub OAuth only (ADR-0023).
 - Whether to support a shared GitHub App for easier onboarding (rejected in the PoC; changes the
   threat model).
 - The default data policy for third-party providers (redact secrets only vs a stricter allowlist).
@@ -382,7 +391,8 @@ in `auto`, the server guard decides; in `off`, only humans resolve. See [`agenti
   session, even if they are an org member.
 - **Session belongs to the PR**, not the trigger user. Participants (author, commenters, mentioned
   humans, maintainers) are stored and shown; the trigger user is audit.
-- **Role mapping:** owner/admin configure; **SME** owns domain reviewers and binds them to assigned
+- **Role mapping (v1.2; v1 is owner/maintainer/reader, `session-capacity-and-visibility` §4):**
+  owner/admin configure; **SME** owns domain reviewers and binds them to assigned
   repos; maintainer (repo write) triggers/replies and requests reviewers; binding by maintainer is
   opt-in (`allowMaintainerBindings`, default off); member with repo read views/replies where GitHub
   permits; viewer read-only; auditor sees audit/export.
@@ -394,7 +404,7 @@ in `auto`, the server guard decides; in `off`, only humans resolve. See [`agenti
   partial or clean review. A `default`/`capability` reviewer that is unavailable is noted.
 - **Fallback comments:** no reviewers/no match/required-unavailable are issue comments, not reviews;
   deduped by policy version; no secrets or model internals beyond reviewer name/domain.
-- **Capability labels:** a `jury:cap:*` label is a request, never a grant. It can only select from
+- **Capability labels (v1.2):** a `jury:cap:*` label is a request, never a grant. It can only select from
   reviewers already bound/approved for the repo; it cannot enable an unbound/archived reviewer,
   bypass required reviewers, raise budgets, or change provider policy. Labels are parsed strictly;
   unknown/empty aliases are ignored with a note.

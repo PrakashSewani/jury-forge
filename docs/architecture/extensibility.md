@@ -11,12 +11,13 @@ the server process for v1.
 | Forge | `ForgeAdapter` | GitHub | GHES, GitLab, Gitea, Bitbucket |
 | Provider | `ProviderAdapter` | OpenAI-compatible, Anthropic-compatible (vendors such as CommandCode are example presets) | Gateways, local servers, new vendors |
 | Model catalog | `ModelCatalog` | Provider `/models` + registry | Signed manifest, curated catalog |
-| Agent runtime | `AgentRuntime` | LangGraph.js or thin turn runner | Another harness behind the session contract |
-| Queue | `JobQueue` | PostgreSQL `SKIP LOCKED` | Redis/BullMQ, SQS, RabbitMQ |
-| Object storage | `ArtifactStore` | Local volume | S3-compatible |
-| Identity | `IdentityProvider` | GitHub OAuth | OIDC/SSO, SAML via a proxy |
-| Notification | `Notifier` | Webhook + email | Slack, Teams, PagerDuty |
-| Context source | `ContextProvider` | Diff (T0) + repo graph (T2, v1.1) + packs | New index types, external knowledge |
+| Turn runner | Step functions over ports | The thin turn runner (ADR-0010 as amended) | A harness only by a new ADR (revisit for v1.1 branch review) |
+| Model gateway | `complete({model, messages, schema, caps})` | `ai` SDK adapters | Another SDK behind the same call |
+| Queue | `JobQueue` (5 functions) | graphile-worker | pg-boss (proven in spike S-A) |
+| Artefact store | `ArtifactStore` | Postgres `bytea` | S3-compatible (v1.2) |
+| Identity | `IdentityProvider` | GitHub OAuth | OIDC/SSO (v1.2), SAML via a proxy |
+| Notification (v1.2) | `Notifier` | None in v1 | Webhook, email, Slack, Teams, PagerDuty |
+| Context source | `ContextProvider` | Diff (T0, T0+ from v1) + instructions; repo graph (T2, v1.1); packs (v1.2) | New index types, external knowledge |
 | Repository graph | `KnowledgeGraph` | Postgres adjacency | Graph DB, external index |
 | Policy | `PolicyEngine` | Built-in schema/DSL | Custom rules, external policy service |
 
@@ -132,7 +133,7 @@ Never load arbitrary Node modules from a user-controlled directory into the API 
 
 - Versioned REST API (`/api/v1`) generated from the same schemas as the dashboard.
 - OpenAPI document published with the release.
-- API tokens with scopes: `runs:read`, `runs:write`, `reviewers:read`, `reviewers:write`,
+- API tokens (v1.2) with scopes: `runs:read`, `runs:write`, `reviewers:read`, `reviewers:write`,
   `packs:write`, `audit:read`, `admin`.
 - Idempotency keys on mutating requests.
 - Pagination, filtering, and stable error envelopes with request ids.
@@ -161,7 +162,7 @@ Never load arbitrary Node modules from a user-controlled directory into the API 
 
 | Phase | Extension |
 | ----- | --------- |
-| v1 | GitHub adapter, OpenAI/Anthropic/local providers, policy schema, packs, signed webhooks, API tokens |
+| v1 | GitHub adapter, OpenAI/Anthropic/local providers, `.jury-forge.yml` schema, one org conventions pack, signed webhooks |
 | v1.1 | GHES, more provider capabilities (tools/streaming), outbound integrations |
-| v1.2 | GitLab adapter, OIDC/SSO, external policy service |
+| v1.2 | GitLab adapter, OIDC/SSO, knowledge packs, API tokens, notifications, S3 artefact store, external policy service |
 | Later | Out-of-process adapters, WASM plugins, marketplace (only if the core is trusted) |

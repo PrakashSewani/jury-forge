@@ -121,10 +121,13 @@ Exposed to agents as tools and to the context planner as ranked sources:
 
 - **Postgres** for nodes, edges, summaries, index versions, and metadata. Adjacency tables with
   indexed `(index_id, from_id)`, `(index_id, to_id)`, `(repo_id, commit_sha)`.
-- **Object storage** for raw file blobs/patches and large parse artefacts; content-addressed by hash.
+- **Artefacts** for raw file blobs/patches and large parse output: bounded `bytea` rows in Postgres,
+  content-addressed by hash, with retention; the optional S3 adapter (v1.2) can hold them instead
+  (technical-approach §2, §9).
 - **Optional vector store** for embeddings; not v1. If added, it is one more ranked source, not the
   source of truth.
-- **Redis** optional for hot retrieval caches; Postgres is the source of truth.
+- **No cache server.** Hot retrieval caches stay in process or in Postgres; v1.1 adds no new
+  infrastructure (technical-approach §9). A cache service would need its own ADR.
 - A dedicated graph database (Neo4j) is deferred; Postgres adjacency is enough for a single repo and
   keeps operations simple.
 

@@ -302,7 +302,7 @@ Presented as a checklist with "remind me later" (advisory, not gating `ready`):
 | Ports 80/443 blocked | `tls_unreachable`; the origin may be saved but `ready` is false; checklist for firewall/security group and retry |
 | TLS not issued after save | `tls_pending`; origin saved; `ready` false; fix DNS/firewall/proxy and retry; no need to re-enter the origin |
 | Origin frozen by `PUBLIC_URL` | Field read-only; change env + restart, then `doctor` |
-| Setup abandoned mid-way | State is `bootstrapping`/`claimed`; `/setup` resumes at the first incomplete step; a janitor alerts after 7 days |
+| Setup abandoned mid-way | State is `bootstrapping`/`claimed`; `/setup` resumes at the first incomplete step and shows how long it has waited; after 7 days `doctor` warns and `/metrics` reports it (no cron job; audit Q-D) |
 | Reinstall on existing volumes | Detected by migrations + instance row; setup resumes, never silently re-initialises |
 
 ## Non-goals

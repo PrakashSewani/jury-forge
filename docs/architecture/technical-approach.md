@@ -40,8 +40,8 @@ These come from accepted decisions, not taste:
 ```
 
 - **Four containers:** `caddy`, `app`, `worker`, `postgres`. `app` and `worker` are the **same image**
-  started with a different command. Cron jobs (reconciler, retention, stalled sessions, reaction
-  polling) run inside `worker`, so there is no separate scheduler container in v1.
+  started with a different command. Cron jobs (the §3.3 list) run inside `worker`, so there is no
+  separate scheduler container in v1.
 - **No Redis, no MinIO, no message broker.** Postgres is the queue, the session store, the audit
   log, and the artefact store (bounded `bytea` with retention) in v1. Object storage becomes an
   optional adapter in v1.2.
@@ -106,7 +106,18 @@ coalesce) plus transactional enqueue (webhook row and job in one transaction).
   - `publish.github` → `queue_name = install:<id>:writes`. This serializes writes per installation,
     the GitHub write queue from ADR-0024 §7.
   - `cron`: reconciler (10 min), retention (daily), stalled sessions (hourly), reaction poll (5 min,
-    open sessions only).
+    open sessions only), stuck-turn sweep (5 min), catalog refresh (daily).
+    *Amended 2026-11-28 (owner decision, architecture audit Q-D):* the last two were added.
+    - **Stuck-turn sweep** (MVP): a turn `running` longer than the threshold (default 20 min, 2× the
+      p95 completion target, configurable; `review-progress-and-completion` RP-03) is failed with
+      reason `stuck`, its job is released, and its Check Run is completed under that spec's failure
+      rules. Worst case, a stuck Check Run ends about 25 min after it started.
+    - **Catalog refresh** (MVP): each provider's `/models`, once a day and staggered, plus the
+      on-demand refresh. A removed model marks its reviewers `configuration_error` and never switches
+      a binding (`provider-model-discovery`). The catalog diff shown on refresh is v1.
+    - **Abandoned setup is not a cron job:** `/metrics` exposes `jf_setup_incomplete_seconds`,
+      `doctor` warns after 7 days with the stage reached, and `/setup` shows how long it has waited.
+      Before an owner is claimed there is nobody to notify, and notifications are v1.2.
 - **Idempotency:** each step writes its result keyed by `(turn_id, step)`; a retried job reads it
   back instead of redoing side effects. Publish uses a stored `external_id` check before posting.
 - **Generations:** a turn carries `(session_id, generation)`. A step aborts as `superseded` if the
@@ -558,11 +569,14 @@ and the tree-sitter grammar packages. Verify each in the milestone that first us
 
 `orgs`, `users`, `user_sessions`, `instance_settings`, `secrets` (wrapped DEKs and ciphertext),
 `installations`, `repositories`, `webhook_deliveries`, `providers`, `provider_models`,
-`reviewers`, `reviewer_versions`, `pr_sessions`, `session_threads`, `session_messages`,
+`model_probes`, `reviewers`, `reviewer_versions`, `reviewer_repo_bindings`, `pr_sessions`, `session_threads`, `session_messages`,
 `message_versions`, `session_turns`, `turn_steps` (`turn_id`, `step`, `input_hash`, `output`, `tokens`,
 `ms`, unique `(turn_id, step)`), `session_findings`, `finding_fingerprints`, `coverage_manifests`,
 `resolutions`, `finding_feedback`, `budgets`, `usage_rollups`, `audit_events` (append-only trigger),
 `artefacts` (`bytea`, size cap, `expires_at`). graphile-worker owns its own schema.
+*Amended 2026-11-28 (architecture audit):* `reviewer_repo_bindings` and `model_probes` were added.
+The MVP specs need a binding (`agentic-review-sessions` §6: the binding is the enablement), and
+ADR-0029 needs a stored probe before a binding.
 
 The v1 migrations add: `appeals`, `suppressions`, `repo_facts`, `review_receipts`, `jury_charges`,
 `charge_results`, and the jury and verifier columns. Field-level detail lives in
