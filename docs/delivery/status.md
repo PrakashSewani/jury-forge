@@ -20,14 +20,55 @@ one phase `in progress` and exactly one next action.
 **Phase:** 1b, milestone **M1.0 (repository and CI)**. The owner said go on 2026-11-27. WP 1-01
 to 1-05 are merged into `dev` (PR #5) with a green CI run; spikes 1-06 and 1-07 remain.
 
-**Branch:** `docs/mvp-spec-consistency` (documentation only: the MVP spec review).
+**Branch:** `docs/deployment-ops-rewrite` (documentation only: deployment and operations rewrite).
 
 **Next action:** run **spike S-A (WP 1-06)**: graphile-worker serialization and debounce under
 concurrency, plus the pg-boss adapter proof, written up in `docs/analysis/spikes/`. It needs a
 container runtime (CI has one; this machine's Docker was not running). S-C (WP 1-07) follows and
 needs the owner's Anthropic key or a local Ollama. Both spike notes close M1.0; then M1.1.
 
-### Landed this session (2026-11-27, MVP spec review)
+### Landed this session (2026-11-28, deployment and operations rewrite)
+
+[`deployment.md`](../architecture/deployment.md) and [`operations.md`](../architecture/operations.md)
+were rewritten to match the accepted v1 stack ([`technical-approach.md`](../architecture/technical-approach.md),
+ADR-0026), and both drift notes are gone. No ADR or spec was changed.
+
+- **Topology:** four containers (`caddy`, `app`, `worker`, `postgres`) plus the one-shot `migrate`,
+  one image for `migrate`/`app`/`worker`. The Compose example gains the `migrate` service,
+  `depends_on: service_completed_successfully`, `postgres:17`, and named volumes; the `scheduler`
+  service is gone.
+- **Removed from v1:** Redis, MinIO/S3, the artefact volume, `OBJECT_STORAGE_*`, object-storage
+  backups, and the separate scheduler. Artefacts are bounded `bytea` in Postgres, so one `pg_dump`
+  covers all durable state; the master key is backed up separately (`--include-key` opt-in, TQ-3).
+  Cron (reconciler, retention, stalled sessions, reaction poll) runs inside `worker`.
+- **Helm is v1.2** (model E, DEP-11, DEP-12, the operations matrix); the v1 install commands for the
+  chart are removed. Air-gapped (F) is "not in v1".
+- **Environment:** only the technical-approach §14 names; `NO_PROXY` and the knowledge-pack body cap
+  were dropped. The retired names appear once, in `operations.md` §3, marked "none in v1".
+- **Added from accepted documents:** the ADR-0030 `local` provider egress exception and its
+  `doctor` and troubleshooting rows; the Q-048 hardware floor row in sizing; the receipt signing key
+  row in secrets; the `doctor` checks from technical-approach §3.12 and first-run-setup criterion 2.
+- **Kept:** the loopback setup listener, the pinned Compose subnet for `TRUSTED_PROXIES`,
+  file-based secrets, Caddy on-demand TLS, the public-surface section, and the section numbering
+  that other documents link to. The Helm anchor changed to `deployment.md#e-kubernetes-and-helm-v12`,
+  and its one inbound link was updated.
+
+**Follow-ups found (not changed here, to keep this PR to two documents):**
+
+- Other documents still describe a separate scheduler, Redis, or MinIO as v1:
+  `architecture/agentic-review.md` (around line 246), `architecture/components.md` §12,
+  `architecture/overview.md` (around lines 73 and 78), `delivery/quality-gates.md` G1 (around line 45),
+  `delivery/roadmap.md` (around line 43), `product/capabilities.md` (the Helm row, around line 247), and
+  `product/specs/repo-knowledge-graph.md` (around line 127, Redis cache).
+- The **bodies** of ADR-0003, ADR-0004, ADR-0006, and ADR-0022 predate technical-approach: they still
+  name a scheduler, Redis/MinIO, object storage, Postgres 16+, and (ADR-0004) row-level security,
+  which technical-approach §3.2 does not use in v1. Their status lines carry the amendments, so the
+  rewrite follows those. ADR-0022's chart component list (a separate scheduler Deployment) needs a
+  superseding decision before the v1.2 chart is specified.
+- Before more than one `worker` replica is documented as safe for cron, an M1.1 integration test
+  must show that graphile-worker fires each cron tick once across two workers.
+
+### Landed earlier this session (2026-11-27, MVP spec review)
 
 The six MVP-gate specs were reviewed against the accepted ADRs and revised. **None is approved yet**;
 each header and the [specs index](../product/specs/README.md) say "revised, awaiting owner approval".
@@ -238,7 +279,23 @@ while `AGENTS.md` and `decisions/README.md` say to supersede; the status list ha
 - [`implementation-plan.md`](implementation-plan.md): 127 work packages across Phases 1b–5 plus
   v1.1/v1.2, with a critical path and per-milestone exit evidence.
 
-## Verified this session (2026-11-27)
+## Verified this session (2026-11-28)
+
+**Deployment and operations rewrite (docs only):**
+
+- Relative-link and heading-anchor check over all 124 Markdown files: 526 relative links, 0 broken. A
+  negative test confirmed that the checker flags a missing file and a missing anchor.
+- Stale-term grep over both documents (Redis, MinIO, S3, `OBJECT_STORAGE`, scheduler,
+  `ENCRYPTION_KEY`, `SESSION_SECRET`, `PROVIDER_EGRESS_ALLOWLIST`, "PostgreSQL 16"): every remaining hit
+  says "v1.2" or "none in v1". Postgres 16 is still mentioned twice as "tested for an external
+  database", which is ADR-0004's status line and technical-approach TQ-4.
+- Every environment variable named in the two documents is on the §14 list, apart from the retired
+  names (marked "none in v1") and the `postgres` image's own `POSTGRES_DB` and `POSTGRES_PASSWORD_FILE`.
+- `git diff --check`: clean; both documents are LF.
+- **Not verified:** the Compose and Caddy examples were not run (there is no image yet); they stay
+  illustrative until M1.2 produces the real files.
+
+## Verified earlier (2026-11-27)
 
 **MVP spec review (docs only):**
 
