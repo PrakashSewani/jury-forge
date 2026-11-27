@@ -3,6 +3,12 @@
 A self-hosted product is judged on the day something goes wrong. This document defines the
 operational contract: install, configure, upgrade, back up, restore, scale, diagnose, and recover.
 
+> **Drift note (2026-11-27).** Parts of this document predate the accepted stack
+> ([`technical-approach.md`](technical-approach.md), ADR-0026); where they differ, technical-approach
+> wins. The support matrix and the environment table below were corrected in the MVP spec review.
+> Passages that still mention a `minio`/Redis service, object-storage backups, or a separate
+> scheduler await a full rewrite: v1 has none of them.
+
 ## 1. Supported environments (proposed)
 
 | Item | Support |
@@ -10,12 +16,12 @@ operational contract: install, configure, upgrade, back up, restore, scale, diag
 | OS | **Ubuntu 24.04 LTS** (confirmed 2026-11-15). Other Linux best-effort; macOS dev, Windows via WSL2. |
 | Arch | **amd64 + arm64** (confirmed 2026-11-15). |
 | Container | **Docker Engine 24+ with Compose v2** (confirmed). |
-| Database | PostgreSQL 16+ (bundled or external). |
-| Object storage | Local volume or S3-compatible (MinIO, S3, R2, GCS via gateway). |
-| Queue | PostgreSQL (default) or Redis 7+ (optional). |
+| Database | PostgreSQL 17 (bundled or external; ADR-0004). |
+| Object storage | None in v1: artefacts are bounded `bytea` in Postgres. An S3-compatible adapter is v1.2 (technical-approach §2). |
+| Queue | PostgreSQL only (graphile-worker; ADR-0006, technical-approach §3.3). No Redis. |
 | Reverse proxy | Bundled Caddy/Traefik, or an operator-provided proxy. |
 | Node/runtime | Pinned LTS in the image; not required on the host. |
-| Kubernetes | **v1:** Helm chart on Kubernetes 1.29+ / Helm 3.14+ (ADR-0022); external/operator Postgres and S3 required. |
+| Kubernetes | **v1.2:** Helm chart on Kubernetes 1.29+ / Helm 3.14+ (ADR-0022 as amended by ADR-0023); external/operator Postgres. |
 
 Anything outside this matrix is best-effort until an ADR extends it.
 
@@ -141,16 +147,20 @@ refuses to start with a missing/invalid critical value.
 | `PUBLIC_URL` | no | Optional: **freezes** the origin (pre-provisioned/air-gapped). Normally unset and configured in setup (ADR-0021). |
 | `SETUP_BIND` | no | Bootstrap listener. Compose binds `0.0.0.0:8080` inside the container and publishes `127.0.0.1:8080:8080`; a native install binds `127.0.0.1:8080`. The host publish is the loopback boundary. |
 | `DATABASE_URL` / `DATABASE_URL_FILE` | yes | Postgres connection; TLS by default. Prefer the file form — a DSN in env leaks the password via `docker inspect`. |
-| `ENCRYPTION_KEY` / `ENCRYPTION_KEY_FILE` | yes | Root key; prefer the file form (Docker secret), never logged. |
-| `SESSION_SECRET` / `SESSION_SECRET_FILE` | yes | Cookie signing/encryption; file form preferred. |
-| `BOOTSTRAP_TOKEN` | first run | One-time, rate-limited, expires; generated if unset. |
-| `DATABASE_PASSWORD_FILE` | bundled Postgres | File form for the bundled database. |
-| `OBJECT_STORAGE_*` | yes | Artefact driver: `local` (default volume) or S3 endpoint/bucket/credentials. |
-| `QUEUE_DRIVER` | no | `postgres` (default) or `redis`. |
+| `JURY_MASTER_KEY_FILE` | yes | The 32-byte master key (KEK); a Docker secret or file, mode 0400; never an env value, never logged. |
+| `TRUSTED_PROXIES` | yes behind a proxy | CIDRs allowed to set forwarded headers: the pinned Compose subnet of the bundled Caddy, or the operator load balancer. Never `0.0.0.0/0`. |
 | `LOG_LEVEL` | no | `info` default; `debug` warns. |
-| `TELEMETRY` | no | `off` default; opt-in only. |
-| `TRUSTED_PROXIES` | no | CIDRs allowed to set forwarded headers. |
-| `PROVIDER_EGRESS_ALLOWLIST` | no | Extra provider hosts, if any. |
+| `METRICS_BIND` | no | Prometheus listener; internal network only. |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | no | Optional OpenTelemetry export to the operator collector. |
+| `HTTPS_PROXY` | no | Optional outbound proxy. |
+| `ROLE` | yes | `app` or `worker` (one image, two commands). |
+
+This is the complete v1 list ([`technical-approach.md`](technical-approach.md) §14, amended
+2026-11-27). Retired names from earlier drafts: `ENCRYPTION_KEY[_FILE]` (now `JURY_MASTER_KEY_FILE`),
+`SESSION_SECRET[_FILE]` (not needed; sessions are random IDs stored hashed), `BOOTSTRAP_TOKEN` (always
+generated), `OBJECT_STORAGE_*` (S3 adapter is v1.2), `QUEUE_DRIVER` (Postgres only), `TELEMETRY` (v1
+has no telemetry), and `PROVIDER_EGRESS_ALLOWLIST` (derived from configured provider origins). The
+bundled Postgres container reads `POSTGRES_PASSWORD_FILE`.
 
 Secrets are **files** in the reference Compose file (Docker secrets, `/run/secrets/*`), read once
 at startup; `*_FILE` variables are the documented form. `.env` holds non-secret instance settings

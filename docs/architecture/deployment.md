@@ -8,6 +8,14 @@ must support. The model choice is recorded in ADR-0003; install behaviour is spe
 **One sentence:** Docker Compose on one Linux host, behind Caddy on a public HTTPS origin, with
 Postgres as the only durable state — everything else is replaceable.
 
+> **Drift note (2026-11-27).** Parts of this document predate the accepted stack
+> ([`technical-approach.md`](technical-approach.md), ADR-0026). Where they differ, technical-approach
+> wins: v1 has **no Redis, no MinIO/S3** (artefacts are bounded `bytea` in Postgres; an S3 adapter is
+> v1.2), **no separate scheduler** (cron runs in the worker), **Helm is v1.2** (ADR-0023), and the
+> environment variables are the §14 list. The Compose example and the secrets table below were
+> corrected in the MVP spec review; the remaining Redis/MinIO/S3 and Helm-in-v1 passages await a
+> full rewrite.
+
 ## 1. Deployment models
 
 | Model | Origin | State | Who it is for | Status |
@@ -196,12 +204,9 @@ services:
       # Without it, the origin is written by setup (ADR-0021).
       SETUP_BIND: 0.0.0.0:8080          # inside the container; host publish is the loopback boundary
       DATABASE_URL_FILE: /run/secrets/database_url
-      ENCRYPTION_KEY_FILE: /run/secrets/encryption_key
-      SESSION_SECRET_FILE: /run/secrets/session_secret
+      JURY_MASTER_KEY_FILE: /run/secrets/master_key
       TRUSTED_PROXIES: 172.28.0.0/24        # the pinned internal subnet, not 172.16.0.0/12
-      QUEUE_DRIVER: postgres
-      OBJECT_STORAGE_DRIVER: local
-    secrets: [database_url, encryption_key, session_secret]
+    secrets: [database_url, master_key]
     networks: [internal]
     expose: ["3000"]
     ports: ["127.0.0.1:8080:8080"]     # host loopback only; do not publish on 0.0.0.0
@@ -221,8 +226,8 @@ services:
     environment:
       ROLE: worker
       DATABASE_URL_FILE: /run/secrets/database_url
-      ENCRYPTION_KEY_FILE: /run/secrets/encryption_key
-    secrets: [database_url, encryption_key]
+      JURY_MASTER_KEY_FILE: /run/secrets/master_key
+    secrets: [database_url, master_key]
     networks: [internal]
     read_only: true
     restart: unless-stopped
@@ -248,8 +253,7 @@ services:
 
 secrets:
   database_url: { file: ./secrets/database_url }
-  encryption_key: { file: ./secrets/encryption_key }
-  session_secret: { file: ./secrets/session_secret }
+  master_key: { file: ./secrets/master_key }
   db_password: { file: ./secrets/db_password }
 ```
 
@@ -259,8 +263,9 @@ otherwise spoof `X-Forwarded-*`. If a host-level proxy or cloud LB sits in front
 stop publishing Caddy directly.
 
 Secrets use **files**, not environment values: Compose interpolates env into `docker inspect` and
-`/proc/1/environ`, which defeats the encryption-key boundary. `ENCRYPTION_KEY_FILE`,
-`SESSION_SECRET_FILE`, and `POSTGRES_PASSWORD_FILE` are the documented forms.
+`/proc/1/environ`, which defeats the encryption-key boundary. `JURY_MASTER_KEY_FILE`,
+`DATABASE_URL_FILE`, and `POSTGRES_PASSWORD_FILE` are the documented forms (technical-approach §14).
+There is no session secret: sessions are random IDs stored hashed (technical-approach §3.9).
 
 ### Reference `Caddyfile` (on-demand TLS for a runtime-configured origin)
 
@@ -419,9 +424,11 @@ network only. Nothing else.
 
 **Outbound (must not happen unless configured):**
 
-- Telemetry or update pings. `TELEMETRY=off` is the default and there is no phone-home.
-- Any provider host not bound to a stored key (key-to-origin binding), or not in
-  `PROVIDER_EGRESS_ALLOWLIST`.
+- Telemetry or update pings. v1 has no telemetry and no phone-home, so there is nothing to switch
+  off.
+- Any provider host not bound to a stored key (key-to-origin binding). The egress allowlist is the
+  GitHub base URL plus the configured provider origins; there is no separate allowlist variable
+  (technical-approach §3.11).
 - Link-local/metadata ranges (`169.254.0.0/16`, `fd00:ec2::254`) from provider or knowledge fetches
   (SSRF guard).
 
@@ -451,12 +458,11 @@ allowlist, so webhook security is signature verification + rate limiting, not IP
 
 | Secret | Where | Rotation |
 | ------ | ----- | -------- |
-| `ENCRYPTION_KEY` / `ENCRYPTION_KEY_FILE` | File preferred (Docker secret), never in the DB; backed up separately | Envelope-encrypted data keys allow rotation; rotation is an explicit CLI step |
-| `SESSION_SECRET` / `SESSION_SECRET_FILE` | File preferred | Rotate invalidates sessions; acceptable |
-| `BOOTSTRAP_TOKEN` | Generated once, hashed at rest, printed once | Disabled on claim; `setup rotate` |
+| Master key (`JURY_MASTER_KEY_FILE`) | File only (Docker secret, mode 0400), never in the DB or an env value; backed up separately | Envelope-encrypted data keys allow rotation; `jury-forge rotate-key` rewraps them |
+| Bootstrap token | Generated once, hashed at rest, printed once; no env override in v1 | Disabled on claim; `setup rotate` |
 | GitHub App private key, client secret, webhook secret | Postgres, envelope-encrypted | Re-enter/re-issue via the UI; audited |
 | Provider keys | Postgres, envelope-encrypted, origin-bound | Verify/rotate in the UI; write-only |
-| DB password, S3 credentials | Secret file (`DATABASE_URL_FILE`, `*_FILE`) | Operator-managed |
+| DB password | Secret file (`DATABASE_URL_FILE`, `POSTGRES_PASSWORD_FILE`) | Operator-managed |
 | Backup encryption key | Operator's store | Out of scope for the app |
 
 `jury-forge init` generates random secrets into `secrets/` files with `0600` (never into `.env`),
@@ -501,7 +507,7 @@ lock so two instances cannot run retention twice.
 
 - `pg_dump -Fc` on a schedule, encrypted, stored off-host.
 - Object-storage copy or bucket lifecycle policy for artefacts.
-- `ENCRYPTION_KEY` and proxy certs backed up separately from the database (a DB restore without the
+- The master key file (`JURY_MASTER_KEY_FILE`) and proxy certs backed up separately from the database (a DB restore without the
   key is useless).
 - Default target: daily dump = **24 h RPO**, **4 h RTO** (accepted, DEP-04); WAL archiving/pgBackRest
   is the documented team/HA upgrade (model B), not a v1 default.

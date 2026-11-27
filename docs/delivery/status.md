@@ -20,14 +20,79 @@ one phase `in progress` and exactly one next action.
 **Phase:** 1b, milestone **M1.0 (repository and CI)**. The owner said go on 2026-11-27. WP 1-01
 to 1-05 are merged into `dev` (PR #5) with a green CI run; spikes 1-06 and 1-07 remain.
 
-**Branch:** `docs/m1-0-ci-evidence` (documentation only: this CI evidence).
+**Branch:** `docs/mvp-spec-consistency` (documentation only: the MVP spec review).
 
 **Next action:** run **spike S-A (WP 1-06)**: graphile-worker serialization and debounce under
 concurrency, plus the pg-boss adapter proof, written up in `docs/analysis/spikes/`. It needs a
 container runtime (CI has one; this machine's Docker was not running). S-C (WP 1-07) follows and
 needs the owner's Anthropic key or a local Ollama. Both spike notes close M1.0; then M1.1.
 
-### Landed this session (2026-11-27, M1.0 walking skeleton)
+### Landed this session (2026-11-27, MVP spec review)
+
+The six MVP-gate specs were reviewed against the accepted ADRs and revised. **None is approved yet**;
+each header and the [specs index](../product/specs/README.md) say "revised, awaiting owner approval".
+
+- **Every spec now has a release-tier section**, and the acceptance criteria carry their tier, so
+  approving a spec for the MVP approves only its MVP rows.
+- **first-run-setup:** environment variables and secrets match technical-approach §14
+  (`JURY_MASTER_KEY_FILE`, no session secret, no `BOOTSTRAP_TOKEN` override, no egress-allowlist
+  variable); no object storage in v1; the bootstrap token is never in a URL; the capability probe
+  (ADR-0029) gates Stage 5; evaluation mode (criterion 11) is after G1; Helm is v1.2; F-042 and
+  F-013 replace the "F-0xx" placeholders.
+- **provider-model-discovery:** the `local` kind follows the new ADR-0030; owner-only provider
+  management (ADR-0028); master key, not KMS; the registry is the bundled snapshot with no default
+  fetch; the signed manifest is untiered (MVP rejects providers without `/models`); Non-goals,
+  Metrics, Rollout, and SSRF/local criteria added.
+- **agentic-review-sessions:** ADR-0010 as amended (no harness); **PR review runs no model tool
+  loop** (the tool table is the v1.1 branch-review set); capability labels are v1.2;
+  `.jury-forge.yml` uses the §14 keys and is read from the base SHA; a comment never creates a
+  session; a mention is a reply turn; `pull_request_review` and default-branch `push` are v1.1 event
+  expansions; a manual request never bypasses bindings; the 2026-11-15 idea list is an untiered
+  appendix; AG-01 and AG-08 closed.
+- **review-progress-and-completion:** Check Run on open only in bound repos and never on forks;
+  failure conclusions per decision 4; the placeholder is found only among the App's own comments; a
+  security section; the large-PR estimate goes into the placeholder.
+- **large-pr-handling:** aligned to ADR-0025 §2 (states, deterministic fitting); the 100 %
+  no-clean-result rule is fixed in the MVP; split/continuation/threshold untiered; Rollout fixed.
+- **session-capacity-and-visibility:** one lifecycle (the data-model states); open PRs' sessions are
+  never archived; ADR-0024 hard budgets plus ADR-0015's soft quota and loop guard (Q-050); a v1
+  owner/maintainer/reader table; reply rights per ADR-0024; pricing points to the provider spec.
+- **New [ADR-0030](../decisions/ADR-0030-local-provider-egress.md)** (egress rule for local model
+  servers), indexed; ADR-0011's status line, technical-approach §3.11, and `security.md` point to it.
+- **technical-approach §14 amended:** `TRUSTED_PROXIES` and `DATABASE_URL_FILE` added (see decision
+  1); retired variable names listed.
+- **`deployment.md` and `operations.md`:** the Compose example, the secrets table, the environment
+  table, and the support matrix now match technical-approach; a drift note marks the remaining
+  Redis/MinIO/S3/Helm-in-v1 passages, which still need a full rewrite.
+- **New Q-050** in [`open-questions.md`](../analysis/open-questions.md).
+
+**Owner decisions (2026-11-27, "fix with defaults"):** each default was checked against the
+accepted ADRs before it was applied; three were changed because the literal default would have
+conflicted with an ADR or weakened the product.
+
+1. **Environment variables:** technical-approach §14 is the list. **Changed:** `TRUSTED_PROXIES`
+   and `DATABASE_URL_FILE` were *added* to §14 instead of moved to the database: the app needs the
+   trusted proxy before any setup state exists, or every pre-auth rate limit collapses into the
+   proxy's single IP, and a `DATABASE_URL` value in the environment leaks the password.
+2. **Mentions:** **changed.** A mention cannot be a review trigger (ADR-0013 names the Check Run
+   action and the label only). An `@jury-forge` mention from a repo-write user is a **reply turn** in
+   an existing session (ADR-0024 §1); it never starts a review and gets no placeholder.
+3. **Check Run on PR open:** only in repos with an enabled binding, never on a fork PR. Applied as
+   proposed.
+4. **Provider outage:** **changed.** `neutral` with the remedy under the default `gate: neutral` (and
+   always in the MVP), but `failure` when a repo opted into a blocking gate (v1): GitHub counts
+   `neutral` as passing a required check, so the literal default would merge unreviewed code during an
+   outage.
+5. **Local models:** applied as proposed, but it contradicts ADR-0011's accepted egress rule, so it
+   is recorded as **ADR-0030** (owner-only, the exact host pinned, plain HTTP only to loopback/private
+   addresses, metadata and link-local always blocked, the instance's own listeners refused). Its
+   safeguards were drafted in this pass and are open to amendment.
+6. **Stalled sessions:** a session is archived only when its PR closes; after 30 days waiting it is
+   marked `needs human`. Applied as proposed; it matches ADR-0015 ("archive only after PR close").
+7. **Model registry:** the bundled snapshot, no default fetch; a signed refresh is opt-in and
+   untiered. Applied as proposed.
+
+### Landed earlier this session (2026-11-27, M1.0 walking skeleton)
 
 Merged into `dev` through PR #5 (`feat/walking-skeleton`, commit `769bc1c`, merge `1182ff7`); no
 product behaviour, only the skeleton and the checks.
@@ -175,6 +240,19 @@ while `AGENTS.md` and `decisions/README.md` say to supersede; the status list ha
 
 ## Verified this session (2026-11-27)
 
+**MVP spec review (docs only):**
+
+- Relative-link and heading-anchor check over all 124 Markdown files: 0 broken.
+- `git diff --check`: clean (no whitespace errors); edited files are LF.
+- Stale-term grep over the six specs (`ENCRYPTION_KEY`, `SESSION_SECRET`,
+  `PROVIDER_EGRESS_ALLOWLIST`, `BOOTSTRAP_TOKEN`, object storage, `F-0xx`, LangGraph, `v1.x`): every
+  remaining hit is intended (a "none in v1" statement, the closed harness question, or a post-v1
+  "later").
+- Each default was checked against ADR-0011, ADR-0013, ADR-0015, ADR-0024, ADR-0025 §2, and
+  technical-approach §3.4, §3.9, §3.11, and §14 before it was applied.
+- **Not verified:** `deployment.md` and `operations.md` beyond the corrected sections (the drift
+  note lists what remains), and the specs not in the MVP gate.
+
 **M1.0 in CI (GitHub Actions):**
 
 - **PR run** [46020023291](https://github.com/PrakashSewani/jury-forge/actions/runs/46020023291)
@@ -247,7 +325,7 @@ while `AGENTS.md` and `decisions/README.md` say to supersede; the status list ha
 - **M1.0 exit:** the CI run is green (PR #5); spikes 1-06 (S-A, needs a container runtime) and
   1-07 (S-C: Ollama and an Anthropic-native model are left, which needs the owner's key or a local
   Ollama).
-- **M1.1 onward:** approval of the six MVP-gate specs before the work packages that implement them:
+- **M1.2 onward:** approval of the six MVP-gate specs (revised 2026-11-27, not yet approved) before the work packages that implement them — first-run-setup before M1.2, provider-model-discovery before M1.3:
   [`first-run-setup.md`](../product/specs/first-run-setup.md),
   [`provider-model-discovery.md`](../product/specs/provider-model-discovery.md),
   [`agentic-review-sessions.md`](../product/specs/agentic-review-sessions.md),
@@ -261,7 +339,7 @@ while `AGENTS.md` and `decisions/README.md` say to supersede; the status list ha
 
 ## Open owner questions
 
-The open list is now Q-001, Q-010, Q-011, Q-017, Q-018, Q-020, Q-030, Q-031, and Q-049; each has a recorded
+The open list is now Q-001, Q-010, Q-011, Q-017, Q-018, Q-020, Q-030, Q-031, Q-049, and Q-050; each has a recorded
 default and a close condition in [`../analysis/open-questions.md`](../analysis/open-questions.md).
 Everything else is closed by an accepted ADR (see the two closed tables there). None of the open
 items blocks Phase 1b.

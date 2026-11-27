@@ -1,15 +1,28 @@
 # Spec: Provider and model discovery
 
-- Status: draft for owner review — **MVP gate**: owner approval required before Phase 1b work that implements it (per-milestone approval, 2026-11-27)
+- Status: draft for owner review — **MVP gate**: owner approval required before Phase 1b work that implements it (per-milestone approval, 2026-11-27). **Revised 2026-11-27** in the MVP spec review (release tiers, ADR alignment; see `delivery/status.md`); not yet approved
 - Date: 2026-11-15
 - Owner: platform + security
-- Related: ADR-0011
+- Related: ADR-0011, ADR-0029 (capability probes), ADR-0030 (local provider egress), ADR-0028 (v1 roles)
 - Parent: [`agentic-review-sessions.md`](agentic-review-sessions.md)
 
 ## Owner directive
 
 The operator adds a provider key; Jury Forge **fetches the models available with that key**. The
 operator never types a model name. Keys are stored encrypted.
+
+## Release tiers
+
+- **MVP (G1, WP 1-18 to 1-20):** provider kinds `openai`, `anthropic`, `commandcode`, `openrouter`,
+  `openai-compatible`, and `local`; key validation by an authenticated call; `/models` discovery;
+  the catalog with the bundled registry snapshot; the capability probe (§2.1) as the binding gate;
+  agent binding (§3); envelope encryption (§4); pricing sources 1, 3, 4, and 5 (§6); the API (§7)
+  and the providers/catalog/probe UI (§8). One operator, the owner, manages providers.
+- **v1:** the cost preview for a typical review, the catalog diff on refresh, and maintainer
+  read access to provider status (ADR-0028).
+- **Not tiered yet:** the signed provider manifest (§5, option 2; no org signing-key model exists
+  yet), an opt-in signed registry refresh (§2), and custom-header providers (Azure, gateways).
+  In the MVP a provider without a usable `/models` endpoint is rejected (§5, option 1).
 
 ## Problem
 
@@ -27,7 +40,7 @@ metadata it needs for token budgeting, cost, and capabilities.
 | `commandcode` | `https://api.commandcode.ai/provider/v1` | `GET /models` | Bearer |
 | `openrouter` | `https://openrouter.ai/api/v1` | `GET /models` (public; pricing + context) | Bearer (for calls) |
 | `openai-compatible` | operator URL | `GET /models` | Bearer or configured header |
-| `local` | operator URL (Ollama/vLLM/…) | `GET /v1/models` | optional key |
+| `local` | operator URL (Ollama/vLLM/…); plain HTTP allowed only to a loopback/private host under [ADR-0030](../../decisions/ADR-0030-local-provider-egress.md) | `GET /v1/models` | optional key |
 
 **CommandCode (verified 2026-11-15):** the live models endpoint is
 `https://api.commandcode.ai/provider/v1/models`. Each model carries a `supported_endpoints` field
@@ -90,7 +103,11 @@ Each entry:
   release). Unknown models are still selectable only if the provider returns them, flagged
   `unknown`, and use conservative limits.
 - The registry is not a vendor price list we maintain forever; it is an operator-overridable
-  catalog. A local instance can ship a registry snapshot and refresh it from a signed URL.
+  catalog. **Default: the snapshot bundled with the release, and no network fetch.** Refreshing it
+  from a signed URL is opt-in, off by default, and uses an operator-configured URL, because a
+  default fetch from a project-run host would be a phone-home (AGENTS.md; non-negotiable 5).
+  Between releases, stale prices are corrected by an admin price override (§6); budgets stay
+  token-based, so a stale price never lets a turn exceed its cap.
 - **No free-text model field anywhere.** The agent editor's model picker only offers catalog
   entries. The API rejects a `modelId` not present for the provider.
 
@@ -132,11 +149,14 @@ Spike evidence for each rule:
 
 ## 4. Encryption and access
 
-- Envelope encryption: a per-provider data key wrapped by the instance root key/KMS.
+- Envelope encryption: a per-provider data key (AES-256-GCM) wrapped by the master key from
+  `JURY_MASTER_KEY_FILE` (technical-approach §3.9). An external KMS is not in v1.
 - Ciphertext is versioned; rotation re-wraps without re-entering the key.
 - The key is decrypted only in the provider gateway, immediately before the call.
 - The key is bound to `baseUrl`/allowed origins; no copy-to-arbitrary-URL path.
-- Only owner/admin can add, rotate, or delete a provider; every action is audited.
+- Only the **owner** can add, rotate, or delete a provider, with re-authentication; every action is
+  audited. (v1 roles are owner/maintainer/reader, ADR-0028; an admin role arrives in v1.2. The MVP
+  has one operator, the owner.)
 - The key is never logged, included in an error, or returned by an API.
 - A provider health check may use the key; the check result is cached and does not leak the key.
 
@@ -151,7 +171,8 @@ Some OpenAI-compatible gateways do not expose `/models`. Options:
 3. **Operator-curated catalog** in the UI: still a selection from a server-validated list, never a
    free-text field.
 
-The default is (1) + (2). Do not silently accept an unvalidated model name.
+**MVP: (1) only.** Option (2) needs an org signing-key model that no ADR defines yet, so it is not
+tiered; option (3) is not planned. Do not silently accept an unvalidated model name.
 
 ## 6. Pricing discovery
 
@@ -227,14 +248,29 @@ All require session + role; all mutations are audited.
 ## 9. Security
 
 - Key validation must not be an SSRF: enforce HTTPS, block private/link-local/loopback/metadata
-  ranges, and bind the destination to the provider's allowed origin.
+  ranges, and bind the destination to the provider's allowed origin. **The one exception is the
+  `local` kind** ([ADR-0030](../../decisions/ADR-0030-local-provider-egress.md)): only the owner
+  sets it; the exact host entered is resolved and pinned; plain HTTP only to loopback/private
+  addresses; link-local, metadata, the instance's own listeners, and the database host are always
+  refused; no redirects.
 - The model endpoint is called with a short timeout and a size cap.
 - Provider errors are mapped to safe taxonomy codes; no raw body or headers in logs.
 - A provider key cannot be copied to a different base URL; credential reuse is by reference, not by
   ciphertext copy.
 - Rate-limit provider verification to prevent abuse.
 
+## Non-goals
+
+- A free-text model field, anywhere, ever.
+- Scraping provider pricing pages, or maintaining a vendor price list as a service.
+- A hosted model registry the instance must contact; the registry ships with the release.
+- Automatic model fallback without an explicit policy (ADR-0016).
+- Tool use in PR review; a forced tool call is only a structured-output mode (ADR-0029).
+
 ## 10. Acceptance criteria
+
+All MVP unless marked.
+
 
 - [ ] Adding a valid OpenAI-compatible key (e.g. CommandCode, OpenAI) fetches a model list and stores the provider encrypted.
 - [ ] An invalid key is rejected and nothing is stored, including on a provider whose `/models`
@@ -254,14 +290,45 @@ All require session + role; all mutations are audited.
 - [ ] A custom provider can be priced manually; the model list is still provider-driven.
 - [ ] Unknown pricing shows “cost unknown” and enforces a token budget.
 - [ ] Cache reads/writes are priced separately when reported; otherwise charged as input.
+- [ ] Only the owner can add, rotate, disable, or delete a provider; a non-owner attempt is refused
+      and audited.
+- [ ] SSRF: a non-`local` provider URL that resolves to a private, loopback, link-local, or metadata
+      address is refused, and a redirect to one is refused.
+- [ ] A `local` provider on a loopback or private address works over plain HTTP; the same URL on a
+      public address requires HTTPS; link-local, metadata, the instance's own listeners, the
+      database host, and a changed DNS answer after pinning are refused (ADR-0030).
+- [ ] With no network access to any registry host, the catalog is still enriched from the bundled
+      snapshot and no registry fetch is attempted by default.
+- [ ] (v1) The cost preview shows an estimate for a typical review per model.
+
+## Metrics
+
+- Provider add success rate on the first attempt, by kind, and the error codes of failures.
+- Probe pass rate per model and mode; probe tokens spent against the estimate.
+- Catalog refresh failures and stale-catalog duration per provider.
+- Turns that failed because a bound model disappeared or degraded (target: every one surfaced with
+  a reason, none silently switched).
+
+## Rollout
+
+- Ships in M1.3 (WP 1-18 egress, 1-19 onboarding, 1-19a probe, 1-20 gateway) and is reached from
+  first-run-setup Stage 4. No feature flag: a review cannot run without it.
+- Contract tests per provider kind use recorded fixtures; a live smoke test per kind runs nightly
+  with opt-in CI secrets (technical-approach §18), never as a contributor gate.
+- Docs: an operator page per provider kind, including running a `local` server on the Docker host
+  gateway and the plain-HTTP warning.
+
 
 ## 11. Open questions
 
 - ~~Exact CommandCode models endpoint/response shape and whether it exposes pricing.~~ Answered by
   the 2026-11-27 spike: public `/models`, no pricing, no capability flags.
 - Which providers expose pricing in `/models` vs require the registry/manual override?
-- Do we ship a registry snapshot in the image, or fetch it? (Default: bundled snapshot + optional
-  signed refresh.)
+- ~~Do we ship a registry snapshot in the image, or fetch it?~~ Decided in the MVP spec review
+  (2026-11-27): bundled snapshot, no default fetch; a signed refresh from an operator-configured URL
+  is opt-in and not tiered yet.
 - Do we allow an operator price override for private/self-hosted models? (Default: yes, audited.)
 - How do we handle providers that require custom headers (Azure, gateways)? (Adapter config; not v1
-  free text.)
+  free text; not tiered.)
+- Who signs a provider manifest, and with which key? (Open; the manifest is not tiered until an ADR
+  answers it.)
