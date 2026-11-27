@@ -51,7 +51,7 @@ written to be read by humans and agents. Start at the layer you need; do not rea
 - [`product/specs/`](product/specs/) — one spec per approved capability (template and index).
   - [`agentic-review-sessions.md`](product/specs/agentic-review-sessions.md) — per-PR sessions, manual triggers, routing, resolution.
   - [`jury-output.md`](product/specs/jury-output.md) — jury composition, finding provenance, deliberation, dissent, and verdict.
-  - [`standout-features.md`](product/specs/standout-features.md) — appeal, verified-fixed, noise budget, repo memory, signed receipt, presets, fix handoff, risk score, charges, and more.
+  - [`standout-features.md`](product/specs/standout-features.md) — appeal, verified-fixed, comment ceiling, repo memory, signed receipt, presets, fix handoff, risk score, charges, and more.
   - [`review-progress-and-completion.md`](product/specs/review-progress-and-completion.md) — Check Run progress, completion, placeholder comment, failure/cancel.
   - [`provider-model-discovery.md`](product/specs/provider-model-discovery.md) — provider keys, `/models`, catalog, no free text.
   - [`repo-knowledge-graph.md`](product/specs/repo-knowledge-graph.md) — PR review is T0+; branch review uses the graph (v1.1).

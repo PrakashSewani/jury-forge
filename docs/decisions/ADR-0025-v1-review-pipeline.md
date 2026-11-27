@@ -1,7 +1,8 @@
 # ADR-0025: v1 review pipeline — T0+ context, verifier, code-first chair, model roles
 
 - Status: accepted (G0, 2026-11-16; large-PR fitting + coverage manifest in MVP; T0+, verifier,
-  code-first chair, and model roles in v1)
+  code-first chair, and model roles in v1). §4's "noise budget (S3)" is amended by ADR-0033
+  (2026-11-28): no default budget, a fixed safety ceiling.
 - Date: 2026-11-16
 - Owners: architecture + review quality
 - Amends: ADR-0007 (PR review context), ADR-0011 (model roles), ADR-0014 (PR review stays

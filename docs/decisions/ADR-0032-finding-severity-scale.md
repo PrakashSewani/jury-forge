@@ -1,6 +1,7 @@
 # ADR-0032: Finding severity scale and ranking weights
 
-- Status: accepted (owner decision, 2026-11-28; architecture audit Q-A)
+- Status: accepted (owner decision, 2026-11-28; architecture audit Q-A). "Trim findings under the
+  noise budget" now means under a repo cap or the safety ceiling (ADR-0033).
 - Date: 2026-11-28
 - Owners: product + review quality
 - Supersedes: —

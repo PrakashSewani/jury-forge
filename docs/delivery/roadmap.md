@@ -89,13 +89,14 @@ conversation a small team can rely on.
 - **Trust hardening:** secret/PII redaction, origin-bound keys, egress policy, trust-labelled
   prompts, output validation, prompt-injection defences for diffs and replies, resolution guard.
 - **Audit stream with export**; retention and deletion for sessions/messages/raw responses.
-- **Stalled-session policy:** 7-day flag, 30-day archive, no auto-resolve, no silent drop.
+- **Stalled-session policy:** 7-day `needs human` flag, 30-day drop from the default inbox, archive
+  only on PR merge/close, no auto-resolve, no silent drop.
 - **Preview/approve mode** and suppression rules.
 - **Backups, restore drill, upgrade/rollback, migration safety.**
 - **Conversation safety (ADR-0024):** trigger authz, fork skip, loop/turn budgets, finding
   fingerprints, re-anchoring after push, evidence-gated resolution, enforced token budgets.
 - **Standout features** ([`specs/standout-features.md`](../product/specs/standout-features.md)):
-  appeal, verified-fixed, noise budget, repo memory, signed receipt, presets + cost estimate, fix
+  appeal, verified-fixed, comment ceiling (ADR-0033), repo memory, signed receipt, presets + cost estimate, fix
   handoff, risk score, reaction feedback, instruction compatibility, jury charges, suggestion
   blocks, merge-gate policy, egress preview.
 - **Review pipeline (ADR-0025):** T0+ context, large-PR fitting + coverage manifest, linked-issue

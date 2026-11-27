@@ -41,14 +41,24 @@ Humans resolve with one click (`suggest`) or the guard does it (`auto`).
 **Acceptance:** a fix push produces at most one reply per affected thread; untouched threads get no
 new comments.
 
-### S3. Noise budget — fewer, better comments (v1)
+### S3. Comment ceiling — focused reviewers, bounded abuse (v1; ADR-0033)
 
-Each review has a **comment budget** (default 7 inline comments). Findings are ranked by
-`severity × confidence × jury agreement`; the rest go into one collapsed summary section. Findings
-that cannot quote a line from the diff are **withheld** and listed in the receipt — never posted.
+There is **no default noise budget**: a review's volume is controlled by how its reviewers are
+defined (a narrow charge, no style nits that a linter covers), not by a product cap. Every
+grounded finding is posted inline, with two limits:
 
-**Acceptance:** no review exceeds the budget; every inline finding quotes diff text that exists at
-the reviewed SHA.
+- an optional repo cap, `review.max_inline_comments` in `.jury-forge.yml`;
+- a fixed **safety ceiling of 50 inline comments per review**, an abuse guard against injected or
+  runaway output that no setting can raise.
+
+Past either limit, findings are ranked by `severity × confidence × jury agreement` (ADR-0032
+weights) and listed in one collapsed summary section and the UI; `critical` findings always post
+inline. A review that hits the ceiling says so and points to the reviewer settings. Findings that
+cannot quote a line from the diff are **withheld** and listed in the receipt — never posted.
+
+**Acceptance:** no review posts more than 50 inline comments, or more than the repo cap when one is
+set, except `critical` findings under a repo cap; every finding past a limit appears in the collapsed
+section and the receipt; every inline finding quotes diff text that exists at the reviewed SHA.
 
 ### S4. Repo memory — learns from feedback without training (v1)
 
@@ -176,7 +186,8 @@ confirm it.
 
 ## Open questions
 
-- SF-01: Default comment budget (7?) and whether it is per policy.
+- ~~SF-01: Default comment budget (7?) and whether it is per policy.~~ Closed by ADR-0033: no default
+  budget, an optional repo cap, a fixed 50-comment safety ceiling.
 - SF-02: Should an upheld appeal escalate to a human reviewer automatically on `critical` severity?
 - SF-03: Suppression expiry default (90 days?) and whether owners can make rules permanent.
 - ~~SF-04: Is replay v1 (for the launch scorecard) or v1.x?~~ Closed by Q-045: egress preview is v1;

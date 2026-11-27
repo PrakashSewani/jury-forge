@@ -82,7 +82,7 @@ The turn runner is a thin, explicit step pipeline (ADR-0010 as amended, technica
 | `review*` | Jurors in parallel, bounded by the provider token bucket (one juror in the MVP, three in v1) | MVP |
 | `ground` | Code: file, line, and quoted evidence exist at the SHA; suggestions apply | MVP |
 | `verify` | One non-voting verifier call (`confirmed`/`unconfirmed`/`wrong`) | v1 |
-| `chair` | Code: fingerprint merge, severity, agreement, ranking, noise budget, suppressions | MVP (single juror), v1 (jury) |
+| `chair` | Code: fingerprint merge, severity, agreement, ranking, comment ceiling (ADR-0033), suppressions | MVP (single juror), v1 (jury) |
 | `summarise` | Fast model: the 3-line summary and dissent text | v1 |
 | `publish` | Enqueue `publish.github` | MVP |
 | `evaluate` | Scorecard counters | v1 |
