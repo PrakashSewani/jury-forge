@@ -32,7 +32,11 @@ metadata it needs for token budgeting, cost, and capabilities.
 **CommandCode (verified 2026-11-15):** the live models endpoint is
 `https://api.commandcode.ai/provider/v1/models`. Each model carries a `supported_endpoints` field
 (chat completions, responses, and/or messages); Claude models answer on `/v1/messages` only. Pricing
-is on the separate Pricing & Limits page, not necessarily in `/models`. The catalog must store the
+is on the separate Pricing & Limits page, not necessarily in `/models`. **Spike 2026-11-27**
+([`../../analysis/spikes/2026-11-27-commandcode-structured-output.md`](../../analysis/spikes/2026-11-27-commandcode-structured-output.md)):
+`/models` needs **no auth** (200 with no key or a bad key), so it cannot validate a key; it returns
+only `id`, `object`, `name`, `created`, `owned_by`, `context_length`, and `supported_endpoints` —
+no pricing and no capability flags. The catalog must store the
 supported endpoints per model and the gateway must choose the right route — do not assume one
 provider-wide flavor.
 
@@ -46,7 +50,9 @@ returns `pricing` (prompt/completion/image/audio/cache read/cache write), `conte
 Add provider
   → name, kind, base URL, API key
   → server normalizes the base URL and calls the model endpoint
-  → 401/403: reject, store nothing
+  → server makes one authenticated minimal call (a short completion on a catalog model) when the
+    model endpoint is public — CommandCode's `/models` answers 200 without a key (spike 2026-11-27)
+  → 401/403 from either call: reject, store nothing
   → 404/unsupported: offer a signed provider manifest (see §5), or reject
   → success: store encrypted credentials + provider row
   → fetch and cache models
@@ -219,8 +225,8 @@ All require session + role; all mutations are audited.
 
 ## 11. Open questions
 
-- Exact CommandCode models endpoint/response shape and whether it exposes pricing (spike with a
-  real key).
+- ~~Exact CommandCode models endpoint/response shape and whether it exposes pricing.~~ Answered by
+  the 2026-11-27 spike: public `/models`, no pricing, no capability flags.
 - Which providers expose pricing in `/models` vs require the registry/manual override?
 - Do we ship a registry snapshot in the image, or fetch it? (Default: bundled snapshot + optional
   signed refresh.)

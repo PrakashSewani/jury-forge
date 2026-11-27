@@ -38,6 +38,7 @@ written to be read by humans and agents. Start at the layer you need; do not rea
 - [`analysis/assumptions.md`](analysis/assumptions.md) — assumptions we are currently making.
 - [`analysis/competitive-landscape-2026-11-16.md`](analysis/competitive-landscape-2026-11-16.md) — Copilot, CodeRabbit, Greptile, PR-Agent, Kodus compared.
 - [`analysis/capability-deep-dive-2026-11-16.md`](analysis/capability-deep-dive-2026-11-16.md) — capability-by-capability gaps and recommendations.
+- [`analysis/spikes/`](analysis/spikes/) — time-boxed spike results, e.g. [CommandCode discovery + structured output (2026-11-27)](analysis/spikes/2026-11-27-commandcode-structured-output.md).
 
 ### 3. Product
 

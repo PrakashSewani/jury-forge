@@ -69,6 +69,21 @@ Fixed in this pass:
    `capabilities.md`, and Q-028. New **Q-049** records the default for GitHub-native resolves of
    critical findings and the merge gate.
 
+**Spike: CommandCode discovery + structured output (2026-11-27)** —
+[`../analysis/spikes/2026-11-27-commandcode-structured-output.md`](../analysis/spikes/2026-11-27-commandcode-structured-output.md),
+run with the owner's key on `deepseek/deepseek-v4.1-flash`; throwaway code outside the repository.
+
+- CommandCode `/models` answers 200 **without a key**, so it cannot validate one; it has no pricing
+  and no capability flags. `provider-model-discovery.md` §1 now validates with an authenticated
+  minimal call.
+- Structured output, 108 trials: the forced-tool mode on `/messages` was 18/18 valid; `json_schema`
+  on `/chat/completions` was 16/18, with a whitespace runaway to the token cap on empty results;
+  `output_format` on `/messages` appears to be ignored (0/18); prompt-only JSON needed one repair in
+  about 20 % of trials.
+- The gateway recommendations (probe-based mode choice, a `finish=length` guard, caps that budget
+  for reasoning) are recorded for the owner; **no ADR was changed**. WP 1-07 is only partly done:
+  Ollama and Anthropic-native models are not covered.
+
 Also noted, not changed: ADRs are amended in place (`accepted as amended`, edited status lines),
 while `AGENTS.md` and `decisions/README.md` say to supersede; the status list has no `amended`.
 
@@ -109,6 +124,10 @@ while `AGENTS.md` and `decisions/README.md` say to supersede; the status list ha
   v1.1/v1.2, with a critical path and per-milestone exit evidence.
 
 ## Verified this session (2026-11-27)
+
+- **Spike calls:** 4 discovery probes, 6 auth probes, 90 structured-output trials plus an 18-trial
+  re-run, all against the live CommandCode API; raw results kept in the scratch folder, summary in
+  the spike note. The key was never printed or written to a file.
 
 - **Link check:** a Node script over all 117 `*.md` files resolved every relative link and heading
   anchor; 0 broken.
