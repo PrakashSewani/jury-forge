@@ -1,7 +1,8 @@
 # ADR-0031: The Helm chart runs the v1 runtime shape
 
-- Status: proposed (2026-11-28, architecture audit Q-B; needs the owner's decision before the v1.2
-  chart is specified)
+- Status: accepted (owner decision, 2026-11-28; architecture audit Q-B). Its cron premise depends
+  on the M1.1 two-worker test (audit Q-E); if that test fails, this ADR is revisited before the
+  chart is built.
 - Date: 2026-11-28
 - Owners: operations + architecture
 - Supersedes: — (amends ADR-0022's component list and support matrix only)
@@ -41,7 +42,7 @@ found this; nothing accepted resolves it.
 
 ## Decision
 
-Option 2 (proposed). The v1.2 chart deploys:
+Option 2, chosen by the owner on 2026-11-28. The v1.2 chart deploys:
 
 - an `app` Deployment (`ROLE=app`);
 - a `worker` Deployment (`ROLE=worker`), whose graphile-worker cron runs the reconciler, retention,
@@ -75,6 +76,6 @@ value. Everything else in ADR-0022 stands: no bundled state, ingress TLS, the or
 
 ## Follow-ups
 
-- Owner decision: accept, amend, or reject.
-- If accepted: add a status-line pointer on ADR-0022 to this ADR, and use this shape when the v1.2
-  chart is specified.
+- Done 2026-11-28: ADR-0022's status line points here.
+- M1.1: the two-worker cron test (audit Q-E) confirms the premise.
+- v1.2: specify the chart with this shape; ADR-0022's other constraints apply unchanged.

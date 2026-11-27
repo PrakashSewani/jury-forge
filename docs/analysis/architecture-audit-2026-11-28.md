@@ -184,12 +184,12 @@ Consistent: marked v1.1 and deferred. No change.
 | XD-4 | `product/specs/repo-knowledge-graph.md` (line 127) | "Redis optional for hot retrieval caches" (v1.1 spec); nothing in the stack adds Redis (TA §2, §9). | M |
 | XD-5 | `decisions/README.md` (lines 65–67) | Says the stack ADRs "stay `proposed` on purpose"; they are accepted (the index above it says so). | M |
 | XD-6 | ADR-0003, ADR-0004, ADR-0006 bodies | Scheduler, Redis/MinIO, object storage, Postgres 16+, RLS. Their status lines already point to TA, which is accepted, so no new decision is needed; the bodies stay as history (ADRs are never rewritten). | — |
-| XD-7 | ADR-0022 body | The v1.2 chart deploys "app, worker, scheduler, and a migration Job" with "Postgres 16+ and object storage". Nothing accepted amends the chart's component list. Proposed fix: ADR-0031. | §4 Q-B |
+| XD-7 | ADR-0022 body | The v1.2 chart deploys "app, worker, scheduler, and a migration Job" with "Postgres 16+ and object storage". Fixed: ADR-0031 (accepted 2026-11-28) amends the component list, and ADR-0022's status line points to it. | §4 Q-B |
 
 ## 3. What was fixed
 
-Every finding in §2 except XD-6 (left as history) and XD-7 (proposed as ADR-0031). AI-5 was closed
-by the owner's decision on Q-A (ADR-0032). The fixes keep each document's structure and the
+Every finding in §2 except XD-6, which is left as history. The owner's decisions closed AI-5 (Q-A,
+ADR-0032) and XD-7 (Q-B, ADR-0031). The fixes keep each document's structure and the
 section headings other documents link to:
 
 - `agentic-review.md#7-repo-knowledge-graph`
@@ -215,7 +215,7 @@ table in them had changed. `branch-review.md` needed nothing.
 | ID | Question | Why it matters | Recommended default |
 | -- | -------- | -------------- | ------------------- |
 | Q-A | *(Decided 2026-11-28: [ADR-0032](../decisions/ADR-0032-finding-severity-scale.md), `critical`/`high`/`medium`/`low`, weights 8/4/2/1.)* What is the finding severity scale? | ADR-0024 §6 and ADR-0028 rely on `critical`, the chair takes "the highest severity", and the receipt prints it, but no accepted document lists the levels. The only example (`ai-pipeline.md` §6) has `info\|warning\|error`, with no `critical`. M1.5 needs it for the `contracts` schema. | Original default: `critical \| high \| medium \| low \| info`. The owner chose four levels without `info`. |
-| Q-B | Does the v1.2 Helm chart keep a separate scheduler Deployment? | ADR-0022 says yes; the v1 runtime has no scheduler (cron is in `worker`). | Proposed as [ADR-0031](../decisions/ADR-0031-helm-chart-runtime-shape.md): the chart runs the same roles as Compose (`app`, `worker`, a migration Job); cron stays in `worker`; S3 is optional. |
+| Q-B | *(Decided 2026-11-28: [ADR-0031](../decisions/ADR-0031-helm-chart-runtime-shape.md) accepted, with no scheduler Deployment and cron in `worker`.)* Does the v1.2 Helm chart keep a separate scheduler Deployment? | ADR-0022 says yes; the v1 runtime has no scheduler (cron is in `worker`). | Proposed as [ADR-0031](../decisions/ADR-0031-helm-chart-runtime-shape.md): the chart runs the same roles as Compose (`app`, `worker`, a migration Job); cron stays in `worker`; S3 is optional. |
 | Q-C | *(Answered during the audit.)* What tier are API tokens? | `session-capacity-and-visibility` (release tiers) puts "the API/CLI surface" in v1.2. | Applied: API tokens are v1.2 in `data-model.md`, `components.md`, `security.md`, and `extensibility.md`. |
 | Q-D | Which cron jobs does `worker` run? | TA §3.3 lists four (reconciler, retention, stalled sessions, reaction poll). The specs need three more: the daily catalog refresh (`provider-model-discovery`), the stuck-turn sweep that fails a stuck `in_progress` Check Run (`review-progress-and-completion` RP-03, 20 min), and the abandoned-setup alert after 7 days (`first-run-setup`). Older docs called these "the janitor"; they now say "a cron sweep in `worker`". | Add the three to the TA §3.3 cron list when M1.1 builds the cron registry (WP 1-10). |
 | Q-E | Is graphile-worker cron safe with several worker replicas? | Each cron tick must fire once. | An M1.1 integration test with two workers, before docs call more than one replica safe. |

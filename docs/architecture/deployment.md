@@ -402,7 +402,7 @@ the same runtime contract. The constraints that ADR fixes for the chart:
   NetworkPolicy with explicit egress; no plaintext secret in `values.yaml`; no cluster-admin.
 
 ADR-0022's component list and support matrix were written before technical-approach.
-[ADR-0031](../decisions/ADR-0031-helm-chart-runtime-shape.md) (proposed) reconciles them with the v1
+[ADR-0031](../decisions/ADR-0031-helm-chart-runtime-shape.md) (accepted 2026-11-28) reconciles them with the v1
 runtime: `app` and `worker` Deployments plus a migration Job, cron in `worker`, external Postgres 17,
 and an optional S3 adapter. This document does not restate them.
 

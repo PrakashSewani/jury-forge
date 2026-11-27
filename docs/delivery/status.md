@@ -54,9 +54,9 @@ changed.
   `roadmap.md`, `capabilities.md` (Helm, queue, artefact, and Compose rows), `principles.md`, the
   `repo-knowledge-graph` spec (no Redis, artefacts in Postgres), and "janitor" in two specs and
   `success.md` (wording only). `decisions/README.md` no longer says the stack ADRs "stay proposed".
-- **New [ADR-0031](../decisions/ADR-0031-helm-chart-runtime-shape.md) (proposed):** the v1.2 Helm
-  chart runs the Compose roles (`app`, `worker` with cron, a migration Job); no scheduler
-  Deployment. It amends ADR-0022's component list only once accepted.
+- **New [ADR-0031](../decisions/ADR-0031-helm-chart-runtime-shape.md) (accepted by the owner,
+  2026-11-28; audit Q-B):** the v1.2 Helm chart runs the Compose roles (`app`, `worker` with cron, a
+  migration Job); no scheduler Deployment. ADR-0022's status line now points to it.
 
 **Owner decision (2026-11-28): [ADR-0032](../decisions/ADR-0032-finding-severity-scale.md)**, audit
 Q-A. The finding severity scale is `critical`/`high`/`medium`/`low`, the same words as the risk
@@ -64,8 +64,10 @@ score. The chair's ranking weights are 8/4/2/1, fixed in v1 and printed in the r
 critical/high → `error`, medium → `warning`, low → `note`. The `jury-output` spec and `ai-pipeline.md`
 point to it.
 
-**Owner questions still open from the audit (§4 there):** Q-B is ADR-0031.
-Q-D is three cron sweeps the specs need, missing from the TA §3.3 list. Q-E is the two-worker cron
+**Owner decision (2026-11-28): ADR-0031 accepted** (audit Q-B). Its cron premise depends on the
+M1.1 two-worker test (Q-E).
+
+**Owner questions still open from the audit (§4 there):** Q-D is three cron sweeps the specs need, missing from the TA §3.3 list. Q-E is the two-worker cron
 test in M1.1. Q-F is the verifier's failure behaviour.
 
 ### Landed earlier this session (2026-11-28, deployment and operations rewrite)
@@ -94,8 +96,8 @@ ADR-0026), and both drift notes are gone. No ADR or spec was changed.
   that other documents link to. The Helm anchor changed to `deployment.md#e-kubernetes-and-helm-v12`,
   and its one inbound link was updated.
 
-**Follow-ups found (since fixed by the architecture alignment above, except the ADR-0022 decision,
-now proposed as ADR-0031):**
+**Follow-ups found (all since fixed by the architecture alignment above; the ADR-0022 chart list is
+amended by ADR-0031):**
 
 - Other documents still describe a separate scheduler, Redis, or MinIO as v1:
   `architecture/agentic-review.md` (around line 246), `architecture/components.md` §12,
@@ -500,7 +502,7 @@ The checklist and its evidence live in [`quality-gates.md`](quality-gates.md#g0-
 | ADR-0028 | accepted (owner, 2026-11-27) | v1 resolution rights: maintainers override; only the owner dismisses critical. |
 | ADR-0029 | accepted (owner, 2026-11-27) | Model capability probes: test auth and structured-output mode before binding. |
 | ADR-0030 | accepted (owner, 2026-11-27) | Egress rule for local model servers: a pinned, owner-only exception for the `local` kind. |
-| ADR-0031 | proposed (2026-11-28) | The v1.2 Helm chart runs the Compose roles; cron in `worker`, no scheduler Deployment. |
+| ADR-0031 | accepted (owner, 2026-11-28) | The v1.2 Helm chart runs the Compose roles; cron in `worker`, no scheduler Deployment. |
 | ADR-0032 | accepted (owner, 2026-11-28) | Finding severity `critical`/`high`/`medium`/`low`; ranking weights 8/4/2/1. |
 
 ## History

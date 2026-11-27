@@ -244,7 +244,7 @@ requirement until the spec is updated; do not infer behaviour beyond it.
 | Metrics, traces, structured logs | Planned | OpenTelemetry; no vendor lock-in. |
 | Health and readiness | Planned | Dependency checks, degraded state. |
 | Horizontal worker scaling | Planned | Queue-based; stateless workers. |
-| Kubernetes / Helm | Planned (v1.2) | Secondary target (ADR-0022): no bundled database; external Postgres; ingress TLS; `kind` e2e gate. Compose stays the reference. The chart's component list (ADR-0022 names a separate scheduler) is reconciled with the v1 runtime by [ADR-0031](../decisions/ADR-0031-helm-chart-runtime-shape.md) (proposed). |
+| Kubernetes / Helm | Planned (v1.2) | Secondary target (ADR-0022): no bundled database; external Postgres; ingress TLS; `kind` e2e gate. Compose stays the reference. The chart's component list (ADR-0022 names a separate scheduler) is reconciled with the v1 runtime by [ADR-0031](../decisions/ADR-0031-helm-chart-runtime-shape.md): `app` and `worker` Deployments plus a migration Job, cron in `worker`, S3 optional. |
 | Air-gapped install | TBD | Local model + mirrored images; forge connectivity caveat. |
 | Multi-installation / multi-tenant | TBD | One instance per org first. |
 
