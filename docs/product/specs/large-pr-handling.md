@@ -1,6 +1,6 @@
 # Spec: Large-PR handling and the coverage manifest (B-04)
 
-- Status: draft — backlog, not committed (see `capabilities.md` §13)
+- Status: draft — **promoted to the MVP** (Q-040): deterministic fitting + coverage manifest per ADR-0025 §2. Split proposals, the minimum-coverage threshold, and the pre-run estimate are not tiered yet. **MVP gate**: owner approval required before Phase 1b work that implements it.
 - Owner: product + AI pipeline
 - Date: 2026-11-15
 - Principles: 2 (trustworthy review), 8 (fail visibly and recoverably), 13 (conversation first-class)

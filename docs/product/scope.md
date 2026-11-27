@@ -46,8 +46,13 @@ engineer uses it. Solo/homelab is served by the labelled evaluation mode, not a 
 
 - **Diff-only by default** for any repository with a bound/default jury: diff/hunks + PR metadata +
   thread context.
-- **Repository instruction files** (`AGENTS.md`, `CONTRIBUTING.md`) at the base SHA, capped and
-  trust-labelled as instructions-only. No other repository file is read at T0 (Q-032).
+- **Repository instruction files** at the base SHA — `AGENTS.md`, `CONTRIBUTING.md`, `REVIEW.md`,
+  `CLAUDE.md`, `.github/copilot-instructions.md`, and path-specific
+  `.github/instructions/**/*.instructions.md` — capped, trust-labelled as instructions-only, and on
+  by default (ADR-0027, S11). No other repository file is read for instructions; code context is
+  the diff only (T0, and T0+ from v1).
+- **One org conventions pack**, versioned and cited `slug@hash` in the receipt (ADR-0017,
+  ADR-0023). More packs, doc links, and retrieval are v1.x.
 - **A default jury of three built-in reviewers: Security, Correctness, Tests.** Editable and
   versioned; no catalog, capability registry, or SME approval in v1.
 - **One review per turn** with:
@@ -65,7 +70,8 @@ engineer uses it. Solo/homelab is served by the labelled evaluation mode, not a 
 - **A durable per-PR session** (ADR-0012): threads, messages, turns, findings, generations; a reply
   resumes with context.
 - **Resolution:** `suggest` default (agent proposes, human resolves natively/UI); `auto`/`off` opt-in;
-  a new reply reopens. SME/admin override is v1.x; owner/maintainer override is v1.
+  a new reply reopens. In v1 the owner and maintainers can accept, dismiss, or reopen a finding;
+  only the owner dismisses or resolves a `critical` one (ADR-0028). SME/admin override is v1.x.
 - **Feedback:** one-click valid / wrong / fixed / duplicate on each finding.
 - **Stalled sessions:** flagged after 7 days, archived after 30, never auto-resolved or silently
   dropped.
@@ -119,7 +125,7 @@ decision.
 | Reviewer catalog, reviewer studio, org approval | Three built-in reviewers prove the loop; the catalog is a platform feature | v1.x |
 | Capability registry and `jury:cap:*` labels | The request/grant model is good, but not needed for the first review | v1.x |
 | SME, admin, viewer, auditor roles | Owner/maintainer/reader is enough for a small team | v1.x |
-| Knowledge packs, doc links, retrieval UI | Repo instruction files cover the first need | v1.x |
+| More than one knowledge pack, doc links, retrieval UI | Instruction files and one conventions pack cover the first need | v1.x |
 | Repository graph and branch review | Highest cost; measure first | v1.1 (measurement-gated) |
 | Helm / Kubernetes | Compose is the reference; Helm adds a support matrix | v1.x |
 | Per-repo provider allowlists / data zones | The egress receipt proves v1; the policy follows | v1.x |
@@ -168,7 +174,7 @@ thesis. It must include the session/reply/resolve path; a one-shot review is not
 ### v1 (the trust loop)
 
 The v1 sections above, grouped by theme in `capabilities.md`: jury (three reviewers, verifier,
-code-first chair, presets, model roles), context (T0+, evidence ingest), conversation (the rest of
+code-first chair, presets, model roles), context (T0+, evidence ingest, one conventions pack), conversation (the rest of
 ADR-0024, appeal, verified-fixed, incremental review), output (noise budget, risk score, charges,
 suggestions, fix handoff, merge gate), learning (reactions, implicit acceptance, repo memory,
 scorecard), trust (signed receipt, egress preview, redaction, retention, audit, roles), and ops

@@ -21,11 +21,58 @@ one phase `in progress` and exactly one next action.
 
 **Branch:** `docs/claude-fix` (documentation only).
 
-**Next action:** merge this documentation PR, then say go for **Phase 1b / M1.0 (repository and CI)**
-on branch `feat/walking-skeleton`, per [`implementation-plan.md`](implementation-plan.md) and
+**Next action:** the owner approves the six MVP-gate specs (listed under "Blocked by"), merges this
+documentation PR, and says go for **Phase 1b / M1.0 (repository and CI)** on branch
+`feat/walking-skeleton`, per
+[`implementation-plan.md`](implementation-plan.md) and
 [`../architecture/technical-approach.md`](../architecture/technical-approach.md) §4.
 
-### Landed this session (2026-11-16, consistency pass)
+### Landed this session (2026-11-27, docs and capabilities review)
+
+A review after G0 found that the 2026-11-16 consistency pass had covered only T0/T0+ wording.
+Fixed in this pass:
+
+- **`capabilities.md` §0 added:** 33 v1 trust-loop rows (verifier, chair, presets, model roles,
+  T0+, instruction files, evidence ingest, conventions pack, ADR-0024, appeal, verified-fixed, noise budget, risk
+  score, charges, fix handoff, merge gate, reactions, repo memory, signed receipt, egress preview,
+  retention, checkbox trigger, bot-author defaults, reconciler, sizing floor, injection corpus),
+  each with its source. Four rows have no spec section yet and are marked *spec gap*.
+- **Row tiers aligned with the tier table:** 55 rows in §2–§12 now carry MVP / v1 / v1.1 /
+  v1.2 instead of a bare `Planned` or `v1.x`. Fixed rows that contradicted it: resolution policy
+  (was MVP with SME/admin override), provider fallback (was Deferred), the benchmark (Phase 3 +
+  v1.1 replay UI), the chair (code, not configurable), the competitor teardown (Done). The
+  status key gained Rejected, Done, and *(partial)*.
+- **Backlog promotions recorded** (§13, the specs README, and five spec headers): B-04 → MVP
+  (Q-040), B-03 and the B-07 reviewer client → v1.1, B-02 and B-06 → v1.2; B-01, B-05, B-08 stay
+  backlog.
+- **Conventions pack:** `scope.md` now has the one v1 org conventions pack that ADR-0017/0023 and
+  WP 2-34 already had; the deferred row covers only further packs.
+- **`standout-features.md`:** S6 split (egress preview v1, replay Phase 3 internal / v1.1 UI);
+  SF-04 closed by Q-045; S1–S6 vs S7–S13 labelled.
+- **`security.md` §6:** v1 role note (owner/maintainer/reader; the other columns are v1.2); the
+  "Enable repositories" row renamed to reviewer binding (ADR-0013).
+
+**Owner decisions (2026-11-27):**
+
+1. **Instruction files → the S11 set** ([ADR-0027](../decisions/ADR-0027-instruction-files.md)):
+   six file types from the base SHA, capped, trust-labelled, on by default (closes KN-01), MVP.
+   Amends Q-032. Propagated to `scope.md`, `capabilities.md`, `knowledge-system.md`,
+   `standout-features.md`, Q-032, ADR-0017/0023 status lines, and the ADR indexes.
+2. **Spec approval → per milestone.** The six MVP specs are marked *MVP gate* and must be approved
+   before Phase 1b work that implements them; every other spec is approved before its milestone.
+   Recorded in [`../product/specs/README.md`](../product/specs/README.md). No spec is approved yet.
+3. **Maintainer rights → override, owner decides critical**
+   ([ADR-0028](../decisions/ADR-0028-v1-resolution-rights.md)): in v1 a maintainer accepts,
+   dismisses, and reopens; only the owner dismisses or resolves a `critical` finding. Amends
+   ADR-0012 and Q-028. Propagated to `scope.md`, `v1-ui.md`, `jury-output.md`, `security.md` §6,
+   `agentic-review-sessions.md`,
+   `capabilities.md`, and Q-028. New **Q-049** records the default for GitHub-native resolves of
+   critical findings and the merge gate.
+
+Also noted, not changed: ADRs are amended in place (`accepted as amended`, edited status lines),
+while `AGENTS.md` and `decisions/README.md` say to supersede; the status list has no `amended`.
+
+### Earlier: 2026-11-16 consistency pass
 
 - **T0+ propagated.** ADR-0025 now names what it amends (ADR-0007, 0011, 0014, 0016, 0018, 0019,
   0023) and states its tier: the MVP stays strict T0, T0+ ships in v1. Fifteen documents that said
@@ -61,7 +108,18 @@ on branch `feat/walking-skeleton`, per [`implementation-plan.md`](implementation
 - [`implementation-plan.md`](implementation-plan.md): 127 work packages across Phases 1b–5 plus
   v1.1/v1.2, with a critical path and per-milestone exit evidence.
 
-## Verified this session (2026-11-16)
+## Verified this session (2026-11-27)
+
+- **Link check:** a Node script over all 117 `*.md` files resolved every relative link and heading
+  anchor; 0 broken.
+- **Edits applied by exact-match replacement**; each pattern had to match exactly once or the file
+  was not written.
+- **Spec-coverage spot-check:** rows in `capabilities.md` §0 link a spec only where `grep` found the
+  topic in it; four rows are marked *spec gap*.
+- **Not verified:** the architecture documents other than `security.md` §6 and the PoC docs were
+  not re-read in full.
+
+## Verified earlier (2026-11-16)
 
 - **Link check:** every relative link in every `*.md` resolved; 0 broken.
 - **Contradiction sweep:** `grep` for "strict T0" / "no repository file reads" leaves only
@@ -79,14 +137,22 @@ on branch `feat/walking-skeleton`, per [`implementation-plan.md`](implementation
 
 ## Blocked by
 
-- **Phase 1b:** only the owner's go. No technical blocker is open.
+- **Phase 1b:** the owner's go and approval of the six MVP-gate specs:
+  [`first-run-setup.md`](../product/specs/first-run-setup.md),
+  [`provider-model-discovery.md`](../product/specs/provider-model-discovery.md),
+  [`agentic-review-sessions.md`](../product/specs/agentic-review-sessions.md),
+  [`review-progress-and-completion.md`](../product/specs/review-progress-and-completion.md),
+  [`large-pr-handling.md`](../product/specs/large-pr-handling.md), and
+  [`session-capacity-and-visibility.md`](../product/specs/session-capacity-and-visibility.md).
+  M1.0 (repository and CI) implements none of them and can start on the go alone. No technical
+  blocker is open.
 - **Installability is still unproven.** There is no compose file, CLI, Dockerfile, or signed release.
   The three documentation defects from the install dry run (B1–B3) are fixed in the docs, but no
   build exists to test. See [`../analysis/install-readiness-2026-11-15.md`](../analysis/install-readiness-2026-11-15.md).
 
 ## Open owner questions
 
-The open list is now Q-001, Q-010, Q-011, Q-017, Q-018, Q-020, Q-030, and Q-031; each has a recorded
+The open list is now Q-001, Q-010, Q-011, Q-017, Q-018, Q-020, Q-030, Q-031, and Q-049; each has a recorded
 default and a close condition in [`../analysis/open-questions.md`](../analysis/open-questions.md).
 Everything else is closed by an accepted ADR (see the two closed tables there). None of the open
 items blocks Phase 1b.
@@ -125,6 +191,8 @@ The checklist and its evidence live in [`quality-gates.md`](quality-gates.md#g0-
 | ADR-0024 | accepted (G0) | Conversation safety, finding identity, evidence-gated resolution. |
 | ADR-0025 | accepted (G0) | v1 pipeline: T0+ context, verifier, code-first chair, model roles. |
 | ADR-0026 | accepted (Phase 1a) | v1 stack: HTTP/UI, GitHub client, parsing, crypto, observability, tests, layout. |
+| ADR-0027 | accepted (owner, 2026-11-27) | Instruction files: the S11 set from the base SHA, default on; amends Q-032. |
+| ADR-0028 | accepted (owner, 2026-11-27) | v1 resolution rights: maintainers override; only the owner dismisses critical. |
 
 ## History
 

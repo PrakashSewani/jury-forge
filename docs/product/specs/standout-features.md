@@ -12,7 +12,9 @@ reply to threads. "Self-hosted" alone is a deployment choice, not a reason to pi
 Forge needs features that only make sense because it is **a jury** that **keeps a record** and
 **runs inside the operator's perimeter**.
 
-## The six standout features
+## The six standout features (S1–S6)
+
+S7–S13 below are table stakes from the competitive scan, not standout features.
 
 Each one builds on the trust loop; none adds a platform surface.
 
@@ -66,12 +68,13 @@ signature and the chain without network access. A receipt link is attached to th
 
 **Acceptance:** tampering with any field or deleting a receipt in the chain fails verification.
 
-### S6. Egress preview and replay (v1.x; replay feeds evaluation)
+### S6. Egress preview (v1) and replay (internal tool in Phase 3; operator UI v1.1)
 
 - **Egress preview:** before the first review on a repo, the owner can see exactly what would be sent
   (redacted diff, instruction files, prompt) without calling a provider.
 - **Replay:** re-run a stored review's exact context against another model or reviewer version,
-  without posting. Results are compared with the original and with human feedback. This is how
+  without posting. The internal tool (WP 3-03) runs the Phase 3 benchmark; the operator-facing
+  replay UI and public scorecard ship in v1.1 (Q-045). Results are compared with the original and with human feedback. This is how
   quality is measured after v1, on the operator's real PRs, instead of a pre-v1 spike.
 
 **Acceptance:** replay never posts to GitHub and never uses a model outside the catalog; the
@@ -117,7 +120,7 @@ them. They are read only from users with write access.
 
 **Acceptance:** a 👎 from a write-access user creates a suppression candidate, shown in the UI.
 
-### S11. Broad instruction-file compatibility, read from the base SHA (v1)
+### S11. Broad instruction-file compatibility, read from the base SHA (MVP; ADR-0027)
 
 Jury Forge reads `AGENTS.md`, `CONTRIBUTING.md`, `REVIEW.md`, `CLAUDE.md`,
 `.github/copilot-instructions.md`, and path-specific `.github/instructions/**/*.instructions.md`
@@ -171,4 +174,5 @@ confirm it.
 - SF-01: Default comment budget (7?) and whether it is per policy.
 - SF-02: Should an upheld appeal escalate to a human reviewer automatically on `critical` severity?
 - SF-03: Suppression expiry default (90 days?) and whether owners can make rules permanent.
-- SF-04: Is replay v1 (for the launch scorecard) or v1.x?
+- ~~SF-04: Is replay v1 (for the launch scorecard) or v1.x?~~ Closed by Q-045: egress preview is v1;
+  replay is an internal Phase 3 tool and an operator UI in v1.1.

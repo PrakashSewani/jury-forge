@@ -105,8 +105,9 @@ Rules:
 3. **Confidence is not evidence.** A high-confidence finding with weak evidence is downgraded, not
    published as fact.
 4. **The chair is explainable.** Every chair call names the rule or the evidence that decided it.
-5. **Humans can override.** A maintainer/SME/admin can accept, dismiss, or reopen a finding; the
-   override is recorded and fed to the reviewer scorecard.
+5. **Humans can override.** In v1 the owner or a maintainer can accept, dismiss, or reopen a
+   finding; only the owner dismisses a `critical` one (ADR-0028). SME/admin rights arrive in v1.2
+   (ADR-0012). The override is recorded and fed to the reviewer scorecard.
 
 ## 2. Verdict policies
 

@@ -218,6 +218,11 @@ cross-tenant tests, a lint rule or code review checklist.
 
 ## 6. Authorization matrix (v1)
 
+> **Tier note (2026-11-27):** this matrix uses the full role model (ADR-0008). v1 ships only
+> **owner, maintainer, and reader** (ADR-0023); the admin, viewer, and auditor columns arrive in
+> v1.2. The MVP has one operator, the claimed owner. Who may accept, dismiss, or reopen a finding
+> is in ADR-0028 (v1) and ADR-0012 (v1.2 roles), not in this table.
+
 | Capability | Owner | Admin | Maintainer | Viewer | Auditor |
 | ---------- | :---: | :---: | :--------: | :----: | :-----: |
 | Install / upgrade / config | ✓ | — | — | — | — |
@@ -228,7 +233,7 @@ cross-tenant tests, a lint rule or code review checklist.
 | Activate a reviewer version | ✓ | ✓ | — | — | — |
 | Manage policies | ✓ | ✓ | — | — | — |
 | Manage knowledge packs | ✓ | ✓ | ✓ | — | — |
-| Enable repositories | ✓ | ✓ | ✓ | — | — |
+| Bind reviewers to repositories (no enable toggle, ADR-0013) | ✓ | ✓ | ✓ | — | — |
 | Trigger a run / try | ✓ | ✓ | ✓ | — | — |
 | Cancel/replay a run | ✓ | ✓ | ✓ | — | — |
 | Read runs/findings | ✓ | ✓ | ✓ | ✓ | ✓ |

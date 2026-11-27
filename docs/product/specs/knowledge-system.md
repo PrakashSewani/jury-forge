@@ -6,8 +6,8 @@
 - Related: ADR-0017 (knowledge sources), ADR-0014 (repo graph)
 - Parent: [`agentic-review-sessions.md`](agentic-review-sessions.md)
 
-> **Direction (ADR-0023):** v1 reads only `AGENTS.md`/`CONTRIBUTING.md` at the base SHA as capped
-> instructions, plus one org conventions pack. Packs, doc links, retrieval UI, and graph-backed
+> **Direction (ADR-0023, ADR-0027):** v1 reads only the S11 instruction files at the base SHA as
+> capped instructions, plus one org conventions pack. Packs, doc links, retrieval UI, and graph-backed
 > knowledge below are **v1.x**.
 
 ## Owner directive
@@ -32,16 +32,21 @@ All sources carry a **trust label**. External docs, repo docs, and packs are unt
 never become instructions.
 
 **Tier rule:** PR review is diff-only (strict T0 in the MVP, T0+ from v1). It sends the diff hunks,
-may expand a hunk to its enclosing function inside that same file, and may read the two instruction
+may expand a hunk to its enclosing function inside that same file, and may read the instruction
 files described below; it never reads other repository files or the graph. Branch review (T2) is where
 repository docs at SHA, live doc links, and the repository graph are sourced.
 
-**T0 instruction-file exception (accepted at G0, Q-032).** The diff-only rule creates a product
+**T0 instruction-file exception (accepted at G0, Q-032; widened by ADR-0027).** The diff-only rule creates a product
 surprise: a default PR review can follow org conventions but cannot read the repository's own
 `AGENTS.md`/`CONTRIBUTING.md`. The accepted fix is a narrow exception, not a general file read: fetch
 those two files at the PR base SHA, cap them (8 KB each by default), trust-label them, and inject them
 as *instructions context* only. No other repository file is readable for code context. This preserves
 the diff-only rule while making "knows our conventions" true.
+
+**2026-11-27 (ADR-0027):** the exception now covers the S11 set — `AGENTS.md`, `CONTRIBUTING.md`,
+`REVIEW.md`, `CLAUDE.md`, `.github/copilot-instructions.md`, and path-specific
+`.github/instructions/**/*.instructions.md` (applied per hunk by `applyTo`) — with the same base-SHA,
+cap, and trust rules, on by default.
 
 ## 2. Knowledge pack format
 
@@ -196,7 +201,7 @@ explicit reviewer grant adds or overrides.
 
 | ID | Question | Default |
 | -- | -------- | ------- |
-| KN-01 | Do we auto-include `AGENTS.md`/`CONTRIBUTING.md` or require a repo setting? | Opt-in per repo, as the PoC. |
+| KN-01 | ~~Do we auto-include `AGENTS.md`/`CONTRIBUTING.md` or require a repo setting?~~ | Closed by ADR-0027: on by default; per-repo opt-out in `.jury-forge.yml` from v1. |
 | KN-02 | Are doc links live-fetched or snapshotted? | Live fetch with allowlist/SSRF/cache guards; always snapshot the fetched copy for audit. |
 | KN-03 | Can packs be granted by capability automatically? | Yes, capability grant; explicit reviewer grant overrides. |
 | KN-04 | Do we support `.claude/skills/` manifests unchanged? | Yes, unknown fields accepted. |

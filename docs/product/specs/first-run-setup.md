@@ -1,6 +1,6 @@
 # Spec: First-run setup and instance bootstrap
 
-- Status: draft for owner review
+- Status: draft for owner review — **MVP gate**: owner approval required before Phase 1b work that implements it (per-milestone approval, 2026-11-27)
 - Date: 2026-11-15
 - Owner: product + operations + security
 - Principles: 1 (operator owns the instance), 4 (secure and private by default), 6 (secure by

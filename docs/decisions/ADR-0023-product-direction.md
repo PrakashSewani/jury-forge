@@ -1,6 +1,6 @@
 # ADR-0023: Product direction — the auditable review layer, not a review platform
 
-- Status: accepted (G0, 2026-11-16)
+- Status: accepted (G0, 2026-11-16; the instruction-file set in item 5 and Q-032 amended by ADR-0027; v1 resolution rights by ADR-0028)
 - Date: 2026-11-15
 - Owners: product + architecture
 - Re-scopes: the v1 application of ADR-0016/ADR-0018 (it does not supersede their decisions; it

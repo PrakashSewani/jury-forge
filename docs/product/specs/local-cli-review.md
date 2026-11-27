@@ -1,6 +1,6 @@
 # Spec: Local / CLI diff review (B-03)
 
-- Status: draft — backlog, not committed (see `capabilities.md` §13)
+- Status: draft — **promoted to v1.1** as `jury-forge review --staged` (deep dive 14.1, WP 11-12). Owner approval of this spec is pending.
 - Owner: product + architecture
 - Date: 2026-11-15
 - Principles: 1, 4, 7 (extensible at the boundaries), 10 (no traps), 11 (start with the wedge)

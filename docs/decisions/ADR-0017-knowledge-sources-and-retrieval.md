@@ -1,6 +1,6 @@
 # ADR-0017: Knowledge sources, snapshots, grants, and retrieval
 
-- Status: accepted (G0, 2026-11-16; v1 = base-SHA instruction files + one conventions pack; the rest v1.2)
+- Status: accepted (G0, 2026-11-16; v1 = base-SHA instruction files (the S11 set, ADR-0027) + one conventions pack; the rest v1.2)
 - Date: 2026-11-15
 - Owners: AI pipeline + security
 - Supersedes: the PoC’s knowledge-pack-only model

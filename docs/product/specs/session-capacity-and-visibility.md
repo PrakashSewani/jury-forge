@@ -1,6 +1,6 @@
 # Spec: Session capacity, interface, roles, and visibility
 
-- Status: draft for owner review
+- Status: draft for owner review — **MVP gate**: owner approval required before Phase 1b work that implements it (per-milestone approval, 2026-11-27)
 - Date: 2026-11-15
 - Owner: product + platform + security
 - Related: ADR-0012 (sessions), ADR-0013 (trigger/routing), ADR-0015 (capacity/visibility, proposed)

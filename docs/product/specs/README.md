@@ -24,16 +24,25 @@ failure modes, rollout, and open questions.
 | [`knowledge-system.md`](knowledge-system.md) | Skills/docs/live doc links, snapshots, grants, retrieval, citations | draft for owner review |
 | [`v1-ui.md`](v1-ui.md) | V1 website scope: control plane, sessions, reviewers, capabilities, providers, audit | draft for owner review |
 | [`shadow-mode.md`](shadow-mode.md) | B-01: run reviewers on live PRs without posting; compare with human review | draft — backlog |
-| [`provider-allowlist.md`](provider-allowlist.md) | B-02: per-repo provider allowlist and data zones, egress ledger | draft — backlog |
-| [`local-cli-review.md`](local-cli-review.md) | B-03: review a local/CI diff through the operator's instance | draft — backlog |
-| [`large-pr-handling.md`](large-pr-handling.md) | B-04: coverage manifest, split proposals, no silent partial reviews | draft — backlog |
+| [`provider-allowlist.md`](provider-allowlist.md) | B-02: per-repo provider allowlist and data zones, egress ledger | draft — promoted to v1.2 |
+| [`local-cli-review.md`](local-cli-review.md) | B-03: review a local/CI diff through the operator's instance | draft — promoted to v1.1 (`--staged`) |
+| [`large-pr-handling.md`](large-pr-handling.md) | B-04: coverage manifest, split proposals, no silent partial reviews | draft — promoted to the MVP (fitting + manifest, Q-040) |
 | [`reviewers-as-code.md`](reviewers-as-code.md) | B-05: reviewer definitions in git with approval preserved | draft — backlog |
-| [`history-seeded-conventions.md`](history-seeded-conventions.md) | B-06: draft conventions pack mined from human review history | draft — backlog |
-| [`mcp-surface.md`](mcp-surface.md) | B-07: read-only findings server and allowlisted reviewer tool servers | draft — backlog |
+| [`history-seeded-conventions.md`](history-seeded-conventions.md) | B-06: draft conventions pack mined from human review history | draft — promoted to v1.2 |
+| [`mcp-surface.md`](mcp-surface.md) | B-07: read-only findings server and allowlisted reviewer tool servers | draft — reviewer client promoted to v1.1; server backlog |
 | [`pr-walkthrough.md`](pr-walkthrough.md) | B-08: opt-in PR overview comment, not a review | draft — backlog |
 
+**Approval is per milestone** (owner decision, 2026-11-27). A spec is approved before the first work
+package that implements it starts, not all at once. The six specs marked *MVP gate* in their header —
+`first-run-setup`, `provider-model-discovery`, `agentic-review-sessions`,
+`review-progress-and-completion`, `large-pr-handling`, and `session-capacity-and-visibility` — gate
+Phase 1b. Every other spec is approved before its milestone. Approval is recorded in the spec header
+with a date and in [`../../delivery/status.md`](../../delivery/status.md).
+
 Specs marked *backlog* are candidates (see [`../capabilities.md`](../capabilities.md) section 13): not
-committed, in no release tier, and not to be implemented until the owner promotes them.
+committed, in no release tier, and not to be implemented until the owner promotes them. Specs marked
+*promoted* were tiered at G0 (2026-11-16); only the promoted part is committed, and the spec still
+needs owner approval before implementation.
 
 The other specs follow the owner's 2026-11-15 capability list (Q-001) and the v1 scope in
 [`../scope.md`](../scope.md). Do not implement until the owner approves the spec and the relevant

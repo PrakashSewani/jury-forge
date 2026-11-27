@@ -1,6 +1,6 @@
 # ADR-0012: PR sessions and resolution modes
 
-- Status: accepted (G0, 2026-11-16; amended by ADR-0024)
+- Status: accepted (G0, 2026-11-16; amended by ADR-0024; v1 override rights amended by ADR-0028)
 - Date: 2026-11-15
 - Owners: product + architecture
 - Supersedes: the PoC's one-shot run model

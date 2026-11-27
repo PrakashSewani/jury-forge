@@ -54,6 +54,8 @@ new one, never rewritten. The index below is the source of truth for status.
 | [ADR-0024](ADR-0024-conversation-safety-and-finding-identity.md) | Conversation safety, finding identity, and evidence-gated resolution | accepted | 2026-11-16 |
 | [ADR-0025](ADR-0025-v1-review-pipeline.md) | v1 review pipeline: T0+ context, verifier, code-first chair, model roles | accepted | 2026-11-16 |
 | [ADR-0026](ADR-0026-v1-stack.md) | v1 stack: HTTP/UI, GitHub client, parsing, crypto, observability, testing, layout | accepted | 2026-11-16 |
+| [ADR-0027](ADR-0027-instruction-files.md) | Repository instruction files: the S11 set, read from the base SHA | accepted | 2026-11-27 |
+| [ADR-0028](ADR-0028-v1-resolution-rights.md) | v1 resolution rights: maintainers override, the owner decides critical findings | accepted | 2026-11-27 |
 
 **Phase 1a (2026-11-16):** the stack ADRs were accepted from
 [`../architecture/technical-approach.md`](../architecture/technical-approach.md).

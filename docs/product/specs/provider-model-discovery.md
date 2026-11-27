@@ -1,6 +1,6 @@
 # Spec: Provider and model discovery
 
-- Status: draft for owner review
+- Status: draft for owner review — **MVP gate**: owner approval required before Phase 1b work that implements it (per-milestone approval, 2026-11-27)
 - Date: 2026-11-15
 - Owner: platform + security
 - Related: ADR-0011

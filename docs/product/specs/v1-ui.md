@@ -146,7 +146,8 @@ The full 8-step studio (capabilities, knowledge, tools, availability, approval) 
 - [ ] Repositories shows the three bindings and a no-reviewers state with **Bind default jury**; no
       enable/disable toggle.
 - [ ] Providers shows the model catalog and pricing source; no free-text model.
-- [ ] Owner/maintainer can override a resolution/reopen with a reason; the action is audited.
+- [ ] Owner/maintainer can accept, dismiss, or reopen a finding with a reason; only the owner can
+      dismiss or resolve a `critical` finding (ADR-0028); every action is audited.
 - [ ] All screens are usable at 320 px and pass the accessibility harness.
 - [ ] No screen prints a machine error code.
 

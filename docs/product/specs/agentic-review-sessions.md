@@ -1,6 +1,6 @@
 # Spec: Agentic PR review sessions
 
-- Status: draft for owner review
+- Status: draft for owner review — **MVP gate**: owner approval required before Phase 1b work that implements it (per-milestone approval, 2026-11-27)
 - Date: 2026-11-15
 - Owner: product + architecture
 - Principles: 2 (trustworthy review), 3 (prompt is not a boundary), 5 (boring operations), 7 (extensible), 8 (fail visibly), 11 (wedge)
@@ -310,11 +310,16 @@ rate is a benchmark/scorecard metric.
 
 The agent validates; **SMEs and higher-level roles can overwrite**.
 
+> **v1 (ADR-0028, 2026-11-27):** v1 has only owner, maintainer, and reader. The owner acts on any
+> finding; a maintainer can accept, dismiss, or reopen with a reason, except that only the owner
+> dismisses or resolves a `critical` finding. The MVP has one operator, the owner. The table below
+> is the full role model; admin, SME, and auditor arrive in v1.2.
+
 | Actor | Can override |
 | ----- | ------------ |
 | Owner / Admin | Resolve, reopen, or dismiss any thread in the org, with a reason |
 | SME | Resolve/reopen/dismiss in their domain and assigned repos, with a reason |
-| Maintainer | Reopen a thread to challenge it; cannot mark it resolved on the bot’s behalf |
+| Maintainer | v1: accept, dismiss, or reopen with a reason, except `critical` findings (owner only; ADR-0028) |
 | Author / member | Reply only; GitHub UI resolution is recorded as a human action |
 | Auditor | Read-only |
 
