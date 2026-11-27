@@ -1,0 +1,11 @@
+{
+  "name": "@jury-forge/web",
+  "version": "0.0.0",
+  "private": true,
+  "description": "React SPA served by the app.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

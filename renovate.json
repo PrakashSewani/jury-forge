@@ -1,0 +1,47 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "Grouped weekly updates; every update must pass the licence check and pnpm check (technical-approach.md §18).",
+  "extends": ["config:recommended", "helpers:pinGitHubActionDigests"],
+  "baseBranchPatterns": ["dev"],
+  "rangeStrategy": "pin",
+  "schedule": ["before 6am on monday"],
+  "timezone": "Etc/UTC",
+  "prConcurrentLimit": 5,
+  "minimumReleaseAge": "3 days",
+  "lockFileMaintenance": { "enabled": true, "schedule": ["before 6am on monday"] },
+  "packageRules": [
+    {
+      "description": "Minor and patch dev tooling in one PR; majors stay separate for review.",
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["minor", "patch", "digest", "pin"],
+      "groupName": "dev tooling"
+    },
+    {
+      "description": "Minor and patch runtime dependencies in one PR.",
+      "matchDepTypes": ["dependencies"],
+      "matchUpdateTypes": ["minor", "patch", "digest", "pin"],
+      "groupName": "runtime dependencies"
+    },
+    {
+      "description": "CI actions in one PR, pinned to commit digests.",
+      "matchManagers": ["github-actions"],
+      "groupName": "github actions"
+    },
+    {
+      "description": "PostgreSQL 17 is the supported datastore (ADR-0004); a new major needs an ADR.",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["postgres"],
+      "allowedVersions": "<18"
+    }
+  ],
+  "customManagers": [
+    {
+      "description": "PostgreSQL test image used by @jury-forge/testkit.",
+      "customType": "regex",
+      "managerFilePatterns": ["/packages/testkit/src/postgres\\.ts$/"],
+      "matchStrings": ["POSTGRES_IMAGE = '(?<depName>postgres):(?<currentValue>[^']+)'"],
+      "datasourceTemplate": "docker",
+      "versioningTemplate": "docker"
+    }
+  ]
+}

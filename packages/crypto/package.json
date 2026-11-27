@@ -1,0 +1,11 @@
+{
+  "name": "@jury-forge/crypto",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Envelope encryption, signing, receipts.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

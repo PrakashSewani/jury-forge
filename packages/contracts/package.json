@@ -1,0 +1,11 @@
+{
+  "name": "@jury-forge/contracts",
+  "version": "0.0.0",
+  "private": true,
+  "description": "zod schemas, API types, finding and receipt schemas. Imports no other workspace package.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

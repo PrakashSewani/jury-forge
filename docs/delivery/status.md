@@ -9,7 +9,7 @@ one phase `in progress` and exactly one next action.
 | ----- | ----- | ------ |
 | 0 | Product definition and documentation | **done — G0 passed 2026-11-16** |
 | 1a | Technology and approach (decisions only, no code) | **done — accepted 2026-11-16** |
-| 1b | Foundation and walking skeleton (MVP, gate G1) | **next — waiting for owner go** |
+| 1b | Foundation and walking skeleton (MVP, gate G1) | **in progress — owner go 2026-11-27; M1.0** |
 | 2 | Trust and security | not started |
 | 3 | Review quality | not started |
 | 4 | Operations and release | not started |
@@ -17,17 +17,47 @@ one phase `in progress` and exactly one next action.
 
 ## Current handoff
 
-**Phase:** 1a complete. Phase 1b has not started; there is no product code in the tree.
+**Phase:** 1b, milestone **M1.0 (repository and CI)**. The owner said go on 2026-11-27. The
+documentation PR (`docs/claude-fix`, PR #4) is merged into `dev`.
 
-**Branch:** `docs/claude-fix` (documentation only).
+**Branch:** `feat/walking-skeleton` (not yet pushed).
 
-**Next action:** the owner approves the six MVP-gate specs (listed under "Blocked by"), merges this
-documentation PR, and says go for **Phase 1b / M1.0 (repository and CI)** on branch
-`feat/walking-skeleton`, per
-[`implementation-plan.md`](implementation-plan.md) and
-[`../architecture/technical-approach.md`](../architecture/technical-approach.md) §4.
+**Next action:** push `feat/walking-skeleton`, open a PR to `dev`, and get the first green CI run.
+That run is the M1.0 exit evidence for WP 1-01 to 1-05, and the first time the testcontainers
+integration test runs. Spikes 1-06 (S-A) and 1-07 (S-C) close M1.0 after that.
 
-### Landed this session (2026-11-27, docs and capabilities review)
+### Landed this session (2026-11-27, M1.0 walking skeleton)
+
+Implemented on `feat/walking-skeleton`; no product behaviour, only the skeleton and the checks.
+
+- **WP 1-01, workspace:** pnpm workspace with `apps/{server,web,cli}` and
+  `packages/{contracts,domain,pipeline,gateway,forge,parsing,store,crypto,testkit}` per
+  technical-approach §4, each a typed placeholder. `tsconfig.json` (strict, `nodenext`,
+  `erasableSyntaxOnly`), `biome.json`, `.editorconfig`, `.node-version`. Exact versions only;
+  dependency install scripts are denied (`allowBuilds`).
+- **WP 1-02, import boundaries:** `.dependency-cruiser.cjs` enforces the §4 rule (`domain` →
+  `contracts` only and no I/O modules; `contracts` is a leaf; `pipeline` does not import
+  gateway/forge/store/crypto; `testkit` only from tests; no cycles, no undeclared or
+  unresolvable imports). `scripts/dependency-rules.test.ts` runs the real rules over deliberate
+  violations in `scripts/fixtures/boundaries/` and expects exactly those four.
+- **WP 1-03, test harness:** vitest projects `unit` and `integration`, v8 coverage with the
+  `packages/domain` ≥ 90 % threshold, fast-check, and `@jury-forge/testkit` with a PostgreSQL 17
+  container helper. A missing container runtime skips integration tests with a warning locally
+  and **fails** in CI.
+- **WP 1-04, licences and supply chain:** `scripts/check-licences.ts` + `licence-policy.json`
+  (see technical-approach §13 for why not `license-checker`), with unit, property, and CLI tests
+  that a BUSL-1.1 or SSPL-1.0 dependency fails. `renovate.json`: grouped weekly updates, pinned
+  ranges and action digests, PostgreSQL held below 18.
+- **WP 1-05, CI:** `.github/workflows/ci.yml` with three jobs: `pnpm check` on linux/amd64,
+  typecheck + unit on linux/arm64, and the TypeScript 5.9.3 fallback typecheck. Actions are
+  pinned to commit SHAs; `contents: read` only.
+- **Found:** dependency-cruiser cannot use TypeScript 7.0's API and passed silently on 0 modules.
+  Fixed with a private TS 5.9.3 for it (`packageExtensions`) and guarded by the fixture test.
+- **Docs:** `AGENTS.md` and `README.md` phase lines, `CONTRIBUTING.md` checks,
+  technical-approach §3.14 and §13 (verified tool versions), and the M1.0 progress note in
+  `implementation-plan.md`.
+
+### Earlier this session (2026-11-27, docs and capabilities review)
 
 A review after G0 found that the 2026-11-16 consistency pass had covered only T0/T0+ wording.
 Fixed in this pass:
@@ -143,6 +173,26 @@ while `AGENTS.md` and `decisions/README.md` say to supersede; the status list ha
 
 ## Verified this session (2026-11-27)
 
+**M1.0, on Windows 11, Node v24.19.0, pnpm 12.4.2:**
+
+- `pnpm check` exited 0: typecheck (TS 7.0.2), `biome ci` (37 files), dependency-cruiser
+  (28 modules, 16 dependencies, 0 violations), licence check (261 package versions, 162
+  production), 28 unit tests passed.
+- **Boundary rule fails a violating import:** a declared `@jury-forge/store` import added to
+  `packages/domain` made `pnpm run check:deps` exit 1 with `domain-imports-only-contracts`;
+  reverted, and the lint returned to 0 violations.
+- **Licence check fails BSL/SSPL:** the CLI test runs the script on a fixture with BUSL-1.1 and
+  SSPL-1.0 packages and asserts exit code 1 naming both.
+- **TypeScript 5.9.3 fallback:** `pnpm --package=typescript@5.9.3 dlx tsc -p tsconfig.json`
+  exited 0.
+- **Integration stage:** with no Docker running, it was skipped locally with the warning; with
+  `CI=1` it failed as designed. **Not verified:** the PostgreSQL container test has not run
+  anywhere yet; the first CI run is its first run.
+- **Not verified:** `renovate.json` against Renovate's validator (running the Renovate CLI was not
+  permitted in this session), and `ci.yml` on GitHub (nothing pushed yet).
+
+**Earlier in this session (docs review and spike):**
+
 - **Spike README charts:** all 5 Mermaid blocks rendered without errors in Mermaid 11.4.1 in the
   app's browser (a local check page).
 - **Spike calls:** 4 discovery probes, 6 auth probes, 90 structured-output trials plus an 18-trial
@@ -176,15 +226,17 @@ while `AGENTS.md` and `decisions/README.md` say to supersede; the status list ha
 
 ## Blocked by
 
-- **Phase 1b:** the owner's go and approval of the six MVP-gate specs:
+- **M1.0 exit:** a green CI run (needs a push and a PR), and spikes 1-06 (S-A, needs Docker) and
+  1-07 (S-C: Ollama and an Anthropic-native model are left, which needs the owner's key or a local
+  Ollama).
+- **M1.1 onward:** approval of the six MVP-gate specs before the work packages that implement them:
   [`first-run-setup.md`](../product/specs/first-run-setup.md),
   [`provider-model-discovery.md`](../product/specs/provider-model-discovery.md),
   [`agentic-review-sessions.md`](../product/specs/agentic-review-sessions.md),
   [`review-progress-and-completion.md`](../product/specs/review-progress-and-completion.md),
   [`large-pr-handling.md`](../product/specs/large-pr-handling.md), and
   [`session-capacity-and-visibility.md`](../product/specs/session-capacity-and-visibility.md).
-  M1.0 (repository and CI) implements none of them and can start on the go alone. No technical
-  blocker is open.
+  M1.0 implements none of them. No technical blocker is open.
 - **Installability is still unproven.** There is no compose file, CLI, Dockerfile, or signed release.
   The three documentation defects from the install dry run (B1–B3) are fixed in the docs, but no
   build exists to test. See [`../analysis/install-readiness-2026-11-15.md`](../analysis/install-readiness-2026-11-15.md).

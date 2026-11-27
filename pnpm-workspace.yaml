@@ -1,0 +1,23 @@
+packages:
+  - apps/*
+  - packages/*
+
+# Exact versions only; Renovate proposes updates (technical-approach.md §18).
+saveExact: true
+engineStrict: true
+
+# dependency-cruiser parses TypeScript through the compiler's JS API, which TypeScript 7.0 lacks
+# (supported: <7.0 or >=7.1). Without this it cruises 0 modules and passes silently. It gets its
+# own copy of the 5.x fallback line (technical-approach.md §3.1); the workspace typechecks on 7.0.
+packageExtensions:
+  dependency-cruiser:
+    dependencies:
+      typescript: 5.9.3
+
+# Dependency install scripts are denied unless listed here as true. These three come from
+# testcontainers (docker-modem → ssh2) and are not needed: ssh2 runs without the optional
+# cpu-features addon, and the protobufjs script only prints a version check.
+allowBuilds:
+  cpu-features: false
+  protobufjs: false
+  ssh2: false

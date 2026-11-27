@@ -16,15 +16,18 @@ choose a runtime that serves the product rather than one that constrains it.
 
 ## Current phase
 
-**Phase 0 (G0) and Phase 1a (technology and approach) are done (2026-11-16). Next: Phase 1b —
-walking skeleton. No product code until the owner says go.**
+**Phase 0 (G0) and Phase 1a (technology and approach) are done (2026-11-16). Phase 1b — walking
+skeleton — is in progress: the owner said go on 2026-11-27, starting with M1.0 (repository and
+CI) on `feat/walking-skeleton`.**
 
-The stack is accepted (ADR-0026, `docs/architecture/technical-approach.md`). Until the owner
-explicitly opens implementation (Phase 1b):
+The stack is accepted (ADR-0026, `docs/architecture/technical-approach.md`). Implementation
+follows [`docs/delivery/implementation-plan.md`](docs/delivery/implementation-plan.md), one
+milestone at a time:
 
-- Deliver docs, specs, ADRs, diagrams, agent definitions, and research.
-- Code is allowed only for documentation tooling or throwaway analysis scripts that are not part
-  of the product.
+- Product code lands only for the current milestone's work packages, through a pull request, with
+  `pnpm check` green.
+- A work package that implements a spec waits for that spec's approval (per milestone; see
+  [`docs/product/specs/README.md`](docs/product/specs/README.md)). M1.0 implements no spec.
 - If a question cannot be answered from evidence or an approved document, ask. Do not invent a
   requirement.
 - New capability requests go into [`docs/product/capabilities.md`](docs/product/capabilities.md)
