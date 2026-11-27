@@ -1,0 +1,32 @@
+{
+  "name": "jury-forge",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Self-hosted, MIT-licensed AI code-review jury.",
+  "license": "MIT",
+  "type": "module",
+  "packageManager": "pnpm@12.4.2",
+  "engines": {
+    "node": ">=24.0.0 <25"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "biome ci .",
+    "format": "biome check --write .",
+    "check:deps": "depcruise apps packages scripts --config .dependency-cruiser.cjs",
+    "check:licences": "node scripts/check-licences.ts",
+    "test": "vitest run --project unit",
+    "test:coverage": "vitest run --project unit --coverage",
+    "test:integration": "vitest run --project integration",
+    "check": "pnpm run typecheck && pnpm run lint && pnpm run check:deps && pnpm run check:licences && pnpm run test:coverage && pnpm run test:integration"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.6.9",
+    "@types/node": "26.6.11",
+    "@vitest/coverage-v8": "5.1.2",
+    "dependency-cruiser": "18.9.0",
+    "fast-check": "4.11.0",
+    "typescript": "7.0.2",
+    "vitest": "5.1.2"
+  }
+}

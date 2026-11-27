@@ -5,8 +5,9 @@ agree that your contribution is licensed under the repository's MIT licence.
 
 ## Before you write code
 
-This repository is in its **documentation and product-definition phase**. Product code does not
-start until the owner passes gate G0. Read:
+This repository is in **Phase 1b (walking skeleton)**. Code follows the approved docs and the
+work packages in [`docs/delivery/implementation-plan.md`](docs/delivery/implementation-plan.md).
+Read:
 
 1. [`AGENTS.md`](AGENTS.md) — the operating contract.
 2. [`docs/README.md`](docs/README.md) — the knowledge base map.
@@ -43,15 +44,28 @@ start until the owner passes gate G0. Read:
 
 ## Checks
 
-Until the product code exists, a docs change is checked by:
+Prerequisites: Node 24 (`.node-version`), pnpm (the version in `package.json`), and Docker for
+the integration tests.
 
-- all relative links resolve,
-- referenced paths exist,
-- the docs map and the ADR index are current,
-- no secrets or customer data,
-- `docs/delivery/status.md` is honest.
+```sh
+pnpm install --frozen-lockfile
+pnpm check
+```
 
-Once code exists, the repository will publish a single check command. It must pass before merge.
+`pnpm check` must pass before merge. It runs, in order:
+
+| Step | Command | What it enforces |
+| ---- | ------- | ---------------- |
+| Typecheck | `pnpm run typecheck` | TypeScript 7, strict; CI also typechecks with the 5.x fallback |
+| Lint and format | `pnpm run lint` | Biome on code and JSON (Markdown is not reformatted) |
+| Import boundaries | `pnpm run check:deps` | `.dependency-cruiser.cjs`: `domain` imports only `contracts` and does no I/O; `pipeline` uses ports; `testkit` only in tests |
+| Licences | `pnpm run check:licences` | `licence-policy.json`: MIT/Apache/BSD/ISC-class only; BSL, SSPL, unknown fail |
+| Unit + coverage | `pnpm run test:coverage` | vitest + fast-check; `packages/domain` ≥ 90 % |
+| Integration | `pnpm run test:integration` | testcontainers PostgreSQL 17; skipped with a warning locally without Docker, a failure in CI |
+
+A docs change is also checked by: all relative links resolve, referenced paths exist, the docs
+map and the ADR index are current, no secrets or customer data, and `docs/delivery/status.md` is
+honest.
 
 ## Security
 

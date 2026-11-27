@@ -1,0 +1,11 @@
+{
+  "name": "@jury-forge/domain",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Pure decision logic: fingerprint, anchor, chair, risk, budget, policy, JCS. No I/O.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

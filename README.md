@@ -8,9 +8,10 @@ reviewers — security, architecture, backend, frontend, performance, testing, d
 roles that do not have a name yet — bind each one to the model you want, and let the jury review
 pull requests as one consolidated verdict with inline findings.
 
-> **Status: documentation and discovery.** This repository is in its product-definition phase.
-> There is no product code yet. The first deliverable is the knowledge base and the decisions that
-> the implementation will follow. The proof of concept that inspired this product lives at
+> **Status: walking skeleton (Phase 1b).** The product definition and the technical approach are
+> accepted. Implementation has started with the repository skeleton and CI; there is no runnable
+> product yet. The knowledge base under [`docs/`](docs/) holds the decisions the implementation
+> follows. The proof of concept that inspired this product lives at
 > [`PrakashSewani/jury-forge-poc`](https://github.com/PrakashSewani/jury-forge-poc); it is a
 > reference, not a starting point.
 
@@ -68,7 +69,7 @@ short version:
 - Documentation is the source of truth. Code follows approved docs.
 - Every durable choice gets an ADR. Options, trade-offs, and consequences are written down.
 - Evidence beats memory. Inspect the code, resolve versions live, cite file and line.
-- No product code until the product and architecture docs are approved.
+- Code follows approved docs and lands through a pull request with `pnpm check` green.
 - MIT, no CLA, no contributor licence gymnastics.
 
 ## License

@@ -284,7 +284,8 @@ persisted result. Model access goes through our **provider gateway**, built on t
 | Fault injection | Kill the worker mid-step; duplicate deliveries; publish-then-crash | Exactly-once effects |
 | E2E (nightly, opt-in) | A real GitHub test org and a real provider key from CI secrets | A smoke test, never a gate for contributors |
 | UI | Playwright (Apache-2.0) + axe | Key flows and accessibility |
-| Licence | `license-checker` allowlist | C1 |
+| Licence | `pnpm licenses list` + `scripts/check-licences.ts` allowlist (`licence-policy.json`) | C1 |
+| Import boundaries | dependency-cruiser (MIT) rules in `.dependency-cruiser.cjs` | The dependency rule in §4 |
 
 The single check command is `pnpm check`: typecheck, lint (Biome, MIT), unit, integration,
 contract, stub-model eval, licence, plus the size budgets.
@@ -479,9 +480,26 @@ as one "v1 stack" decision.
 | @openai/agents | 0.22.0 | MIT |
 | @mastra/core | 1.83.0 | Apache-2.0 (repo has `ee/` portions) |
 
-Not yet verified live: Caddy, minisign, cosign, syft, testcontainers, fast-check, Biome, Playwright,
-Radix, Tailwind, kysely-codegen, license-checker, and the tree-sitter grammar packages. Verify them
-in M1.0 before pinning.
+**M1.0 tooling, verified live 2026-11-27 and pinned in `package.json`:**
+
+| Package | Version | Licence | Note |
+| ------- | ------- | ------- | ---- |
+| typescript | 7.0.2 | Apache-2.0 | Workspace typecheck. The 5.x fallback (5.9.3) runs in a separate CI job. |
+| @biomejs/biome | 2.6.9 | MIT OR Apache-2.0 | Lint and format, scoped to code and JSON so Markdown is not reformatted. |
+| vitest, @vitest/coverage-v8 | 5.1.2 | MIT | Newer patch than the 5.1.0 recorded above. |
+| fast-check | 4.11.0 | MIT | |
+| testcontainers, @testcontainers/postgresql | 12.2.2 | MIT | Test image `postgres:17.12-alpine`. |
+| pg | 8.23.1 | MIT | |
+| dependency-cruiser | 18.9.0 | MIT | Gets its own TypeScript 5.9.3 through `packageExtensions`: it needs the compiler JS API, which TypeScript 7.0 lacks (supported: <7.0 or >=7.1). Without it, it cruises 0 modules and passes silently. |
+
+**Changed from the plan:** `license-checker` (BSD-3-Clause, last published 2022) is not used.
+The licence check is `pnpm licenses list --json` (built into pnpm) plus a small SPDX-expression
+evaluator in `scripts/check-licences.ts`, with the policy in `licence-policy.json`. That adds no
+dependency and checks the production set separately: a `dev`-scoped exception (today only
+`lightningcss`, MPL-2.0, through Vite) is void if the package becomes reachable from production.
+
+Not yet verified live: Caddy, minisign, cosign, syft, Playwright, Radix, Tailwind, kysely-codegen,
+and the tree-sitter grammar packages. Verify each in the milestone that first uses it.
 
 ---
 

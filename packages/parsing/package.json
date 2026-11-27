@@ -1,0 +1,11 @@
+{
+  "name": "@jury-forge/parsing",
+  "version": "0.0.0",
+  "private": true,
+  "description": "web-tree-sitter wrapper, grammars, queries.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

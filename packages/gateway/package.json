@@ -1,0 +1,11 @@
+{
+  "name": "@jury-forge/gateway",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Provider gateway, catalog, egress, redaction.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}
