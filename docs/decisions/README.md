@@ -57,6 +57,7 @@ new one, never rewritten. The index below is the source of truth for status.
 | [ADR-0027](ADR-0027-instruction-files.md) | Repository instruction files: the S11 set, read from the base SHA | accepted | 2026-11-27 |
 | [ADR-0028](ADR-0028-v1-resolution-rights.md) | v1 resolution rights: maintainers override, the owner decides critical findings | accepted | 2026-11-27 |
 | [ADR-0029](ADR-0029-model-capability-probes.md) | Model capability probes: test a model before a reviewer trusts it | accepted | 2026-11-27 |
+| [ADR-0030](ADR-0030-local-provider-egress.md) | Egress rule for local model servers: a pinned, owner-only exception for the `local` kind | accepted | 2026-11-27 |
 
 **Phase 1a (2026-11-16):** the stack ADRs were accepted from
 [`../architecture/technical-approach.md`](../architecture/technical-approach.md).

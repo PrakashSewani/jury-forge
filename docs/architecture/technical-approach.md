@@ -238,7 +238,8 @@ persisted result. Model access goes through our **provider gateway**, built on t
 - Every outbound request goes through a custom `undici` dispatcher. It checks the allowlist (GitHub
   base URL, configured provider origins), re-checks DNS after resolution, blocks
   private/loopback/link-local/metadata ranges, uses HTTPS only, re-validates every redirect, and
-  enforces size and time caps.
+  enforces size and time caps. **Exception:** the `local` provider kind may reach the loopback or
+  private host the owner entered, pinned and audited, never link-local or metadata (ADR-0030).
 - Keys are bound to their provider origin: the gateway refuses to send a key to any other origin.
 - Optional `HTTPS_PROXY`. Air-gapped installs are v1.1+.
 
@@ -511,9 +512,19 @@ and the tree-sitter grammar packages. Verify each in the milestone that first us
   3. **Repo config `.jury-forge.yml`** read from the base SHA.
   A higher layer never overrides a security floor set by a lower one: caps, budgets, and fork policy
   can only be tightened per repo.
-- **Environment variables (complete v1 list):** `DATABASE_URL`, `JURY_MASTER_KEY_FILE`, `PUBLIC_URL` (optional
-  freeze, ADR-0021), `SETUP_BIND`, `LOG_LEVEL`, `METRICS_BIND`, `OTEL_EXPORTER_OTLP_ENDPOINT`
-  (optional), `HTTPS_PROXY` (optional), `ROLE` (`app`/`worker`). Everything else lives in the database.
+- **Environment variables (complete v1 list):** `DATABASE_URL` or `DATABASE_URL_FILE` (the file
+  form is preferred: the URL carries the database password), `JURY_MASTER_KEY_FILE`, `PUBLIC_URL`
+  (optional freeze, ADR-0021), `SETUP_BIND`, `TRUSTED_PROXIES`, `LOG_LEVEL`, `METRICS_BIND`,
+  `OTEL_EXPORTER_OTLP_ENDPOINT` (optional), `HTTPS_PROXY` (optional), `ROLE` (`app`/`worker`).
+  Everything else lives in the database.
+  *Amended 2026-11-27 (MVP spec review):* `TRUSTED_PROXIES` and `DATABASE_URL_FILE` were added. Both
+  are infrastructure: the app must know which peer (the bundled Caddy's pinned Compose subnet, or the
+  operator's load balancer) may set forwarded headers before any setup state exists, or every
+  pre-auth rate limit collapses into the proxy's single IP. The variables older docs name are
+  retired: `ENCRYPTION_KEY[_FILE]` is `JURY_MASTER_KEY_FILE`; `SESSION_SECRET` is not needed
+  (sessions are random IDs stored hashed, §3.9); `BOOTSTRAP_TOKEN` is always generated (§3.13,
+  first-run-setup Stage 1); the provider egress allowlist is derived from configured provider
+  origins (§3.11); `OBJECT_STORAGE_*` arrives with the v1.2 S3 adapter.
 - Every config source is parsed by **one zod schema per layer** in `contracts`. Startup fails closed
   on an invalid environment; an invalid repo file produces a Check Run note and falls back to defaults.
 - `.jury-forge.yml` v1 keys: `version`, `review.on`, `review.drafts`, `review.preset`,

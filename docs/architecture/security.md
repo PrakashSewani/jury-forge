@@ -101,7 +101,9 @@ a run sends the key in the auth header. (The PoC's F-004.)
 **Controls:**
 
 - A credential is bound to an allowed origin (host + scheme); it cannot be sent elsewhere.
-- Egress allowlist; block private/link-local/loopback/metadata ranges.
+- Egress allowlist; block private/link-local/loopback/metadata ranges. The one exception is a
+  `local` model provider: the exact loopback/private host the owner entered, pinned; link-local and
+  metadata stay blocked (ADR-0030).
 - Credential changes require re-authentication and are audited.
 - Reuse copies a reference to a credential, not a free-floating ciphertext.
 - In multi-user mode, credential use is a scoped permission.
@@ -362,7 +364,7 @@ New attack surface and controls:
 | Session hijack | Tenant/repo scoping, session authorization, short-lived tokens, audit; no session id in URLs without auth. |
 | Bot loop | Ignore self, mention/reply requirement, debounce/coalesce, turn/tool/rate limits. |
 | Provider key exfiltration | Envelope encryption, write-only, origin-bound, no copy-to-arbitrary-URL, re-auth for rotation. |
-| Model catalog SSRF | HTTPS, block private/loopback/link-local/metadata, origin binding, timeouts/size caps. |
+| Model catalog SSRF | HTTPS, block private/loopback/link-local/metadata, origin binding, timeouts/size caps. A `local` provider is the pinned, owner-only exception in ADR-0030. |
 | Live doc-link fetch SSRF | Admin-curated allowlist, HTTPS, block private/link-local/metadata, recheck redirects, per-domain rate limit, timeout/size caps, per-run snapshot. |
 | Graph data leakage | Tenant/repo scoping, no secrets, retention/delete, access checks on tools. |
 | Runaway cost | Per-turn/session/repo budgets; stop before the next call; alert. |

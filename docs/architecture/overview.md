@@ -169,6 +169,7 @@ is a durable unit within a session.
 | Instruction files: the S11 set from the base SHA | Accepted (2026-11-27) | ADR-0027 |
 | v1 resolution rights | Accepted (2026-11-27) | ADR-0028 |
 | Model capability probes | Accepted (2026-11-27) | ADR-0029 |
+| Egress rule for local model servers | Accepted (2026-11-27) | ADR-0030 |
 
 Read next: [`agentic-review.md`](agentic-review.md) → [`components.md`](components.md) →
 [`job-pipeline.md`](job-pipeline.md) → [`security.md`](security.md) →

@@ -1,6 +1,6 @@
 # Spec: First-run setup and instance bootstrap
 
-- Status: draft for owner review — **MVP gate**: owner approval required before Phase 1b work that implements it (per-milestone approval, 2026-11-27)
+- Status: draft for owner review — **MVP gate**: owner approval required before Phase 1b work that implements it (per-milestone approval, 2026-11-27). **Revised 2026-11-27** in the MVP spec review (release tiers, ADR alignment; see `delivery/status.md`); not yet approved
 - Date: 2026-11-15
 - Owner: product + operations + security
 - Principles: 1 (operator owns the instance), 4 (secure and private by default), 6 (secure by
@@ -29,7 +29,7 @@ the v1 UI — and in none of them end to end. The gaps that matter:
   path: a half-finished setup currently has no name and no way forward.
 - **No install modes for the evaluation path.** Drafts assume a public HTTPS origin. ADR-0003
   option 2 (all-in-one) and Q-030 exist, but the first-run flow for "laptop, no domain, no tunnel"
-  is unspecified, so the fastest way to try the product is also the least defined (F-0xx: setup
+  is unspecified, so the fastest way to try the product is also the least defined (F-042: setup
   requires GitHub to reach the instance).
 - **No funnel.** We cannot say how long setup takes, where operators abandon, or whether G1's
   "clean-machine install" is met, because no step is instrumented.
@@ -44,6 +44,14 @@ the v1 UI — and in none of them end to end. The gaps that matter:
   domain or a tunnel."
 - **P6 Auditor**: "Show who claimed the instance, when, from where, and which configuration
   changed afterwards."
+
+## Release tiers
+
+- **MVP (G1):** Stages 0–7 for the Compose public-host mode, one built-in reviewer, a single
+  operator (the claimed owner), and every acceptance criterion except 11.
+- **v1:** the three-reviewer default jury, the review receipt on success, member invites.
+- **After G1 (Q-030):** the labelled all-in-one / local evaluation mode and criterion 11.
+- **v1.2:** Helm (ADR-0023). Air-gapped and pre-provisioned installs stay out of v1.
 
 ## Behaviour
 
@@ -88,16 +96,22 @@ Run by `jury-forge doctor` (CLI) and repeated by the server at `/setup` load:
   from outside the host and `GET {ORIGIN}/api/auth/github/callback` is the OAuth callback. There is
   no "container webhook URL"; Docker publishes nothing — GitHub calls the operator's domain and the
   proxy forwards it.
-- TLS terminates correctly; `TRUSTED_PROXIES` covers the actual peer; forwarded headers are ignored
-  from other peers.
-- Outbound reachability: `api.github.com`, `github.com`, and `PROVIDER_EGRESS_ALLOWLIST` hosts.
+- TLS terminates correctly; `TRUSTED_PROXIES` (technical-approach §14: the pinned Compose subnet of
+  the bundled Caddy, or the operator's load balancer CIDRs) covers the actual peer; forwarded headers
+  are ignored from other peers.
+- Outbound reachability: `api.github.com` and `github.com`; provider origins are checked when a
+  provider is added (Stage 4). There is no separate egress allowlist variable: the allowlist is the
+  GitHub base URL plus the configured provider origins (technical-approach §3.11).
 - **Enterprise org blockers** are surfaced before the operator spends time on OAuth: org IP
   allowlist (`ip_allow_list`), SAML SSO enforcement (`sso_required`), OAuth app restrictions, and
   repository access policy. Each is a warned, typed result with the org-side fix, not a generic
   "login failed" (see [`deployment.md`](../../architecture/deployment.md#enterprise-org-blockers-check-before-promising-an-install)).
-- Postgres reachable, migrations at head, object storage writable, queue pollable.
-- `ENCRYPTION_KEY` / `SESSION_SECRET` present, non-default, and the encryption key decrypts its own
-  probe record; a mismatch fails closed with `encryption_key_mismatch`.
+- Postgres reachable, migrations at head, queue pollable. Artefacts live in Postgres in v1; there is
+  no object storage to check (technical-approach §2; the S3 adapter is v1.2).
+- The master key file (`JURY_MASTER_KEY_FILE`) exists, is readable only by the app user, is not a
+  sample value, and decrypts its own probe record; a mismatch fails closed with
+  `encryption_key_mismatch`. There is no session secret to check: sessions are random IDs stored
+  hashed (technical-approach §3.9).
 - Clock skew, disk headroom, and container user are reported, not enforced.
 
 `doctor` prints the same checks as the UI and exits non-zero on blockers. Every failure carries a
@@ -105,19 +119,19 @@ remedy and a docs anchor; no raw stack traces.
 
 ### Stage 1 — Bootstrap token
 
-- On first boot the server generates a single-use **bootstrap token** if `BOOTSTRAP_TOKEN` is unset,
-  writes it once to stdout/log (`setup token: …`) and stores only a hash, with `created_at`,
+- On first boot the server generates a single-use **bootstrap token**, writes it once to stdout/log (`setup token: …`) and stores only a hash, with `created_at`,
   `expires_at` (default 24 h), `attempts`, `last_attempt_at`. The log line is excluded from support
   bundles and redacted by the log pipeline; `jury-forge setup token` re-prints it to the operator's
   terminal only.
-- `BOOTSTRAP_TOKEN` supplied via env overrides generation and skips the log line.
+- There is no environment override for the token in v1 (technical-approach §14): pre-provisioned
+  installs are out of v1, and an env value would sit in `/proc/1/environ` for the container's life.
 - `/setup` accepts the token in a form POST only; failures are constant-time compared, rate-limited
   per IP and globally, and increment `attempts`; 5 failures in 15 minutes pauses claims and raises a
   visible alert. Every attempt is audited (no token material).
 - The token is **disabled** on claim, on `jury-forge init --rotate`, after expiry, or by
   `jury-forge setup disable`. Disabled means `410` plus a documented recovery (`create-admin`).
 - No claim cookie is required to bootstrap; the session cookie is only issued after GitHub OAuth
-  succeeds, so plain-HTTP and LAN installs are not blocked by `Secure` (F-0xx, PoC cookie flaw).
+  succeeds, so plain-HTTP and LAN installs are not blocked by `Secure` (F-013, PoC cookie flaw).
 
 ### Stage 1.5 — Public origin (domain)
 
@@ -197,8 +211,10 @@ The App from Stage 2 supplies the OAuth client id/secret. If no App exists, the 
 `setup_step_out_of_order` and the UI sends the operator back to Stage 2; there is no claim without
 an App.
 
-1. `/setup?token=…` exchanges the token for a short-lived **claim intent** (10 min, single use,
-   bound to the token id and a nonce), then redirects to GitHub OAuth using the App's client.
+1. The bootstrap token, submitted by **form POST** on the loopback listener (Stage 1; never in a
+   URL or query string), is exchanged for a short-lived **claim intent** (10 min, single use, bound
+   to the token id and a nonce), then the server redirects to GitHub OAuth using the App's client.
+   Only the opaque claim-intent id travels in the OAuth `state`.
 2. GitHub identity is verified (`/user`, verified email, installation visibility). The UI shows the
    account that will become owner; nothing is written until the operator confirms.
 3. Confirmation creates the owner in one transaction: `user`, `role=owner`, `audit.owner_claimed`
@@ -217,7 +233,12 @@ write-only, origin-bound, catalog fetched, `hasKey` only in responses. Setup add
 
 - A **skip** that leaves the instance `claimed` but not `ready`, with a persistent "no provider"
   state and a link back. Reviews cannot run without a provider; the UI must say so before a trigger.
-- A local-model shortcut (Ollama/vLLM base URL) that runs the same discovery call.
+- A local-model shortcut (Ollama/vLLM base URL) that runs the same discovery call, under the
+  `local` provider egress rules in [ADR-0030](../../decisions/ADR-0030-local-provider-egress.md).
+- **A capability probe before binding** (ADR-0029, [`provider-model-discovery.md`](provider-model-discovery.md)
+  §2.1): the chosen model must pass the probe before Stage 5 can bind it. The probe's token estimate
+  is shown before it runs; a failed probe shows the per-mode results and keeps the instance
+  `claimed`.
 - A failure path that keeps nothing: no partial provider row, no key fragment in logs.
 
 ### Stage 5 — Default jury and binding
@@ -252,8 +273,8 @@ write-only, origin-bound, catalog fetched, `hasKey` only in responses. Setup add
 Presented as a checklist with "remind me later" (advisory, not gating `ready`):
 
 - Backups scheduled and a restore drill run.
-- `BOOTSTRAP_TOKEN` confirmed disabled; secrets stored outside the DB; encryption key backed up
-  separately.
+- The bootstrap token confirmed disabled; secrets stored outside the DB; the master key file backed
+  up separately.
 - Metrics/alerts connected (optional).
 - Retention defaults reviewed; telemetry confirmed `off`.
 
@@ -262,9 +283,9 @@ Presented as a checklist with "remind me later" (advisory, not gating `ready`):
 | Mode | Origin | Difference |
 | ---- | ------ | ---------- |
 | **Compose, public host** (default) | HTTPS, set in Stage 1.5 (or frozen by `PUBLIC_URL`) | Full flow above. |
-| **Compose, external Postgres/S3** | HTTPS | Stage 0 validates the external endpoints; no local volumes. |
+| **Compose, external Postgres** | HTTPS | Stage 0 validates the external database (TLS, version, migration rights); no local database volume. An S3 artefact adapter is v1.2. |
 | **All-in-one / local** (post-G1, Q-030) | `http://localhost:PORT` | Manifest flow unavailable; **fixture forge is the default demo path** (no tunnel, deterministic, doubles as the eval harness entry); manual app entry for a real local App; tunnel documented, not bundled. Labelled "evaluation only". |
-| **Kubernetes / Helm** (v1.x, ADR-0022/ADR-0023) | HTTPS via ingress | Same flow; bootstrap via `kubectl port-forward svc/app 8080:8080` (never through the ingress); `values.origin` may freeze the origin; no on-demand TLS, no bundled databases. |
+| **Kubernetes / Helm** (v1.2, ADR-0022 as amended by ADR-0023) | HTTPS via ingress | Same flow; bootstrap via `kubectl port-forward svc/app 8080:8080` (never through the ingress); `values.origin` may freeze the origin; no on-demand TLS, no bundled databases. |
 | **Pre-provisioned / air-gapped** (out of v1) | Any | Secrets supplied by env/files; no manifest; provider is local; forge is GHES or a mirror. |
 
 ### Recovery paths (first-class, not docs-only)
@@ -273,7 +294,7 @@ Presented as a checklist with "remind me later" (advisory, not gating `ready`):
 | --------- | --------- |
 | Token lost or expired, no owner yet | `jury-forge create-admin --recover` (host access required), audited; prints a new one-time token. |
 | Owner exists, claim replayed | Refused + audited; ownership transfer is a separate admin flow. |
-| `ENCRYPTION_KEY` rotated/lost | Fail closed with `encryption_key_mismatch`; documented restore-from-backup only. |
+| Master key file (`JURY_MASTER_KEY_FILE`) rotated/lost | Fail closed with `encryption_key_mismatch`; documented restore-from-backup only. |
 | Wrong installation stored | "Change installation" re-runs Stage 2 safely; pending sessions on the old installation are paused with a reason. |
 | Setup page loops / OAuth fails | App missing or OAuth callback wrong, or the Stage 2/3 order was skipped; create/verify the App, then claim; re-run Stage 1.5 if the origin is stale; `PATCH /app` updates URLs |
 | Origin changed | Validated, audited, App URLs updated; sessions re-login; banner until webhook self-test passes |
@@ -290,7 +311,7 @@ Presented as a checklist with "remind me later" (advisory, not gating `ready`):
 - Multi-org and multi-installation setup in v1 (Q-004; the model keeps the boundary).
 - **Multiple users in MVP.** MVP is a single operator (the claimed owner); member invites and role
   management are v1. This is a stated limit, not an oversight.
-- Helm is a v1.x install path (ADR-0022/ADR-0023), not the reference and ships no bundled databases
+- Helm is a v1.2 install path (ADR-0022 as amended by ADR-0023), not the reference and ships no bundled databases
   or on-demand TLS. No Kubernetes operator/CRD; air-gapped remains out of v1.
 - A marketplace or one-click cloud images at first run.
 - **Sub-path hosting** (`https://host/jury-forge`). Unsupported in v1; the origin is an authority
@@ -308,11 +329,13 @@ Presented as a checklist with "remind me later" (advisory, not gating `ready`):
    creation, GitHub org admin work, and test repo/PR creation are measured separately and are not
    inside the 15 minutes. No `curl … | sh` anywhere in the docs.
 2. `jury-forge doctor` exits non-zero and names the remedy for each of: missing/invalid origin,
-   non-HTTPS origin, unreachable Postgres, default `ENCRYPTION_KEY`, origin/`Host` mismatch,
-   untrusted proxy header, missing secret file, and GitHub unreachable.
+   non-HTTPS origin, unreachable Postgres, a missing, sample, or group/world-readable master key
+   file, origin/`Host` mismatch, untrusted proxy header, missing secret file, and GitHub
+   unreachable.
 3. No secrets are written to the database in plaintext; `provider` and `github_app` ciphertext
-   round-trips, and `ENCRYPTION_KEY` mismatch refuses to start with `encryption_key_mismatch`.
-   Secrets are read from `*_FILE` paths in the reference Compose file, not from environment values.
+   round-trips, and a master-key mismatch refuses to start with `encryption_key_mismatch`.
+   Secrets are read from `*_FILE` paths in the reference Compose file (`JURY_MASTER_KEY_FILE`,
+   `DATABASE_URL_FILE`), not from environment values.
 4. Bootstrap token: single use, expires, rate-limited (5 failures/15 min pauses), audited, and
    disabled after claim; a replay returns `instance_claimed` and writes an audit row.
 5. Claim never uses `installations[0]`: with two installations visible, the operator must choose,
@@ -326,8 +349,9 @@ Presented as a checklist with "remind me later" (advisory, not gating `ready`):
 9. `setup_state` transitions are audited with actor, time, and step; the audit export contains them.
 10. A setup abandoned after Stage 3 (owner claimed) resumes at Stage 4 and does not re-create the
     App or owner; abandoned after Stage 2 resumes at Stage 3.
-11. Local/evaluation mode completes the setup stages (origin through first review) without a public
-    URL (tunnel or fixture forge), and the instance is labelled "evaluation only".
+11. **(After G1, Q-030 — not part of the G1 script.)** Local/evaluation mode completes the setup
+    stages (origin through first review) without a public URL (tunnel or fixture forge), and the
+    instance is labelled "evaluation only".
 12. Setup works at 1280 px and 375 px widths, keyboard-only, with visible focus and no colour-only
     status; screen-reader labels on every step and error.
 13. Every user-facing setup error maps to a stable code, a remedy, and a docs anchor; no 500s from
@@ -431,4 +455,5 @@ propagation and TLS issuance (see criterion 1).
   commands required by this spec (roadmap Phase 1/4).
 - Tests: clean-machine install test (Stage 0–6), fault injection (double submit, replayed callback,
   webhook never arrives, provider 401, GitHub 500), and an accessibility pass on every step.
-- Exit gate: folded into G1 — the acceptance criteria above are the G1 script.
+- Exit gate: folded into G1 — the acceptance criteria above, except criterion 11 (evaluation mode,
+  after G1), are the G1 script.

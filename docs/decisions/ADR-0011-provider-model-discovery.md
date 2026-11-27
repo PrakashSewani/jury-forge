@@ -1,6 +1,6 @@
 # ADR-0011: Provider and model discovery
 
-- Status: accepted (G0, 2026-11-16; amended by ADR-0025 model roles; key validation and verified capabilities amended by ADR-0029)
+- Status: accepted (G0, 2026-11-16; amended by ADR-0025 model roles; key validation and verified capabilities amended by ADR-0029; egress for the `local` kind amended by ADR-0030)
 - Date: 2026-11-15
 - Owners: platform + security
 - Supersedes: —

@@ -1,14 +1,28 @@
 # Spec: Agentic PR review sessions
 
-- Status: draft for owner review — **MVP gate**: owner approval required before Phase 1b work that implements it (per-milestone approval, 2026-11-27)
+- Status: draft for owner review — **MVP gate**: owner approval required before Phase 1b work that implements it (per-milestone approval, 2026-11-27). **Revised 2026-11-27** in the MVP spec review (release tiers, ADR alignment; see `delivery/status.md`); not yet approved
 - Date: 2026-11-15
 - Owner: product + architecture
 - Principles: 2 (trustworthy review), 3 (prompt is not a boundary), 5 (boring operations), 7 (extensible), 8 (fail visibly), 11 (wedge)
-- Related: ADR-0010 (harness), ADR-0011 (provider discovery), ADR-0012 (sessions/resolution), ADR-0013 (manual trigger/routing), ADR-0014 (repo graph)
+- Related: ADR-0010 as amended (thin turn runner, no harness), ADR-0011 (provider discovery), ADR-0012 (sessions/resolution), ADR-0013 (manual trigger/routing), ADR-0014 (repo graph), ADR-0016 (bindings), ADR-0024 (conversation safety), ADR-0025 (v1 pipeline), ADR-0027 (instruction files), ADR-0028 (v1 resolution rights)
 
 > **Direction (ADR-0023):** v1 is the trust loop: a three-reviewer default jury, diff + repository
 > instruction files, Check Run progress, a verdict with dissent, a receipt, and a durable session.
-> The catalog, capability labels, branch review, and graph described below are v1.x.
+> Branch review and the graph are v1.1; the catalog, capability labels, and the wider role model
+> are v1.2.
+
+## Release tiers
+
+Approving this spec for the MVP approves the **MVP** row only; later rows are approved before their
+milestone (per-milestone approval, [`README.md`](README.md)).
+
+| Tier | In scope |
+| ---- | -------- |
+| **MVP (G1)** | The PR session (§1) and its lifecycle (§2); manual triggers: the `PR review` Check Run action, the `jury:pr-review` label, and the UI picker (§3); reply turns and PR-level mention turns under ADR-0024 §1–§2 (who may start a turn, self/bot detection, fork skip, turn budgets, debounce, rate limit); strict T0 context plus base-SHA instruction files (ADR-0027); the fixed turn pipeline with **no model tool loop** (§4); one built-in reviewer bound to a repo (§6); `suggest` resolution (§5); a single operator, the owner. |
+| **v1** | The three-reviewer jury, T0+, verifier, and code-first chair (ADR-0025); comment versioning, re-anchoring after a push, verified-fixed (S2), incremental review, and appeal (S1) (ADR-0024 §3, §5); evidence-gated `auto` and `off` (§5); maintainer overrides (ADR-0028); automatic review from `.jury-forge.yml` (§3). |
+| **v1.1** | Branch review (T2) and the repo graph (§7); the branch-review tool set (§4); the `pull_request_review` and default-branch `push` events (an App event expansion, which is a security-review change per [`first-run-setup.md`](first-run-setup.md) Stage 2). |
+| **v1.2** | The reviewer catalog and agent studio, capability labels `jury:cap:*`, and the admin/SME/auditor roles (ADR-0023). |
+| **Not tiered** | Sandboxed `tests.run` / `build.run`, and everything in the appendix (§13). |
 
 ## Owner directives captured
 
@@ -17,7 +31,9 @@
 2. **Every pull request gets its own session.** Jury Forge comments, the user replies, and Jury Forge
    responds again with the context alive. Sessions survive restarts and days of waiting.
 3. **Use an existing harness** for context/loop/state management where it fits; do not invent a
-   workflow engine unless the harness cannot carry the product.
+   workflow engine unless the harness cannot carry the product. *Resolved by ADR-0010 as amended
+   (technical-approach §3.4): v1 uses a thin, explicit turn runner and no agent harness; LangGraph.js
+   is revisited only if v1.1 branch review needs multi-step tool exploration.*
 4. **Self-hostable backend and UI, Dockerized.** No Cloudflare requirement.
 5. **Provider management is first-class.** The operator adds a provider key; Jury Forge fetches the
    models available with that key. **No free-text model entry.**
@@ -62,7 +78,7 @@ and it cannot decide which specialist agents a given PR needs.
 - **GitHub is the primary conversation surface.** Most users ask, reply, and resolve in the PR.
 - **The website is the control plane and deep view.** Onboarding, session inbox/timeline, agents,
   providers/models, policy, roles, audit, costs, branch review, exports.
-- **The harness is internal.** LangGraph.js or the turn runner is not a user interface.
+- **The turn runner is internal** (ADR-0010 as amended). It is not a user interface.
 - **The session belongs to the PR**, not to the user who triggered it. It is keyed by
   `(installation, repository, PR)` and is visible to repo readers; the trigger user is recorded for
   audit. Participants include the author, commenters, mentioned humans, and maintainers.
@@ -105,7 +121,7 @@ created → active → waiting_for_user → active → resolved
 merged/closed → archived
 ```
 
-- **created:** a manual trigger, an automatic policy, or the first comment.
+- **created:** a manual trigger or an automatic policy. A comment never creates a session (ADR-0024 §1).
 - **active:** the agent is planning, retrieving context, running agents, or writing.
 - **waiting_for_user:** the agent asked a question or posted findings and has nothing to add until a
   human replies.
@@ -124,7 +140,9 @@ A short, visible contract sets expectations in the PR and the session UI:
   answers replies, and proposes resolutions in `suggest`.
 - **What it does not do:** merge, push fixes, resolve threads in `suggest`/`off`, or review files
   outside the selected mode.
-- **How to ask:** a mode label, the Check Run action, the UI picker, or an `@jury-forge` mention.
+- **How to ask for a review:** the `PR review` Check Run action, the `jury:pr-review` label, or the
+  UI picker (ADR-0013). An `@jury-forge` mention asks a question in an existing session; it never
+  starts a review.
 - **How to answer:** reply in the thread; a reply reopens a resolved thread.
 - **If nobody replies:** the session waits in `waiting_for_user`; after the configured idle window
   it is summarized and surfaced to maintainers, then archived per retention (see
@@ -143,12 +161,12 @@ installation-level; it is not gated by a per-repo enable toggle.
 Surfaces, in order of preference:
 
 1. **GitHub Check Run action (primary).** On PR open/synchronize, the app creates a neutral
-   `Jury Forge` check run with the action button `PR review` (and `Branch review` in v1.x; Checks API
+   `Jury Forge` check run with the action button `PR review` (and `Branch review` in v1.1; Checks API
    `actions`; max 3, label ≤ 20 chars). Clicking a button sends `check_run.requested_action` to the app
    and starts the turn. No comment is posted just to trigger. Requires `checks: write`.
 2. **PR label (modes):** `jury:pr-review` (diff-only: strict T0 in the MVP, T0+ enclosing-function
    expansion from v1, ADR-0025; PR diff/hunks + metadata + thread context; no file outside the
-   diff, no graph) and `jury:branch-review` (v1.x: complete branch review against the
+   diff, no graph) and `jury:branch-review` (v1.1: complete branch review against the
    repo context graph, T2). One click in the sidebar; the app listens to `pull_request.labeled`.
    These two labels are **modes**.
    **Capability labels** `jury:cap:<id>` request a capability group **within the reviewers already
@@ -156,8 +174,9 @@ Surfaces, in order of preference:
    budgets, or provider policy. A capability label alone defaults to PR review; add
    `jury:branch-review` for the branch mode. If no bound reviewer matches, post a capability
    fallback. All active capability labels are synced to every installed repo. Specific reviewers are
-   selected via the UI “Ask Jury Forge” picker, not a command. **Tier note:** Phase 1 uses built-in
-   capability IDs; the registry and label sync ship in v1 (ADR-0018).
+   selected via the UI “Ask Jury Forge” picker, not a command. **Tier note:** capability labels, the
+   registry, and label sync are **v1.2** (ADR-0023, which moved them from ADR-0018's v1); the MVP and
+   v1 have only the two mode labels.
 3. **Web UI:** “Ask Jury Forge” on a repository/PR view; select mode and specific bound
    reviewers/capabilities; it enqueues the same turn. The UI must not require the repo to be
    “enabled”.
@@ -167,37 +186,44 @@ Surfaces, in order of preference:
 
 ### Automatic (optional, policy-driven)
 
-Automatic review is opt-in per repository through **config-as-code**, not a webview toggle. The app
-reads `.jury-forge.yml` (or `.github/jury-forge.yml`) at the PR head/base:
+**(v1.)** Automatic review is opt-in per repository through **config-as-code**, not a webview
+toggle. The app reads `.jury-forge.yml` (or `.github/jury-forge.yml`) **from the base SHA only**, so
+a PR cannot change the policy that reviews it (technical-approach §14). The v1 keys are fixed by
+technical-approach §14:
 
 ```yaml
 version: 1
 review:
-  auto: true                 # default false
-  mode: diff                 # pr | branch
-  on: [opened, ready_for_review, synchronize]
-agents:
-  security: { paths: ["src/**", "auth/**"], selection: required }
-  testing:  { paths: ["**/*.test.*", "src/**"], selection: default }
-  docs:     { paths: ["docs/**", "**/*.md"], selection: capability, capabilities: [docs] }
+  on: [opened, ready_for_review, synchronize]   # default [] = manual only
+  drafts: false
+  preset: standard                               # quick | standard | deep
+  paths: { include: ["src/**"], exclude: ["**/*.lock"] }
+  authors: { exclude: ["renovate[bot]"] }
+gate: neutral                                    # neutral | critical | charges
+resolution: suggest                              # suggest | auto | off
 ```
 
-- If `auto` is false (the default), the app does nothing until a human triggers it.
+- If `review.on` is empty (the default), the app does nothing until a human triggers it.
+- Which reviewers run is set by repo **bindings** in the UI (ADR-0016), not by this file;
+  per-reviewer scopes in config-as-code are the reviewers-as-code backlog item (B-05).
+- Unknown keys produce a warning, not an error; an invalid file produces a Check Run note and the
+  defaults (technical-approach §14).
 - A repo allowlist may exist at the org level, but **manual reviews bypass it**. The allowlist only
   controls automatic reviews.
-- A manual request always wins over policy: the operator can ask for an agent that is not normally
-  available on that repo, subject to permissions and budget.
+- A manual request wins over **automatic-review policy** (the allowlist, `review.on`, path and author
+  filters), subject to permissions and budget. It never wins over **bindings**: a reviewer with no
+  enabled binding on the repo cannot run, manual or not (ADR-0016; §6).
 
 ### Event triggers for an active session
 
 | Event | Behavior |
 | ----- | -------- |
 | `pull_request_review_comment` created (human reply) | Resume the thread session; enqueue a turn. Ignore the bot's own comments. |
-| `issue_comment` created on a PR (human) | If it mentions Jury Forge, enqueue a PR-level turn; no slash commands. |
-| `pull_request_review` submitted (human review) | Add to session context; the agent may respond if it was mentioned or if policy says so. |
-| `pull_request` synchronize | Advance generation; mark affected findings `needs_recheck`; T0 PR review does not re-index; a branch/T2 or background graph job may refresh the index; do not auto-post unless policy says so. |
+| `issue_comment` created on a PR (human) | If it mentions Jury Forge **and** the sender has repo write access (ADR-0024 §1), enqueue a PR-level **reply turn** in the existing session: it answers and never starts a review. With no session, or from any other sender, the comment is stored as context only. No slash commands. |
+| `pull_request_review` submitted (human review) | **v1.1:** add to session context. The MVP and v1 App do not subscribe to this event ([`first-run-setup.md`](first-run-setup.md) Stage 2). |
+| `pull_request` synchronize | Advance the generation and mark open findings for recheck; do not auto-post unless policy says so. **v1:** re-anchor and recheck (§4 "After a push", ADR-0024 §5). **v1.1:** a branch/T2 or background graph job may refresh the index; T0 PR review never re-indexes. |
 | `pull_request` closed/merged | Archive the session. |
-| `push` to default branch | Update the repo graph, not the PR session. |
+| `push` to default branch | **v1.1:** update the repo graph, not the PR session (an App event expansion). |
 
 ## 4. The agent turn
 
@@ -217,26 +243,31 @@ ingest event
   → in auto, resolve only if the guard passes; in suggest/off, wait for a human
 ```
 
-### Tools available to agents
+### Tools (branch review, v1.1) and the PR-review pipeline steps
 
-**Tier rule:** PR review (T0) may use only `get_diff`, `get_thread`, `get_prior_findings`,
-`get_knowledge` (granted packs), `post_reply`, `ask_user`, `update_finding`. Repository read/graph/test tools are **branch review
-(T2)** only. `resolve_thread` is used only in `auto` resolution mode.
+**Tier rule:** **PR review (T0 in the MVP, T0+ from v1) runs no model tool loop.** Code plans the
+context before the model is called (technical-approach §3.4; capabilities "Tool use"): the pipeline
+fetches the diff, the thread, prior findings, and granted packs, and the pipeline — not the model —
+posts replies, asks questions, and updates findings from the model's structured output. A forced tool
+call may be used only as the structured-output mode the capability probe chose (ADR-0029). The table
+below is therefore the **v1.1 branch-review (T2) tool set**; rows marked "pipeline" are the same
+operations PR review performs as fixed steps. `resolve_thread` is used only in `auto` resolution mode
+(v1), and only by the guard in code.
 
 | Tool | Purpose | Guard |
 | ---- | ------- | ----- |
-| `get_diff` | The PR diff/hunks at the generation SHA | Read-only; T0 |
+| `get_diff` | The PR diff/hunks at the generation SHA | Read-only; a pipeline step in PR review |
 | `read_file(path, range)` | A file slice at the SHA | T2 only; bounded range, repo-relative |
 | `search_symbols` / `find_references` | Query the repo graph | T2 only; read-only, result cap |
 | `find_tests` | Tests related to changed code | T2 only; read-only |
-| `get_thread` | The conversation and finding history | Session-scoped |
-| `get_prior_findings` | Open/resolved findings for this repo/PR | Session/repo-scoped |
-| `get_knowledge` | Granted packs, ranked by relevance | T0 packs only; repo-doc/live/graph sources are T2; budgeted |
-| `post_reply` | Reply in the current thread or PR | One reply per turn unless policy allows more |
-| `ask_user` | Ask a focused question and wait | Ends the turn in `waiting_for_user` |
+| `get_thread` | The conversation and finding history | Session-scoped; pipeline in PR review |
+| `get_prior_findings` | Open/resolved findings for this repo/PR | Session/repo-scoped; pipeline in PR review |
+| `get_knowledge` | Granted packs, ranked by relevance | Pipeline in PR review (granted packs only); repo-doc/live/graph sources are T2; budgeted |
+| `post_reply` | Reply in the current thread or PR | Pipeline in PR review; one reply per turn unless policy allows more |
+| `ask_user` | Ask a focused question and wait | Pipeline in PR review (a question field in the structured output); ends the turn in `waiting_for_user` |
 | `resolve_thread` | Resolve the thread | Only in `auto`; guard: evidence, user response, agent-owned thread |
 | `reopen_thread` | Reopen on new evidence | Guard: human reply or new failure |
-| `update_finding` | Mark addressed/verified/dismissed/reopened | Guard: evidence + actor |
+| `update_finding` | Mark addressed/verified/dismissed/reopened | Pipeline in PR review; guard: evidence + actor, decided in code |
 | `check_ci` | Read check runs/status for the SHA | T2 only |
 | `tests.run` | Run selected tests in a sandbox | Later (post-v1.x); opt-in repo policy; isolated, no secrets, network off, resource caps |
 | `build.run` | Build in a sandbox | Later (post-v1.x); opt-in repo policy; same isolation |
@@ -261,7 +292,7 @@ optional; sandboxed test/build tools can be added later behind an explicit capab
   other). Only dispute (an **appeal**, standout S1) and question start a full juror turn.
 - **One voice per thread:** the juror that raised the finding answers; the chair speaks only at PR level.
 
-### After a push (ADR-0024 §5)
+### After a push (v1, ADR-0024 §5)
 
 - Open findings are re-anchored by `anchor_hash` (exact, then fuzzy within the file).
 - If the anchored code changed, the finding becomes `fix_candidate` and gets a cheap recheck; the
@@ -354,6 +385,10 @@ The **router** builds the jury for a turn:
 Agents that are not available on a repo are never silently used. The UI shows availability and the
 reason.
 
+**Tier note:** in the MVP the router has one built-in reviewer with one repo binding
+(`required`/`default`, first-run-setup Stage 5); v1 adds the three-reviewer jury; capability
+selection (step 1 and the `capability` mode) is v1.2.
+
 **Catalog and repo bindings:** a reviewer is not available on a repo without an enabled binding.
 Bindings are `required` (always), `default` (plain review), or `capability` (only when requested)
 with path/language/label scope. A required reviewer that cannot run blocks the review with a
@@ -376,7 +411,7 @@ Two review modes, both session turns:
   diff touches auth/payments/infra, exceeds a size threshold, or changes a public contract. The
   recommendation is advisory; it never upgrades the mode automatically.
 
-### `jury:branch-review` — complete branch review (v1.x)
+### `jury:branch-review` — complete branch review (v1.1)
 
 - Compares the PR branch to the **repository’s default branch**, not just the latest PR diff.
 - Reviews the complete branch delta (all changed files/functions vs default) against the repository
@@ -417,8 +452,9 @@ See [`provider-model-discovery.md`](provider-model-discovery.md).
 - Known models are enriched with context window, max output, pricing, and capabilities from a
   versioned registry; unknown models are flagged and use conservative defaults.
 - Keys are envelope-encrypted, write-only, origin-bound, and rotatable.
-- CommandCode is an OpenAI-compatible provider: `GET https://api.commandcode.ai/provider/v1/models`
-  (or `/v1/models`) with the key; verify the exact shape in the spike.
+- CommandCode: `GET https://api.commandcode.ai/provider/v1/models` answers without a key and has no
+  pricing or capability flags (spike 2026-11-27); keys are validated by an authenticated call and
+  models by the capability probe ([`provider-model-discovery.md`](provider-model-discovery.md)).
 
 ## 9. UI
 
@@ -448,21 +484,23 @@ See [`provider-model-discovery.md`](provider-model-discovery.md).
 
 ## 11. Acceptance criteria
 
-- [ ] A human can trigger a review on any PR in an installed repo with the `jury:pr-review` label or Check Run action; no repo toggle.
-- [ ] A session survives a process restart and a multi-day wait; a reply resumes with prior context.
-- [ ] The agent replies in the correct GitHub thread, not a duplicate top-level comment.
-- [ ] `suggest` is the default: the agent proposes, a human resolves natively/UI; no `/jury` command.
-- [ ] `auto` resolves only through the guard and is opt-in; `off` never resolves.
-- [ ] SME/admin override works with a reason and audit; a new reply reopens.
-- [ ] The agent router selects agents by explicit request, repo config, path/language/label, and
-      availability; the timeline explains why.
-- [ ] Adding a provider key fetches the model list; the UI has no free-text model field; an invalid
+Each criterion carries its tier; only MVP criteria are part of the G1 script.
+
+- [ ] (MVP) A user with repo write access can trigger a review on any PR in an installed repo with a bound reviewer, with the `jury:pr-review` label, the `PR review` Check Run action, or the UI picker; no repo toggle. Without a binding, the trigger gets the configuration fallback.
+- [ ] (MVP) A session survives a process restart and a multi-day wait; a reply resumes with prior context.
+- [ ] (MVP) The agent replies in the correct GitHub thread, not a duplicate top-level comment.
+- [ ] (MVP) `suggest` is the default: the agent proposes, a human resolves natively/UI; no `/jury` command.
+- [ ] (v1) `auto` resolves only through the guard and is opt-in; `off` never resolves.
+- [ ] (MVP) The owner can resolve, reopen, or dismiss with a reason and audit; a new reply reopens. (v1) A maintainer can accept, dismiss, or reopen with a reason, except a `critical` finding (owner only, ADR-0028). (v1.2) SME/admin overrides.
+- [ ] (MVP) The router runs the bound reviewer when its binding and availability match, and the timeline explains why it ran or was skipped. (v1) Three reviewers with path/language scopes. (v1.2) Capability requests.
+- [ ] (MVP) Adding a provider key fetches the model list; the UI has no free-text model field; an invalid
       key is rejected.
-- [ ] Keys are encrypted and never returned; a key is bound to its provider origin.
-- [ ] PR review is diff-only by default; the `jury:branch-review` label or Branch review action compares the branch to the default branch, builds/uses the repo graph, and reports an estimate.
-- [ ] A branch/T2 re-run reuses the graph and only re-indexes changed files; T0 PR review does not touch the graph.
-- [ ] All provider/session/tool/resolution actions are audited.
-- [ ] Docker Compose install runs the backend, worker, scheduler, Postgres, and UI.
+- [ ] (MVP) Keys are encrypted and never returned; a key is bound to its provider origin.
+- [ ] (MVP) PR review is diff-only and runs no model tool loop. (v1.1) PR review stays the default; the `jury:branch-review` label or Branch review action compares the branch to the default branch, builds/uses the repo graph, and reports an estimate.
+- [ ] (v1.1) A branch/T2 re-run reuses the graph and only re-indexes changed files; T0 PR review does not touch the graph.
+- [ ] (MVP) All provider/session/resolution actions are audited (tool calls from v1.1).
+- [ ] (MVP) ADR-0024 §1–§2: a comment from a non-collaborator, a bot, or Jury Forge itself starts no turn; a fork PR is skipped; a mention from a write-access user starts a reply turn and never a review; thread and session budgets stop with a hand-off message.
+- [ ] (MVP) The Docker Compose install runs Caddy, the app (API + UI), the worker (cron included; there is no separate scheduler), and Postgres.
 
 ## 12. Metrics
 
@@ -472,7 +510,11 @@ See [`provider-model-discovery.md`](provider-model-discovery.md).
 - Agent selection accuracy (manual override rate).
 - Provider/model error rate and fallback rate.
 
-## 13. Additional product ideas
+## 13. Appendix: untiered ideas
+
+> **Not approved by approving this spec.** These are candidates captured on 2026-11-15. Each needs a
+> tier in [`../capabilities.md`](../capabilities.md) and, where non-trivial, its own spec before it
+> is built. Where an idea contradicts the sections above, the sections above win.
 
 **Session UX**
 
@@ -550,7 +592,7 @@ See [`provider-model-discovery.md`](provider-model-discovery.md).
 - Prompt-injection detection/flagging; never let a reply trigger a resolve or a privileged tool.
 - Tool budgets and read-only enforcement; no shell/code execution in v1.
 - Rate limits per author/session/repo; bot-loop protection; abuse reporting.
-- Docker Compose with Postgres, queue, object storage, TLS; backup/restore/upgrade runbooks.
+- Docker Compose with Postgres (which is also the queue and the artefact store in v1), TLS; backup/restore/upgrade runbooks.
 - OTel traces per turn/tool/model; cost dashboards; alerts for stuck sessions and false resolves.
 
 **Evaluation**
@@ -570,11 +612,11 @@ See [`provider-model-discovery.md`](provider-model-discovery.md).
 
 | ID | Question | Default |
 | -- | -------- | ------- |
-| AG-01 | Which harness: LangGraph.js, OpenAI Agents SDK, Vercel AI SDK + custom, or a spike? | Spike LangGraph.js vs custom; ADR-0010. |
+| AG-01 | ~~Which harness?~~ | **Closed:** a thin turn runner with the `ai` SDK, no harness (ADR-0010 as amended, technical-approach §3.4). |
 | AG-02 | Trigger surface: labels, Check Run, UI, or app review request? | Labels + Check Run actions + UI; no slash commands. Reviewer picker unsupported for arbitrary apps (tested). |
 | AG-03 | Must the user explicitly confirm before resolution, or can the agent judge satisfaction? | `suggest` default: agent proposes, human resolves natively/UI; `auto`/`off` opt-in. |
 | AG-04 | Automatic review policy: config-as-code only, or org UI? | Config-as-code; org defaults later. |
 | AG-05 | Graph languages for v1? | TypeScript/JavaScript first; Python/Go next. |
 | AG-06 | Graph store: Postgres adjacency vs a graph database? | Postgres first; extract later. |
 | AG-07 | Session retention? | 90 days after merge/close; configurable. |
-| AG-08 | Who can trigger/resolve besides the bot? | Repo write access; org roles; audited. |
+| AG-08 | ~~Who can trigger/resolve besides the bot?~~ | **Closed:** triggers per ADR-0024 §1 (repo write access); resolution rights per ADR-0028. |
