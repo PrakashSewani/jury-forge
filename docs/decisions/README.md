@@ -58,13 +58,21 @@ new one, never rewritten. The index below is the source of truth for status.
 | [ADR-0028](ADR-0028-v1-resolution-rights.md) | v1 resolution rights: maintainers override, the owner decides critical findings | accepted | 2026-11-27 |
 | [ADR-0029](ADR-0029-model-capability-probes.md) | Model capability probes: test a model before a reviewer trusts it | accepted | 2026-11-27 |
 | [ADR-0030](ADR-0030-local-provider-egress.md) | Egress rule for local model servers: a pinned, owner-only exception for the `local` kind | accepted | 2026-11-27 |
+| [ADR-0031](ADR-0031-helm-chart-runtime-shape.md) | The Helm chart (v1.2) runs the v1 runtime shape: no scheduler Deployment, cron in `worker` | proposed | 2026-11-28 |
 
 **Phase 1a (2026-11-16):** the stack ADRs were accepted from
 [`../architecture/technical-approach.md`](../architecture/technical-approach.md).
 
-**G0 (2026-11-16):** the owner accepted the product and behaviour decisions. The stack ADRs
-(0003, 0004, 0005, 0006, 0010, 0020) stay `proposed` on purpose: they are the input to Phase 1,
-*technology and approach*, where each one is re-evaluated against alternatives before it is accepted.
+**G0 (2026-11-16):** the owner accepted the product and behaviour decisions. The stack ADRs (0003,
+0004, 0005, 0006, 0010, 0020) were left `proposed` at G0 as input to Phase 1a and were accepted at
+the end of Phase 1a the same day (above).
+
+**Pre-stack ADR bodies:** ADR-0003, ADR-0004, ADR-0006, and ADR-0022 were written before the stack
+was accepted, and their bodies still mention a scheduler, Redis/MinIO, object storage, Postgres 16+,
+or row-level security. Their status lines record what was accepted, and
+[`technical-approach.md`](../architecture/technical-approach.md) is the binding detail. The bodies
+stay as history (ADRs are never rewritten); see the
+[architecture audit](../analysis/architecture-audit-2026-11-28.md).
 
 ## Conventions
 

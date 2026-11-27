@@ -42,7 +42,7 @@ and Q-032–Q-048; a link check (0 broken) and a consistency pass across the doc
 - [ ] Stack ADRs accepted (runtime, deployment, storage, queue, auth, harness).
 - [ ] A clean Ubuntu 24.04 host with Docker 24+/Compose v2 installed reaches a first review in ≤15 min median / ≤60 min p90 from a verified bundle; Docker install, DNS, provider account, and org admin work are measured separately.
 - [ ] The setup listener is reachable on host loopback only; it is not reachable on the host's public interface.
-- [ ] The app, worker, scheduler, Postgres, and UI start; `/healthz` and `/readyz` pass.
+- [ ] The one-shot `migrate` container exits `0`; then `caddy`, `app` (API + UI), `worker` (cron included; no separate scheduler), and `postgres` start; `/healthz` and `/readyz` pass.
 - [ ] Migrations run before the app starts; the schema version is reported.
 - [ ] The GitHub App is created, installed, and verified before the owner claim; no per-repo enable toggle is required.
 - [ ] A provider key is validated by an authenticated call (not `/models` alone); `/models` is fetched; a capability probe passes; an agent binds to a catalog model (no free text) (ADR-0029).

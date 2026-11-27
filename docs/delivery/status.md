@@ -20,14 +20,50 @@ one phase `in progress` and exactly one next action.
 **Phase:** 1b, milestone **M1.0 (repository and CI)**. The owner said go on 2026-11-27. WP 1-01
 to 1-05 are merged into `dev` (PR #5) with a green CI run; spikes 1-06 and 1-07 remain.
 
-**Branch:** `docs/deployment-ops-rewrite` (documentation only: deployment and operations rewrite).
+**Branch:** `docs/architecture-alignment` (documentation only: the architecture audit and its
+fixes; stacked on `docs/deployment-ops-rewrite`, PR #8).
 
 **Next action:** run **spike S-A (WP 1-06)**: graphile-worker serialization and debounce under
 concurrency, plus the pg-boss adapter proof, written up in `docs/analysis/spikes/`. It needs a
 container runtime (CI has one; this machine's Docker was not running). S-C (WP 1-07) follows and
 needs the owner's Anthropic key or a local Ollama. Both spike notes close M1.0; then M1.1.
 
-### Landed this session (2026-11-28, deployment and operations rewrite)
+### Landed this session (2026-11-28, architecture audit and alignment)
+
+The [architecture audit](../analysis/architecture-audit-2026-11-28.md) read every document in
+`docs/architecture/` against technical-approach (ADR-0026) and the accepted ADRs. It recorded about
+80 findings and fixed all of them except two decisions for the owner. No accepted ADR body was
+changed.
+
+- **Runtime:** a thin turn runner, not LangGraph (ADR-0010 as amended); the chair is code and the
+  verifier is a non-voting call in every v1 review (ADR-0025 §4). This replaced "LangGraph
+  recommended", "optional chair model call", and "optional verifier" in `overview`, `components`,
+  `agentic-review`, `ai-pipeline`, and `extensibility`.
+- **Queue:** [`job-pipeline.md`](../architecture/job-pipeline.md) was rebuilt on graphile-worker:
+  the TA §3.3 jobs, per-session `queue_name`, `job_key` debounce, cron in `worker`, permanently
+  failed jobs instead of a DLQ table, and the step list of TA §3.4.
+- **Data model:** [`data-model.md`](../architecture/data-model.md) was rebuilt on the TA §17 tables
+  with a tier per table (MVP, v1, v1.1, v1.2). The `runs`/`run_steps`/`jobs`/`outbox`/`agent_*` model
+  is gone; RLS is not used in v1; retention is 30 days raw (Q-046). **TA §17 amended:**
+  `reviewer_repo_bindings` (the MVP specs need it) and `model_probes` (ADR-0029) were added.
+- **Security:** no RLS and no KMS in v1 (the KEK file); sessions idle 8 h / absolute 7 d; API tokens,
+  OIDC, and the wider roles tiered v1.2; two closed open decisions marked closed.
+- **Observability:** metrics and trace steps follow TA §3.12 and §3.4; `/readyz` no longer checks
+  object storage.
+- **Outside `docs/architecture/`:** G1 in `quality-gates.md` names the real containers;
+  `roadmap.md`, `capabilities.md` (Helm, queue, artefact, and Compose rows), `principles.md`, the
+  `repo-knowledge-graph` spec (no Redis, artefacts in Postgres), and "janitor" in two specs and
+  `success.md` (wording only). `decisions/README.md` no longer says the stack ADRs "stay proposed".
+- **New [ADR-0031](../decisions/ADR-0031-helm-chart-runtime-shape.md) (proposed):** the v1.2 Helm
+  chart runs the Compose roles (`app`, `worker` with cron, a migration Job); no scheduler
+  Deployment. It amends ADR-0022's component list only once accepted.
+
+**Owner questions from the audit (§4 there):** Q-A is the finding severity scale (needed by M1.5;
+ADR-0024 and ADR-0028 rely on `critical`, but no document lists the levels). Q-B is ADR-0031.
+Q-D is three cron sweeps the specs need, missing from the TA §3.3 list. Q-E is the two-worker cron
+test in M1.1. Q-F is the verifier's failure behaviour.
+
+### Landed earlier this session (2026-11-28, deployment and operations rewrite)
 
 [`deployment.md`](../architecture/deployment.md) and [`operations.md`](../architecture/operations.md)
 were rewritten to match the accepted v1 stack ([`technical-approach.md`](../architecture/technical-approach.md),
@@ -53,7 +89,8 @@ ADR-0026), and both drift notes are gone. No ADR or spec was changed.
   that other documents link to. The Helm anchor changed to `deployment.md#e-kubernetes-and-helm-v12`,
   and its one inbound link was updated.
 
-**Follow-ups found (not changed here, to keep this PR to two documents):**
+**Follow-ups found (since fixed by the architecture alignment above, except the ADR-0022 decision,
+now proposed as ADR-0031):**
 
 - Other documents still describe a separate scheduler, Redis, or MinIO as v1:
   `architecture/agentic-review.md` (around line 246), `architecture/components.md` §12,
@@ -280,6 +317,25 @@ while `AGENTS.md` and `decisions/README.md` say to supersede; the status list ha
   v1.1/v1.2, with a critical path and per-milestone exit evidence.
 
 ## Verified this session (2026-11-28)
+
+**Architecture audit and alignment (docs only):**
+
+- Every document in `docs/architecture/` was read in full; findings cite the pre-fix line numbers
+  at `c8a76d2`.
+- Each replacement was applied by exact match: a pattern had to match exactly once, or the file was
+  not written.
+- Stale-term grep over `docs/architecture/`, `docs/delivery/`, and `docs/product/` (Redis, MinIO,
+  object storage, S3, janitor, LangGraph, DLQ, `webhook_events`, `run_steps`, row-level security, KMS,
+  lease, heartbeat, Postgres 16, OIDC). Every remaining hit is one of:
+  - a "none in v1" statement;
+  - a v1.1/v1.2 item;
+  - a rejected option;
+  - the PoC history;
+  - the standout-feature ID "S3".
+- The relative-link and anchor check result is recorded below with the deployment rewrite run; it
+  covers this branch.
+- **Not verified:** nothing was implemented, so the indicative table and column lists in
+  `data-model.md` are unchecked until the M1.1 migrations exist.
 
 **Deployment and operations rewrite (docs only):**
 

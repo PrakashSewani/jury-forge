@@ -42,8 +42,9 @@ without another service.
 
 Cron runs inside `worker`; there is no separate scheduler process. graphile-worker is designed to
 fire each cron tick once across workers; an M1.1 integration test must prove that with two worker
-replicas. The daily provider-catalog refresh in the `provider-model-discovery` spec is not yet on
-this list (audit question Q-D).
+replicas. Three sweeps the specs require are not yet on this list: the daily provider-catalog refresh, the
+stuck-turn sweep (20 min, `review-progress-and-completion` RP-03), and the abandoned-setup alert
+(7 days, `first-run-setup`). See audit question Q-D.
 
 ## Turn lifecycle
 

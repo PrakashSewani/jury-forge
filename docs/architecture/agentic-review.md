@@ -83,7 +83,7 @@ turn runs at a time.
 
 ```
 PrSession
-  id, installation_id, repo_id, pr_number, state, generation, lease, last_turn_at
+  id, installation_id, repo_id, pr_number, state, generation, last_turn_at
 Thread
   id, session_id, github_thread_id, file, line, state, created_by
 Message

@@ -40,7 +40,8 @@ not a one-shot review, and not a platform.
 
 - Stack ADRs accepted: runtime, deployment, storage, queue, auth, agent harness (ADR-0010).
 - Repository structure and the one-command check.
-- Compose install (app, worker, scheduler, Postgres) with migrations and a bootstrap admin.
+- Compose install (`caddy`, one-shot `migrate`, `app`, `worker` with cron, `postgres`) with a
+  bootstrap token and first-owner claim.
 - Shared contracts (schemas), error taxonomy, OpenAPI generation.
 - Provider onboarding: key validation, `/models` discovery, encrypted storage, catalog (ADR-0011).
 - GitHub App setup, webhook ingress, queue, manual `jury:pr-review` label + Check Run action on an

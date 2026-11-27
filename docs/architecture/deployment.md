@@ -151,7 +151,7 @@ failures. `doctor` and the setup preflight warn about them; the fix is always an
 | `caddy` | `caddy:2` (pinned by digest) | 1 | `80`, `443` public | HTTP probe | `caddy-data`, `caddy-config` |
 | `migrate` | Jury Forge image, migrate command | one-shot | none | exits `0` | none |
 | `app` | Jury Forge image, `ROLE=app` | 1 | `3000` internal; `127.0.0.1:8080` setup | `/healthz`, `/readyz` | none |
-| `worker` | Jury Forge image, `ROLE=worker` | 1–N | none (`METRICS_BIND` internal) | process + queue heartbeat | none |
+| `worker` | Jury Forge image, `ROLE=worker` | 1–N | none (`METRICS_BIND` internal) | process up; queue lag in `/metrics` and `doctor` | none |
 | `postgres` | `postgres:17` | 1 | `5432` internal | `pg_isready` | `postgres-data` |
 
 These are the four long-running containers plus the one-shot `migrate` of technical-approach §2 and
@@ -401,8 +401,10 @@ the same runtime contract. The constraints that ADR fixes for the chart:
 - **Security defaults:** non-root, read-only, drop-all `securityContext`; default-deny
   NetworkPolicy with explicit egress; no plaintext secret in `values.yaml`; no cluster-admin.
 
-ADR-0022's component list and support matrix were written before technical-approach and are
-reconciled with the v1 runtime when the v1.2 chart is specified; this document does not restate them.
+ADR-0022's component list and support matrix were written before technical-approach.
+[ADR-0031](../decisions/ADR-0031-helm-chart-runtime-shape.md) (proposed) reconciles them with the v1
+runtime: `app` and `worker` Deployments plus a migration Job, cron in `worker`, external Postgres 17,
+and an optional S3 adapter. This document does not restate them.
 
 ### F. Air-gapped / offline (not in v1)
 

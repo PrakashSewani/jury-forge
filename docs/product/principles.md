@@ -62,7 +62,7 @@ the product.
 ## 8. Fail visibly and recoverably
 
 A failed run is a first-class state with a reason, a timeline, and a next action. Silent
-degradation is a bug. Every long-running operation has a lease, a heartbeat, a timeout, and a way
+degradation is a bug. Every long-running operation has an owner (a queue job), a timeout, and a way
 to cancel or retry.
 
 **Tie-breaker:** choose the option that makes failure obvious and recoverable.

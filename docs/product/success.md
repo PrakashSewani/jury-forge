@@ -36,7 +36,7 @@ The Check Run is the progress surface; the review is the completion. No comment 
 | Status visibility | Sessions where progress is visible without asking / total | 100% |
 | Placeholder comment count | Placeholder comments per session/generation | ≤ 1 |
 | Duplicate review/comment rate | Duplicate publishes or placeholder comments | 0 |
-| Stuck status rate | `in_progress` beyond 2× p95 | 0 (janitor fails it visibly) |
+| Stuck status rate | `in_progress` beyond 2× p95 | 0 (a cron sweep fails it visibly) |
 | Failure remedy | Failures with a named next action / all failures | 100% |
 
 ## Quality metrics
@@ -65,7 +65,7 @@ with evidence.
 | Run success rate | Runs that finish `completed` / runs started | ≥ 99% (excluding provider outages) |
 | Publish success rate | Runs that publish / runs that reach `post` | ≥ 99.5% |
 | Duplicate publish rate | Runs that create more than one review | 0 |
-| Stuck run rate | Runs `running` beyond 2× expected duration | 0 (janitor recovers) |
+| Stuck turn rate | Turns `running` beyond 2× expected duration | 0 (the queue retries; a cron sweep fails it visibly) |
 | Time to first finding | Webhook received → first provider finding | ≤ 60 s p50, ≤ 3 min p95 |
 | End-to-end review time | Webhook → posted review | ≤ 3 min p50, ≤ 10 min p95 |
 | Recovery time | Failed run → retried or replayed successfully | ≤ 5 min with operator action |
@@ -146,7 +146,7 @@ We will run the same benchmark on the PoC and on Jury Forge, and publish the del
 | Grounding | Line-existence only | 100% evidence-verified |
 | Time to first review | To be measured | ≤ 60 s p50, ≤ 3 min p95 |
 | Cost visibility | Token usage only | Pre-run estimate + per-run cost |
-| Stuck runs | No recovery | 0 (janitor + replay) |
+| Stuck turns | No recovery | 0 (queue retry + cron sweep; replay is v1.1) |
 | Install | Cloudflare account | Compose on a VPS |
 | Roles | Single owner | 5 roles, scoped |
 | Audit | Best-effort, 90 days | Append-only, exportable |
