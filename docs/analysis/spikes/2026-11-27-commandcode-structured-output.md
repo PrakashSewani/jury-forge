@@ -146,6 +146,10 @@ at the published DeepSeek V4 Flash rate. The V4.1 price is not in `/models`.
 
 ## Not covered
 
+> **Owner decision (2026-11-28):** S-C closes on this result. The gaps below are skipped for now.
+> The capability probe (ADR-0029) tests each provider and model before binding. CommandCode's public
+> catalog lists 12 Claude models on `/messages`, so a Claude run needs no separate Anthropic key.
+
 - Ollama or any local server (none running here); Anthropic-native Claude models; the `/responses`
   endpoint; streaming structured output; tool calling beyond the forced JSON tool.
 - More than one model. Results are for `deepseek/deepseek-v4.1-flash` on CommandCode only and do

@@ -61,14 +61,14 @@ repos.
 | 1-04 | Licence and supply chain | S | Licence allowlist check, Renovate config, pinned versions verified live (the remaining tools in approach §13) | A BSL/SSPL test dependency fails CI |
 | 1-05 | CI pipeline | S | GitHub Actions: PR check stages (approach §18), cache, multi-arch build (no push) | Green PR on `feat/walking-skeleton` |
 | 1-06 | Spike S-A (queue) ∥ | S | graphile-worker serialization and debounce under concurrency; pg-boss adapter proof | Written result in `docs/analysis/spikes/` |
-| 1-07 | Spike S-C (structured output) ∥ | S | `ai` SDK structured output across OpenAI-compatible, Anthropic, and Ollama; measure the repair rate. **Partly done 2026-11-27** (CommandCode, both API formats; [result](../analysis/spikes/2026-11-27-commandcode-structured-output.md)); Ollama and an Anthropic-native model remain | Written result; gateway interface frozen |
+| 1-07 | Spike S-C (structured output) ∥ | S | `ai` SDK structured output across OpenAI-compatible, Anthropic, and Ollama; measure the repair rate. **Partly done 2026-11-27** (CommandCode, both API formats; [result](../analysis/spikes/2026-11-27-commandcode-structured-output.md)); **closed 2026-11-28** by owner decision: the OpenAI-compatible result freezes the gateway interface; Ollama and a Claude model are skipped for now, and the capability probe (WP 1-19a) covers each provider at bind time | Written result; gateway interface frozen |
 
 **Exit evidence:** a CI run link; both spike notes; ADR amendments if a spike failed.
 
 **Progress (2026-11-27):** WP 1-01 to 1-05 are merged into `dev` (PR #5). CI evidence:
 [run 46020023291](https://github.com/PrakashSewani/jury-forge/actions/runs/46020023291), all three
 jobs green, including the testcontainers PostgreSQL integration test (see [`status.md`](status.md)).
-Still open: spikes 1-06 and 1-07. The image build and size gate in 1-05
+Still open: spike 1-06 (1-07 closed 2026-11-28). The image build and size gate in 1-05
 move to M1.2, when there is a Dockerfile to build; CI covers linux/amd64 and linux/arm64 with
 typecheck and unit tests until then.
 

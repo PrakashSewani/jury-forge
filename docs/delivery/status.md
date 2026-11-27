@@ -25,8 +25,8 @@ and a local test-config fix).
 
 **Next action:** run **spike S-A (WP 1-06)**: graphile-worker serialization and debounce under
 concurrency, plus the pg-boss adapter proof, written up in `docs/analysis/spikes/`. It needs a
-container runtime (CI has one; this machine's Docker was not running). S-C (WP 1-07) follows and
-needs the owner's Anthropic key or a local Ollama. Both spike notes close M1.0; then M1.1.
+container runtime; Docker now runs on this machine (engine 29.9.3, 2026-11-28). S-C (WP 1-07) is
+closed (owner decision below). The S-A note closes M1.0; then M1.1.
 
 ### Landed this session (2026-11-28, development-readiness check)
 
@@ -58,6 +58,17 @@ their MVP-tier rows, so M1.1 onward is unblocked.
   out of the default inbox at 30, archived only on PR merge/close). `agentic-review-sessions` no
   longer archives on "retention expiry", and AG-07 (90-day session retention) is closed by Q-046
   (1 year).
+
+5. **S-C (WP 1-07) closed** on the 2026-11-27 CommandCode result. The OpenAI-compatible path is
+   enough to freeze the gateway interface for the MVP. Ollama and a Claude model are skipped for now.
+   This narrows the spike, not the product: Anthropic-compatible and local providers stay required
+   (AGENTS.md non-negotiable 7), and the capability probe (ADR-0029, WP 1-19a) tests each provider and
+   model before it can be bound. CommandCode's public catalog lists 12 Claude models on `/messages`, so
+   the Anthropic check can run later with the same key.
+
+**Local validation (2026-11-28):** with Docker running, `pnpm check` exits 0 here: typecheck, Biome,
+dependency rules, licences, 28 unit tests, and the integration test against a real PostgreSQL 17
+container.
 
 **Tooling fix:** `pnpm check` failed on this machine because the integration glob
 `**/*.int.test.ts` also matched a leftover checkout in `.claude/worktrees/`. The integration project

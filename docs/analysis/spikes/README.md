@@ -21,7 +21,7 @@ Planned spikes from [`technical-approach.md`](../../architecture/technical-appro
 | ----- | ----- | ------ |
 | S-A | graphile-worker serialization and debounce; pg-boss swap | not started |
 | S-B | web-tree-sitter in distroless on arm64 | not started |
-| S-C | `ai` SDK structured output and repair rate | **partly done** — CommandCode (both API formats); Ollama and an Anthropic-native model remain |
+| S-C | `ai` SDK structured output and repair rate | **closed 2026-11-28** (owner): the CommandCode result is enough for the MVP; Ollama and a Claude model skipped for now, covered at bind time by the capability probe (ADR-0029) |
 | S-D | GitHub review-thread GraphQL resolve and reaction limits | not started |
 | S-E | CLI packaging, bash wrapper | not started |
 
