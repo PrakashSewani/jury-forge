@@ -125,7 +125,11 @@ from the runaway in finding 2, and most of the rest from the `output_format` fai
 repairs. That is well under one US dollar
 at the published DeepSeek V4 Flash rate. The V4.1 price is not in `/models`.
 
-## Recommendations (for the owner; nothing below is decided)
+## Recommendations
+
+> **Adopted 2026-11-27** as [ADR-0029](../../decisions/ADR-0029-model-capability-probes.md) (model
+> capability probes): probe-based mode choice, the `finish=length` guard, and key validation by an
+> authenticated call. The exact output cap is still open (Q-031).
 
 - **Gateway strategy (`technical-approach.md` §3.4).** Choose the structured-output mode **per
   provider + endpoint + model, from a recorded probe**, not from the SDK's capability defaults. For

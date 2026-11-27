@@ -6,6 +6,8 @@ Shared vocabulary. When a term is ambiguous, this page wins.
 | ---- | ------- |
 | **ADR** | Architecture Decision Record. One durable choice, with context, options, decision, and consequences. |
 | **Anchor hash** | Hash of the whitespace-normalised anchored lines ±2 lines; used to re-locate a finding after a push (ADR-0024). |
+| **Capability probe** | A short, budgeted test on synthetic fixtures that checks a model's auth, picks the structured-output mode that works, and records reasoning share and caching before the model can be bound (ADR-0029). |
+| **Spike** | A time-boxed, throwaway experiment that answers one technical question; its result is a note in `docs/analysis/spikes/`, never product code. |
 | **Appeal** | A PR author's dispute of a finding; the jury re-examines it and the finding is upheld, downgraded, or withdrawn (S1). |
 | **Coverage manifest** | The per-review list of files reviewed, expanded, summarised, skipped, or excluded, with reasons (ADR-0025). |
 | **Jury charge** | A natural-language pass/fail check defined per repo, shown as a Check Run line item (S12). |
@@ -97,7 +99,6 @@ Shared vocabulary. When a term is ambiguous, this page wins.
 | **Branch review** | v1.1: compare the PR branch to the repository default branch and review the full branch delta against the context graph. |
 | **Shadow mode** | A reviewer binding that runs the full pipeline but publishes nothing; findings are stored unpublished and compared with human review (B-01, backlog). |
 | **Zone / data policy** | Admin-assigned provider trust label and the per-repo rule (allowlist or minimum zone) deciding which providers may receive its code (B-02, backlog). |
-| **Coverage manifest** | Per-turn list of changed files as reviewed / partial / not reviewed, with reasons (B-04, backlog). |
 | **Knowledge source** | A pack, repo doc at SHA, live doc link, org convention, or graph used by a reviewer. |
 | **Doc-link snapshot** | The content-hashed copy of an allowlisted external URL fetched live for a turn; stored for audit and used as fallback. |
 | **Knowledge grant** | A scoped attachment (org/repo/reviewer/capability) with precedence and pin/latest. |

@@ -45,7 +45,7 @@ and Q-032–Q-048; a link check (0 broken) and a consistency pass across the doc
 - [ ] The app, worker, scheduler, Postgres, and UI start; `/healthz` and `/readyz` pass.
 - [ ] Migrations run before the app starts; the schema version is reported.
 - [ ] The GitHub App is created, installed, and verified before the owner claim; no per-repo enable toggle is required.
-- [ ] A provider key is validated; `/models` is fetched; an agent binds to a catalog model (no free text).
+- [ ] A provider key is validated by an authenticated call (not `/models` alone); `/models` is fetched; a capability probe passes; an agent binds to a catalog model (no free text) (ADR-0029).
 - [ ] A webhook is verified, persisted, and enqueued.
 - [ ] Manual `jury:pr-review` label or Check Run action starts a session; one built-in reviewer publishes one review (T0 diff + base-SHA instruction files; no file tools).
 - [ ] ADR-0024 safety core: a non-collaborator comment, a bot comment, and Jury Forge's own comment start no turn; a fork PR is skipped; thread/session turn budgets stop with a hand-off message; fingerprints are stable across two runs.

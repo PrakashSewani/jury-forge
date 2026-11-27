@@ -61,7 +61,7 @@ repos.
 | 1-04 | Licence and supply chain | S | Licence allowlist check, Renovate config, pinned versions verified live (the remaining tools in approach §13) | A BSL/SSPL test dependency fails CI |
 | 1-05 | CI pipeline | S | GitHub Actions: PR check stages (approach §18), cache, multi-arch build (no push) | Green PR on `feat/walking-skeleton` |
 | 1-06 | Spike S-A (queue) ∥ | S | graphile-worker serialization and debounce under concurrency; pg-boss adapter proof | Written result in `docs/analysis/spikes/` |
-| 1-07 | Spike S-C (structured output) ∥ | S | `ai` SDK structured output across OpenAI-compatible, Anthropic, and Ollama; measure the repair rate | Written result; gateway interface frozen |
+| 1-07 | Spike S-C (structured output) ∥ | S | `ai` SDK structured output across OpenAI-compatible, Anthropic, and Ollama; measure the repair rate. **Partly done 2026-11-27** (CommandCode, both API formats; [result](../analysis/spikes/2026-11-27-commandcode-structured-output.md)); Ollama and an Anthropic-native model remain | Written result; gateway interface frozen |
 
 **Exit evidence:** a CI run link; both spike notes; ADR amendments if a spike failed.
 
@@ -91,7 +91,8 @@ repos.
 | -- | ----- | ---- | -------- | --------- |
 | 1-18 | Egress module | M | `undici` dispatcher: allowlist, DNS re-check, private-range block, redirect re-check, size and time caps, `HTTPS_PROXY` | SSRF corpus passes |
 | 1-19 | Provider onboarding | M | Add/verify key (write-only, encrypted, origin-bound), `/models` discovery, catalog + registry enrichment, refresh, deprecation | No free-text model; an invalid key stores nothing |
-| 1-20 | Gateway `complete()` | M | `ai` SDK inside; zod → structured output; one repair attempt; per-provider token bucket; hard caps; redacted I/O persisted | Contract tests per provider kind with recorded fixtures |
+| 1-19a | Capability probe | M | Auth check by authenticated call; structured-output modes on synthetic fixtures; budget + estimate; `model_probes`; re-probe triggers; binding gate (ADR-0029) | A model with no passing mode cannot be bound; a bad key fails even where `/models` is public |
+| 1-20 | Gateway `complete()` | M | `ai` SDK inside; zod → structured output in the probe-chosen mode; one repair attempt (prompt mode only); `finish=length` fails; per-provider token bucket; hard caps; redacted I/O persisted | Contract tests per provider kind with recorded fixtures |
 | 1-21 | Stub provider ∥ | S | Deterministic scripted provider in `testkit`; `pnpm dev:stub` | The full pipeline runs offline |
 | 1-22 | Secret redaction | M | gitleaks-derived ruleset, entropy check, placeholders, per-rule tests, counts recorded | Redaction corpus passes; no secret reaches the gateway |
 

@@ -111,7 +111,7 @@ Every model used by the product is described by a registry entry:
 | `max_output` | Reserve for the response. |
 | `tokenizer` | Exact or approximate token counting. |
 | `input_price`, `output_price` | Cost estimate and accounting. |
-| `capabilities` | chat, structured output, tools, streaming, vision, embeddings. |
+| `capabilities` | chat, structured output, tools, streaming, vision, embeddings. Claimed by the registry; structured output is verified per endpoint by the capability probe (ADR-0029). |
 | `rate_limits` | Concurrency and RPM/TPM budgets. |
 | `notes` | Quirks, deprecations, known issues. |
 
@@ -406,7 +406,8 @@ decides whether to block a merge.
 | Failure | Behavior |
 | ------- | -------- |
 | Provider timeout | Retry; fail only that reviewer; summary notes it. |
-| Malformed output | One repair turn; then fail the reviewer. |
+| Malformed output | One repair turn (prompt-JSON mode only); then fail the reviewer. |
+| Output hits the token cap (`finish=length`) | Fail the reviewer with the reason; no repair (ADR-0029). |
 | Ungrounded finding | Drop inline; optional low-confidence note. |
 | Budget exhausted | Stop before the next call; summary explains. |
 | Index unavailable | Degrade to diff + instructions; mark the review "limited context". |

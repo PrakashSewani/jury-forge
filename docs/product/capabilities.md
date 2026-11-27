@@ -21,7 +21,7 @@ means either. Older docs that say v1.1 for the graph, branch review, or GHES are
 
 | Tier | Theme | Capabilities |
 | ---- | ----- | ------------ |
-| **MVP / Phase 1** | *Safe loop*: one reviewer, a real conversation, nothing exploitable | Compose install + bootstrap; GitHub App; **GitHub OAuth login + first-owner claim**; provider add + `/models` discovery + encrypted keys; **one built-in reviewer** on a catalog model; manual trigger (`jury:pr-review` label, Check Run action, UI picker; no slash); **T0 diff review + base-SHA instruction files (S11)**; **large-PR fitting + coverage manifest**; one review per turn; Check Run progress/completion; reply → next turn; **`suggest` resolution**; one-click feedback; **ADR-0024 safety core: trigger authz, self-detection by App ID, bot/fork skip, turn budgets, finding fingerprints**; hard per-turn caps; session timeline; health/readiness; **eval harness v0 (stub model)**; licence check in CI. |
+| **MVP / Phase 1** | *Safe loop*: one reviewer, a real conversation, nothing exploitable | Compose install + bootstrap; GitHub App; **GitHub OAuth login + first-owner claim**; provider add + `/models` discovery + encrypted keys + **model capability probe (ADR-0029)**; **one built-in reviewer** on a catalog model; manual trigger (`jury:pr-review` label, Check Run action, UI picker; no slash); **T0 diff review + base-SHA instruction files (S11)**; **large-PR fitting + coverage manifest**; one review per turn; Check Run progress/completion; reply → next turn; **`suggest` resolution**; one-click feedback; **ADR-0024 safety core: trigger authz, self-detection by App ID, bot/fork skip, turn budgets, finding fingerprints**; hard per-turn caps; session timeline; health/readiness; **eval harness v0 (stub model)**; licence check in CI. |
 | **v1 — the trust loop** | *A review you can defend* | **Jury:** Security, Correctness, Tests + non-voting verifier; code-first chair; provenance, dissent, verdict; presets (`quick`/`standard`/`deep`) with a cost estimate; `reasoning`/`fast` model roles + prompt-cache ordering (ADR-0025). **Context:** T0+ enclosing-function expansion; linked-issue and CI SARIF evidence; base-SHA `.jury-forge.yml`; one org conventions pack (ADR-0017/0023). **Conversation:** full ADR-0024 (comment versioning, re-anchoring, evidence-gated `auto`, enforced budgets, GitHub write queue); appeal; verified-fixed; incremental review on push; originating-juror thread ownership; stalled-session policy. **Output:** noise budget; risk score; jury charges; validated `suggestion` blocks; fix-prompt handoff; Check Run merge-gate policy. **Learning:** reactions + implicit acceptance; repo memory (suppressions + human-confirmed facts); per-juror scorecard. **Trust:** signed, chained receipt; egress preview; secret redaction; origin-bound keys; retention defaults (30 d raw / 1 y findings and receipts); audit + export; owner/maintainer/reader. **Ops:** backup/restore including keys; N-1 upgrade and rollback; webhook reconciler; PR-checkbox trigger; bot-author defaults; sizing floor of 2 vCPU / 4 GB / 20 GB for ≤20 devs; injection corpus as a release gate. |
 | **v1.1 — depth** | *Better reviews, more places* | Replay benchmark tooling and the public scorecard; **branch review + callers-of-changed-symbols index**, then the full graph (measurement-gated); sandboxed analyzer runs (own ADR); provider fallback; `code-review` skill folder; read-only MCP; SARIF upload; rule auto-tuning suggestions; **GHES**; CLI `--staged`. |
 | **v1.2 — platform** | *Org scale* | Reviewer catalog + studio + approval; capability registry + `jury:cap:*` labels; SME/admin/viewer/auditor roles; knowledge packs, doc links, retrieval UI, signed packs; history-seeded conventions; OIDC; Helm; per-repo provider allowlists/data zones; analytics UI; notifications; **GitLab self-managed**. |
@@ -48,8 +48,8 @@ before 2026-11-27. "Deep dive" refers to the row numbers in
 | Jury | Default jury: Security, Correctness, Tests | Planned (v1; MVP has one reviewer) | ADR-0023, Q-036 | [`specs/reviewer-assignment-and-roles.md`](specs/reviewer-assignment-and-roles.md) §8 |
 | Jury | Non-voting verifier (`confirmed`/`unconfirmed`/`wrong`) | Planned (v1) | ADR-0025 §4, Q-038 | [`../architecture/ai-pipeline.md`](../architecture/ai-pipeline.md) |
 | Jury | Code-first chair (fingerprint merge, policy-capped severity, ranked) | Planned (v1) | ADR-0025 §4 | [`specs/jury-output.md`](specs/jury-output.md) |
-| Jury | Presets `quick`/`standard`/`deep` with an up-front cost estimate | Planned (v1) | S7 | [`specs/standout-features.md`](specs/standout-features.md) |
-| Jury | Model roles `reasoning`/`fast` + prompt-cache prefix order | Planned (v1) | ADR-0025 §5, Q-044 | — (spec gap; ADR-0025 §5 is the requirement) |
+| Jury | Presets `quick`/`standard`/`deep` with an up-front cost estimate (prices from the registry or an admin override; output estimates include the probed reasoning share; otherwise tokens + "cost unknown") | Planned (v1) | S7, ADR-0029 | [`specs/standout-features.md`](specs/standout-features.md) |
+| Jury | Model roles `reasoning`/`fast` + prompt-cache prefix order. The probe's reasoning share shows whether a `fast` candidate is actually fast (DeepSeek V4.1 Flash spent about half its output on reasoning); caching was confirmed through CommandCode (51 of 90 calls) | Planned (v1) | ADR-0025 §5, Q-044, spike 2026-11-27 | — (spec gap; ADR-0025 §5 is the requirement) |
 | Context | T0+ enclosing-function expansion (files already in the diff) | Planned (v1; MVP is strict T0) | ADR-0025 §1, Q-037 | [`../architecture/ai-pipeline.md`](../architecture/ai-pipeline.md) |
 | Context | Base-SHA instruction files (the S11 set, default on) | Planned (MVP) | ADR-0027, S11 | [`specs/standout-features.md`](specs/standout-features.md) |
 | Context | Large-PR fitting + coverage manifest | Planned (MVP) | ADR-0025 §2, Q-040 (B-04) | [`specs/large-pr-handling.md`](specs/large-pr-handling.md) |
@@ -93,7 +93,7 @@ requirement until the spec is updated; do not infer behaviour beyond it.
 | Private GitHub App per instance | Proven | Keep; support multiple installations and GHES later. |
 | First-run protection | Proven | Replace `SETUP_CODE` with a rate-limited bootstrap token and recovery flow. |
 | Readiness checklist computed from state | Proven | Keep; derive from database, not client state. |
-| Instance diagnostics and environment validation | Planned | Health, dependency checks, config lint, support bundle. |
+| Instance diagnostics and environment validation | Planned | Health, dependency checks, config lint, support bundle; each bound model's last capability probe (ADR-0029). |
 | Local demo mode without a public URL | TBD | Would remove the tunnel requirement for evaluation. |
 | One-click marketplace images | Deferred | Nice for adoption; not a substitute for Compose. |
 
@@ -208,8 +208,8 @@ requirement until the spec is updated; do not infer behaviour beyond it.
 | Data retention and deletion | Planned | Per data class; export/delete. |
 | Approval workflow for prompt changes | Planned | Four-eyes for security reviewers. |
 | Egress and redaction receipt | Planned (v1; Q-033, Q-045) | Per repo/turn: provider, model, tokens, redactions, withheld files, policy decision; the operator's privacy proof. |
-| Cost budgets and alerts | Planned | Per repo/instance/period; estimates and alerts in v1. |
-| Hard per-turn caps (tokens, tool calls, wall-clock) | Planned (MVP) | Server-enforced stop with a recorded reason; bounds spend and injection blast radius. |
+| Cost budgets and alerts | Planned | Per repo/instance/period; estimates and alerts in v1. Prices come from the registry or an admin override, because a provider's `/models` may have none (CommandCode has none); an unpriced model gets a token-only budget and "cost unknown". |
+| Hard per-turn caps (tokens, tool calls, wall-clock) | Planned (MVP) | Server-enforced stop with a recorded reason; bounds spend and injection blast radius. Output caps budget for reasoning tokens (about half the output on `/chat/completions` for the spike model; a 5-token cap returned nothing), and `finish=length` on structured output is a failure, not a repair (ADR-0029). Defaults: Q-031. |
 
 ## 8. Providers and models
 
@@ -217,15 +217,16 @@ requirement until the spec is updated; do not infer behaviour beyond it.
 | ---------- | ------ | ----- |
 | OpenAI-compatible chat | Proven | Keep. |
 | Anthropic-compatible messages | Proven | Keep. |
-| Local model servers | Planned | OpenAI-compatible path; document Ollama/vLLM. |
-| Structured output / JSON schema | Planned | Prefer native support; repair fallback. |
-| Streaming | Planned | Latency and UX. |
-| Tool use / function calling | Planned | Retrieval, verification, suggestions. |
-| Provider capability registry | Planned | Windows, prices, features, health. |
-| Provider model discovery | Planned | Fetch `/models` with the key; no free-text model input (ADR-0011). |
-| Model catalog + registry enrichment | Planned | Provider truth + context/prices/capabilities; unknown models flagged. |
+| Local model servers | Planned | OpenAI-compatible path; document Ollama/vLLM. Probed like any other model (ADR-0029); spike S-C has not covered Ollama yet. |
+| Structured output / JSON schema | Planned (MVP) | The mode is chosen per provider, model, and endpoint by the capability probe — forced tool call, native schema, or prompt JSON with one repair — not by claimed support (ADR-0029). Spike: forced tool 18/18; native `json_schema` 16/18 with a runaway on empty results; Anthropic `output_format` ignored by CommandCode (0/18). |
+| Streaming | Planned | Latency and UX. Not covered by the 2026-11-27 spike; probe before relying on it. |
+| Tool use / function calling | Planned (v1.1, branch review) | Retrieval, verification, suggestions. PR review (T0/T0+) runs no tools; a forced tool call may be used only as a structured-output mode chosen by the probe (ADR-0029). |
+| Provider capability registry | Planned | Windows, prices, features, health. Features are claims until a capability probe verifies them on this instance (ADR-0029). |
+| Provider model discovery | Planned (MVP) | Fetch `/models`; no free-text model input (ADR-0011). `/models` never validates a key on its own: some providers answer without one (spike 2026-11-27). |
+| Model capability probe | Planned (MVP) | Before a model is bound, a budgeted probe on synthetic fixtures checks auth, picks the structured-output mode that actually works, and records reasoning share, caching, and latency (ADR-0029). |
+| Model catalog + registry enrichment | Planned (MVP) | Provider truth + context/prices; capabilities are claimed by the registry and verified by the probe; unknown models flagged. |
 | Encrypted, write-only provider keys | Planned | Envelope encryption, origin binding, rotation, audit. |
-| Per-provider concurrency and rate limits | Planned | Protect the provider and the bill. |
+| Per-provider concurrency and rate limits | Planned | Protect the provider and the bill. 429 → backoff; errors are classified by HTTP status, because one provider returned two different 401 body shapes (spike 2026-11-27). |
 | Provider fallback / routing | Planned (v1.1) | Per reviewer first; org-level later. |
 | Custom headers / Azure / gateways | Planned | Adapter config. |
 | Embeddings provider | TBD | Only if semantic retrieval lands. |

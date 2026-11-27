@@ -80,8 +80,10 @@ engineer uses it. Solo/homelab is served by the labelled evaluation mode, not a 
 
 ### 4. Providers and models
 
-- Add a provider with base URL + key; validate and fetch `/models`; no free-text model entry
-  (ADR-0011).
+- Add a provider with base URL + key; validate the key with an authenticated call and fetch
+  `/models`; no free-text model entry (ADR-0011).
+- **Capability probe** before a model is bound: a budgeted test on synthetic fixtures picks the
+  structured-output mode that works and records reasoning share and caching (ADR-0029).
 - Model catalog enriched with context window, prices, capabilities, and supported endpoint; unknown
   models flagged.
 - Encrypted, write-only, origin-bound, rotatable keys; per-provider health/refresh.
@@ -156,7 +158,8 @@ would support for a team that depends on it.
 
 - Compose install with Postgres, one worker, and one UI.
 - GitHub App setup and installation-level availability (no repo toggle).
-- Provider add → `/models` discovery → one built-in reviewer bound to a catalog model.
+- Provider add → `/models` discovery → capability probe → one built-in reviewer bound to a catalog
+  model.
 - Manual `jury:pr-review` label, Check Run action, or UI picker → T0 diff review with base-SHA
   instruction files → one review.
 - Large-PR fitting with a coverage manifest; never a silent partial review.

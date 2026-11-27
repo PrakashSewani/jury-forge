@@ -80,9 +80,27 @@ run with the owner's key on `deepseek/deepseek-v4.1-flash`; throwaway code outsi
   on `/chat/completions` was 16/18, with a whitespace runaway to the token cap on empty results;
   `output_format` on `/messages` appears to be ignored (0/18); prompt-only JSON needed one repair in
   about 20 % of trials.
-- The gateway recommendations (probe-based mode choice, a `finish=length` guard, caps that budget
-  for reasoning) are recorded for the owner; **no ADR was changed**. WP 1-07 is only partly done:
-  Ollama and Anthropic-native models are not covered.
+- WP 1-07 is only partly done: Ollama and Anthropic-native models are not covered.
+
+**Capability review against the spike (2026-11-27):** a row-by-row pass over `capabilities.md`.
+Reworked: structured output (probe-chosen mode, MVP), tool use (v1.1; a forced tool is only a
+structured-output mode in PR review), hard caps (reasoning tokens, `finish=length`), cost budgets
+and presets (registry/admin prices; "cost unknown"), model roles (reasoning share, caching
+confirmed), local servers and streaming (untested; probe first), capability registry (claims until
+probed), rate limits (classify errors by status), diagnostics (last probe). Also S7 in
+`standout-features.md`, Q-031 evidence, and `provider-model-discovery.md` pricing and catalog rows.
+
+**Model capability probes (owner decision, 2026-11-27)** —
+[ADR-0029](../decisions/ADR-0029-model-capability-probes.md): before a model is bound, a budgeted
+probe on synthetic fixtures checks auth with a real call, picks the structured-output mode that
+works, and records reasoning share and caching; `finish=length` is a failure, not a repair. MVP.
+Propagated to `capabilities.md`, `scope.md`, `provider-model-discovery.md` (§2.1, binding, API, UI,
+acceptance), `technical-approach.md` §3.4, `ai-pipeline.md`, `components.md`, `data-model.md`
+(`model_probes`), `implementation-plan.md` (WP 1-19a, 1-07, 1-20), G1 in `quality-gates.md`, the
+glossary (also removed a stale duplicate "Coverage manifest" entry), ADR-0011/0026 status lines,
+and the ADR indexes. New [`../analysis/spikes/README.md`](../analysis/spikes/README.md): spike
+index, S-A…S-E status, Mermaid charts of the results, and how to run a spike. The pre-v1 quality
+spike stays dropped (ADR-0023).
 
 Also noted, not changed: ADRs are amended in place (`accepted as amended`, edited status lines),
 while `AGENTS.md` and `decisions/README.md` say to supersede; the status list has no `amended`.
@@ -125,6 +143,8 @@ while `AGENTS.md` and `decisions/README.md` say to supersede; the status list ha
 
 ## Verified this session (2026-11-27)
 
+- **Spike README charts:** all 5 Mermaid blocks rendered without errors in Mermaid 11.4.1 in the
+  app's browser (a local check page).
 - **Spike calls:** 4 discovery probes, 6 auth probes, 90 structured-output trials plus an 18-trial
   re-run, all against the live CommandCode API; raw results kept in the scratch folder, summary in
   the spike note. The key was never printed or written to a file.
@@ -212,6 +232,7 @@ The checklist and its evidence live in [`quality-gates.md`](quality-gates.md#g0-
 | ADR-0026 | accepted (Phase 1a) | v1 stack: HTTP/UI, GitHub client, parsing, crypto, observability, tests, layout. |
 | ADR-0027 | accepted (owner, 2026-11-27) | Instruction files: the S11 set from the base SHA, default on; amends Q-032. |
 | ADR-0028 | accepted (owner, 2026-11-27) | v1 resolution rights: maintainers override; only the owner dismisses critical. |
+| ADR-0029 | accepted (owner, 2026-11-27) | Model capability probes: test auth and structured-output mode before binding. |
 
 ## History
 

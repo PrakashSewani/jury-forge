@@ -92,6 +92,11 @@ high-reasoning models + a chair). Chosen per trigger (label `jury:quick|standard
 action, or UI). Before the run, the Check Run shows the estimated tokens and cost from the catalog
 prices. The estimate is stored in the receipt next to the actual figures.
 
+Prices come from the registry or an admin override when the provider's `/models` has none (CommandCode
+has none); without a price the estimate shows tokens and "cost unknown". Output estimates include
+the reasoning-token share recorded by the model's capability probe (ADR-0029); on the spike model it
+was about half of all output on `/chat/completions`.
+
 **Acceptance:** every run records the preset, the estimate, and the actual cost; `Deep` needs write
 access and respects the budgets in ADR-0024.
 

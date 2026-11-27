@@ -147,9 +147,12 @@ persisted result. Model access goes through our **provider gateway**, built on t
   - Per-provider token bucket.
   - Hard per-call token and time caps.
   - Every request and response is stored redacted for the receipt.
-- **Structured output:** **zod 4.6.7 (MIT)** schemas are converted to JSON Schema and sent as native
-  structured output where the provider supports it; otherwise a strict JSON prompt with **one**
-  repair attempt; otherwise the call fails. Unknown fields are rejected.
+- **Structured output:** **zod 4.6.7 (MIT)** schemas are converted to JSON Schema. **Amended by
+  ADR-0029 (2026-11-27):** the mode — forced tool call, native schema, or a strict JSON prompt with
+  **one** repair attempt — is the one the model's **capability probe** passed, not the provider's or
+  the SDK's claimed support. A call that ends with `finish=length` fails and is not repaired. Unknown
+  fields are rejected. In `ai` 7, use `generateText` with `output: Output.object(...)`;
+  `generateObject` is deprecated.
 - **Tool use in v1:** none for T0+ PR review (the context is pre-planned). Tool calling exists in
   the gateway for v1.1 branch review.
 - **Risk:** the `ai` SDK changes fast (major 7). Mitigation: the gateway exposes our own

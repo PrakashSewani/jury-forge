@@ -1,6 +1,6 @@
 # ADR-0026: v1 stack
 
-- Status: accepted (Phase 1a, 2026-11-16)
+- Status: accepted (Phase 1a, 2026-11-16; structured-output mode choice amended by ADR-0029)
 - Date: 2026-11-16
 - Owners: architecture
 - Related: ADR-0003, 0004, 0005, 0006, 0010 (amended), 0020; full analysis in
