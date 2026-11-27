@@ -50,7 +50,12 @@ and Q-032–Q-048; a link check (0 broken) and a consistency pass across the doc
 - [ ] Manual `jury:pr-review` label or Check Run action starts a session; one built-in reviewer publishes one review (T0 diff + base-SHA instruction files; no file tools).
 - [ ] ADR-0024 safety core: a non-collaborator comment, a bot comment, and Jury Forge's own comment start no turn; a fork PR is skipped; thread/session turn budgets stop with a hand-off message; fingerprints are stable across two runs.
 - [ ] A large PR produces a coverage manifest and a first-line partial-coverage note; nothing is silently dropped.
-- [ ] The licence check rejects a BSL/SSPL/EE dependency.
+- [x] The licence check rejects a BSL/SSPL/EE dependency. Evidence (2026-11-27):
+      `scripts/check-licences.test.ts` asserts that BUSL-1.1, SSPL-1.0, Elastic-2.0, unknown, and
+      `SEE LICENSE IN` licences fail, and that the CLI exits 1 naming a BUSL-1.1 and an SSPL-1.0
+      package. It passed as a required step of `pnpm check` in CI
+      [run 46020023291](https://github.com/PrakashSewani/jury-forge/actions/runs/46020023291)
+      (PR #5).
 - [ ] The reviewer is bound to a repo with `required`/`default`; no binding means unavailable.
 - [ ] The Check Run moves `queued → in_progress → completed`; the review is the completion; no duplicate comment.
 - [ ] One-click finding feedback is recorded.

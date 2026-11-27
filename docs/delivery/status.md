@@ -17,18 +17,20 @@ one phase `in progress` and exactly one next action.
 
 ## Current handoff
 
-**Phase:** 1b, milestone **M1.0 (repository and CI)**. The owner said go on 2026-11-27. The
-documentation PR (`docs/claude-fix`, PR #4) is merged into `dev`.
+**Phase:** 1b, milestone **M1.0 (repository and CI)**. The owner said go on 2026-11-27. WP 1-01
+to 1-05 are merged into `dev` (PR #5) with a green CI run; spikes 1-06 and 1-07 remain.
 
-**Branch:** `feat/walking-skeleton` (not yet pushed).
+**Branch:** `docs/m1-0-ci-evidence` (documentation only: this CI evidence).
 
-**Next action:** push `feat/walking-skeleton`, open a PR to `dev`, and get the first green CI run.
-That run is the M1.0 exit evidence for WP 1-01 to 1-05, and the first time the testcontainers
-integration test runs. Spikes 1-06 (S-A) and 1-07 (S-C) close M1.0 after that.
+**Next action:** run **spike S-A (WP 1-06)**: graphile-worker serialization and debounce under
+concurrency, plus the pg-boss adapter proof, written up in `docs/analysis/spikes/`. It needs a
+container runtime (CI has one; this machine's Docker was not running). S-C (WP 1-07) follows and
+needs the owner's Anthropic key or a local Ollama. Both spike notes close M1.0; then M1.1.
 
 ### Landed this session (2026-11-27, M1.0 walking skeleton)
 
-Implemented on `feat/walking-skeleton`; no product behaviour, only the skeleton and the checks.
+Merged into `dev` through PR #5 (`feat/walking-skeleton`, commit `769bc1c`, merge `1182ff7`); no
+product behaviour, only the skeleton and the checks.
 
 - **WP 1-01, workspace:** pnpm workspace with `apps/{server,web,cli}` and
   `packages/{contracts,domain,pipeline,gateway,forge,parsing,store,crypto,testkit}` per
@@ -173,7 +175,25 @@ while `AGENTS.md` and `decisions/README.md` say to supersede; the status list ha
 
 ## Verified this session (2026-11-27)
 
-**M1.0, on Windows 11, Node v24.19.0, pnpm 12.4.2:**
+**M1.0 in CI (GitHub Actions):**
+
+- **PR run** [46020023291](https://github.com/PrakashSewani/jury-forge/actions/runs/46020023291)
+  on head `769bc1c` (`pull_request`): all three jobs succeeded.
+  - [`pnpm check (linux/amd64)`](https://github.com/PrakashSewani/jury-forge/actions/runs/46020023291/job/140576955358):
+    dependency-cruiser 28 modules, 16 dependencies, 0 violations; licence check passed on 260
+    package versions (162 production; 261 on Windows, where the set of platform-specific
+    optional packages differs); unit 28/28 passed; **integration 1/1 passed**. This is
+    the first run of the testcontainers test: PostgreSQL 17 started and answered a query.
+  - [`typecheck + unit (linux/arm64)`](https://github.com/PrakashSewani/jury-forge/actions/runs/46020023291/job/140576955420):
+    succeeded.
+  - [`typecheck (TypeScript 5.x fallback)`](https://github.com/PrakashSewani/jury-forge/actions/runs/46020023291/job/140576955091):
+    succeeded.
+- **`dev` push run** [46020282734](https://github.com/PrakashSewani/jury-forge/actions/runs/46020282734)
+  on merge `1182ff7`: succeeded.
+- **Still not verified:** `renovate.json` against Renovate's validator, and whether the Renovate
+  app is installed on the repository (no Renovate PR or onboarding issue has been seen yet).
+
+**M1.0 locally, on Windows 11, Node v24.19.0, pnpm 12.4.2:**
 
 - `pnpm check` exited 0: typecheck (TS 7.0.2), `biome ci` (37 files), dependency-cruiser
   (28 modules, 16 dependencies, 0 violations), licence check (261 package versions, 162
@@ -186,10 +206,8 @@ while `AGENTS.md` and `decisions/README.md` say to supersede; the status list ha
 - **TypeScript 5.9.3 fallback:** `pnpm --package=typescript@5.9.3 dlx tsc -p tsconfig.json`
   exited 0.
 - **Integration stage:** with no Docker running, it was skipped locally with the warning; with
-  `CI=1` it failed as designed. **Not verified:** the PostgreSQL container test has not run
-  anywhere yet; the first CI run is its first run.
-- **Not verified:** `renovate.json` against Renovate's validator (running the Renovate CLI was not
-  permitted in this session), and `ci.yml` on GitHub (nothing pushed yet).
+  `CI=1` it failed as designed. The container test itself ran in CI (above).
+- Running Renovate's validator locally was not permitted in this session.
 
 **Earlier in this session (docs review and spike):**
 
@@ -226,7 +244,7 @@ while `AGENTS.md` and `decisions/README.md` say to supersede; the status list ha
 
 ## Blocked by
 
-- **M1.0 exit:** a green CI run (needs a push and a PR), and spikes 1-06 (S-A, needs Docker) and
+- **M1.0 exit:** the CI run is green (PR #5); spikes 1-06 (S-A, needs a container runtime) and
   1-07 (S-C: Ollama and an Anthropic-native model are left, which needs the owner's key or a local
   Ollama).
 - **M1.1 onward:** approval of the six MVP-gate specs before the work packages that implement them:
