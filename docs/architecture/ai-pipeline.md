@@ -437,7 +437,7 @@ decides whether to block a merge.
 | Index unavailable (v1.1 branch review) | Degrade to diff + instructions; mark the review "limited context". |
 | Conventions pack unavailable | Continue without it; mark provenance. |
 | Verifier says `wrong` / `unconfirmed` | Drop / collapse; record it in the receipt. |
-| Verifier call fails | Not specified yet (audit 2026-11-28, Q-F). |
+| Verifier fails (after retries, or `finish=length`) | Publish no findings; fail the turn as `verifier_unavailable`, retryable; the Check Run follows the provider-failure rule (`neutral`, or `failure` under a blocking gate); a retry re-runs only `verify` (`jury-output` §5, Q-F). |
 | Prompt injection detected | Do not follow; note it in the run; optionally flag the PR. |
 
 ## 17. What not to do

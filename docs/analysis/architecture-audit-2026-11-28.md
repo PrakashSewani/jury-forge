@@ -185,6 +185,7 @@ Consistent: marked v1.1 and deferred. No change.
 | XD-5 | `decisions/README.md` (lines 65–67) | Says the stack ADRs "stay `proposed` on purpose"; they are accepted (the index above it says so). | M |
 | XD-6 | ADR-0003, ADR-0004, ADR-0006 bodies | Scheduler, Redis/MinIO, object storage, Postgres 16+, RLS. Their status lines already point to TA, which is accepted, so no new decision is needed; the bodies stay as history (ADRs are never rewritten). | — |
 | XD-7 | ADR-0022 body | The v1.2 chart deploys "app, worker, scheduler, and a migration Job" with "Postgres 16+ and object storage". Fixed: ADR-0031 (accepted 2026-11-28) amends the component list, and ADR-0022's status line points to it. | §4 Q-B |
+| XD-8 | `product/specs/jury-output.md` §5 | "If the chair fails, the review publishes the findings with a visible note": a rule from when the chair was a prompt. The chair is code (ADR-0025 §4), so a chair failure is an internal error. Fixed with Q-F: the turn fails visibly. | M |
 
 ## 3. What was fixed
 
@@ -219,7 +220,7 @@ table in them had changed. `branch-review.md` needed nothing.
 | Q-C | *(Answered during the audit.)* What tier are API tokens? | `session-capacity-and-visibility` (release tiers) puts "the API/CLI surface" in v1.2. | Applied: API tokens are v1.2 in `data-model.md`, `components.md`, `security.md`, and `extensibility.md`. |
 | Q-D | *(Decided 2026-11-28: the stuck-turn sweep runs every 5 min with a 20-min threshold; the catalog refresh is a daily cron in the MVP; abandoned setup uses a metric and `doctor` instead of a cron job. Recorded in TA §3.3.)* Which cron jobs does `worker` run? | TA §3.3 lists four (reconciler, retention, stalled sessions, reaction poll). The specs need three more: the daily catalog refresh (`provider-model-discovery`), the stuck-turn sweep that fails a stuck `in_progress` Check Run (`review-progress-and-completion` RP-03, 20 min), and the abandoned-setup alert after 7 days (`first-run-setup`). Older docs called these "the janitor"; they now say "a cron sweep in `worker`". | Add the three to the TA §3.3 cron list when M1.1 builds the cron registry (WP 1-10). |
 | Q-E | Is graphile-worker cron safe with several worker replicas? | Each cron tick must fire once. | An M1.1 integration test with two workers, before docs call more than one replica safe. |
-| Q-F | What happens when the verifier call fails (timeout, 5xx, `finish=length`)? | ADR-0025 defines the verifier's verdicts but not its failure. The old `ai-pipeline.md` row ("chair unavailable: use policy defaults") no longer applies, because the chair is code. | Publish nothing as confirmed, mark the findings unverified, and say so in the Check Run; decide in the `jury-output` spec before v1. |
+| Q-F | *(Decided 2026-11-28: the turn fails as `verifier_unavailable` and nothing is published; the Check Run follows the provider-failure rule; a retry re-runs only `verify`. Recorded in `jury-output` §5.)* What happens when the verifier call fails (timeout, 5xx, `finish=length`)? | ADR-0025 defines the verifier's verdicts but not its failure. The old `ai-pipeline.md` row ("chair unavailable: use policy defaults") no longer applies, because the chair is code. | Publish nothing as confirmed, mark the findings unverified, and say so in the Check Run; decide in the `jury-output` spec before v1. |
 
 ## 5. Verification
 

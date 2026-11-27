@@ -77,8 +77,16 @@ Abandoned setup is not a cron job: `/metrics` (`jf_setup_incomplete_seconds`) an
 7 days) report it. The cron lists in `job-pipeline`, `components`, `operations`, `deployment`, and
 `overview` match it, and the summaries in `agentic-review` and ADR-0031 point to §3.3.
 
-**Owner questions still open from the audit (§4 there):** Q-E is the two-worker cron test in M1.1.
-Q-F is the verifier's failure behaviour.
+**Owner decision (2026-11-28), audit Q-F:** when the verifier fails (after retries, or at
+`finish=length`), nothing is published. The turn fails as `verifier_unavailable` and is retryable;
+the Check Run follows the provider-failure rule (`neutral`, or `failure` under a blocking gate); and
+a retry re-runs only `verify`. This is recorded in `jury-output` §5 (with a v1 acceptance
+criterion), `review-progress-and-completion` §5, `ai-pipeline`, and `job-pipeline`. The same pass
+fixed `jury-output`'s stale "if the chair fails, publish anyway" rule: the chair is code, so its
+failure is an internal error that fails visibly.
+
+**Still open from the audit:** only Q-E, the two-worker cron test, which is a task for M1.1 and
+needs no decision.
 
 ### Landed earlier this session (2026-11-28, deployment and operations rewrite)
 

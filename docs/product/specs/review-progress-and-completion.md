@@ -152,6 +152,7 @@ Rules:
 | No reviewers bound | `action_required` | Fallback comment (existing) | No turn |
 | Required reviewer unavailable | `action_required` | Required-unavailable fallback | No review |
 | Provider 401/429/5xx | `neutral` with the remedy when the repo `gate` is `neutral` (the default, and always in the MVP); `failure` when the repo opted into a blocking `gate` (v1) | One failure comment with the remedy, or edit the placeholder | Turn failed, retryable |
+| Verifier unavailable (v1; error after retries or `finish=length`) | As the provider row: `neutral` with the remedy, or `failure` under a blocking `gate` | One failure message with the remedy; no findings published (`jury-output` §5) | Turn failed (`verifier_unavailable`), retryable; a retry re-runs only `verify` |
 | Cap exceeded | `neutral`/`failure` per policy | The review/status says the cap was hit; no silent truncation | Turn completed with a cap reason |
 | Label removed | `cancelled` | Placeholder edited to “cancelled” (if it exists) | Turn cancelled |
 | PR merged mid-turn | `cancelled` or `completed` with the partial result | No new comment after archive | Session archived |

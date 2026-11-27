@@ -124,6 +124,7 @@ This closes the PoC's F-007.
 | Transient network / 5xx / 429 | Retry with backoff and jitter; honour `Retry-After`; per-provider token bucket. |
 | Provider 4xx (bad key, bad model) | Fail that juror, not the whole turn; mark the provider or model `configuration_error`. |
 | Output hits the token cap (`finish=length`) | Fail that juror with the reason; no repair (ADR-0029). |
+| Verifier fails (after retries, or `finish=length`) | Fail the turn as `verifier_unavailable` and publish nothing; the stored juror steps make a retry re-run only `verify` (`jury-output` §5). |
 | Forge 4xx (permission, validation) | Fail the step with a fixable error; do not retry blindly. |
 | Database serialization / deadlock | Retry the transaction. |
 | Worker crash | The job runs again after the lock timeout; finished steps are skipped. |
