@@ -558,11 +558,14 @@ and the tree-sitter grammar packages. Verify each in the milestone that first us
 
 `orgs`, `users`, `user_sessions`, `instance_settings`, `secrets` (wrapped DEKs and ciphertext),
 `installations`, `repositories`, `webhook_deliveries`, `providers`, `provider_models`,
-`reviewers`, `reviewer_versions`, `pr_sessions`, `session_threads`, `session_messages`,
+`model_probes`, `reviewers`, `reviewer_versions`, `reviewer_repo_bindings`, `pr_sessions`, `session_threads`, `session_messages`,
 `message_versions`, `session_turns`, `turn_steps` (`turn_id`, `step`, `input_hash`, `output`, `tokens`,
 `ms`, unique `(turn_id, step)`), `session_findings`, `finding_fingerprints`, `coverage_manifests`,
 `resolutions`, `finding_feedback`, `budgets`, `usage_rollups`, `audit_events` (append-only trigger),
 `artefacts` (`bytea`, size cap, `expires_at`). graphile-worker owns its own schema.
+*Amended 2026-11-28 (architecture audit):* `reviewer_repo_bindings` and `model_probes` were added.
+The MVP specs need a binding (`agentic-review-sessions` §6: the binding is the enablement), and
+ADR-0029 needs a stored probe before a binding.
 
 The v1 migrations add: `appeals`, `suppressions`, `repo_facts`, `review_receipts`, `jury_charges`,
 `charge_results`, and the jury and verifier columns. Field-level detail lives in

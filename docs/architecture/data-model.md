@@ -1,210 +1,161 @@
-# Target data model
+# Data model
 
-Conceptual model for the reference implementation (PostgreSQL). It is deliberately richer than
-the PoC: tenancy, versioning, idempotency, audit, budgets, and run snapshots are first-class.
+Field-level reference for the PostgreSQL 17 schema of the accepted v1 stack
+([`technical-approach.md`](technical-approach.md) §3.2 and §17, ADR-0004, ADR-0026). Table names
+are normative for docs and contracts; column lists and types are indicative, and the SQL migrations
+written in M1.1 (WP 1-08) are the DDL. If this document and a migration disagree, fix one of them in
+the same pull request.
 
-> **Status:** proposed. The exact DDL follows the storage ADR. Names are normative for docs and
-> contracts; column types are indicative.
+Each table carries a **tier**: **MVP** (the first migrations, gate G1), **v1** (added by the v1
+migrations), **v1.1**, or **v1.2**. Nothing is built ahead of its tier.
 
 ## Design rules
 
-1. **Every row is tenant-scoped** (directly or through a parent). A query without a tenant scope is
-   a bug.
-2. **Configuration is versioned.** A run references the exact reviewer/policy/pack versions it
-   used. Mutation never rewrites history.
-3. **Facts and artefacts are separate.** Postgres holds facts; object storage holds bytes (raw
-   diffs, provider responses, reports, exports).
-4. **Every long-running thing has a lease and a heartbeat.** No immortal `running` state.
-5. **Every external effect has an idempotency key.** Publishing, forge calls, provider calls.
-6. **Audit is append-only.** Activity is a derived, best-effort feed.
-7. **Deletion is explicit and cascading.** Retention is a policy, not an afterthought.
+1. **Every row is tenant-scoped** by `org_id`, directly or through a parent. The `store` package's
+   repositories always filter by org, and cross-tenant tests prove it. Row-level security is **not
+   used in v1**; revisit it with multi-installation (technical-approach §3.2).
+2. **Configuration is versioned.** A turn references the exact reviewer versions, instruction files,
+   and model bindings it used. Mutation never rewrites history.
+3. **Postgres is the only datastore.** Relational data, the queue, the audit log, and artefacts all
+   live here. Large bytes (raw diffs, model requests and responses, exports) are `bytea` rows in
+   `artefacts`, each at most 2 MB, with `expires_at`. There is no object store in v1; an optional
+   S3 adapter is v1.2.
+4. **The queue is graphile-worker's own schema.** Jury Forge does not define job, lease, or
+   dead-letter tables. Durable progress lives in `session_turns` and `turn_steps`.
+5. **Every external effect has an idempotency key.** Step results are unique by `(turn_id, step)`;
+   a publish checks a stored `external_id` before posting (technical-approach §3.3).
+6. **Audit is append-only.** A trigger blocks `UPDATE` and `DELETE` on `audit_events`.
+7. **IDs are UUIDv7; times are UTC** (technical-approach §15).
+8. **Deletion is explicit and cascading.** Retention is a policy run by the daily retention job.
 
-## Tenancy and identity
+## Instance, tenancy, and identity
 
-| Entity | Key fields | Notes |
-| ------ | ---------- | ----- |
-| `organizations` | `id`, `slug`, `name`, `created_at` | The tenant. Single-operator mode is an org with one member. |
-| `users` | `id`, `login`, `email`, `display_name`, `avatar_url`, `created_at` | Identity from GitHub OAuth/OIDC. |
-| `memberships` | `org_id`, `user_id`, `role`, `created_at` | Roles: owner, admin, maintainer, viewer, auditor. |
-| `sessions` | `id`, `user_id`, `token_hash`, `expires_at`, `revoked_at`, `last_seen_at` | Hashed tokens; revocation; optional device metadata. |
-| `api_tokens` | `id`, `org_id`, `user_id`, `name`, `token_hash`, `scopes`, `expires_at`, `last_used_at` | Automation; scoped; revocable. |
-| `audit_events` | `id`, `org_id`, `actor_type`, `actor_id`, `action`, `target_type`, `target_id`, `before`, `after`, `request_id`, `run_id`, `ip`, `at` | Append-only; redacted; exportable. |
+| Table | Tier | Key fields | Notes |
+| ----- | ---- | ---------- | ----- |
+| `orgs` | MVP | `id`, `slug`, `name`, `owner_user_id`, `created_at` | The tenant. v1 is single-org per instance, but every table carries `org_id`. `owner_user_id` is the claimed owner (first-run-setup Stage 3). |
+| `users` | MVP | `id`, `github_id`, `login`, `display_name`, `avatar_url`, `created_at` | Identity from GitHub OAuth. OIDC is v1.2. |
+| `user_sessions` | MVP | `id`, `user_id`, `token_hash`, `created_at`, `last_seen_at`, `idle_expires_at`, `absolute_expires_at`, `revoked_at` | Opaque random IDs stored hashed; idle 8 h, absolute 7 d (technical-approach §3.9). |
+| `instance_settings` | MVP | `org_id`, `key`, `value`, `version`, `updated_by`, `updated_at` | Layer 2 of the configuration model (technical-approach §14): set through the UI, versioned, audited. Includes `public_url` (ADR-0021) and the setup state. |
+| `secrets` | MVP | `id`, `org_id`, `kind`, `ciphertext`, `wrapped_dek`, `key_id`, `created_at`, `rotated_at` | Envelope encryption: a DEK per secret, wrapped by the KEK from `JURY_MASTER_KEY_FILE`; `key_id` supports rotation (`jury-forge rotate-key`). Holds the GitHub App private key, client and webhook secrets, provider keys, and the receipt signing key. |
+| `audit_events` | MVP | `id`, `org_id`, `actor_type`, `actor_id`, `action`, `target_type`, `target_id`, `before`, `after`, `request_id`, `turn_id`, `ip`, `at` | Append-only (trigger); redacted; exportable. |
+| `memberships` / `role_bindings` | v1.2 | `org_id`, `principal`, `role`, `scope` | The admin, SME, member, viewer, and auditor roles (ADR-0008, ADR-0016). In v1, maintainer and reader are derived from GitHub repo access at request time and are not stored as grants (`session-capacity-and-visibility` §4). |
+| `api_tokens` | v1.2 | `id`, `org_id`, `user_id`, `name`, `token_hash`, `scopes`, `expires_at`, `last_used_at` | The API/CLI surface is v1.2 (`session-capacity-and-visibility`, release tiers). |
 
-## Forge integration
+## Forge
 
-| Entity | Key fields | Notes |
-| ------ | ---------- | ----- |
-| `forge_installations` | `id`, `org_id`, `forge` (`github`/`gitea`/…), `external_id`, `account_login`, `account_type`, `base_url`, `status`, `created_at` | Multiple installations per org. `base_url` supports GHES. |
-| `forge_credentials` | `id`, `installation_id`, `kind`, `ciphertext`, `key_version`, `created_at`, `rotated_at` | App private key, webhook secret, client secret; envelope-encrypted. |
-| `repositories` | `id`, `installation_id`, `external_id`, `full_name`, `private`, `default_branch`, `language`, `enabled`, `created_at` | `external_id` unique per forge. |
-| `webhook_events` | `id`, `installation_id`, `forge`, `delivery_id`, `event`, `action`, `payload_ref`, `received_at`, `processed_at`, `status` | Raw payload in object storage; idempotent on `(forge, delivery_id)`. |
-| `outbox` | `id`, `org_id`, `topic`, `payload`, `created_at`, `published_at`, `attempts` | Transactional outbox for queue publishing. |
+| Table | Tier | Key fields | Notes |
+| ----- | ---- | ---------- | ----- |
+| `installations` | MVP | `id`, `org_id`, `forge` (`github`), `external_id`, `account_login`, `account_type`, `base_url`, `app_secret_ids`, `status`, `created_at` | `base_url` leaves room for GHES (v1.1). App credentials are rows in `secrets`. |
+| `repositories` | MVP | `id`, `org_id`, `installation_id`, `external_id`, `full_name`, `private`, `default_branch`, `language`, `created_at` | No enable toggle (ADR-0013); review is manual-first and automatic review is config-as-code. |
+| `webhook_deliveries` | MVP | `id`, `org_id`, `installation_id`, `delivery_id`, `event`, `action`, `payload_artefact_id`, `received_at`, `processed_at`, `status` | Unique `delivery_id`; inserted in the same transaction as its job (technical-approach §5.1). The raw payload is an artefact, kept 30 days. |
 
-## Review configuration
+## Providers and models
 
-| Entity | Key fields | Notes |
-| ------ | ---------- | ----- |
-| `reviewers` | `id`, `org_id`, `name`, `slug`, `description`, `domain`, `owner_user_id`, `status`, `created_by`, `created_at`, `archived_at` | Catalog identity; owner is an SME/admin. |
-| `reviewer_versions` | `id`, `reviewer_id`, `version`, `status` (`draft`/`approved`/`active`/`archived`), `instructions`, `rules`, `provider_id`, `model_id`, `endpoint`, `params`, `output_schema`, `capability_ids`, `tool_policy`, `sandbox_policy`, `content_hash`, `created_by`, `approved_by`, `created_at`, `activated_at` | Immutable once active; model/endpoint from the catalog. |
-| `provider_credentials` | `id`, `org_id`, `name`, `provider`, `base_url`, `allowed_origins`, `ciphertext`, `key_version`, `created_at`, `last_used_at` | Credential is bound to allowed origins. No copy-to-arbitrary-URL. |
-| `reviewer_bindings` | `reviewer_version_id`, `provider_credential_id`, `model_id`, `endpoint`, `params`, `budget` | Explicit binding, replaceable. |
-| `repo_reviewer_bindings` | `id`, `repo_id`, `reviewer_id`, `reviewer_version_id`, `enabled`, `selection` (`required`/`default`/`capability`), `priority`, `paths_include`, `paths_exclude`, `context_paths`, `languages`, `labels`, `budget`, `created_by`, `updated_at` | A reviewer runs on a repo only with a binding; `capability` runs only when requested; `context_paths` is T2 branch review only. |
-| `repo_reviewer_policy` | `repo_id`, `default_mode` (`pr`/`branch`), `min_required`, `fallback_mode`, `policy_version`, `updated_at` | Default jury and fallback behavior. |
-| `capabilities` | `id`, `org_id`, `capability_key`, `name`, `description`, `parent_id`, `status`, `built_in`, `approved_by`, `created_at` | First-class capability; `capability_key` is immutable and used in the label. |
-| `capability_labels` | `id`, `org_id`, `capability_id`, `repo_id`, `label`, `status`, `last_synced_at` | `jury:cap:<key>` labels synced to every installed repo; disabled labels remain with fallback. |
-| `reviewer_capabilities` | `reviewer_version_id`, `capability_id` | Many-to-many capability tags on a reviewer version. |
-| `reviewer_approvals` | `id`, `reviewer_version_id`, `approved_by`, `approved_at`, `note` | Org approval before any binding; a maintainer still needs `allowMaintainerBindings` to bind. |
-| `role_bindings` | `id`, `org_id`, `principal_type` (`user`/`team`), `principal_id`, `role`, `scope_type` (`org`/`repo`/`domain`), `scope_id` | Owner/admin/SME/maintainer/member/viewer/auditor. |
-| `fallback_comments` | `id`, `repo_id`, `pr_number`, `policy_version`, `reason`, `github_comment_id`, `updated_at` | Dedupe/update the no-reviewers/no-match notice. |
-| `policies` | `id`, `org_id`, `scope_type` (`org`/`repo`/`branch`/`path`), `scope_id`, `version`, `config`, `created_by`, `created_at` | Validated by schema; versioned. |
+| Table | Tier | Key fields | Notes |
+| ----- | ---- | ---------- | ----- |
+| `providers` | MVP | `id`, `org_id`, `kind` (`openai_compatible`/`anthropic_compatible`/`local`), `name`, `base_url`, `allowed_origin`, `pinned_addresses`, `secret_id`, `status`, `created_at`, `last_verified_at` | Keys are write-only and origin-bound (ADR-0011). `pinned_addresses` applies only to the `local` kind (ADR-0030). |
+| `provider_models` | MVP | `id`, `provider_id`, `model_id`, `display_name`, `context_window`, `max_output`, `input_price`, `output_price`, `cache_read_price`, `cache_write_price`, `capabilities`, `supported_endpoints`, `pricing_source`, `source`, `status`, `last_seen_at` | Fetched from `/models` and enriched from the bundled registry snapshot. A binding can only name a row here (no free-text model IDs). |
+| `model_probes` | MVP | `id`, `provider_id`, `model_id`, `endpoint`, `probe_version`, `sdk_version`, `status` (`passed`/`failed`/`running`), `chosen_mode`, `mode_results`, `reasoning_share`, `cache_read_seen`, `tokens_used`, `triggered_by`, `actor_id`, `started_at`, `finished_at` | ADR-0029. A binding needs a `passed` probe for its provider, model, endpoint, and current probe version. Synthetic fixtures only. |
 
-Policy config covers: required/default/capability reviewers, severity thresholds, inline caps, publish mode,
-token/cost budgets, model allowlist, data policy, fork policy, suppression rules, and preview/approve.
+## Reviewers
 
-## Runs
+| Table | Tier | Key fields | Notes |
+| ----- | ---- | ---------- | ----- |
+| `reviewers` | MVP | `id`, `org_id`, `slug`, `name`, `role` (`security`/`correctness`/`tests`/…), `built_in`, `status`, `created_at`, `archived_at` | MVP binds one juror; v1 ships three built-in jurors (Security, Correctness, Tests) plus the non-voting verifier (ADR-0025). |
+| `reviewer_versions` | MVP | `id`, `reviewer_id`, `version`, `prompt_file_id`, `prompt_hash`, `instructions`, `model_role` (`reasoning`/`fast`), `provider_model_id` (override), `params`, `output_schema`, `content_hash`, `created_by`, `created_at`, `activated_at` | Immutable once active. The factory default is a versioned prompt file; an operator edit creates a new version (technical-approach §16). |
+| `model_role_bindings` | v1 | `org_id`, `role` (`reasoning`/`fast`), `provider_model_id`, `updated_by`, `updated_at` | ADR-0025 §5. A reviewer may override `reasoning`. |
+| `reviewer_repo_bindings` | MVP | `id`, `repo_id`, `reviewer_id`, `reviewer_version_id`, `enabled`, `selection` (`required`/`default`; `capability` is v1.2), `paths_include`, `paths_exclude`, `languages`, `budget`, `created_by`, `updated_at` | The binding is the enablement: no reviewer runs on a repo without an enabled binding, and the Check Run appears on PR open only in a bound repo (ADR-0013, ADR-0016, `agentic-review-sessions` §6). The MVP has one built-in reviewer and one binding; v1 adds path/language scopes for the three jurors. Added to technical-approach §17 on 2026-11-28. |
+| `capabilities`, `capability_labels`, `reviewer_capabilities`, `reviewer_approvals`, `fallback_comments` | v1.2 | — | The capability registry and `jury:cap:*` labels (ADR-0016, capabilities.md v1.2). |
 
-| Entity | Key fields | Notes |
-| ------ | ---------- | ----- |
-| `review_requests` | `id`, `org_id`, `repository_id`, `pr_number`, `head_sha`, `base_sha`, `compare_sha`, `review_mode` (`pr`/`branch`), `context_tier` (`T0`/`T2`), `event`, `mode` (`auto`/`manual`/`replay`), `requested_by`, `created_at` | One per webhook/try; `compare_sha` is the default branch for a branch review. |
-| `runs` | `id`, `org_id`, `request_id`, `repository_id`, `pr_number`, `head_sha`, `base_sha`, `compare_sha`, `review_mode` (`pr`/`branch`), `context_tier` (`T0`/`T2`), `generation`, `status`, `phase`, `attempt`, `lease_owner`, `lease_expires_at`, `heartbeat_at`, `error_code`, `error_detail`, `started_at`, `finished_at`, `canceled_at` | `status`: queued, running, completed, failed, canceled, skipped. `compare_sha` = default branch for branch review. |
-| `run_steps` | `id`, `run_id`, `name`, `status`, `attempt`, `started_at`, `finished_at`, `error`, `metrics`, `output_ref` | One row per step attempt; idempotent by `(run_id, name, attempt)`. |
-| `run_config_snapshot` | `run_id`, `reviewer_versions`, `policy_version`, `pack_versions`, `model_registry`, `prompt_hashes`, `context_budget` | JSON; the exact configuration used. |
-| `run_context` | `run_id`, `manifest`, `included_files`, `omitted_files`, `tokens`, `bytes`, `artefact_ref` | What the model saw and why. |
-| `provider_calls` | `id`, `run_id`, `reviewer_version_id`, `provider`, `model`, `request_hash`, `response_ref`, `prompt_tokens`, `completion_tokens`, `cost_micros`, `latency_ms`, `status`, `error`, `created_at` | Raw request/response in object storage, redacted as configured. |
-| `findings` | `id`, `run_id`, `reviewer_version_id`, `file`, `line`, `start_line`, `severity`, `title`, `body`, `confidence`, `evidence`, `fingerprint`, `status` (`published`/`summary`/`dropped`/`unverified`), `created_at` | Stable fingerprint for cross-run tracking. |
-| `finding_feedback` | `finding_id`, `user_id`, `verdict` (`helpful`/`wrong`/`fixed`/`duplicate`), `reason`, `created_at` | The learning loop. |
-| `review_publications` | `id`, `run_id`, `forge`, `external_review_id`, `idempotency_key`, `status`, `published_at`, `error` | Exactly-once publish. |
+## Sessions and turns
 
-## Agentic sessions
-
-| Entity | Key fields | Notes |
-| ------ | ---------- | ----- |
-| `pr_sessions` | `id`, `org_id`, `installation_id`, `repository_id`, `pr_number`, `state`, `generation`, `lease_owner`, `lease_expires_at`, `last_turn_at`, `archived_at` | One per PR; `state` = created/active/waiting_for_user/resolved/archived. |
-| `session_threads` | `id`, `session_id`, `github_thread_id`, `file`, `line`, `created_by`, `state`, `resolved_by`, `resolved_at` | One per review-comment thread; bot-owned threads are the only ones the bot can resolve. |
-| `session_messages` | `id`, `session_id`, `thread_id`, `role`, `agent_version_id`, `github_comment_id`, `body`, `created_at` | `role` = user/agent/system/tool; append-only. |
-| `session_participants` | `id`, `session_id`, `user_id`, `github_login`, `role`, `joined_at` | PR author, commenters, mentioned humans, maintainers; visibility is repo-scoped. |
-| `session_mentions` | `id`, `session_message_id`, `mentioned_login`, `kind` (`human`/`agent`), `created_at` | A human mention is a request for human input, not a bot instruction. |
-| `session_turns` | `id`, `session_id`, `trigger`, `mode`, `requested_capabilities`, `generation`, `status`, `input`, `plan`, `output`, `cost_micros`, `started_at`, `finished_at` | Durable unit of work; serialized per session; labels/tags recorded for provenance. |
-| `session_findings` | `id`, `session_id`, `thread_id`, `agent_run_id`, `file`, `line`, `severity`, `status`, `fingerprint`, `anchor_hash`, `agreement`, `verifier_verdict`, `evidence` | `status` = open/fix_candidate/verified_fixed/outdated/addressed/dismissed/resolved/reopened. |
-| `tool_calls` | `id`, `turn_id`, `agent_run_id`, `tool`, `input`, `output`, `tokens`, `latency_ms`, `status` | Bounded; read-only tools in v1. |
-| `resolutions` | `id`, `thread_id`, `actor_type`, `actor_id`, `mode` (`suggest`/`auto`/`off`), `evidence`, `confidence`, `created_at` | In `suggest`, actor is the human who resolved; in `auto`, the bot resolution is guarded. |
-| `agent_definitions` | `id`, `org_id`, `name`, `slug`, `role`, `created_at`, `archived_at` | Stable identity. |
-| `agent_versions` | `id`, `agent_id`, `version`, `status`, `instructions`, `rules`, `provider_id`, `model_id`, `endpoint`, `params`, `tools`, `sandbox_policy`, `content_hash`, `activated_at` | Immutable once active; provider/model/endpoint from the catalog only. |
-| `agent_scopes` | `id`, `agent_version_id`, `scope_type` (`repo`/`path`/`language`/`label`), `pattern`, `required` | Dynamic availability. |
-| `provider_models` | `id`, `provider_id`, `model_id`, `display_name`, `context_window`, `max_output`, `input_price`, `output_price`, `cache_read_price`, `cache_write_price`, `capabilities`, `supported_endpoints`, `pricing_source`, `source`, `status`, `last_seen_at` | Fetched from `/models`; enriched by the registry. |
-| `model_probes` | `id`, `provider_id`, `model_id`, `endpoint`, `probe_version`, `sdk_version`, `status` (`passed`/`failed`/`running`), `chosen_mode`, `mode_results`, `reasoning_share`, `cache_read_seen`, `tokens_used`, `triggered_by`, `actor_id`, `started_at`, `finished_at` | ADR-0029. A binding needs a `passed` probe for its provider, model, endpoint, and current probe version. Synthetic fixtures only. |
-| `repo_indexes` | `id`, `org_id`, `repository_id`, `commit_sha`, `status`, `parser_version`, `built_at`, `stale_at` | One per indexed commit. |
-| `index_nodes` | `id`, `index_id`, `kind`, `key`, `path`, `symbol`, `summary`, `content_hash`, `metadata` | File/symbol/test/config/doc/owner/finding. |
-| `index_edges` | `index_id`, `from_id`, `to_id`, `kind`, `metadata` | imports/references/tests/owns/documents/relates_to. |
-| `context_manifests` | `id`, `turn_id`, `index_id`, `included`, `omitted`, `tokens`, `bytes`, `reasons` | What the model saw and why. |
-| `coverage_manifests` | `id`, `turn_id`, `files` (path, state `reviewed`/`expanded`/`summarised`/`skipped`/`excluded`, reason, tokens) | ADR-0025 §2; part of the receipt. |
-| `finding_fingerprints` | `fingerprint`, `repository_id`, `category`, `path`, `anchor_hash`, `first_seen_turn_id`, `last_state` | ADR-0024 §4; unique `(repository_id, fingerprint)`. Code-assigned only. |
-| `message_versions` | `id`, `session_message_id`, `body_hash`, `body`, `observed_at`, `answered_by_turn_id` | ADR-0024 §3; a turn answers one version. |
-| `appeals` | `id`, `finding_id`, `appellant_user_id`, `argument_message_id`, `outcome` (`upheld`/`downgraded`/`withdrawn`/`escalated`), `votes`, `turn_id` | S1; one appeal per finding. |
-| `suppressions` | `id`, `repository_id`, `fingerprint`, `category`, `path_glob`, `reason`, `source` (`feedback`/`appeal`/`reaction`), `created_by`, `expires_at`, `revoked_at` | S4; never applies to `critical`. |
-| `repo_facts` | `id`, `repository_id`, `text`, `source_appeal_id`, `confirmed_by`, `confirmed_at`, `expires_at` | S4 positive memory; human-confirmed only. |
-| `review_receipts` | `id`, `turn_id`, `canonical_json`, `hash`, `prev_hash`, `signature`, `key_id`, `created_at` | S5; append-only hash chain per installation. |
-| `jury_charges` | `id`, `repository_id`, `charge_id`, `text`, `source_sha` | S12; read from base-SHA `.jury-forge.yml`. |
-| `charge_results` | `id`, `turn_id`, `charge_id`, `result` (`pass`/`fail`/`n_a`), `evidence` | S12; Check Run line items. |
+| Table | Tier | Key fields | Notes |
+| ----- | ---- | ---------- | ----- |
+| `pr_sessions` | MVP | `id`, `org_id`, `installation_id`, `repository_id`, `pr_number`, `state`, `generation`, `needs_human_reason`, `last_turn_at`, `archived_at` | One per `(installation_id, repository_id, pr_number)`. `state` = `created`/`active`/`waiting_for_user`/`resolved`/`archived` (`session-capacity-and-visibility` §2). |
+| `session_threads` | MVP | `id`, `session_id`, `github_thread_id`, `file`, `line`, `created_by`, `owner_reviewer_id`, `state`, `resolved_by`, `resolved_at` | One per review-comment thread; only bot-owned threads can be bot-resolved (`auto`). |
+| `session_messages` | MVP | `id`, `session_id`, `thread_id`, `role` (`user`/`agent`/`system`), `reviewer_version_id`, `github_comment_id`, `author_login`, `created_at` | Append-only; the body lives in `message_versions`. |
+| `message_versions` | MVP | `id`, `session_message_id`, `body_hash`, `body`, `observed_at`, `answered_by_turn_id` | ADR-0024 §3; a turn answers one version. |
+| `session_turns` | MVP | `id`, `session_id`, `generation`, `trigger`, `intent`, `status` (`queued`/`running`/`completed`/`failed`/`superseded`/`budget_stopped`), `config_snapshot`, `cost_micros`, `tokens`, `started_at`, `finished_at` | The durable unit of work, serialized per session by the queue (`queue_name = session:<id>`). `config_snapshot` freezes reviewer versions, prompt hashes, instruction-file hashes, and model bindings. |
+| `turn_steps` | MVP | `turn_id`, `step`, `input_hash`, `output`, `tokens`, `ms`, `created_at` | Unique `(turn_id, step)`. A retried job reads finished steps back instead of redoing them (technical-approach §3.3). Large outputs reference an artefact. |
+| `session_findings` | MVP | `id`, `session_id`, `thread_id`, `turn_id`, `reviewer_version_id`, `fingerprint`, `category`, `severity`, `file`, `line`, `start_line`, `anchor_hash`, `status`, `evidence`, `confidence`, `external_id` | `status` = `open`/`fix_candidate`/`verified_fixed`/`outdated`/`addressed`/`dismissed`/`resolved`/`reopened` (ADR-0024). `external_id` is the GitHub comment ID used for idempotent publishing. |
+| `finding_fingerprints` | MVP | `fingerprint`, `repository_id`, `category`, `path`, `anchor_hash`, `first_seen_turn_id`, `last_state` | ADR-0024 §4; unique `(repository_id, fingerprint)`. Code-assigned only. |
+| `coverage_manifests` | MVP | `id`, `turn_id`, `files` (path, state `reviewed`/`expanded`/`summarised`/`skipped`/`excluded`, reason, tokens) | ADR-0025 §2; part of the receipt. `expanded` appears from v1 (T0+). |
+| `resolutions` | MVP | `id`, `thread_id`, `actor_type`, `actor_id`, `mode` (`suggest`/`auto`/`off`), `evidence`, `confidence`, `created_at` | In `suggest`, the actor is the human who resolved; in `auto`, the bot resolution is guarded (ADR-0024 §6). |
+| `finding_feedback` | MVP | `finding_id`, `user_id`, `source` (`button`/`reaction`), `verdict` (`helpful`/`wrong`/`fixed`/`duplicate`), `reason`, `created_at` | The learning loop; reactions are polled (cron). |
+| `session_findings` jury and verifier columns | v1 | `agreement`, `jurors`, `verifier_verdict` (`confirmed`/`unconfirmed`/`wrong`), `verifier_reason` | ADR-0025 §4. |
+| `appeals` | v1 | `id`, `finding_id`, `appellant_user_id`, `argument_message_id`, `outcome` (`upheld`/`downgraded`/`withdrawn`/`escalated`), `votes`, `turn_id` | S1; one appeal per finding. |
+| `suppressions` | v1 | `id`, `repository_id`, `fingerprint`, `category`, `path_glob`, `reason`, `source` (`feedback`/`appeal`/`reaction`), `created_by`, `expires_at`, `revoked_at` | S4; never applies to `critical`. |
+| `repo_facts` | v1 | `id`, `repository_id`, `text`, `source_appeal_id`, `confirmed_by`, `confirmed_at`, `expires_at` | S4 positive memory; human-confirmed only. |
+| `review_receipts` | v1 | `id`, `turn_id`, `canonical_json`, `hash`, `prev_hash`, `signature`, `key_id`, `created_at` | S5; RFC 8785 JCS, Ed25519, an append-only hash chain per installation. |
+| `jury_charges` | v1 | `id`, `repository_id`, `charge_id`, `text`, `source_sha` | S12; read from the base-SHA `.jury-forge.yml`. |
+| `charge_results` | v1 | `id`, `turn_id`, `charge_id`, `result` (`pass`/`fail`/`n_a`), `evidence` | S12; Check Run line items. |
+| `tool_calls` | v1.1 | `id`, `turn_id`, `reviewer_version_id`, `tool`, `input`, `output`, `tokens`, `latency_ms`, `status` | Branch review only; PR review runs no model tool loop (technical-approach §3.4). |
 
 ### Session invariants
 
 1. One `pr_sessions` row per `(installation_id, repository_id, pr_number)`.
-2. One active `session_turn` per session; the queue serializes by `session_id`.
-3. A `session_threads` row can be resolved by a human natively/UI (`suggest`/`off`) or by the bot
-   in `auto`; a bot resolution requires a `resolutions` row with evidence and a prior human message.
-4. `agent_versions` reference a `provider_models` row and a capability set; a removed model marks
-   the agent `configuration_error`. A `capability` binding must reference a reviewer with at least
-   one capability.
-5. `repo_indexes` are derived and rebuildable; `index_nodes`/`index_edges` never store secrets.
-6. `context_manifests` are immutable and link to the turn's generation.
-7. Session visibility never exceeds repo visibility; a participant/reader must have repo access.
-   The session belongs to the PR, not the trigger user.
+2. One running turn per session: the queue serializes by `queue_name = session:<id>`, and replies
+   inside the 30 s debounce window coalesce into one turn (`job_key` replace mode).
+3. A turn carries `(session_id, generation)`; a step aborts as `superseded` when the generation has
+   moved (ADR-0024).
+4. A `session_threads` row is resolved by a human natively or in the UI (`suggest`/`off`), or by the
+   bot in `auto`; a bot resolution needs a `resolutions` row with evidence and a prior human message.
+5. A reviewer version references a `provider_models` row through its model role or override; a
+   removed model marks the reviewer `configuration_error`.
+6. Session visibility never exceeds repo visibility: a reader must have repo access on GitHub. The
+   session belongs to the PR, not the user who triggered it.
 
-## Knowledge
+## Artefacts, budgets, and usage
 
-| Entity | Key fields | Notes |
-| ------ | ---------- | ----- |
-| `packs` | `id`, `org_id`, `slug`, `name`, `created_at`, `archived_at` | Stable identity. |
-| `pack_versions` | `id`, `pack_id`, `hash`, `manifest`, `body`, `bytes`, `token_estimate`, `signature`, `created_by`, `created_at` | Immutable; unique `(pack_id, hash)`. |
-| `pack_documents` | `id`, `version_id`, `path`, `bytes`, `tokens`, `text`, `never_quote` | Only manifest + docs. |
-| `pack_grants` | `id`, `pack_id`, `scope_type`, `scope_id`, `precedence`, `pinned_version_id`, `enabled`, `created_at` | Global/repo/reviewer/capability; pin or latest. |
-| `knowledge_sources` | `id`, `org_id`, `kind` (`pack`/`url`/`repo-doc`/`convention`), `name`, `owner_user_id`, `status`, `created_at` | Unified source identity. |
-| `knowledge_snapshots` | `id`, `source_id`, `url`, `final_url`, `content_hash`, `title`, `text`, `fetched_at`, `status` | The fetched copy of a live doc link; stored per run for audit/fallback. |
-| `knowledge_citations` | `id`, `turn_id`, `source_id`, `version_id`, `path`, `tokens`, `created_at` | What was injected and where it came from. |
-| `reviewer_knowledge_bindings` | `reviewer_version_id`, `source_id`, `mode`, `enabled` | Explicit reviewer knowledge. |
-| `pack_chunks` | `id`, `version_id`, `path`, `chunk_index`, `text`, `tokens`, `embedding_ref` | For relevance retrieval (optional). |
+| Table | Tier | Key fields | Notes |
+| ----- | ---- | ---------- | ----- |
+| `artefacts` | MVP | `id`, `org_id`, `kind` (`diff`/`provider_request`/`provider_response`/`webhook_payload`/`export`), `bytes` (`bytea`), `size`, `sha256`, `redacted`, `created_at`, `expires_at` | ≤ 2 MB each; the daily retention job deletes expired rows (technical-approach §3.2). Never logged, never a span attribute. |
+| `budgets` | MVP | `id`, `org_id`, `scope_type` (`session`/`repo`/`installation`/`requester`), `scope_id`, `period` (`turn`/`day`/`week`/`month`), `token_limit`, `cost_limit_micros`, `action` (`warn`/`block`), `created_at` | ADR-0024 §7 hard budgets fail closed; checked in `domain` before every model call. |
+| `usage_rollups` | MVP | `org_id`, `scope_type`, `scope_id`, `period_start`, `tokens`, `cost_micros`, `turns` | Materialised for the dashboard and the scorecard. |
 
-## Budgets and usage
+## Repository graph (v1.1) and knowledge (v1.2)
 
-| Entity | Key fields | Notes |
-| ------ | ---------- | ----- |
-| `budgets` | `id`, `org_id`, `scope_type` (`session`/`repo`/`installation`/`requester`), `scope_id`, `period` (`day`/`week`/`month`), `token_limit`, `cost_limit_micros`, `action` (`warn`/`block`), `created_at` | Hard or soft; `block` fails closed (ADR-0024 §7). |
-| `usage_rollups` | `org_id`, `scope_type`, `scope_id`, `period_start`, `tokens`, `cost_micros`, `runs` | Materialised for dashboards. |
-| `model_registry` | `provider`, `model`, `context_window`, `max_output`, `tokenizer`, `input_price`, `output_price`, `capabilities`, `updated_at` | Operator-overridable. |
+| Table | Tier | Notes |
+| ----- | ---- | ----- |
+| `repo_indexes`, `index_nodes`, `index_edges` | v1.1 | Postgres adjacency tables per `(repository, commit)` for branch review (ADR-0014); derived, rebuildable, never store secrets. |
+| `context_manifests` | v1.1 | What a branch-review turn saw from the graph; PR review uses `coverage_manifests`. |
+| `knowledge_sources`, `packs`, `pack_versions`, `pack_documents`, `pack_grants`, `knowledge_snapshots`, `knowledge_citations`, `reviewer_knowledge_bindings` | v1.2 | Knowledge packs, doc links, grants, and retrieval (ADR-0017). The single org conventions pack in v1 is an instruction source recorded in the turn's `config_snapshot` and the receipt. |
 
-## Operations
+## Not in the schema
 
-| Entity | Key fields | Notes |
-| ------ | ---------- | ----- |
-| `jobs` | `id`, `queue`, `kind`, `payload`, `status`, `priority`, `run_at`, `attempts`, `max_attempts`, `lease_owner`, `lease_expires_at`, `last_error` | Or an external queue; the contract is the same. |
-| `dead_letters` | `id`, `job_id`, `reason`, `payload`, `created_at`, `replayed_at` | Operator replay. |
-| `diagnostics` | `id`, `org_id`, `kind`, `payload`, `created_at`, `expires_at` | Support bundle metadata. |
-| `retention_policies` | `org_id`, `data_class`, `retain_days`, `action` | Runs, prompts, raw responses, audit, packs. |
-
-## Relationships (simplified)
-
-```
-organizations ─┬─< memberships >─ users
-               ├─< forge_installations ─< repositories
-               ├─< reviewers ─< reviewer_versions ─< reviewer_bindings >─ provider_credentials
-               ├─< policies
-               ├─< packs ─< pack_versions ─< pack_documents / pack_chunks
-               ├─< budgets / usage_rollups
-               └─< review_requests ─< runs ─┬─< run_steps
-                                            ├─< provider_calls
-                                            ├─< findings ─< finding_feedback
-                                            └─< review_publications
-audit_events (org-scoped, append-only, references actors/targets by id)
-jobs / dead_letters (operational, org-scoped)
-```
-
-## Key invariants
-
-1. `(forge, delivery_id)` is unique in `webhook_events`.
-2. `(run_id, name, attempt)` is unique in `run_steps`.
-3. `(run_id)` is unique in `review_publications` for a successful publish; `idempotency_key` is
-   unique.
-4. A `run` can reference only `active` or `archived` reviewer versions; an active version is
-   immutable.
-5. A `pack_version` is immutable; `(pack_id, hash)` is unique.
-6. A `finding` must reference a file and a line that exist at the run's `head_sha`, or be marked
-   `unverified`.
-7. Every mutating API request writes an `audit_event`.
-8. Every `job` has a lease; a lease expiry is recoverable by the janitor.
-9. A tenant-scoped query must include `org_id`; row-level security is a defense in depth.
+- **Queue tables** (`jobs`, `dead_letters`, `outbox`): graphile-worker owns its schema; a job that
+  exhausts its attempts stays there as permanently failed, inspectable, and retryable by an admin
+  with audit (ADR-0006). The transactional outbox is `add_job` in the same transaction.
+- **A separate run model** (`review_requests`, `runs`, `run_steps`, `review_publications`,
+  `provider_calls`): a review is a `session_turn`; its steps are `turn_steps`; model requests and
+  responses are artefacts referenced from `turn_steps.output`; publish idempotency is
+  `session_findings.external_id` plus the `(turn_id, 'publish')` step result.
+- **Agent tables** (`agent_definitions`, `agent_versions`, `agent_scopes`): reviewers are the only
+  agent definition.
 
 ## Retention and deletion
 
-- Raw prompts/responses: configurable, default 90 days.
-- Findings and summaries: keep until the repository/run is deleted or retention says otherwise.
-- Audit: keep for the configured compliance window (default 1 year; exportable).
+Defaults (Q-046, `security.md` §10), all configurable:
+
+- Raw model requests and responses (artefacts): **30 days**.
 - Webhook payloads: 30 days.
-- Idempotency records: at least as long as the forge's retry window plus the retention of the
-  related run.
-- Deleting an organisation cascades through all tenant data and object-storage prefixes; the
-  operation is audited and confirmed.
+- Findings, sessions, and receipts: 1 year.
+- Audit: 1 year; exportable.
+- Idempotency records (`webhook_deliveries`, `turn_steps`): at least the forge's retry window plus the
+  retention of the related turn.
+- Deleting an organisation cascades through all tenant rows, artefacts included; the operation is
+  audited and confirmed.
 
 ## Why this is not the PoC schema
 
 | PoC | Target | Reason |
 | --- | ------ | ------ |
-| One `github_app` row | Multiple installations + credentials | Teams, GHES, multi-org |
+| One `github_app` row with plaintext-adjacent secrets | `installations` + envelope-encrypted `secrets` | GHES later, key rotation |
 | Mutable `reviewers` | `reviewers` + `reviewer_versions` | Reproducibility, rollback, prompt hashes |
-| `runs` without steps | `runs` + `run_steps` + `provider_calls` | Observability and idempotency |
-| Findings embedded as JSON | `findings` rows | Feedback, dedup, fingerprints, queries |
-| `activity_log` | `audit_events` + activity feed | Compliance and export |
+| `runs` without steps | `session_turns` + `turn_steps` | Durable sessions, observability, idempotency |
+| Findings embedded as JSON | `session_findings` + `finding_fingerprints` | Feedback, dedup, re-anchoring |
+| `activity_log` | `audit_events` (append-only) + a derived activity feed | Compliance and export |
 | No budgets | `budgets` + `usage_rollups` | Cost control |
-| Byte fields | Token estimates + model registry | Model-aware budgets |
-| No job table | `jobs` + `dead_letters` | Reliability and replay |
+| Byte fields | Token estimates + the model catalog | Model-aware budgets |
+| A Durable Object per run | graphile-worker jobs + session rows | Reliability and serialization |
 | No tenant column | `org_id` everywhere | Teams and isolation |
