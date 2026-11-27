@@ -216,8 +216,9 @@ Every prompt is assembled from labelled blocks:
 ### Output contract
 
 A strict JSON schema (zod in `contracts`), sent in the structured-output mode the model's capability
-probe passed (ADR-0029). The example below is illustrative. **The severity scale is not fixed yet**:
-it must include `critical`, which ADR-0024 §6 and ADR-0028 depend on (audit 2026-11-28, Q-A).
+probe passed (ADR-0029). The example below is illustrative; the severity enum is fixed by
+[ADR-0032](../decisions/ADR-0032-finding-severity-scale.md) (`critical > high > medium > low`, ranking
+weights 8/4/2/1).
 
 ```json
 {
@@ -227,7 +228,7 @@ it must include `critical`, which ADR-0024 §6 and ADR-0028 depend on (audit 202
       "file": "src/x.ts",
       "line": 60,
       "startLine": 55,
-      "severity": "<scale to be fixed; includes critical>",
+      "severity": "critical|high|medium|low",
       "category": "security|correctness|performance|testing|docs|style|design",
       "title": "string, <= 120 chars",
       "body": "string, <= 2000 chars",

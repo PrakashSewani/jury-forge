@@ -63,7 +63,7 @@ Every published finding keeps:
 | `model` | Provider + model from the catalog at turn time |
 | `evidence` | File/line/hunk at the generation SHA, or a knowledge citation |
 | `confidence` | Reviewer confidence, normalized to a shared scale |
-| `severity` | Reviewer severity, normalized by policy |
+| `severity` | `critical` / `high` / `medium` / `low` ([ADR-0032](../../decisions/ADR-0032-finding-severity-scale.md)); the chair takes the highest among confirming jurors, capped by policy |
 | `claim` | What the reviewer asserts, in one sentence |
 | `status` | Raised, merged, disputed, dismissed, accepted |
 

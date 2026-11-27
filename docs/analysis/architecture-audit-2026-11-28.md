@@ -126,7 +126,7 @@ tier or name; **L** = wording.
 | AI-2 | 26–101 | Stage list and headings use `index` and `jury`; no `verify` or `summarise` stage. | H |
 | AI-3 | 39 | Raw diff stored in object storage. | M |
 | AI-4 | 61–63, 148 | "Granted packs" in T0 context; v1 has one org conventions pack, and packs are v1.2. | M |
-| AI-5 | 211 | The example severity enum `info|warning|error` has no `critical`, which ADR-0024 §6 and ADR-0028 depend on. See §4 Q-A. | H |
+| AI-5 | 211 | The example severity enum `info\|warning\|error` has no `critical`, which ADR-0024 §6 and ADR-0028 depend on. See §4 Q-A. | H |
 | AI-6 | 255–271 | Eight roles listed as "the jury"; v1 has three built-in jurors (Security, Correctness, Tests). | M |
 | AI-7 | 283–294 | Model verification "optional, per policy". | H |
 | AI-8 | 306–327 | Fingerprint from "key phrases"; an "optional" chair that produces a verdict. | H |
@@ -188,8 +188,8 @@ Consistent: marked v1.1 and deferred. No change.
 
 ## 3. What was fixed
 
-Every finding in §2 except XD-6 (left as history), XD-7 (needs a decision), and AI-5 (needs a
-decision; the document now flags the gap). The fixes keep each document's structure and the
+Every finding in §2 except XD-6 (left as history) and XD-7 (proposed as ADR-0031). AI-5 was closed
+by the owner's decision on Q-A (ADR-0032). The fixes keep each document's structure and the
 section headings other documents link to:
 
 - `agentic-review.md#7-repo-knowledge-graph`
@@ -214,7 +214,7 @@ table in them had changed. `branch-review.md` needed nothing.
 
 | ID | Question | Why it matters | Recommended default |
 | -- | -------- | -------------- | ------------------- |
-| Q-A | What is the finding severity scale? | ADR-0024 §6 and ADR-0028 rely on `critical`, the chair takes "the highest severity", and the receipt prints it, but no accepted document lists the levels. The only example (`ai-pipeline.md` §6) has `info|warning|error`, with no `critical`. M1.5 needs it for the `contracts` schema. | `critical | high | medium | low | info`, written into `jury-output.md` before M1.5. |
+| Q-A | *(Decided 2026-11-28: [ADR-0032](../decisions/ADR-0032-finding-severity-scale.md), `critical`/`high`/`medium`/`low`, weights 8/4/2/1.)* What is the finding severity scale? | ADR-0024 §6 and ADR-0028 rely on `critical`, the chair takes "the highest severity", and the receipt prints it, but no accepted document lists the levels. The only example (`ai-pipeline.md` §6) has `info\|warning\|error`, with no `critical`. M1.5 needs it for the `contracts` schema. | Original default: `critical \| high \| medium \| low \| info`. The owner chose four levels without `info`. |
 | Q-B | Does the v1.2 Helm chart keep a separate scheduler Deployment? | ADR-0022 says yes; the v1 runtime has no scheduler (cron is in `worker`). | Proposed as [ADR-0031](../decisions/ADR-0031-helm-chart-runtime-shape.md): the chart runs the same roles as Compose (`app`, `worker`, a migration Job); cron stays in `worker`; S3 is optional. |
 | Q-C | *(Answered during the audit.)* What tier are API tokens? | `session-capacity-and-visibility` (release tiers) puts "the API/CLI surface" in v1.2. | Applied: API tokens are v1.2 in `data-model.md`, `components.md`, `security.md`, and `extensibility.md`. |
 | Q-D | Which cron jobs does `worker` run? | TA §3.3 lists four (reconciler, retention, stalled sessions, reaction poll). The specs need three more: the daily catalog refresh (`provider-model-discovery`), the stuck-turn sweep that fails a stuck `in_progress` Check Run (`review-progress-and-completion` RP-03, 20 min), and the abandoned-setup alert after 7 days (`first-run-setup`). Older docs called these "the janitor"; they now say "a cron sweep in `worker`". | Add the three to the TA §3.3 cron list when M1.1 builds the cron registry (WP 1-10). |

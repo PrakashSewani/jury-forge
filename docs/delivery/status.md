@@ -58,8 +58,13 @@ changed.
   chart runs the Compose roles (`app`, `worker` with cron, a migration Job); no scheduler
   Deployment. It amends ADR-0022's component list only once accepted.
 
-**Owner questions from the audit (§4 there):** Q-A is the finding severity scale (needed by M1.5;
-ADR-0024 and ADR-0028 rely on `critical`, but no document lists the levels). Q-B is ADR-0031.
+**Owner decision (2026-11-28): [ADR-0032](../decisions/ADR-0032-finding-severity-scale.md)**, audit
+Q-A. The finding severity scale is `critical`/`high`/`medium`/`low`, the same words as the risk
+score. The chair's ranking weights are 8/4/2/1, fixed in v1 and printed in the receipt. SARIF maps
+critical/high → `error`, medium → `warning`, low → `note`. The `jury-output` spec and `ai-pipeline.md`
+point to it.
+
+**Owner questions still open from the audit (§4 there):** Q-B is ADR-0031.
 Q-D is three cron sweeps the specs need, missing from the TA §3.3 list. Q-E is the two-worker cron
 test in M1.1. Q-F is the verifier's failure behaviour.
 
@@ -494,6 +499,9 @@ The checklist and its evidence live in [`quality-gates.md`](quality-gates.md#g0-
 | ADR-0027 | accepted (owner, 2026-11-27) | Instruction files: the S11 set from the base SHA, default on; amends Q-032. |
 | ADR-0028 | accepted (owner, 2026-11-27) | v1 resolution rights: maintainers override; only the owner dismisses critical. |
 | ADR-0029 | accepted (owner, 2026-11-27) | Model capability probes: test auth and structured-output mode before binding. |
+| ADR-0030 | accepted (owner, 2026-11-27) | Egress rule for local model servers: a pinned, owner-only exception for the `local` kind. |
+| ADR-0031 | proposed (2026-11-28) | The v1.2 Helm chart runs the Compose roles; cron in `worker`, no scheduler Deployment. |
+| ADR-0032 | accepted (owner, 2026-11-28) | Finding severity `critical`/`high`/`medium`/`low`; ranking weights 8/4/2/1. |
 
 ## History
 

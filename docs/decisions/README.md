@@ -59,6 +59,7 @@ new one, never rewritten. The index below is the source of truth for status.
 | [ADR-0029](ADR-0029-model-capability-probes.md) | Model capability probes: test a model before a reviewer trusts it | accepted | 2026-11-27 |
 | [ADR-0030](ADR-0030-local-provider-egress.md) | Egress rule for local model servers: a pinned, owner-only exception for the `local` kind | accepted | 2026-11-27 |
 | [ADR-0031](ADR-0031-helm-chart-runtime-shape.md) | The Helm chart (v1.2) runs the v1 runtime shape: no scheduler Deployment, cron in `worker` | proposed | 2026-11-28 |
+| [ADR-0032](ADR-0032-finding-severity-scale.md) | Finding severity scale (`critical`/`high`/`medium`/`low`) and ranking weights (8/4/2/1) | accepted | 2026-11-28 |
 
 **Phase 1a (2026-11-16):** the stack ADRs were accepted from
 [`../architecture/technical-approach.md`](../architecture/technical-approach.md).
