@@ -1,6 +1,6 @@
 # Spec: Review progress and completion
 
-- Status: draft for owner review
+- Status: draft for owner review — **MVP gate**: owner approval required before Phase 1b work that implements it (per-milestone approval, 2026-11-27)
 - Date: 2026-11-15
 - Owner: product + platform
 - Principles: 4 (secure by default), 8 (fail visibly), 9 (one vocabulary), 13 (conversation)

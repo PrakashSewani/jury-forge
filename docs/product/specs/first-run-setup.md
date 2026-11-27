@@ -1,6 +1,6 @@
 # Spec: First-run setup and instance bootstrap
 
-- Status: draft for owner review
+- Status: draft for owner review — **MVP gate**: owner approval required before Phase 1b work that implements it (per-milestone approval, 2026-11-27)
 - Date: 2026-11-15
 - Owner: product + operations + security
 - Principles: 1 (operator owns the instance), 4 (secure and private by default), 6 (secure by
@@ -275,7 +275,7 @@ Presented as a checklist with "remind me later" (advisory, not gating `ready`):
 | Owner exists, claim replayed | Refused + audited; ownership transfer is a separate admin flow. |
 | `ENCRYPTION_KEY` rotated/lost | Fail closed with `encryption_key_mismatch`; documented restore-from-backup only. |
 | Wrong installation stored | "Change installation" re-runs Stage 2 safely; pending sessions on the old installation are paused with a reason. |
-| Setup page loops / OAuth fails | App missing or OAuth callback wrong; Stage 2/3 order | Create/verify the App, then claim; re-run Stage 1.5 if the origin is stale; `PATCH /app` updates URLs |
+| Setup page loops / OAuth fails | App missing or OAuth callback wrong, or the Stage 2/3 order was skipped; create/verify the App, then claim; re-run Stage 1.5 if the origin is stale; `PATCH /app` updates URLs |
 | Origin changed | Validated, audited, App URLs updated; sessions re-login; banner until webhook self-test passes |
 | Bad domain / DNS not pointing at the host | Typed `dns_mismatch` with the records to create; origin is not saved |
 | Ports 80/443 blocked | `tls_unreachable`; the origin may be saved but `ready` is false; checklist for firewall/security group and retry |

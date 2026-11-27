@@ -218,6 +218,11 @@ cross-tenant tests, a lint rule or code review checklist.
 
 ## 6. Authorization matrix (v1)
 
+> **Tier note (2026-11-27):** this matrix uses the full role model (ADR-0008). v1 ships only
+> **owner, maintainer, and reader** (ADR-0023); the admin, viewer, and auditor columns arrive in
+> v1.2. The MVP has one operator, the claimed owner. Who may accept, dismiss, or reopen a finding
+> is in ADR-0028 (v1) and ADR-0012 (v1.2 roles), not in this table.
+
 | Capability | Owner | Admin | Maintainer | Viewer | Auditor |
 | ---------- | :---: | :---: | :--------: | :----: | :-----: |
 | Install / upgrade / config | ✓ | — | — | — | — |
@@ -228,7 +233,7 @@ cross-tenant tests, a lint rule or code review checklist.
 | Activate a reviewer version | ✓ | ✓ | — | — | — |
 | Manage policies | ✓ | ✓ | — | — | — |
 | Manage knowledge packs | ✓ | ✓ | ✓ | — | — |
-| Enable repositories | ✓ | ✓ | ✓ | — | — |
+| Bind reviewers to repositories (no enable toggle, ADR-0013) | ✓ | ✓ | ✓ | — | — |
 | Trigger a run / try | ✓ | ✓ | ✓ | — | — |
 | Cancel/replay a run | ✓ | ✓ | ✓ | — | — |
 | Read runs/findings | ✓ | ✓ | ✓ | ✓ | ✓ |
@@ -264,6 +269,12 @@ A single egress policy module decides whether a request may leave:
 
 ## 9. Prompt and output safety
 
+- **Review instructions are read from the base SHA**, never the head branch (S11). A PR cannot
+  rewrite the rules it is reviewed by; changed instruction files are flagged in the review.
+- Linked-issue text, SARIF results, replies, and prior agent output are untrusted blocks; prior
+  agent output is labelled `prior_agent_output` and is never evidence (ADR-0024 §2).
+- A public **prompt-injection corpus** (diff, reply, edited comment, instruction file, linked
+  issue, SARIF, pack) runs in CI and is a release gate.
 - System prompt is built only from trusted configuration; data is inserted as data.
 - A random nonce delimits untrusted blocks; all occurrences of the nonce in data are escaped.
 - The output schema is strict; unknown fields are rejected; sizes are capped.
@@ -278,6 +289,14 @@ A single egress policy module decides whether a request may leave:
   request id, run id, timestamp, IP.
 - Data-egress events: provider, model, token counts, redactions, policy decision.
 - Export as JSON/CSV; retention configurable; deletion is audited.
+- **Retention defaults (v1):** raw prompts/responses 30 days; findings, sessions, and receipts 1 year;
+  audit 1 year; per-repo purge. All configurable.
+- **Egress preview (v1):** the owner can see the exact redacted payload for a repo before the first
+  provider call.
+- **Receipt signing:** an instance Ed25519 key generated at install, encrypted at rest, included in
+  backups; rotation starts a new chain segment; `jury-forge receipt verify` works offline (S5).
+- **Abuse and cost controls:** ADR-0024 trigger authz, fork skip, turn budgets, and per-requester
+  budgets that fail closed.
 - Activity feed is derived and best-effort; it is not the audit source.
 
 ## 11. Deployment hardening checklist

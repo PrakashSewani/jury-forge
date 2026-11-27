@@ -59,7 +59,10 @@ if CPU/memory requires it.
   window, tokenizer, price, health.
 - Adapters: OpenAI-compatible, Anthropic-compatible, local (OpenAI-compatible), and later others.
 - Request policy: timeouts, retries with jitter, `Retry-After`, circuit breaker, concurrency.
-- Structured output: native JSON schema where available; repair turn otherwise.
+- Structured output: the mode the model's capability probe passed (forced tool, native schema, or
+  prompt JSON with one repair); `finish=length` is a failure (ADR-0029).
+- Capability probe runner: synthetic fixtures, token budget, results stored per provider, model,
+  endpoint, and probe version.
 - Usage and cost accounting per call, per reviewer, per run.
 - Egress enforcement: the destination must match the credential's allowed origin.
 - Redaction hooks before the request leaves the process.

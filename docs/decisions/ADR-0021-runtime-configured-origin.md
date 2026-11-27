@@ -1,6 +1,6 @@
 # ADR-0021: Runtime-configured public origin
 
-- Status: proposed
+- Status: accepted (G0, 2026-11-16)
 - Date: 2026-11-15
 - Owners: architecture + operations + security
 - Supersedes: the "set `PUBLIC_URL` in `.env` before first start" assumption in the ops draft

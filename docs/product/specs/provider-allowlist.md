@@ -1,6 +1,6 @@
 # Spec: Per-repo provider allowlist and data zones (B-02)
 
-- Status: draft — backlog, not committed (see `capabilities.md` §13)
+- Status: draft — **promoted to v1.2** (Q-033, roadmap v1.2; earlier only if a security buyer requires it). Owner approval of this spec is pending.
 - Owner: product + security
 - Date: 2026-11-15
 - Principles: 1 (operator owns the instance), 3 (prompt is not a boundary), 4 (secure and private by

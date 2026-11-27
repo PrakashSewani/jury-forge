@@ -16,18 +16,19 @@ choose a runtime that serves the product rather than one that constrains it.
 
 ## Current phase
 
-**Phase 0 — product definition and documentation. No product code.**
+**Phase 0 (G0) and Phase 1a (technology and approach) are done (2026-11-16). Next: Phase 1b —
+walking skeleton. No product code until the owner says go.**
 
-Until the owner explicitly opens implementation:
+The stack is accepted (ADR-0026, `docs/architecture/technical-approach.md`). Until the owner
+explicitly opens implementation (Phase 1b):
 
 - Deliver docs, specs, ADRs, diagrams, agent definitions, and research.
 - Code is allowed only for documentation tooling or throwaway analysis scripts that are not part
   of the product.
 - If a question cannot be answered from evidence or an approved document, ask. Do not invent a
   requirement.
-- The owner will supply the final product capabilities later. Until then, mark capability gaps as
-  `TBD` and keep them in [`docs/product/capabilities.md`](docs/product/capabilities.md), not in
-  speculative code.
+- New capability requests go into [`docs/product/capabilities.md`](docs/product/capabilities.md)
+  with a spec before they are built.
 
 ## Non-negotiables
 
@@ -173,10 +174,12 @@ A change is done when all of the following are true:
 | [`docs/product/principles.md`](docs/product/principles.md)     | You need tie-breakers.                                   |
 | [`docs/product/capabilities.md`](docs/product/capabilities.md) | You need the capability backlog and TBDs.                |
 | [`docs/architecture/overview.md`](docs/architecture/overview.md) | You need the target system shape.                      |
+| [`docs/architecture/technical-approach.md`](docs/architecture/technical-approach.md) | You need the stack, layout, and Phase 1b plan. |
 | [`docs/architecture/security.md`](docs/architecture/security.md) | You are touching auth, secrets, egress, or prompts.    |
 | [`docs/architecture/ai-pipeline.md`](docs/architecture/ai-pipeline.md) | You are touching review quality.                  |
 | [`docs/architecture/operations.md`](docs/architecture/operations.md) | You are touching deployment, upgrades, or backups.  |
 | [`docs/delivery/roadmap.md`](docs/delivery/roadmap.md)         | You need the plan.                                       |
+| [`docs/delivery/implementation-plan.md`](docs/delivery/implementation-plan.md) | You need the next work package and its exit evidence. |
 | [`docs/delivery/status.md`](docs/delivery/status.md)           | You need the current handoff.                            |
 | [`docs/decisions/README.md`](docs/decisions/README.md)         | You need the decision log format.                        |
 
@@ -203,3 +206,9 @@ A change is done when all of the following are true:
   Cloudflare or managed-service requirement.
 - 2026-11-15: Harness candidates require MIT/Apache-compatible licences. No BSL/SSPL/open-core
   dependency in the core; see ADR-0010.
+- 2026-11-16: The pre-v1 quality spike is **removed**; quality is measured after v1 via feedback
+  and replay. The owner wants the product to be best-in-class: positioning is fully MIT,
+  telemetry-off, self-hosted jury + durable conversation + verifiable receipt (ADR-0024, ADR-0025,
+  `product/specs/standout-features.md`).
+- 2026-11-16: **Models propose, code decides.** Finding identity, dedup, chair, risk score,
+  resolution guards, and budgets are deterministic code; models are used only for judgement.

@@ -1,6 +1,6 @@
 # ADR-0015: Session capacity, interface, roles, and visibility
 
-- Status: proposed
+- Status: accepted (G0, 2026-11-16)
 - Date: 2026-11-15
 - Owners: product + platform + security
 - Supersedes: —

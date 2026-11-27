@@ -1,6 +1,6 @@
 # ADR-0014: Diff-only PR review with an incremental repository graph
 
-- Status: proposed
+- Status: accepted (G0, 2026-11-16; graph and branch review are v1.1, measurement-gated)
 - Date: 2026-11-15
 - Owners: AI pipeline + architecture
 - Supersedes: the PoC's diff-only context + literal reference paths (as the context strategy)
@@ -25,10 +25,13 @@ tests, or the rest of the repository unless the operator listed paths.
 
 > **Note (2026-11-15):** [ADR-0018](ADR-0018-release-tiering-and-quality-first-sequencing.md)
 > sequences the graph and branch review into v1.1 (benchmark-gated). [ADR-0019](ADR-0019-pr-review-context-tiers.md)
-> proposed bounded reads for PR review and was **rejected**; PR review remains strict T0 diff-only.
-> The decisions below stand.
+> proposed bounded reads of arbitrary files for PR review and was **rejected**. PR review stays
+> diff-only: from v1 the hunks are expanded to the enclosing function within files already in the
+> diff (T0+, [ADR-0025](ADR-0025-v1-review-pipeline.md)); no file outside the diff is read. The
+> decisions below stand.
 
-- **PR review is diff-only.** It sends the PR diff/hunks and metadata; no graph, no full files.
+- **PR review is diff-only.** It sends the PR diff/hunks (T0+ expansion per ADR-0025) and metadata;
+  no graph, and no file outside the diff.
 - **Branch review uses the graph.** It compares the branch to the default branch and provides the
   graph as context.
 - **The review target is the branch delta vs the repository default branch.** The graph is context,

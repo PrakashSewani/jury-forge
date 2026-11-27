@@ -1,6 +1,6 @@
 # Spec: MCP surface (B-07)
 
-- Status: draft — backlog, not committed (see `capabilities.md` §13)
+- Status: draft — reviewer-side MCP client **promoted to v1.1** (deep dive 4.6, WP 11-08); the read-only findings server stays backlog. Owner approval of this spec is pending.
 - Owner: product + security + architecture
 - Date: 2026-11-15
 - Principles: 3, 4, 7, 8, 10

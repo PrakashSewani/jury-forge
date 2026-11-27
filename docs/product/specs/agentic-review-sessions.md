@@ -1,6 +1,6 @@
 # Spec: Agentic PR review sessions
 
-- Status: draft for owner review
+- Status: draft for owner review — **MVP gate**: owner approval required before Phase 1b work that implements it (per-milestone approval, 2026-11-27)
 - Date: 2026-11-15
 - Owner: product + architecture
 - Principles: 2 (trustworthy review), 3 (prompt is not a boundary), 5 (boring operations), 7 (extensible), 8 (fail visibly), 11 (wedge)
@@ -146,8 +146,9 @@ Surfaces, in order of preference:
    `Jury Forge` check run with the action button `PR review` (and `Branch review` in v1.x; Checks API
    `actions`; max 3, label ≤ 20 chars). Clicking a button sends `check_run.requested_action` to the app
    and starts the turn. No comment is posted just to trigger. Requires `checks: write`.
-2. **PR label (modes):** `jury:pr-review` (strict T0: PR diff/hunks + metadata + thread context;
-   no repository file reads, no graph) and `jury:branch-review` (v1.x: complete branch review against the
+2. **PR label (modes):** `jury:pr-review` (diff-only: strict T0 in the MVP, T0+ enclosing-function
+   expansion from v1, ADR-0025; PR diff/hunks + metadata + thread context; no file outside the
+   diff, no graph) and `jury:branch-review` (v1.x: complete branch review against the
    repo context graph, T2). One click in the sidebar; the app listens to `pull_request.labeled`.
    These two labels are **modes**.
    **Capability labels** `jury:cap:<id>` request a capability group **within the reviewers already
@@ -245,10 +246,29 @@ optional; sandboxed test/build tools can be added later behind an explicit capab
 
 ### Loop limits
 
-- Max turns per session: configurable (for example 20) before requiring an explicit human command.
+> **Binding rules: [ADR-0024](../../decisions/ADR-0024-conversation-safety-and-finding-identity.md).**
+> Only write-access users trigger reviews; the PR author may reply on its own Jury Forge threads;
+> others and all bots never start a turn; fork PRs are skipped by default (MVP). Self-detection is by
+> App ID. Each thread gets at most 6 agent replies and each session at most 40 turns per generation,
+> then the agent hands off to a human. Each user gets at most 10 reply turns per hour. A turn answers
+> the exact comment version it read.
+
+- Max turns per session: 40 per generation (ADR-0024), then a human hand-off message.
 - Max tokens, tool calls, and wall-clock per turn; currency cap only when pricing is known.
 - A turn that hits a limit posts a short status, stops, and waits — it never silently truncates.
 - A user reply interrupts/queues; it does not run a second turn in parallel with the current one.
+- **Reply intent** is classified first by the `fast` model (dispute / question / fixed / won't-fix /
+  other). Only dispute (an **appeal**, standout S1) and question start a full juror turn.
+- **One voice per thread:** the juror that raised the finding answers; the chair speaks only at PR level.
+
+### After a push (ADR-0024 §5)
+
+- Open findings are re-anchored by `anchor_hash` (exact, then fuzzy within the file).
+- If the anchored code changed, the finding becomes `fix_candidate` and gets a cheap recheck; the
+  result is posted as **"Verified fixed in `<sha>`"** or "Still present" (S2).
+- If the anchor is lost, the finding becomes `outdated` and is not reposted.
+- When an automatic or manual trigger is active, **incremental review** covers only the new commits'
+  diff, and open findings are never repeated.
 
 ## 5. Resolution protocol
 
@@ -265,7 +285,9 @@ commands; a human resolves natively in GitHub or via the Jury Forge UI.
 
 ### `auto` (opt-in)
 
-The agent may call `resolve_thread` only when all guard checks pass:
+The agent may call `resolve_thread` only when all guard checks pass (ADR-0024 §6 is binding: the
+anchored code changed after the finding, the recheck says `fixed` above the threshold, no human
+dispute since, and severity below `critical`):
 
 1. The thread was created by Jury Forge.
 2. There is a human response after the last agent finding/question.
@@ -288,11 +310,16 @@ rate is a benchmark/scorecard metric.
 
 The agent validates; **SMEs and higher-level roles can overwrite**.
 
+> **v1 (ADR-0028, 2026-11-27):** v1 has only owner, maintainer, and reader. The owner acts on any
+> finding; a maintainer can accept, dismiss, or reopen with a reason, except that only the owner
+> dismisses or resolves a `critical` finding. The MVP has one operator, the owner. The table below
+> is the full role model; admin, SME, and auditor arrive in v1.2.
+
 | Actor | Can override |
 | ----- | ------------ |
 | Owner / Admin | Resolve, reopen, or dismiss any thread in the org, with a reason |
 | SME | Resolve/reopen/dismiss in their domain and assigned repos, with a reason |
-| Maintainer | Reopen a thread to challenge it; cannot mark it resolved on the bot’s behalf |
+| Maintainer | v1: accept, dismiss, or reopen with a reason, except `critical` findings (owner only; ADR-0028) |
 | Author / member | Reply only; GitHub UI resolution is recorded as a human action |
 | Auditor | Read-only |
 

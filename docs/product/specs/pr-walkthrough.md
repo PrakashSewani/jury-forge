@@ -27,7 +27,7 @@ not dilute the wedge or be mistaken for a verdict.
    it never runs automatically unless a repo policy opts in.
 2. It is performed by an **approved reviewer bound to the repo with the capability `walkthrough`**
    (ADR-0016). No such binding → the standard no-reviewer fallback comment.
-3. The agent uses strict T0 diff-only context and produces one **walkthrough comment**:
+3. The agent uses diff-only context (strict T0 in the MVP, T0+ from v1 per ADR-0025) and produces one **walkthrough comment**:
    - purpose (a short grounded summary),
    - changes grouped by area, each listing the files involved,
    - a suggested review order,

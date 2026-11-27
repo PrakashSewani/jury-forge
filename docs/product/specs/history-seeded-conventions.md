@@ -1,6 +1,6 @@
 # Spec: History-seeded conventions (B-06)
 
-- Status: draft — backlog, not committed (see `capabilities.md` §13)
+- Status: draft — **promoted to v1.2** (deep dive 5.5, WP 12-05). Owner approval of this spec is pending.
 - Owner: product + AI pipeline + security
 - Date: 2026-11-15
 - Principles: 2, 3, 4, 6, 13
