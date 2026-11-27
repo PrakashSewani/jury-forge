@@ -540,8 +540,14 @@ and the tree-sitter grammar packages. Verify each in the milestone that first us
   on an invalid environment; an invalid repo file produces a Check Run note and falls back to defaults.
 - `.jury-forge.yml` v1 keys: `version`, `review.on`, `review.drafts`, `review.preset`,
   `review.paths.include|exclude`, `review.authors.exclude`, `charges[]`, `gate` (`neutral`/`critical`/`charges`),
-  `noise.budget`, `resolution` (`suggest`/`auto`/`off`). Unknown keys produce a warning, not an
+  `review.max_inline_comments` (optional; can only lower the ADR-0033 safety ceiling), `resolution` (`suggest`/`auto`/`off`). Unknown keys produce a warning, not an
   error, which keeps the file forward compatible.
+  *Amended 2026-11-28:* `noise.budget` was replaced by `review.max_inline_comments` (ADR-0033).
+- **Per-turn hard caps (Q-031, owner decision 2026-11-28):** output ≤ 4,000 tokens per model call;
+  input ≤ min(70 % of the bound model's context window, 100,000 tokens); ≤ 10 min wall-clock per
+  turn (under the 20-min stuck-turn sweep, §3.3). They are instance settings that a repo can only
+  tighten. A cap that is hit stops the step with a recorded reason; `finish=length` on structured
+  output is a failure (ADR-0029). Revisit with benchmark v0.
 
 ## 15. API and error conventions
 

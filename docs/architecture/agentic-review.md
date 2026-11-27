@@ -155,7 +155,7 @@ gives each step's tier.
 6. **`ground`** (code) — file, line, and evidence exist at the generation SHA; drop ungrounded
    claims.
 7. **`verify`** (v1) — one non-voting verifier call; `wrong` is dropped, `unconfirmed` collapsed.
-8. **`chair`** (code) — fingerprint merge, severity, agreement, ranking, noise budget, suppressions;
+8. **`chair`** (code) — fingerprint merge, severity, agreement, ranking, comment ceiling (ADR-0033), suppressions;
    dissent kept.
 9. **`summarise`** (v1, fast model) and **`publish`** — one reply per thread/turn (or one PR
    summary) through the write queue; inline suggestions where valid.

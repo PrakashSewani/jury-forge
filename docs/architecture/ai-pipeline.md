@@ -98,7 +98,7 @@ vote, add findings, or raise severity (ADR-0025 §4).
 
 Merge by fingerprint (ADR-0024 §4); severity = the highest severity among confirming jurors, capped
 by policy; agreement = jurors flagging the finding ÷ jurors that saw the file; rank by `severity ×
-confidence × agreement`; apply the noise budget and suppressions. The rules are printed in the
+confidence × agreement`; apply suppressions and the comment ceiling (ADR-0033: no default cap, an optional repo cap, a fixed 50-comment safety ceiling). The rules are printed in the
 receipt. No model decides identity, severity, or the verdict.
 
 ### `summarise` (v1, fast model)

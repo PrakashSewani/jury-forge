@@ -1,6 +1,6 @@
 # Spec: Review progress and completion
 
-- Status: draft for owner review — **MVP gate**: owner approval required before Phase 1b work that implements it (per-milestone approval, 2026-11-27). **Revised 2026-11-27** in the MVP spec review (release tiers, ADR alignment; see `delivery/status.md`); not yet approved
+- Status: **MVP gate — MVP-tier rows approved by the owner on 2026-11-28.** Later tiers stay draft and are approved before their milestone (per-milestone approval, 2026-11-27). Revised 2026-11-27 in the MVP spec review (release tiers, ADR alignment; see `delivery/status.md`).
 - Date: 2026-11-15
 - Owner: product + platform
 - Principles: 4 (secure by default), 8 (fail visibly), 9 (one vocabulary), 13 (conversation)

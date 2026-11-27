@@ -1,6 +1,6 @@
 # Spec: Agentic PR review sessions
 
-- Status: draft for owner review — **MVP gate**: owner approval required before Phase 1b work that implements it (per-milestone approval, 2026-11-27). **Revised 2026-11-27** in the MVP spec review (release tiers, ADR alignment; see `delivery/status.md`); not yet approved
+- Status: **MVP gate — MVP-tier rows approved by the owner on 2026-11-28.** Later tiers stay draft and are approved before their milestone (per-milestone approval, 2026-11-27). Revised 2026-11-27 in the MVP spec review (release tiers, ADR alignment; see `delivery/status.md`).
 - Date: 2026-11-15
 - Owner: product + architecture
 - Principles: 2 (trustworthy review), 3 (prompt is not a boundary), 5 (boring operations), 7 (extensible), 8 (fail visibly), 11 (wedge)
@@ -126,7 +126,9 @@ merged/closed → archived
 - **waiting_for_user:** the agent asked a question or posted findings and has nothing to add until a
   human replies.
 - **resolved:** a human resolved it (`suggest`/`off`) or the bot resolved it under `auto`; a new reply reopens it.
-- **archived:** PR merged/closed or retention expiry; no further turns.
+- **archived:** PR merged/closed; no further turns. An open PR's session is never archived
+  ([`session-capacity-and-visibility.md`](session-capacity-and-visibility.md) §2); retention deletes
+  archived data later (Q-046).
 
 There is **no per-session process to suspend**. `waiting_for_user` and long idle periods consume no
 compute; a reply is the wake-up. Only storage/retention/UI noise justify aging a session. See
@@ -618,5 +620,5 @@ Each criterion carries its tier; only MVP criteria are part of the G1 script.
 | AG-04 | Automatic review policy: config-as-code only, or org UI? | Config-as-code; org defaults later. |
 | AG-05 | Graph languages for v1? | TypeScript/JavaScript first; Python/Go next. |
 | AG-06 | Graph store: Postgres adjacency vs a graph database? | Postgres first; extract later. |
-| AG-07 | Session retention? | 90 days after merge/close; configurable. |
+| AG-07 | ~~Session retention?~~ | **Closed by Q-046:** raw prompts/responses 30 days; findings, sessions, and receipts 1 year; configurable (`architecture/security.md` §10). |
 | AG-08 | ~~Who can trigger/resolve besides the bot?~~ | **Closed:** triggers per ADR-0024 §1 (repo write access); resolution rights per ADR-0028. |

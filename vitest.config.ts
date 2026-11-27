@@ -1,6 +1,9 @@
 import { defineConfig } from 'vitest/config';
 
 const sources = ['apps/*/src/**/*.test.ts', 'packages/*/src/**/*.test.ts', 'scripts/**/*.test.ts'];
+// Integration tests live in the same roots. Scoping them keeps stray checkouts (for example
+// `.claude/worktrees/`) out of the run.
+const integrationSources = sources.map((glob) => glob.replace(/\.test\.ts$/, '.int.test.ts'));
 const integration = '**/*.int.test.ts';
 const fixtures = 'scripts/fixtures/**';
 
@@ -19,7 +22,7 @@ export default defineConfig({
         extends: true,
         test: {
           name: 'integration',
-          include: [integration],
+          include: integrationSources,
           exclude: ['**/node_modules/**'],
           testTimeout: 120_000,
           hookTimeout: 120_000,

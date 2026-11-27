@@ -78,7 +78,7 @@ Every published finding keeps:
 > **code-only chair**. The chair merges findings by fingerprint (ADR-0024 §4). Severity is the
 > highest among the confirming jurors, capped by policy. Agreement is the number of jurors that
 > flagged the finding divided by the number that saw the file. Findings are ranked by
-> `severity × confidence × agreement`, then the noise budget and suppressions are applied. A model
+> `severity × confidence × agreement`, then suppressions and the comment ceiling (ADR-0033) are applied. A model
 > writes only the summary and dissent text. The "chair decision" below is therefore a rule
 > application, recorded in the receipt.
 

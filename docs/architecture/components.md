@@ -130,7 +130,7 @@ Correctness, Tests) and a non-voting verifier (ADR-0025).
 - Merge attribution: which jurors found it, with what confidence.
 - Severity = the highest severity among confirming jurors, capped by policy; agreement = jurors
   flagging it ÷ jurors that saw the file; rank by `severity × confidence × agreement`.
-- Apply the noise budget and suppressions; surface disagreement as dissent.
+- Apply suppressions and the comment ceiling (ADR-0033); surface disagreement as dissent.
 - Produce the publish plan: inline comments, summary, status/check conclusion. A fast model writes
   only the summary and dissent text.
 

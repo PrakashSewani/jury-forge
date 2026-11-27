@@ -12,21 +12,21 @@ failure modes, rollout, and open questions.
 
 | Spec | Capability | Status |
 | ---- | ---------- | ------ |
-| [`first-run-setup.md`](first-run-setup.md) | Install preflight, bootstrap token, first owner claim, GitHub App/installation, provider, first reviewer, first review, recovery | draft for owner review; **revised in the MVP spec review (2026-11-27), awaiting owner approval** |
-| [`agentic-review-sessions.md`](agentic-review-sessions.md) | Durable per-PR sessions, manual triggers, dynamic routing, resolution modes (`suggest` default), PR/branch review | draft for owner review; **revised in the MVP spec review (2026-11-27), awaiting owner approval** |
-| [`review-progress-and-completion.md`](review-progress-and-completion.md) | Check Run progress, completion signal, manual-trigger placeholder comment, failure/cancel behaviour | draft for owner review; **revised in the MVP spec review (2026-11-27), awaiting owner approval** |
+| [`first-run-setup.md`](first-run-setup.md) | Install preflight, bootstrap token, first owner claim, GitHub App/installation, provider, first reviewer, first review, recovery | draft for owner review; revised 2026-11-27; **MVP rows approved 2026-11-28** |
+| [`agentic-review-sessions.md`](agentic-review-sessions.md) | Durable per-PR sessions, manual triggers, dynamic routing, resolution modes (`suggest` default), PR/branch review | draft for owner review; revised 2026-11-27; **MVP rows approved 2026-11-28** |
+| [`review-progress-and-completion.md`](review-progress-and-completion.md) | Check Run progress, completion signal, manual-trigger placeholder comment, failure/cancel behaviour | draft for owner review; revised 2026-11-27; **MVP rows approved 2026-11-28** |
 | [`jury-output.md`](jury-output.md) | Jury composition, finding provenance, deliberation, dissent, chair verdict, and output display | draft for owner review |
-| [`standout-features.md`](standout-features.md) | Appeal, verified-fixed, noise budget, repo memory, signed receipt, presets, fix handoff, risk score, reactions, instruction compatibility | draft for owner review |
-| [`provider-model-discovery.md`](provider-model-discovery.md) | Provider onboarding, `/models` discovery, model catalog, encrypted keys | draft for owner review; **revised in the MVP spec review (2026-11-27), awaiting owner approval** |
+| [`standout-features.md`](standout-features.md) | Appeal, verified-fixed, comment ceiling, repo memory, signed receipt, presets, fix handoff, risk score, reactions, instruction compatibility | draft for owner review |
+| [`provider-model-discovery.md`](provider-model-discovery.md) | Provider onboarding, `/models` discovery, model catalog, encrypted keys | draft for owner review; revised 2026-11-27; **MVP rows approved 2026-11-28** |
 | [`repo-knowledge-graph.md`](repo-knowledge-graph.md) | Incremental repository graph for branch review (v1.x) and context reuse | draft for owner review |
-| [`session-capacity-and-visibility.md`](session-capacity-and-visibility.md) | Interface, concurrency, lifecycle, roles, visibility, budgets | draft for owner review; **revised in the MVP spec review (2026-11-27), awaiting owner approval** |
+| [`session-capacity-and-visibility.md`](session-capacity-and-visibility.md) | Interface, concurrency, lifecycle, roles, visibility, budgets | draft for owner review; revised 2026-11-27; **MVP rows approved 2026-11-28** |
 | [`reviewer-assignment-and-roles.md`](reviewer-assignment-and-roles.md) | Reviewer catalog, repo bindings (required/default/capability), capability registry, SME/admin roles, fallback | draft for owner review |
 | [`knowledge-system.md`](knowledge-system.md) | Skills/docs/live doc links, snapshots, grants, retrieval, citations | draft for owner review |
 | [`v1-ui.md`](v1-ui.md) | V1 website scope: control plane, sessions, reviewers, capabilities, providers, audit | draft for owner review |
 | [`shadow-mode.md`](shadow-mode.md) | B-01: run reviewers on live PRs without posting; compare with human review | draft — backlog |
 | [`provider-allowlist.md`](provider-allowlist.md) | B-02: per-repo provider allowlist and data zones, egress ledger | draft — promoted to v1.2 |
 | [`local-cli-review.md`](local-cli-review.md) | B-03: review a local/CI diff through the operator's instance | draft — promoted to v1.1 (`--staged`) |
-| [`large-pr-handling.md`](large-pr-handling.md) | B-04: coverage manifest, split proposals, no silent partial reviews | draft — promoted to the MVP (fitting + manifest, Q-040); **revised in the MVP spec review (2026-11-27), awaiting owner approval** |
+| [`large-pr-handling.md`](large-pr-handling.md) | B-04: coverage manifest, split proposals, no silent partial reviews | draft — promoted to the MVP (fitting + manifest, Q-040); revised 2026-11-27; **MVP rows approved 2026-11-28** |
 | [`reviewers-as-code.md`](reviewers-as-code.md) | B-05: reviewer definitions in git with approval preserved | draft — backlog |
 | [`history-seeded-conventions.md`](history-seeded-conventions.md) | B-06: draft conventions pack mined from human review history | draft — promoted to v1.2 |
 | [`mcp-surface.md`](mcp-surface.md) | B-07: read-only findings server and allowlisted reviewer tool servers | draft — reviewer client promoted to v1.1; server backlog |

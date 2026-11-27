@@ -60,6 +60,7 @@ new one, never rewritten. The index below is the source of truth for status.
 | [ADR-0030](ADR-0030-local-provider-egress.md) | Egress rule for local model servers: a pinned, owner-only exception for the `local` kind | accepted | 2026-11-27 |
 | [ADR-0031](ADR-0031-helm-chart-runtime-shape.md) | The Helm chart (v1.2) runs the v1 runtime shape: no scheduler Deployment, cron in `worker` | accepted | 2026-11-28 |
 | [ADR-0032](ADR-0032-finding-severity-scale.md) | Finding severity scale (`critical`/`high`/`medium`/`low`) and ranking weights (8/4/2/1) | accepted | 2026-11-28 |
+| [ADR-0033](ADR-0033-comment-volume.md) | Comment volume: no default noise budget, an optional repo cap, a fixed 50-comment safety ceiling | accepted | 2026-11-28 |
 
 **Phase 1a (2026-11-16):** the stack ADRs were accepted from
 [`../architecture/technical-approach.md`](../architecture/technical-approach.md).

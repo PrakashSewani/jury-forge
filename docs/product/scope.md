@@ -73,8 +73,9 @@ engineer uses it. Solo/homelab is served by the labelled evaluation mode, not a 
   a new reply reopens. In v1 the owner and maintainers can accept, dismiss, or reopen a finding;
   only the owner dismisses or resolves a `critical` one (ADR-0028). SME/admin override is v1.x.
 - **Feedback:** one-click valid / wrong / fixed / duplicate on each finding.
-- **Stalled sessions:** flagged after 7 days, archived after 30, never auto-resolved or silently
-  dropped.
+- **Stalled sessions:** flagged `needs human` after 7 days waiting, dropped from the default inbox
+  view after 30, archived only when the PR is merged or closed; never auto-resolved or silently
+  dropped ([`specs/session-capacity-and-visibility.md`](specs/session-capacity-and-visibility.md) §2).
 - **Branch review and the repository graph are v1.x**, benchmark-gated (ADR-0014/ADR-0018). A
   one-click “deep review” is the path, not an automatic upgrade.
 
@@ -178,7 +179,7 @@ thesis. It must include the session/reply/resolve path; a one-shot review is not
 
 The v1 sections above, grouped by theme in `capabilities.md`: jury (three reviewers, verifier,
 code-first chair, presets, model roles), context (T0+, evidence ingest, one conventions pack), conversation (the rest of
-ADR-0024, appeal, verified-fixed, incremental review), output (noise budget, risk score, charges,
+ADR-0024, appeal, verified-fixed, incremental review), output (comment ceiling, risk score, charges,
 suggestions, fix handoff, merge gate), learning (reactions, implicit acceptance, repo memory,
 scorecard), trust (signed receipt, egress preview, redaction, retention, audit, roles), and ops
 (backup/restore, upgrade/rollback, reconciler, sizing).

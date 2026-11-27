@@ -75,7 +75,7 @@ and Q-032–Q-048; a link check (0 broken) and a consistency pass across the doc
 - [ ] Owner/maintainer/reader permissions are enforced server-side; the wider role model (SME/admin/viewer/auditor) is v1.x.
 - [ ] The three-reviewer default jury produces a verdict with composition, per-finding provenance, and preserved dissent.
 - [ ] A review receipt records provider, model, tokens, redactions, withheld sources, context, policy, verdict, and resolver.
-- [ ] A stale session is flagged after 7 days and archived after 30; it is never auto-resolved or silently dropped.
+- [ ] A stale session is flagged `needs human` after 7 days and leaves the default inbox after 30; it is archived only when its PR is merged or closed, and never auto-resolved or silently dropped.
 - [ ] A required reviewer that is unavailable blocks the review with a fallback; no partial/clean review.
 - [ ] Tenant-scoped queries; cross-tenant tests pass.
 - [ ] Credential-to-origin binding; a key cannot be sent to an arbitrary URL.

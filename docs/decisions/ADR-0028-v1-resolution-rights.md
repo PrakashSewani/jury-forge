@@ -1,6 +1,7 @@
 # ADR-0028: v1 resolution rights — maintainers override, the owner decides critical findings
 
-- Status: accepted (owner decision, 2026-11-27)
+- Status: accepted (owner decision, 2026-11-27). The owner confirmed the Q-049 default on
+  2026-11-28.
 - Date: 2026-11-27
 - Owners: product + security
 - Amends: ADR-0012 (human override, for the v1 role set), Q-028 (resolve rights)
