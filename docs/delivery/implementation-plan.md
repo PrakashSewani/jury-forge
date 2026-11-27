@@ -184,13 +184,13 @@ Ordered so each theme builds on the previous one. Themes match the v1 tier group
 | 2-11 | Reply intent + appeal | M | `fast` intent classifier; appeal flow (originating juror + one other, then the verifier, then code decides); one appeal per finding |
 | 2-12 | `auto` guard | S | ADR-0024 §6 conditions; reversible; wrong-resolution metric |
 | 2-13 | Enforced budgets | M | Session/repo/installation/requester budgets that fail closed; Check Run reason; owner notice |
-| 2-14 | Stalled sessions ∥ | S | 7-day flag, 30-day archive cron |
+| 2-14 | Stalled sessions ∥ | S | Hourly cron: 7-day `needs human` flag and one nudge, 30-day drop from the default inbox; archive only on PR merge/close (`session-capacity-and-visibility` §2) |
 
 ### M2.3 — Output
 
 | WP | Title | Size | Contents |
 | -- | ----- | ---- | -------- |
-| 2-15 | Noise budget + withheld count | S | Comment budget, collapsed section, withheld count in the summary |
+| 2-15 | Comment ceiling + withheld count | S | ADR-0033: fixed 50-comment safety ceiling (code constant), optional `review.max_inline_comments` repo cap, `critical` always inline, overflow in a collapsed section, withheld count in the summary, ceiling-hit metric |
 | 2-16 | Risk score | S | Deterministic factors (paths, size, max severity, disagreement); shown in the Check Run; inbox sort |
 | 2-17 | Jury charges | M | `.jury-forge.yml` charges → Check Run line items with evidence |
 | 2-18 | Suggestion blocks | M | Single-hunk GitHub `suggestion` validated to apply cleanly at the SHA |
@@ -237,7 +237,7 @@ Ordered so each theme builds on the previous one. Themes match the v1 tier group
 | 3-02 | Pilot repos | S | 2–3 consenting repos (OSS or friendly teams); data-handling agreement written |
 | 3-03 | Replay tool (internal) | M | Re-run stored turn inputs against another model or preset without posting (the public UI arrives in v1.1) |
 | 3-04 | Baseline comparison | M | Jury vs a single strong model at **equal token budget**; precision from feedback/appeals, recall from human review comments and later fixes |
-| 3-05 | Calibration | M | Confidence buckets vs acceptance; tune the verifier threshold, noise budget, and chair parameters (as code constants with ADR notes) |
+| 3-05 | Calibration | M | Confidence buckets vs acceptance; tune the verifier threshold, the comment ceiling, and chair parameters (as code constants with ADR notes) |
 | 3-06 | Cost and latency report | S | Cost per accepted finding, p50/p95 latency per preset; publish the ranges in the docs |
 | 3-07 | Branch-review decision | S | Record whether T0+ recall is enough, or whether branch review leads v1.1 |
 | 3-08 | **G3 review** | S | Scorecard, dogfood report, method published |

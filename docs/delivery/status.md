@@ -20,13 +20,49 @@ one phase `in progress` and exactly one next action.
 **Phase:** 1b, milestone **M1.0 (repository and CI)**. The owner said go on 2026-11-27. WP 1-01
 to 1-05 are merged into `dev` (PR #5) with a green CI run; spikes 1-06 and 1-07 remain.
 
-**Branch:** `docs/architecture-alignment` (documentation only: the architecture audit and its
-fixes; stacked on `docs/deployment-ops-rewrite`, PR #8).
+**Branch:** `chore/dev-readiness` (the development-readiness check: owner decisions, doc alignment,
+and a local test-config fix).
 
 **Next action:** run **spike S-A (WP 1-06)**: graphile-worker serialization and debounce under
 concurrency, plus the pg-boss adapter proof, written up in `docs/analysis/spikes/`. It needs a
 container runtime (CI has one; this machine's Docker was not running). S-C (WP 1-07) follows and
 needs the owner's Anthropic key or a local Ollama. Both spike notes close M1.0; then M1.1.
+
+### Landed this session (2026-11-28, development-readiness check)
+
+A final sanity check before development continues. **The six MVP-gate specs are approved** for
+their MVP-tier rows, so M1.1 onward is unblocked.
+
+**Owner decisions (2026-11-28):**
+
+1. **MVP-gate specs approved:** `first-run-setup`, `provider-model-discovery`,
+   `agentic-review-sessions`, `review-progress-and-completion`, `large-pr-handling`, and
+   `session-capacity-and-visibility`, MVP-tier rows only. Each header and the
+   [specs index](../product/specs/README.md) record it.
+2. **Q-031 per-turn caps:** output ≤ 4,000 tokens per model call; input ≤ min(70 % of the model's
+   context, 100k tokens); ≤ 10 min per turn. Recorded in technical-approach §14 and
+   `capabilities.md`.
+3. **Comment volume ([ADR-0033](../decisions/ADR-0033-comment-volume.md), closes SF-01):** no default
+   noise budget. Reviewers are kept focused by how they are defined. An optional repo cap
+   (`review.max_inline_comments`, replacing `noise.budget` in technical-approach §14) and a fixed
+   50-comment safety ceiling against injected or runaway output; `critical` always inline; nothing
+   dropped silently. ADR-0025 and ADR-0032 status lines point to it; S3, `capabilities.md`, the
+   architecture docs, and WP 2-15 follow it.
+4. **Q-049 and Q-050 defaults confirmed** and moved to "Closed by the owner (2026-11-28)" in
+   [`open-questions.md`](../analysis/open-questions.md); ADR-0028's status line notes Q-049.
+
+**Doc alignment:**
+
+- The stalled-session rule in `scope.md`, `roadmap.md`, `quality-gates.md` (G2), and WP 2-14 still
+  said "archived after 30 days". It now follows the 2026-11-27 decision (`needs human` at 7 days,
+  out of the default inbox at 30, archived only on PR merge/close). `agentic-review-sessions` no
+  longer archives on "retention expiry", and AG-07 (90-day session retention) is closed by Q-046
+  (1 year).
+
+**Tooling fix:** `pnpm check` failed on this machine because the integration glob
+`**/*.int.test.ts` also matched a leftover checkout in `.claude/worktrees/`. The integration project
+now includes only `apps/*/src`, `packages/*/src`, and `scripts/`, the same roots as the unit project.
+`pnpm check` then passed locally (integration tests skipped: Docker was not running; CI runs them).
 
 ### Landed this session (2026-11-28, architecture audit and alignment)
 
