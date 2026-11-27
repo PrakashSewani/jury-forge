@@ -65,9 +65,10 @@ repos.
 
 **Exit evidence:** a CI run link; both spike notes; ADR amendments if a spike failed.
 
-**Progress (2026-11-27):** WP 1-01 to 1-05 are implemented on `feat/walking-skeleton`, and
-`pnpm check` passes locally (see [`status.md`](status.md)). Still open: the first CI run, the
-integration stage with Docker, and spikes 1-06 and 1-07. The image build and size gate in 1-05
+**Progress (2026-11-27):** WP 1-01 to 1-05 are merged into `dev` (PR #5). CI evidence:
+[run 46020023291](https://github.com/PrakashSewani/jury-forge/actions/runs/46020023291), all three
+jobs green, including the testcontainers PostgreSQL integration test (see [`status.md`](status.md)).
+Still open: spikes 1-06 and 1-07. The image build and size gate in 1-05
 move to M1.2, when there is a Dockerfile to build; CI covers linux/amd64 and linux/arm64 with
 typecheck and unit tests until then.
 
