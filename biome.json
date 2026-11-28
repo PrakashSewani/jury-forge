@@ -17,7 +17,8 @@
       "!**/*.md",
       "!**/dist",
       "!**/coverage",
-      "!scripts/fixtures"
+      "!scripts/fixtures",
+      "!packages/store/src/db.generated.ts"
     ]
   },
   "formatter": {

@@ -46,7 +46,7 @@ describe.runIf(runtime)('migrate entrypoint', () => {
     const first = run([], { DATABASE_URL_FILE: file });
     expect(first.stderr).toBe('');
     expect(first.code).toBe(0);
-    expect(first.stdout).toContain('migrate: 5 migration(s) applied');
+    expect(first.stdout).toContain('migrate: 6 migration(s) applied');
     const password = new URL(container.getConnectionUri()).password;
     expect(first.stdout).not.toContain(`:${password}@`);
 

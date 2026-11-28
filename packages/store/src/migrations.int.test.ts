@@ -58,6 +58,7 @@ const MIGRATIONS = [
   '0003_providers_reviewers',
   '0004_sessions',
   '0005_budgets_usage',
+  '0006_audit_append_only',
 ];
 
 const PG_MIGRATE_LOCK_ID = '7241865325823964';
@@ -175,6 +176,11 @@ async function schemaSnapshot(client: pg.Client): Promise<string[]> {
      union all
      select 'function ' || p.proname || ' ' || md5(pg_get_functiondef(p.oid))
        from pg_proc p where p.pronamespace = 'public'::regnamespace
+     union all
+     select 'trigger ' || pg_get_triggerdef(t.oid)
+       from pg_trigger t join pg_class c on c.oid = t.tgrelid
+       join pg_namespace n on n.oid = c.relnamespace
+      where n.nspname = 'public' and not t.tgisinternal
      order by 1`,
     [MIGRATIONS_TABLE],
   );
@@ -504,7 +510,16 @@ describe.runIf(runtime)('MVP schema migrations (WP 1-08)', () => {
       const before = await rowsPerTenantTable(client, org);
       expect(Object.entries(before).filter(([, n]) => n === 0)).toEqual([]);
 
+      // Without the purge flag the audit guard (migration 0006) refuses the cascade.
+      const refused = await client
+        .query('delete from orgs where id = $1', [org])
+        .catch((e: unknown) => e);
+      expect(pgCode(refused)).toBe('JF001');
+
+      await client.query('begin');
+      await client.query("select set_config('jury_forge.audit_delete', 'org_purge', true)");
       await client.query('delete from orgs where id = $1', [org]);
+      await client.query('commit');
 
       const after = await rowsPerTenantTable(client, org);
       expect(Object.entries(after).filter(([, n]) => n > 0)).toEqual([]);
