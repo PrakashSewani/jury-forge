@@ -17,8 +17,9 @@ choose a runtime that serves the product rather than one that constrains it.
 ## Current phase
 
 **Phase 0 (G0) and Phase 1a (technology and approach) are done (2026-11-16). Phase 1b — walking
-skeleton — is in progress: the owner said go on 2026-11-27, starting with M1.0 (repository and
-CI) on `feat/walking-skeleton`.**
+skeleton — is in progress: the owner said go on 2026-11-27. M1.0 (repository and CI) is merged into `dev`
+except spike S-A; the six MVP-gate specs were approved on 2026-11-28. The current milestone and
+next action are in [`docs/delivery/status.md`](docs/delivery/status.md).**
 
 The stack is accepted (ADR-0026, `docs/architecture/technical-approach.md`). Implementation
 follows [`docs/delivery/implementation-plan.md`](docs/delivery/implementation-plan.md), one

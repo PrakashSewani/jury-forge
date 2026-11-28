@@ -78,7 +78,7 @@ typecheck and unit tests until then.
 | -- | ----- | ---- | -------- | --------- |
 | 1-08 | Migrations v0 | M | SQL migrations for the MVP schema (approach §17); `migrate` entrypoint; up/down tests | Fresh DB → latest → down → up in CI |
 | 1-09 | Store package | M | Kysely codegen; repositories with mandatory `org_id`; UUIDv7; audit append-only trigger; artefacts with expiry | Cross-tenant tests pass |
-| 1-10 | `JobQueue` port | M | graphile-worker adapter: `enqueue`, `enqueueTx`, `cancel`, `schedule`, `onJob`; per-session `queue_name`; `job_key` debounce; cron registry | Serialization, debounce, and txn-enqueue tests pass |
+| 1-10 | `JobQueue` port | M | graphile-worker adapter: `enqueue`, `enqueueTx`, `cancel`, `schedule`, `onJob`; per-session `queue_name`; `job_key` debounce; cron registry; a two-worker cron test (audit Q-E, [`job-pipeline.md`](../architecture/job-pipeline.md)) | Serialization, debounce, and txn-enqueue tests pass; with two `worker` processes, each cron tick fires exactly once (until this passes, only one `worker` replica is documented as safe) |
 | 1-11 | Step runner core | M | `turn_steps` persistence, `(turn_id, step)` idempotency, generation check, `superseded` abort, retry policy | Fault-injection test: kill mid-step → resumes without duplicate effects |
 
 ### M1.2 — Install and setup
@@ -111,8 +111,10 @@ typecheck and unit tests until then.
 | 1-24 | Forge adapter | L | `ForgeAdapter` port; GitHub implementation (installation tokens, diff, contents at SHA, checks, reviews, comments, thread GraphQL); **spike S-D**; contract suite | The adapter passes the contract suite against fixtures |
 | 1-25 | Write queue | S | `publish.github` per-installation queue, ≤ 1 mutation/s, `Retry-After`, secondary-limit backoff, `external_id` idempotency | Publish-then-crash test: no duplicate review |
 | 1-26 | ADR-0024 safety core | M | Trigger authz (`author_association`), self-detection by App ID, bot/fork skip, per-thread/session/user turn budgets, hand-off message | Abuse corpus: non-collaborator, bot, self, and fork start no turn |
+| 1-26a | Router, bindings, and fallback | M | `reviewer_repo_bindings` for the one built-in reviewer (`required`/`default`; ADR-0013, ADR-0016); the router steps of `agentic-review-sessions` §6 (MVP subset: binding, availability, budget); the reason each reviewer ran or was skipped recorded in the timeline; no runnable reviewer → the configuration or required-unavailable fallback, never a clean review (`review-progress-and-completion` §1 and §5) | No binding → `action_required` fallback and no turn; an unavailable required reviewer → no review; the timeline shows why |
 | 1-27 | Check Run lifecycle | S | `queued → in_progress → completed`, actions (`review`), failure reasons, placeholder comment option | Matches the review-progress spec |
-| 1-28 | Reconciler cron ∥ | S | Every 10 min: open PRs with pending triggers (label/checkbox), enqueue what was missed | A delivery dropped during downtime is recovered |
+| 1-28 | Reconciler cron ∥ | S | Every 10 min: open PRs with a pending `jury:pr-review` label, enqueue what was missed. Built in the MVP ahead of its v1 capability row; the PR-checkbox trigger is v1 (WP 2-32) | A delivery dropped during downtime is recovered |
+| 1-28a | MVP maintenance crons ∥ | S | The MVP cron jobs of technical-approach §3.3 not covered elsewhere: **stuck-turn sweep** (every 5 min; a turn `running` > 20 min, configurable, fails as `stuck` and its Check Run completes under the RP-03 failure rules), **catalog refresh** (daily, staggered per provider; a removed model marks its reviewer `configuration_error` and never switches a binding), and **retention** (daily; deletes expired `artefacts`) | A seeded stuck turn is failed and its Check Run completed; a model removed from a fixture `/models` disables its reviewer; an expired artefact is deleted |
 
 ### M1.5 — First review
 

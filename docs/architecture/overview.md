@@ -171,6 +171,9 @@ pipeline in [`job-pipeline.md`](job-pipeline.md).
 | v1 resolution rights | Accepted (2026-11-27) | ADR-0028 |
 | Model capability probes | Accepted (2026-11-27) | ADR-0029 |
 | Egress rule for local model servers | Accepted (2026-11-27) | ADR-0030 |
+| Helm chart runtime shape (v1.2): the Compose roles, cron in `worker` | Accepted (2026-11-28) | ADR-0031 |
+| Finding severity scale `critical`/`high`/`medium`/`low` | Accepted (2026-11-28) | ADR-0032 |
+| Comment volume: no default noise budget, a fixed 50-comment ceiling | Accepted (2026-11-28) | ADR-0033 |
 
 Read next: [`agentic-review.md`](agentic-review.md) → [`components.md`](components.md) →
 [`job-pipeline.md`](job-pipeline.md) → [`security.md`](security.md) →
