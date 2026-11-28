@@ -173,6 +173,9 @@ Until an origin is set, `:443` has no certificate and only the loopback listener
 reports `origin_unset`. After the origin is saved but before TLS is issued, `/readyz` reports
 `tls_pending` (`tls_front_unverified` in `front` mode); other hosts get `421` once the app knows the
 origin.
+*Owner decision 2026-11-28 (WP 1-14):* "reports" means a field in the `/readyz` body. These states
+never turn `/readyz` into a 503: its status code covers only the process's own dependencies
+(`observability.md` §9), so the Compose stack starts before setup.
 
 ### Stage 2 — GitHub App and installation
 

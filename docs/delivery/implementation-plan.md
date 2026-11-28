@@ -223,13 +223,9 @@ here, because kysely-codegen brings the same package.
   readiness before and after `migrate`, the heartbeat, fencing); and unit tests for the listen
   address, the environment, the logger, HTTP, and the healthcheck.
 - **Carried forward:**
-  - **WP 1-14:** the Compose healthcheck needs `/readyz` to return 200 before an origin exists,
-    because `caddy` waits for `app` to be healthy. Report `origin_unset` and `tls_pending` in the
-    body without failing readiness, or the stack cannot start (first-run-setup Stage 1.5 vs
-    `observability.md` §9).
-  - **WP 1-14 also:** the `ask` endpoint, `TRUSTED_PROXIES` on the pinned subnet, and the `front`
-    variant without published ports. Caddy 2.11's `on_demand_tls` needs checking for the `interval`
-    and `burst` the reference Caddyfile names.
+  - **WP 1-14 (done 2026-11-28):** `/readyz` reports the origin state in its body without failing
+    readiness (owner decision); the `ask` endpoint. Caddy 2.11 has no `interval`/`burst`
+    (ADR-0038). `TRUSTED_PROXIES` moved to WP 1-15, and the `front` variant files to WP 1-16.
   - **WP 1-15:** the master key secret file, its `/readyz` component, and the zod environment
     schema in `contracts` (technical-approach §14). WP 1-13 parses its three variables by hand.
   - **WP 1-17:** `jury-forge init` replaces `init-secrets.sh`, including the file ownership.
@@ -239,6 +235,43 @@ here, because kysely-codegen brings the same package.
     - a least-privilege database role for `app` and `worker`; today all three roles connect as
       `jury_forge`, the cluster's owner;
     - user-namespace-remapped and rootless Docker (secret uids).
+
+**Progress (2026-11-28): WP 1-14 is written, split by the owner.** The origin step sits behind the
+bootstrap token (WP 1-15), and the `front` proof needs the App (WP 1-16). So WP 1-14 builds the
+origin plumbing, and the origin is set only by `PUBLIC_URL` until WP 1-15.
+- **Built:**
+  - `parseOrigin` with typed reasons, and a token bucket (`domain`, 100% branch coverage);
+  - the stored origin with compare-and-set and audit (`store`);
+  - `OriginService`, the `ask` endpoint, `Host` pinning (`421`, and `503 origin_unset`), and the
+    `PUBLIC_URL` freeze;
+  - both TLS modes and their readiness states, and the TLS handshake check (`apps/server`).
+
+  `deployment.md` §3 ("The origin and TLS as built") has the details.
+- **Owner decisions (2026-11-28):**
+  - the split above;
+  - `/readyz` keeps its status code for the process's dependencies, with the origin state in the
+    body;
+  - the issuance check is a handshake to Caddy;
+  - Pebble in CI proves the exit.
+- **ADR-0038 (proposed):** the issuance limit is the app's alone, 5 per 2 minutes, because Caddy
+  2.11 refuses `interval`.
+- **The exit:** `scripts/compose-smoke-test.sh` phase 2, with `PUBLIC_URL` set and Caddy pointed at
+  Pebble:
+  - the configured name gets a valid certificate, and another name fails the handshake;
+  - another `Host` gets `421`, and internal paths answer `404` from outside;
+  - `/readyz` reports `tls_issued`.
+- **Carried forward:**
+  - **WP 1-15:** the Stage 1.5 setup route behind the bootstrap token. It uses `parseOrigin`,
+    `writeOriginSetting`, and `OriginService.invalidate()`, and adds:
+    - pre-save DNS and port validation;
+    - the "I terminate TLS in front" confirmation (it sets `front`);
+    - `TRUSTED_PROXIES`, for the token's per-IP limit;
+    - the read-only origin field when `PUBLIC_URL` freezes it.
+  - **WP 1-16:**
+    - the ADR-0036 proof, a verified delivery plus `insecure_ssl` = 0, which makes `tls_front`;
+    - `PATCH /app` and re-login on an origin change, and the 3-changes-per-hour cap;
+    - the `front` deployment files for the owner's VPS (Caddy on plain HTTP, no published ports).
+  - **WP 1-17:** `doctor` reports the origin, the mode, and the `ask` refusals.
 
 ### M1.3 — Providers and egress
 

@@ -192,6 +192,11 @@ SLOs are per instance (self-hosted), not a central promise. The docs explain how
 
 - `GET /healthz` — liveness: process is up, no dependency checks.
 - `GET /readyz` — readiness: DB reachable, migrations current, queue reachable, master key loaded. Returns `200` or `503` with a component breakdown.
+  *Owner decision 2026-11-28 (WP 1-14):* the status code covers only these, the process's own
+  dependencies. The origin and TLS state (`origin_unset`, `tls_pending`, `tls_issued`,
+  `tls_front_unverified`, `tls_front`) is an `origin` field in the body and does not fail readiness.
+  Otherwise the Compose stack could not start before setup, because `caddy` waits for a healthy
+  `app`. The master-key check arrives with WP 1-15 (`deployment.md` §3).
 - `GET /metrics` — Prometheus (auth-protected or bound to the internal network).
 - `GET /api/v1/diagnostics` — admin-only summary: version, migration, components, last errors,
   config warnings. The basis of the support bundle.
