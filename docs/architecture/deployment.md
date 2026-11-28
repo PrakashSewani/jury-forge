@@ -624,8 +624,9 @@ stored `external_id`, the retry does not repeat side effects (technical-approach
 **Cron runs inside `worker`** through graphile-worker's built-in cron: reconciler (10 min),
 retention (daily), stalled sessions (hourly), reaction poll (5 min, open sessions only), stuck-turn
 sweep (5 min), and catalog refresh (daily) (technical-approach §3.3). graphile-worker
-is designed to fire each cron tick once across all workers; an M1.1 integration test must prove that
-with two worker replicas before more than one replica is documented as safe for cron.
+is designed to fire each cron tick once across all workers. The WP 1-10 integration test proves it with
+two worker processes (two consecutive ticks, one run each), so more than one `worker` replica is safe
+for cron; a crashed replica's jobs are released by the stuck-turn sweep (ADR-0037).
 
 **Backups (minimum viable):**
 

@@ -149,6 +149,11 @@ coalesce) plus transactional enqueue (webhook row and job in one transaction).
 
   Both questions it raised were closed by the owner the same day: Q-051 (a named licence exception
   for `argparse`, §13) and Q-052 (ADR-0037, above).
+- *WP 1-10 (2026-11-28):* the port is `JobQueue` in `contracts`, and the graphile-worker adapter is
+  `GraphileJobQueue` in `store`. Its settings, the cron task-name rule, the ADR-0037 release with its
+  grace wait, and the fenced-completion guard are described in [`job-pipeline.md`](job-pipeline.md).
+  Integration tests with two worker processes cover serialization, debounce, transactional enqueue,
+  cron once per tick, graceful stop, a killed worker, and a fenced worker.
 
 ### 3.4 Agent runtime — ADR-0010 → **change the recommendation: thin turn runner, no harness**
 
@@ -351,6 +356,8 @@ contract, stub-model eval, licence, plus the size budgets.
 `pipeline` depends on `domain` and **ports** (interfaces); `gateway`, `forge`, `store`, and `crypto`
 implement those ports. Apps wire them together. The rules that decide outcomes are therefore pure
 and testable without a database, network, or model ("code decides").
+*Added 2026-11-28 (WP 1-10):* port interfaces live in `contracts`, the leaf that `pipeline` and the
+implementing packages can both import; the first is `JobQueue`.
 
 ## 5. Key runtime flows
 
@@ -535,6 +542,7 @@ as one "v1 stack" decision.
 | node-pg-migrate | 9.0.0 | MIT | The latest release (2026-07-17). Plain `.sql` files with `-- Up Migration` / `-- Down Migration` markers, one transaction per run, and an advisory lock that fails fast (WP 1-08). Its peer range `pg <9.0.0` covers `pg` 8.23.1. Runtime dependencies `glob`, `jiti`, `yargs` pass the licence check. |
 | kysely | 0.29.9 | MIT | The latest release (2026-11-12), as planned above. No runtime dependencies. |
 | kysely-codegen | 0.20.0 | MIT | Dev only (WP 1-09). Reaches `argparse` (Python-2.0) through `cosmiconfig` 9 → `js-yaml` 4; covered by the Q-051 exception. Its database drivers are optional peers; only `pg` is installed. |
+| graphile-worker | 0.18.0 | MIT | The latest release, as planned above (WP 1-10). Its tree has `argparse` (Python-2.0), covered by the Q-051 exception; nothing else needed a new licence. |
 
 **Licence exception for graphile-worker (Q-051, owner decision 2026-11-28):** graphile-worker 0.18.0
 pulls in `argparse` 2.0.1 (Python-2.0) through `cosmiconfig` 8.3.6 → `js-yaml` 4.3.2, and only

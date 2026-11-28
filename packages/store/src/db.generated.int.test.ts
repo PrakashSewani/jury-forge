@@ -25,6 +25,8 @@ describe.runIf(runtime)('generated database types', () => {
       const output = await generate({
         db,
         dialect: new CodegenPostgresDialect(),
+        // Only our schema: graphile-worker owns `graphile_worker`, reached through its SQL API.
+        includePattern: 'public.*',
         excludePattern: 'public.pgmigrations',
         outFile: null,
       });

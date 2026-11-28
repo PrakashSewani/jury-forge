@@ -1,6 +1,6 @@
 // Kysely repositories, SQL migrations, queue adapter (technical-approach §4).
-// M1.1: the SQL migrations (WP 1-08) and the tenant-scoped store with the artefact and audit
-// repositories (WP 1-09). The queue adapter arrives with WP 1-10.
+// M1.1: the SQL migrations (WP 1-08), the tenant-scoped store with the artefact and audit
+// repositories (WP 1-09), and the graphile-worker `JobQueue` adapter (WP 1-10).
 export {
   ARTEFACT_KINDS,
   ARTEFACT_MAX_BYTES,
@@ -21,6 +21,16 @@ export {
   type MigrationDirection,
   migrate,
 } from './migrations.ts';
+export {
+  FencedError,
+  GraphileJobQueue,
+  type GraphileJobQueueOptions,
+  type QueueLogLevel,
+  QueueUsageError,
+  type ReleaseDeadWorkersOptions,
+  type ReleasedPool,
+  releaseDeadWorkers,
+} from './queue.ts';
 export {
   type AuditDeleteReason,
   createStore,

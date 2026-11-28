@@ -9,6 +9,8 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
+    "@jury-forge/contracts": "workspace:*",
+    "graphile-worker": "0.18.0",
     "kysely": "0.29.9",
     "node-pg-migrate": "9.0.0",
     "pg": "8.23.1"

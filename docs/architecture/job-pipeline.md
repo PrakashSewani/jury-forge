@@ -25,8 +25,10 @@ without another service.
   one run). The debounce is trailing (each trigger moves `run_at`), and the surviving payload is
   whichever write committed last. Replace mode only replaces a job that has not started: when the
   session's job is running, graphile-worker clears that job's key, **removes its remaining retries**,
-  and adds a new job (S-A E3). So the turn job should carry IDs only, with `resolve` reading the
-  pending inputs from the database (S-A R1; settled in WP 1-10).
+  and adds a new job (S-A E3). So a job payload carries IDs only, and `resolve` reads the pending
+  inputs from the database (S-A R1). The port requires `org_id` in every payload (WP 1-10). **Bound
+  (S-A R8):** a stream of replies less than 30 s apart keeps postponing the turn; the MVP accepts it,
+  and a cap would need `preserve_run_at` logic in the adapter.
 - **Transactional enqueue:** `add_job` runs in the same transaction as the state change that causes
   it (for example the `webhook_deliveries` insert). That is the outbox; there is no separate outbox
   table.
@@ -35,11 +37,25 @@ without another service.
   `schedule`, `onJob`). graphile-worker is pre-1.0, so spike S-A wrote a pg-boss adapter behind the
   same port; it passed the same serialization, debounce, and transaction tests. Its differences
   (queues declared up front, one key, polling to tune, a failed job that blocks its session) are in
-  the spike note. No other backend (Redis, a managed queue) is planned.
+  the spike note. No other backend (Redis, a managed queue) is planned. The interface lives in
+  `contracts` (`job-queue.ts`), the leaf package that `pipeline` and `store` both import, and the
+  graphile-worker adapter is `GraphileJobQueue` in `store` (WP 1-10).
+- **Adapter settings (WP 1-10):**
+  - concurrency 2 per worker (`session-capacity-and-visibility`: 2–4);
+  - an idle poll every 1000 ms besides LISTEN/NOTIFY, because nothing notifies when a session's queue
+    frees (S-A E1); an idle worker then finds a ready job within about 1 s, inside the p95 < 2 s pickup budget
+    (technical-approach §6 checks it with an integration timer, not yet written);
+  - `maxAttempts` explicit on every job (S-A R7);
+  - job task names may use dots (`session.turn`), but cron task names follow graphile-worker's
+    crontab grammar, `[_a-zA-Z][_a-zA-Z0-9:/_-]*`, so they use a colon (`cron:retention`);
+  - a cron handler receives `{ scheduledAt, backfilled }`, and missed ticks are not backfilled;
+  - `migrate` installs graphile-worker's schema too; a worker's own schema check at start then has
+    nothing to do.
 - **Housekeeping:** each session leaves a row in graphile-worker's queue table, every fetch locks the
   available rows, and nothing removes them on its own. Pickup p95 was 7 ms with none and 284 ms with
   100,000 (S-A E8). graphile-worker's `cleanup` (`GC_JOB_QUEUES`, `GC_TASK_IDENTIFIERS`) removes them
-  and should run from the daily retention cron (S-A R6; settled in WP 1-10).
+  and should run from the daily retention cron (S-A R6). `GraphileJobQueue.cleanup()` does it (WP
+  1-10); the retention cron calls it (WP 1-28a).
 
 ## Jobs
 
@@ -57,9 +73,9 @@ without another service.
 | `index.incremental`, `index.full` | Branch review, default-branch push, parser upgrade | The index worker queue | v1.1 |
 
 Cron runs inside `worker`; there is no separate scheduler process. graphile-worker is designed to
-fire each cron tick once across workers; an M1.1 integration test must prove that with two worker
-replicas. Spike S-A previewed it: 3 of 3 ticks fired once with two workers (E7), which is not yet the
-test. The list is technical-approach §3.3 (amended 2026-11-28, audit Q-D). Abandoned setup is
+fire each cron tick once across workers. The WP 1-10 integration test proves it with two worker
+processes: two consecutive ticks, one run each (audit Q-E). Before it, spike S-A saw 3 of 3 ticks fire
+once (E7). The list is technical-approach §3.3 (amended 2026-11-28, audit Q-D). Abandoned setup is
 not a cron job: `/metrics` and `doctor` report it.
 
 ## Turn lifecycle
@@ -84,11 +100,22 @@ turn row and its `turn_steps` are what survive.
   stuck-turn sweep fences any pool silent for 2 minutes, then calls `forceUnlockWorkers` (635 ms in
   the spike). A fenced worker that was only slow stops its jobs and exits. A crashed worker's sessions
   resume within about 7 minutes.
+  - **As built (WP 1-10), in `releaseDeadWorkers`:** the sweep marks the pool, waits one heartbeat
+    interval plus 5 s (35 s), and only then unlocks what the pool still holds. A slow but live worker
+    sees the mark at its next heartbeat and stops cleanly before its job can run elsewhere, so no
+    session runs two turns at once (a test shows it). This keeps ADR-0037's order and its "about
+    7 minutes".
+  - graphile-worker completes a job by deleting it by id, whoever holds it now
+    (`dist/sql/completeJobs.js`), while failing a job is scoped to the pool. So a handler that
+    finishes after its worker was fenced throws `FencedError` instead of completing the job, and the
+    job stays with its new holder.
 - On a graceful stop (SIGTERM, `docker stop`), graphile-worker fires the running jobs' abort signal
   after 5 s. With its default settings, a job that then fails has its failure lost, and stays locked
   like a crash;
-  `completeJobBatchDelay: 0` and `failJobBatchDelay: 0` fixed it in the spike (S-A E6b, R3). Steps
-  should honour the job's abort signal within those 5 s (S-A R4; settled in WP 1-10 and WP 1-11).
+  `completeJobBatchDelay: 0` and `failJobBatchDelay: 0` fixed it in the spike (S-A E6b, R3); the
+  adapter sets them, and a WP 1-10 test confirms that another worker retries the aborted job. Steps
+  should honour the job's abort signal within those 5 s (S-A R4; WP 1-11). The signal also fires when
+  the worker is fenced.
 - A job that exhausts its attempts stays in graphile-worker's tables as permanently failed: it is
   inspectable, and an admin can retry it with audit (ADR-0006). The turn becomes `failed`, and the
   Check Run says why.

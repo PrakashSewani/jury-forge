@@ -1,3 +1,12 @@
-// zod schemas, API types, finding and receipt schemas. Imports no other workspace package.
-// Walking-skeleton placeholder (M1.0); see docs/architecture/technical-approach.md §4.
-export {};
+// zod schemas, API types, finding and receipt schemas, and the port interfaces that `pipeline`
+// depends on and the implementation packages provide. Imports no other workspace package.
+export type {
+  CronTick,
+  JobContext,
+  JobHandler,
+  JobJson,
+  JobQueue,
+  JobRef,
+  JobSpec,
+  TenantJobPayload,
+} from './job-queue.ts';
