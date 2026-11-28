@@ -2,7 +2,8 @@
 # The exit checks of WP 1-13 and WP 1-14 on a clean Linux host. CI runs it on fresh GitHub runner
 # VMs (amd64 and arm64); an operator can run it on a test host.
 # 1. `docker compose up` of deploy/ is healthy and its boundaries hold. No origin is set, so every
-#    certificate is refused.
+#    certificate is refused. The master key is in no log, and another key stops `app` with
+#    `encryption_key_mismatch` (WP 1-15a).
 # 2. With PUBLIC_URL set and Caddy pointed at Pebble (Let's Encrypt's test ACME server; test-only,
 #    never shipped), the configured name gets a valid certificate, every other name is refused,
 #    another Host gets 421, and /readyz reports tls_issued.
@@ -36,6 +37,9 @@ test "$(sudo stat -c '%u %a' "$work/deploy/secrets/database_url")" = '65532 400'
   fail 'database_url is not 65532 0400'
 test "$(sudo stat -c '%u %a' "$work/deploy/secrets/db_password")" = '70 400' ||
   fail 'db_password is not 70 0400'
+test "$(sudo stat -c '%u %a' "$work/deploy/secrets/master_key")" = '65532 400' ||
+  fail 'master_key is not 65532 0400'
+master_key=$(sudo cat "$work/deploy/secrets/master_key")
 sudo "$work/deploy/init-secrets.sh" 2> /dev/null && fail 'init-secrets overwrote existing secrets'
 
 echo '== up (first start)'
@@ -96,6 +100,7 @@ readyz() {
     http://app:3000/readyz
 }
 readyz | grep -q '"state":"origin_unset"' || fail "/readyz does not report origin_unset: $(readyz)"
+readyz | grep -q '"master_key":"ok"' || fail "/readyz does not report the master key: $(readyz)"
 
 echo '== worker stop'
 compose stop worker
@@ -109,6 +114,25 @@ compose down
 compose up --detach --wait --wait-timeout 180 --no-build
 compose logs --no-color --no-log-prefix migrate | grep -q 'migrate: 0 migration(s) applied' ||
   fail 'the second migrate applied migrations again'
+
+echo '== master key (WP 1-15a)'
+if compose logs --no-color | grep -qF "$master_key"; then fail 'the master key is in a log'; fi
+compose stop app worker
+sudo cp "$work/deploy/secrets/master_key" "$work/deploy/master_key.kept"
+sudo chmod 0600 "$work/deploy/secrets/master_key"
+head -c 32 /dev/urandom | base64 | sudo tee "$work/deploy/secrets/master_key" > /dev/null
+sudo chmod 0400 "$work/deploy/secrets/master_key"
+status=0
+output=$(compose run --rm --no-deps -T app 2>&1) || status=$?
+test "$status" = 1 || fail "app started with another master key (exit $status)"
+echo "$output" | grep -q '"code":"encryption_key_mismatch"' ||
+  fail "app did not report encryption_key_mismatch: $output"
+sudo cp "$work/deploy/master_key.kept" "$work/deploy/secrets/master_key"
+sudo chown 65532:65532 "$work/deploy/secrets/master_key"
+sudo chmod 0400 "$work/deploy/secrets/master_key"
+sudo rm -f "$work/deploy/master_key.kept"
+compose up --detach --wait --wait-timeout 180 --no-build
+readyz | grep -q '"master_key":"ok"' || fail "the restored key is not ready: $(readyz)"
 
 echo '== origin and TLS (WP 1-14, Pebble)'
 compose down

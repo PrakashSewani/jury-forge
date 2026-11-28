@@ -10,7 +10,7 @@
     "node": ">=24.0.0 <25"
   },
   "scripts": {
-    "build": "tsc -p packages/contracts/tsconfig.build.json && tsc -p packages/domain/tsconfig.build.json && tsc -p packages/pipeline/tsconfig.build.json && tsc -p packages/store/tsconfig.build.json && tsc -p apps/server/tsconfig.build.json",
+    "build": "tsc -p packages/contracts/tsconfig.build.json && tsc -p packages/domain/tsconfig.build.json && tsc -p packages/crypto/tsconfig.build.json && tsc -p packages/pipeline/tsconfig.build.json && tsc -p packages/store/tsconfig.build.json && tsc -p apps/server/tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json",
     "lint": "biome ci .",
     "format": "biome check --write .",

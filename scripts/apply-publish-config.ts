@@ -37,6 +37,18 @@ export function deployedManifests(deployDir: string): string[] {
   return paths;
 }
 
+/** The `.ts` files an `exports` field still points at; Node cannot run them from node_modules. */
+export function typeScriptExports(exportsField: unknown): string[] {
+  if (typeof exportsField === 'string') return exportsField.endsWith('.ts') ? [exportsField] : [];
+  if (typeof exportsField !== 'object' || exportsField === null) return [];
+  return Object.values(exportsField).flatMap((value) => typeScriptExports(value));
+}
+
+/**
+ * Applies publishConfig in place and returns the packages it changed. Throws when a deployed
+ * workspace package would still export TypeScript (WP 1-15a: a package without `files` and
+ * `publishConfig.exports` was found only when the container failed to start).
+ */
 export function applyToDeploy(deployDir: string): string[] {
   const changed: string[] = [];
   for (const path of deployedManifests(deployDir)) {
@@ -44,8 +56,15 @@ export function applyToDeploy(deployDir: string): string[] {
     if (!manifest.name?.startsWith(SCOPE)) {
       throw new Error(`${path} is not a ${SCOPE} package`);
     }
+    const applied = applyPublishConfig(manifest);
+    const source = typeScriptExports(applied['exports']);
+    if (source.length > 0) {
+      throw new Error(
+        `${manifest.name} would ship TypeScript exports (${source.join(', ')}); give it files, publishConfig.exports, a tsconfig.build.json, and a step in the root build script`,
+      );
+    }
     if (manifest.publishConfig === undefined) continue;
-    writeFileSync(path, `${JSON.stringify(applyPublishConfig(manifest), null, 2)}\n`);
+    writeFileSync(path, `${JSON.stringify(applied, null, 2)}\n`);
     changed.push(manifest.name);
   }
   return changed;

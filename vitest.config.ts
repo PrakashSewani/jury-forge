@@ -37,6 +37,8 @@ export default defineConfig({
       thresholds: {
         // technical-approach.md §20: new code in `domain` keeps >= 90 % branch coverage.
         'packages/domain/src/**/*.ts': { branches: 90, functions: 90, lines: 90, statements: 90 },
+        // WP 1-15a: the master key and envelope encryption are held to the same bar.
+        'packages/crypto/src/**/*.ts': { branches: 90, functions: 90, lines: 90, statements: 90 },
       },
     },
   },

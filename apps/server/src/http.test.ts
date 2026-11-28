@@ -1,11 +1,10 @@
-import type { StoreReadiness } from '@jury-forge/store';
 import pino from 'pino';
 import { describe, expect, it } from 'vitest';
-import { buildAppServer, buildSetupServer, type OriginPort } from './http.ts';
+import { type AppComponents, buildAppServer, buildSetupServer, type OriginPort } from './http.ts';
 import type { AskDecision, OriginReadiness, OriginState } from './origin-service.ts';
 
 const logger = pino({ level: 'silent' });
-const allOk: StoreReadiness = { database: 'ok', migrations: 'ok', queue: 'ok' };
+const allOk: AppComponents = { database: 'ok', migrations: 'ok', queue: 'ok', master_key: 'ok' };
 const ORIGIN = { url: 'https://review.example.com', host: 'review.example.com' };
 
 function fakeOrigin(
@@ -100,10 +99,12 @@ describe('app server: health', () => {
     await app.close();
   });
 
-  it.each<StoreReadiness>([
-    { database: 'error', migrations: 'error', queue: 'error' },
-    { database: 'ok', migrations: 'pending', queue: 'ok' },
-    { database: 'ok', migrations: 'ok', queue: 'pending' },
+  it.each<AppComponents>([
+    { database: 'error', migrations: 'error', queue: 'error', master_key: 'error' },
+    { database: 'ok', migrations: 'pending', queue: 'ok', master_key: 'ok' },
+    { database: 'ok', migrations: 'ok', queue: 'pending', master_key: 'ok' },
+    { database: 'ok', migrations: 'ok', queue: 'ok', master_key: 'error' },
+    { database: 'ok', migrations: 'ok', queue: 'ok', master_key: 'pending' },
   ])('answers /readyz with 503 for %j', async (components) => {
     const app = server(fakeOrigin(), async () => components);
     const response = await app.inject({ method: 'GET', url: '/readyz' });

@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { applyPublishConfig, applyToDeploy } from './apply-publish-config.ts';
+import { applyPublishConfig, applyToDeploy, typeScriptExports } from './apply-publish-config.ts';
 
 const dirs: string[] = [];
 afterEach(() => {
@@ -31,37 +31,60 @@ describe('applyPublishConfig', () => {
   });
 });
 
+describe('typeScriptExports', () => {
+  it('finds .ts targets in string, subpath, and condition forms', () => {
+    expect(typeScriptExports('./src/index.ts')).toEqual(['./src/index.ts']);
+    expect(typeScriptExports('./dist/index.js')).toEqual([]);
+    expect(
+      typeScriptExports({
+        '.': './dist/index.js',
+        './x': { import: './src/x.ts', default: './x.js' },
+      }),
+    ).toEqual(['./src/x.ts']);
+    expect(typeScriptExports(undefined)).toEqual([]);
+    expect(typeScriptExports(null)).toEqual([]);
+  });
+});
+
 describe('applyToDeploy', () => {
-  it('rewrites the deploy root and every injected @jury-forge package, nothing else', () => {
+  const injected = (dir: string, name: string) =>
+    join(
+      dir,
+      'node_modules',
+      '.pnpm',
+      `@jury-forge+${name}@file+_abc123`,
+      'node_modules',
+      '@jury-forge',
+      name,
+    );
+  const publish = { exports: { '.': './dist/index.js' } };
+
+  function deployDir(): string {
     const dir = mkdtempSync(join(tmpdir(), 'jf-deploy-'));
     dirs.push(dir);
-    const injected = (name: string) =>
-      join(
-        dir,
-        'node_modules',
-        '.pnpm',
-        `@jury-forge+${name}@file+_abc123`,
-        'node_modules',
-        '@jury-forge',
-        name,
-      );
-    const pg = join(dir, 'node_modules', '.pnpm', 'pg@8.23.1', 'node_modules', 'pg');
-    for (const path of [injected('store'), injected('domain'), pg])
-      mkdirSync(path, { recursive: true });
-    const publish = { exports: { '.': './dist/index.js' } };
     writeJson(join(dir, 'package.json'), {
       name: '@jury-forge/server',
       exports: { '.': './src/index.ts' },
       publishConfig: publish,
     });
-    writeJson(join(injected('store'), 'package.json'), {
+    return dir;
+  }
+
+  it('rewrites the deploy root and every injected @jury-forge package, nothing else', () => {
+    const dir = deployDir();
+    const pg = join(dir, 'node_modules', '.pnpm', 'pg@8.23.1', 'node_modules', 'pg');
+    for (const path of [injected(dir, 'store'), injected(dir, 'contracts'), pg]) {
+      mkdirSync(path, { recursive: true });
+    }
+    writeJson(join(injected(dir, 'store'), 'package.json'), {
       name: '@jury-forge/store',
       exports: { '.': './src/index.ts' },
       publishConfig: publish,
     });
-    writeJson(join(injected('domain'), 'package.json'), {
-      name: '@jury-forge/domain',
-      exports: { '.': './src/index.ts' },
+    // Already plain JS with nothing to apply: left as it is.
+    writeJson(join(injected(dir, 'contracts'), 'package.json'), {
+      name: '@jury-forge/contracts',
+      exports: { '.': './dist/index.js' },
     });
     writeJson(join(pg, 'package.json'), { name: 'pg', publishConfig: { tag: 'latest' } });
 
@@ -69,8 +92,18 @@ describe('applyToDeploy', () => {
     const read = (path: string) =>
       JSON.parse(readFileSync(join(path, 'package.json'), 'utf8')) as Record<string, unknown>;
     expect(read(dir)['exports']).toEqual({ '.': './dist/index.js' });
-    expect(read(injected('store'))['exports']).toEqual({ '.': './dist/index.js' });
-    expect(read(injected('domain'))['exports']).toEqual({ '.': './src/index.ts' });
+    expect(read(injected(dir, 'store'))['exports']).toEqual({ '.': './dist/index.js' });
+    expect(read(injected(dir, 'contracts'))['exports']).toEqual({ '.': './dist/index.js' });
     expect(read(pg)['publishConfig']).toEqual({ tag: 'latest' });
+  });
+
+  it('refuses a workspace package that would ship TypeScript exports', () => {
+    const dir = deployDir();
+    mkdirSync(injected(dir, 'crypto'), { recursive: true });
+    writeJson(join(injected(dir, 'crypto'), 'package.json'), {
+      name: '@jury-forge/crypto',
+      exports: { '.': './src/index.ts' },
+    });
+    expect(() => applyToDeploy(dir)).toThrow('@jury-forge/crypto would ship TypeScript exports');
   });
 });

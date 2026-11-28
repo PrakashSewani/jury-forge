@@ -1,25 +1,17 @@
-// JSON logs with pino (technical-approach §3.12). `LOG_LEVEL` is `info` by default; `debug` and
-// `trace` warn at start (operations.md §3). Headers that carry credentials are redacted.
+// JSON logs with pino (technical-approach §3.12). `LOG_LEVEL` (checked by the environment schema in
+// `contracts`) is `info` by default; `debug` and `trace` warn at start (operations.md §3). Headers
+// that carry credentials are redacted.
 
-import pino, { type Logger } from 'pino';
+import type { LogLevel } from '@jury-forge/contracts';
+import pino, { type DestinationStream, type Logger } from 'pino';
 
-const LEVELS = ['fatal', 'error', 'warn', 'info', 'debug', 'trace'] as const;
-type Level = (typeof LEVELS)[number];
-
-export class LogLevelError extends Error {
-  override name = 'LogLevelError';
-}
-
-export function parseLogLevel(value: string | undefined): Level {
-  if (value === undefined || value === '') return 'info';
-  if ((LEVELS as readonly string[]).includes(value)) return value as Level;
-  throw new LogLevelError(
-    `LOG_LEVEL must be one of ${LEVELS.join(', ')}, got ${JSON.stringify(value)}`,
-  );
-}
-
-export function createLogger(level: Level, role: string): Logger {
-  const logger = pino({
+/** `destination` defaults to stdout; tests pass a stream to read the lines back. */
+export function createLogger(
+  level: LogLevel,
+  role: string,
+  destination?: DestinationStream,
+): Logger {
+  const options = {
     level,
     base: { role },
     redact: {
@@ -31,9 +23,14 @@ export function createLogger(level: Level, role: string): Logger {
       ],
       censor: '[redacted]',
     },
-  });
+  };
+  const logger = destination === undefined ? pino(options) : pino(options, destination);
   if (level === 'debug' || level === 'trace') {
-    logger.warn({ level }, 'verbose logging is on; turn it off when the investigation is done');
+    // Not `level`: that key would overwrite pino's own level field in the line.
+    logger.warn(
+      { logLevel: level },
+      'verbose logging is on; turn it off when the investigation is done',
+    );
   }
   return logger;
 }

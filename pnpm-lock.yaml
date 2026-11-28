@@ -194,6 +194,12 @@ importers:
 
   apps/server:
     dependencies:
+      '@jury-forge/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@jury-forge/crypto':
+        specifier: workspace:*
+        version: link:../../packages/crypto
       '@jury-forge/domain':
         specifier: workspace:*
         version: link:../../packages/domain
@@ -222,9 +228,17 @@ importers:
 
   apps/web: {}
 
-  packages/contracts: {}
+  packages/contracts:
+    dependencies:
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
 
-  packages/crypto: {}
+  packages/crypto:
+    devDependencies:
+      fast-check:
+        specifier: 4.11.0
+        version: 4.11.0
 
   packages/domain:
     devDependencies:

@@ -1,12 +1,18 @@
 // The `app` role (deployment.md §3): the main HTTP server on port 3000 and the setup listener on
 // `SETUP_BIND`. In Compose, port 3000 is only on the internal network (`expose`, no `ports`), and
 // the setup port is published on host loopback only. The image runs it as `main.js app`.
+// It refuses to start when the master key does not open the key probe (WP 1-15a).
 
 import { checkReadiness, createStore } from '@jury-forge/store';
 import type { Logger } from 'pino';
 import { EnvError, loadRoleEnv, type RoleEnv } from './env.ts';
-import { APP_PORT, buildAppServer, buildSetupServer } from './http.ts';
+import { APP_PORT, type AppComponents, buildAppServer, buildSetupServer } from './http.ts';
 import { createLogger } from './logger.ts';
+import {
+  MasterKeyCheckError,
+  masterKeyReadiness,
+  verifyMasterKeyAtStart,
+} from './master-key-check.ts';
 import { OriginService } from './origin-service.ts';
 import { waitForSignal } from './shutdown.ts';
 import { createTlsProbe, type TlsProbe } from './tls-probe.ts';
@@ -32,6 +38,12 @@ export interface StartAppOptions {
 export async function startApp(options: StartAppOptions): Promise<RunningApp> {
   const { env, logger } = options;
   const store = createStore({ databaseUrl: env.databaseUrl, maxConnections: 5 });
+  try {
+    await verifyMasterKeyAtStart(store, env.masterKey);
+  } catch (error) {
+    await store.destroy();
+    throw error;
+  }
   const origin = new OriginService({
     store,
     publicUrl: env.publicUrl,
@@ -40,11 +52,20 @@ export async function startApp(options: StartAppOptions): Promise<RunningApp> {
   const app = buildAppServer({
     logger,
     origin,
-    readiness: () =>
-      checkReadiness(store, {
+    readiness: async (): Promise<AppComponents> => {
+      const components = await checkReadiness(store, {
         onError: (component, error) =>
           logger.warn({ component, err: error }, 'readiness check failed'),
-      }),
+      });
+      const masterKey =
+        components.database === 'ok'
+          ? await masterKeyReadiness(store, env.masterKey).catch((error: unknown) => {
+              logger.warn({ component: 'master_key', err: error }, 'readiness check failed');
+              return 'error' as const;
+            })
+          : 'error';
+      return { ...components, master_key: masterKey };
+    },
   });
   const setup = buildSetupServer({ logger: logger.child({ listener: 'setup' }) });
   const stop = async () => {
@@ -96,7 +117,11 @@ export async function runApp(
     running = await startApp({ env: roleEnv, logger });
   } catch (error) {
     dispose();
-    logger.fatal({ err: error }, 'app failed to start');
+    if (error instanceof MasterKeyCheckError) {
+      logger.fatal({ code: error.code }, error.message);
+    } else {
+      logger.fatal({ err: error }, 'app failed to start');
+    }
     return 1;
   }
   logger.info('app started');

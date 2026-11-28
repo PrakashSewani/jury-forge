@@ -15,5 +15,8 @@
     "exports": {
       ".": "./dist/index.js"
     }
+  },
+  "dependencies": {
+    "zod": "4.6.7"
   }
 }
