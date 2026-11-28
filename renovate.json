@@ -54,6 +54,16 @@
       "versioningTemplate": "docker"
     },
     {
+      "description": "Pebble, the test-only ACME server of the Compose smoke test (WP 1-14).",
+      "customType": "regex",
+      "managerFilePatterns": ["/(^|/)scripts/compose-smoke-test\\.sh$/"],
+      "matchStrings": [
+        "pebble_image=(?<depName>[^:@\\s]+):(?<currentValue>[^@\\s]+)@(?<currentDigest>sha256:[a-f0-9]{64})"
+      ],
+      "datasourceTemplate": "docker",
+      "versioningTemplate": "docker"
+    },
+    {
       "description": "PostgreSQL image of the CI image smoke test; same version as the testkit image.",
       "customType": "regex",
       "managerFilePatterns": ["/\\.github/workflows/ci\\.yml$/"],

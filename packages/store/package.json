@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@jury-forge/contracts": "workspace:*",
+    "@jury-forge/domain": "workspace:*",
     "graphile-worker": "0.18.0",
     "kysely": "0.29.9",
     "node-pg-migrate": "9.0.0",

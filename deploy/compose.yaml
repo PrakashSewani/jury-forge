@@ -82,6 +82,8 @@ services:
       <<: *jury-forge-env
       # Inside the container; the host publish below is the loopback boundary (ADR-0021).
       SETUP_BIND: 0.0.0.0:8080
+      # Empty unless .env sets it: then it freezes the origin (ADR-0021).
+      PUBLIC_URL: ${PUBLIC_URL:-}
     networks: [internal, egress]
     expose: ["3000"]
     ports: ["127.0.0.1:8080:8080"] # host loopback only; never publish it on 0.0.0.0

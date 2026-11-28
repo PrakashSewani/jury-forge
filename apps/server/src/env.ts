@@ -1,10 +1,12 @@
 // The environment the `app` and `worker` roles read in WP 1-13 (technical-approach §14;
 // operations.md §3): `DATABASE_URL_FILE` or `DATABASE_URL`, `LOG_LEVEL`, and, for `app`,
-// `SETUP_BIND`. An invalid value stops the process before it opens a connection (fail closed).
-// The rest of the v1 list arrives with the work that reads it: `JURY_MASTER_KEY_FILE` with the key
-// loader (WP 1-15), `PUBLIC_URL` and `TRUSTED_PROXIES` with the origin (WP 1-14).
+// `SETUP_BIND` and `PUBLIC_URL` (WP 1-14: it freezes the origin, ADR-0021). An invalid value stops
+// the process before it opens a connection (fail closed). The rest of the v1 list arrives with the
+// work that reads it: `JURY_MASTER_KEY_FILE` with the key loader and `TRUSTED_PROXIES` with the
+// first per-client rate limit (both WP 1-15).
 
 import { readFileSync } from 'node:fs';
+import { type Origin, parseOrigin } from '@jury-forge/domain';
 import { DatabaseUrlError, type ReadFile, resolveDatabaseUrl } from '@jury-forge/store';
 import {
   DEFAULT_SETUP_BIND,
@@ -18,6 +20,8 @@ export interface RoleEnv {
   databaseUrl: string;
   logLevel: ReturnType<typeof parseLogLevel>;
   setupBind: ListenAddress;
+  /** The parsed `PUBLIC_URL`, or null when the origin is set in setup. */
+  publicUrl: Origin | null;
 }
 
 export class EnvError extends Error {
@@ -35,9 +39,11 @@ export function loadRoleEnv(
     return {
       logLevel: parseLogLevel(env['LOG_LEVEL']),
       setupBind: parseSetupBind(env['SETUP_BIND']),
+      publicUrl: parsePublicUrl(env['PUBLIC_URL']),
       databaseUrl: resolveDatabaseUrl(env, readFile),
     };
   } catch (error) {
+    if (error instanceof EnvError) throw error;
     if (
       error instanceof DatabaseUrlError ||
       error instanceof ListenAddressError ||
@@ -47,6 +53,15 @@ export function loadRoleEnv(
     }
     throw error;
   }
+}
+
+function parsePublicUrl(value: string | undefined): Origin | null {
+  if (value === undefined || value === '') return null;
+  const parsed = parseOrigin(value);
+  if (!parsed.ok) {
+    throw new EnvError(`PUBLIC_URL must be https://<host> with no port or path (${parsed.reason})`);
+  }
+  return parsed.origin;
 }
 
 function parseSetupBind(value: string | undefined): ListenAddress {

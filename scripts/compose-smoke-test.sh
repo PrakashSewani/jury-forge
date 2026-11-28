@@ -1,14 +1,22 @@
 #!/usr/bin/env bash
-# The WP 1-13 exit check: `docker compose up` of deploy/ comes up healthy on a clean Linux host, and
-# its boundaries hold. CI runs it on fresh GitHub runner VMs (amd64 and arm64); an operator can
-# run it on a test host. It needs Docker Engine with Compose v2, curl, sudo, free ports 80, 443,
-# and 8080, and the image tagged `jury-forge:local` (`docker build -t jury-forge:local .`).
-# It works on a copy of deploy/ in a temporary directory and removes it, volumes included.
+# The exit checks of WP 1-13 and WP 1-14 on a clean Linux host. CI runs it on fresh GitHub runner
+# VMs (amd64 and arm64); an operator can run it on a test host.
+# 1. `docker compose up` of deploy/ is healthy and its boundaries hold. No origin is set, so every
+#    certificate is refused.
+# 2. With PUBLIC_URL set and Caddy pointed at Pebble (Let's Encrypt's test ACME server; test-only,
+#    never shipped), the configured name gets a valid certificate, every other name is refused,
+#    another Host gets 421, and /readyz reports tls_issued.
+# It needs Docker Engine with Compose v2, curl, sudo, free ports 80, 443, 8080, and 15000, and the
+# image tagged `jury-forge:local` (`docker build -t jury-forge:local .`). It works on a copy of
+# deploy/ in a temporary directory and removes it, volumes included.
 set -euo pipefail
 
 repo=$(cd "$(dirname "$0")/.." && pwd)
 work=$(mktemp -d)
 project=jury-forge-smoke
+# Pebble by tag and multi-arch digest. Renovate's docker-compose manager does not read this file.
+pebble_image=ghcr.io/letsencrypt/pebble:2.10.3@sha256:0c81f05db371f436c97fb894bd6d2ab8fc9c8e2ce40f8bef8a8e15941bcd75ef
+origin_host=review.jury-forge.test
 compose() { docker compose --project-name "$project" --file "$work/deploy/compose.yaml" "$@"; }
 fail() {
   echo "FAIL: $*" >&2
@@ -69,6 +77,8 @@ status=0
 curl -sk -m 10 -o /dev/null --resolve review.example.test:443:127.0.0.1 https://review.example.test/ ||
   status=$?
 test "$status" = 35 || fail ":443 handshake did not fail as expected (curl exit $status)"
+compose logs --no-color --no-log-prefix app | grep '"decision":"not_configured"' | grep -q review.example.test ||
+  fail 'the app did not refuse the ask before an origin exists'
 # `compose port` prints `:0` for a port that is not published.
 published() { compose port "$1" "$2" 2> /dev/null | grep -Eq ':[1-9][0-9]*$'; }
 if published postgres 5432; then fail 'postgres is published'; fi
@@ -81,6 +91,11 @@ if docker run --rm --network "${project}_internal" --entrypoint wget "$pg_image"
   https://api.github.com 2> /dev/null; then
   fail 'the internal network has egress'
 fi
+readyz() {
+  docker run --rm --network "${project}_internal" --entrypoint wget "$pg_image" -q -O - \
+    http://app:3000/readyz
+}
+readyz | grep -q '"state":"origin_unset"' || fail "/readyz does not report origin_unset: $(readyz)"
 
 echo '== worker stop'
 compose stop worker
@@ -95,4 +110,90 @@ compose up --detach --wait --wait-timeout 180 --no-build
 compose logs --no-color --no-log-prefix migrate | grep -q 'migrate: 0 migration(s) applied' ||
   fail 'the second migrate applied migrations again'
 
-echo 'OK: the Compose bundle is healthy and its boundaries hold'
+echo '== origin and TLS (WP 1-14, Pebble)'
+compose down
+{
+  echo 'services:'
+  echo '  pebble:'
+  echo "    image: $pebble_image"
+  echo '    command: ["-config", "/test/config/pebble-config.json"]'
+  echo '    environment:'
+  echo '      PEBBLE_VA_ALWAYS_VALID: "1" # no DNS for the test name; validation is not under test'
+  echo '      PEBBLE_WFE_NONCEREJECT: "0" # no random bad-nonce rejections'
+  echo '    networks: [edge, internal]'
+  echo '    ports: ["127.0.0.1:15000:15000"]'
+  echo '  caddy:'
+  echo '    volumes:'
+  echo '      - ./Caddyfile.pebble:/etc/caddy/Caddyfile:ro'
+  echo '      - ./pebble.minica.pem:/pebble/minica.pem:ro'
+  echo '  app:'
+  echo '    environment:'
+  echo '      NODE_EXTRA_CA_CERTS: /pebble/root.pem # the TLS probe trusts this run'"'"'s Pebble root'
+  echo '    volumes:'
+  echo '      - ./pebble-root.pem:/pebble/root.pem:ro'
+} > "$work/deploy/compose.pebble.yaml"
+with_pebble() { compose --file "$work/deploy/compose.pebble.yaml" "$@"; }
+with_pebble up --detach pebble
+for _ in $(seq 1 30); do
+  curl -sfk https://127.0.0.1:15000/roots/0 -o "$work/deploy/pebble-root.pem" && break
+  sleep 1
+done
+grep -q 'BEGIN CERTIFICATE' "$work/deploy/pebble-root.pem" || fail 'no Pebble root'
+docker cp "${project}-pebble-1:/test/certs/pebble.minica.pem" "$work/deploy/pebble.minica.pem"
+chmod 0644 "$work/deploy/pebble-root.pem" "$work/deploy/pebble.minica.pem"
+# The shipped Caddyfile with Pebble as the CA, added to its global block.
+awk '{ print } $0 == "{" && !done { print "\tacme_ca https://pebble:14000/dir"; print "\tacme_ca_root /pebble/minica.pem"; done = 1 }' \
+  "$work/deploy/Caddyfile" > "$work/deploy/Caddyfile.pebble"
+grep -q 'acme_ca https://pebble' "$work/deploy/Caddyfile.pebble" || fail 'Caddyfile.pebble not built'
+printf 'PUBLIC_URL=https://%s\n' "$origin_host" >> "$work/deploy/.env"
+with_pebble up --detach --wait --wait-timeout 180 --no-build
+compose logs --no-color --no-log-prefix app | grep -q '"msg":"PUBLIC_URL freezes the origin"' ||
+  fail 'the app did not read PUBLIC_URL'
+
+# tls <name> [curl args...]: an HTTPS request for <name> to this host's :443, trusting only Pebble.
+tls() {
+  local name=$1
+  shift
+  curl -s -m 30 --cacert "$work/deploy/pebble-root.pem" --resolve "$name:443:127.0.0.1" "$@" \
+    "https://$name/"
+}
+issued=false
+for _ in $(seq 1 30); do
+  if tls "$origin_host" -o /dev/null; then
+    issued=true
+    break
+  fi
+  sleep 2
+done
+$issued || fail "no valid certificate for $origin_host"
+if command -v openssl > /dev/null; then
+  openssl s_client -connect 127.0.0.1:443 -servername "$origin_host" < /dev/null 2> /dev/null |
+    openssl x509 -noout -subject -issuer -ext subjectAltName
+fi
+# Pinned: the origin's Host reaches the app, which serves nothing public yet (404).
+test "$(tls "$origin_host" -o /dev/null -w '%{http_code}')" = 404 || fail 'the origin Host is not served'
+test "$(tls "$origin_host" -o /dev/null -w '%{http_code}' -H 'Host: evil.jury-forge.test')" = 421 ||
+  fail 'another Host is not 421'
+for path in readyz healthz metrics "api/internal/tls/allow?domain=$origin_host"; do
+  code=$(curl -s -m 10 --cacert "$work/deploy/pebble-root.pem" --resolve "$origin_host:443:127.0.0.1" \
+    -o /dev/null -w '%{http_code}' "https://$origin_host/$path")
+  test "$code" = 404 || fail "/$path is reachable from outside ($code)"
+done
+status=0
+tls other.jury-forge.test -o /dev/null || status=$?
+test "$status" = 35 || fail "a certificate was served for another name (curl exit $status)"
+compose logs --no-color --no-log-prefix app | grep '"decision":"other_name"' | grep -q other.jury-forge.test ||
+  fail 'the app did not refuse the ask for another name'
+reported=false
+for _ in $(seq 1 30); do
+  if readyz | grep -q '"state":"tls_issued"'; then
+    reported=true
+    break
+  fi
+  sleep 2
+done
+$reported || fail "/readyz does not report tls_issued: $(readyz)"
+readyz
+echo
+
+echo 'OK: the bundle is healthy, its boundaries hold, and only the origin gets a certificate'

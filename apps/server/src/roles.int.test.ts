@@ -34,6 +34,7 @@ function roleEnv(databaseUrl: string): RoleEnv {
     databaseUrl,
     logLevel: 'info',
     setupBind: { host: '127.0.0.1', port: 0, loopback: true },
+    publicUrl: null,
   };
 }
 
@@ -73,7 +74,7 @@ describe.runIf(runtime)('app and worker roles (WP 1-13)', () => {
 
       const before = await fetch(`${base}/readyz`);
       expect(before.status).toBe(503);
-      expect(await before.json()).toEqual({
+      expect(await before.json()).toMatchObject({
         status: 'not_ready',
         components: { database: 'ok', migrations: 'pending', queue: 'pending' },
       });
@@ -84,6 +85,7 @@ describe.runIf(runtime)('app and worker roles (WP 1-13)', () => {
       expect(await after.json()).toEqual({
         status: 'ready',
         components: { database: 'ok', migrations: 'ok', queue: 'ok' },
+        origin: { state: 'origin_unset', frozen: false, tls_mode: 'caddy' },
       });
 
       const setup = await fetch(`http://127.0.0.1:${app.setupPort}/healthz`);
