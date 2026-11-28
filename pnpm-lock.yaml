@@ -194,6 +194,9 @@ importers:
 
   apps/server:
     dependencies:
+      '@jury-forge/pipeline':
+        specifier: workspace:*
+        version: link:../../packages/pipeline
       '@jury-forge/store':
         specifier: workspace:*
         version: link:../../packages/store
@@ -201,6 +204,12 @@ importers:
       '@jury-forge/testkit':
         specifier: workspace:*
         version: link:../../packages/testkit
+      '@types/pg':
+        specifier: 8.23.1
+        version: 8.23.1
+      pg:
+        specifier: 8.23.1
+        version: 8.23.1
 
   apps/web: {}
 
@@ -208,7 +217,11 @@ importers:
 
   packages/crypto: {}
 
-  packages/domain: {}
+  packages/domain:
+    devDependencies:
+      fast-check:
+        specifier: 4.11.0
+        version: 4.11.0
 
   packages/forge: {}
 
@@ -216,7 +229,18 @@ importers:
 
   packages/parsing: {}
 
-  packages/pipeline: {}
+  packages/pipeline:
+    dependencies:
+      '@jury-forge/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@jury-forge/domain':
+        specifier: workspace:*
+        version: link:../domain
+    devDependencies:
+      fast-check:
+        specifier: 4.11.0
+        version: 4.11.0
 
   packages/store:
     dependencies:

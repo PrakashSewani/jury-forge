@@ -10,3 +10,10 @@ export type {
   JobSpec,
   TenantJobPayload,
 } from './job-queue.ts';
+export type {
+  StoredStep,
+  TerminalTurnStatus,
+  TurnRecord,
+  TurnStatus,
+  TurnStore,
+} from './turn-store.ts';
