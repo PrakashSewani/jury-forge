@@ -524,6 +524,12 @@ as one "v1 stack" decision.
 | pg | 8.23.1 | MIT | |
 | dependency-cruiser | 18.9.0 | MIT | Gets its own TypeScript 5.9.3 through `packageExtensions`: it needs the compiler JS API, which TypeScript 7.0 lacks (supported: <7.0 or >=7.1). Without it, it cruises 0 modules and passes silently. |
 
+**M1.1, verified live 2026-11-28 and pinned in `packages/store/package.json`:**
+
+| Package | Version | Licence | Note |
+| ------- | ------- | ------- | ---- |
+| node-pg-migrate | 9.0.0 | MIT | The latest release (2026-07-17). Plain `.sql` files with `-- Up Migration` / `-- Down Migration` markers, one transaction per run, and an advisory lock that fails fast (WP 1-08). Its peer range `pg <9.0.0` covers `pg` 8.23.1. Runtime dependencies `glob`, `jiti`, `yargs` pass the licence check. |
+
 **Licence exception for graphile-worker (Q-051, owner decision 2026-11-28):** graphile-worker 0.18.0
 pulls in `argparse` 2.0.1 (Python-2.0) through `cosmiconfig` 8.3.6 → `js-yaml` 4.3.2, and only
 js-yaml's command-line tool uses it ([spike S-A](../analysis/spikes/2026-11-28-queue-serialization-debounce.md)).
