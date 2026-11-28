@@ -15,7 +15,7 @@
 // stack can start before setup (owner decision, 2026-11-28).
 
 import { hostOf } from '@jury-forge/domain';
-import type { StoreReadiness } from '@jury-forge/store';
+import type { ComponentState, StoreReadiness } from '@jury-forge/store';
 import Fastify, {
   type FastifyBaseLogger,
   type FastifyInstance,
@@ -25,9 +25,12 @@ import type { AskDecision, OriginReadiness, OriginState } from './origin-service
 
 export const APP_PORT = 3000;
 
+/** The datastore's components, plus the master key (its probe opens; WP 1-15a). */
+export type AppComponents = StoreReadiness & { master_key: ComponentState };
+
 export interface Readiness {
   status: 'ready' | 'not_ready';
-  components: StoreReadiness;
+  components: AppComponents;
   origin: OriginReadiness | { state: 'error' };
 }
 
@@ -39,7 +42,7 @@ export interface OriginPort {
 
 export interface AppServerOptions {
   logger: FastifyBaseLogger;
-  readiness: () => Promise<StoreReadiness>;
+  readiness: () => Promise<AppComponents>;
   origin: OriginPort;
 }
 

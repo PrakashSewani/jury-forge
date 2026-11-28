@@ -267,6 +267,10 @@ Every row is enforced in the service layer, not only in the UI.
 
 ## 7. Secrets and encryption
 
+- *As built (WP 1-15a):* the key file is one line of base64; `app` and `worker` refuse to start
+  when it is malformed, non-random, group- or world-readable, or does not open the stored key probe
+  (`encryption_key_mismatch`). The key never appears in a log line (tested), and the secret's
+  additional data binds it to its org and kind. Details: technical-approach §3.9.
 - **Envelope encryption:** a data key (DEK, AES-256-GCM) per secret, wrapped by the 32-byte master
   key (KEK) read from `JURY_MASTER_KEY_FILE` (a Docker secret or file, mode 0400; never an env
   value). `key_id` supports rotation; `jury-forge rotate-key` rewraps the DEKs without

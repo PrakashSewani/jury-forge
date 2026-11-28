@@ -307,8 +307,11 @@ it on fresh amd64 and arm64 runner VMs. Where they differ from the illustrative 
     specification). So each file is owned by the container user that reads it, mode `0400`:
     `database_url` by 65532 (the image's `nonroot`) and `db_password` by 70 (`postgres` in the
     Alpine image).
-  - `init-secrets.sh` creates them as root. It refuses to overwrite and prints fingerprints only.
-    `jury-forge init` (WP 1-17) replaces it.
+  - *WP 1-15a:* `master_key` too, owned by 65532 and given only to `app` and `worker` (`migrate`
+    never reads it). It is one line, 32 random bytes in base64.
+  - `init-secrets.sh` creates them as root. It refuses to overwrite and prints fingerprints only,
+    plus the master key's id (`k1-…`, the same id the app records). `jury-forge init` (WP 1-17)
+    replaces it.
   - **Limitation:** a Docker daemon with user-namespace remapping or in rootless mode shifts those
     uids, so the files are unreadable there. It is not supported until `init` handles it.
 - **Users:**
@@ -331,8 +334,8 @@ it on fresh amd64 and arm64 runner VMs. Where they differ from the illustrative 
 - **Stop:** `worker` has a 15 s stop grace period, above graphile-worker's 5 s abort timeout (spike
   S-A R4). On `SIGTERM` it stops in about a second when idle, exits 0, and removes its heartbeat.
 - **Not yet in the file:**
-  - the master key (`JURY_MASTER_KEY_FILE`, WP 1-15);
-  - `TRUSTED_PROXIES`, `PUBLIC_URL`, and the `front` variant (WP 1-14);
+  - `TRUSTED_PROXIES` (the first limit keyed on a client address behind Caddy) and the `front`
+    variant (WP 1-16). `PUBLIC_URL` arrived with WP 1-14 and the master key with WP 1-15a;
   - digest-pinned Jury Forge images: until the release pipeline (WP 4-05), `build` makes
     `jury-forge:local` from the checkout.
 - **Caddy:** the Caddyfile is the minimum for WP 1-13. Health, metrics, and `/api/internal/*`

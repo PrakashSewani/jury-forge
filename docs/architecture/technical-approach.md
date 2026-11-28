@@ -272,6 +272,19 @@ persisted result. Model access goes through our **provider gateway**, built on t
 - **Webhook HMAC:** `timingSafeEqual` on the raw body; deliveries older than 5 min are rejected.
 - **Sessions:** opaque random IDs, stored hashed in Postgres; `HttpOnly; Secure; SameSite=Lax`;
   idle 8 h / absolute 7 d; re-auth for sensitive actions.
+- *WP 1-15a (2026-11-28), as built (`packages/crypto`):*
+  - **The key file:** one line of base64 that decodes to 32 bytes (owner decision). It is refused
+    when malformed, when it has 16 or fewer distinct byte values (samples, repeats), or when the
+    file is group- or world-readable.
+  - **`MasterKey`** never shows its bytes: it prints, serialises, and inspects as
+    `[MasterKey <keyId>]`. The `keyId` is `k1-` plus 16 hex characters of
+    SHA-256(`jury-forge/kek-id/v1 ` + key). `init-secrets.sh` prints the same id.
+  - **The envelope:** version byte, IV, tag, and data. The DEK's additional data is the key id; the
+    secret's is the caller's context (`<org_id>/<kind>`). Another key fails as
+    `encryption_key_mismatch`, and a changed record fails as an integrity error.
+  - **The probe:** one `key_probe` secret, opened by `app` and `worker` at start (they refuse to
+    start if it does not open) and by `/readyz` (the `master_key` component).
+  - **Not yet:** `rotate-key` (a keyring of more than one key) and backups with the key.
 - **Backups** include the KEK only if the operator opts in to "include key"; otherwise the restore
   drill asks for the key file. Both paths are documented and tested.
 
@@ -640,7 +653,9 @@ packages in WP 1-12.)
   origins (§3.11); `OBJECT_STORAGE_*` arrives with the v1.2 S3 adapter.
   *Amended 2026-11-28 (WP 1-13):* `ROLE` is not read. The image's command is the role (`migrate`,
   `app`, `worker`; §3.13), so one variable less can disagree with the command.
-- Every config source is parsed by **one zod schema per layer** in `contracts`. Startup fails closed
+- Every config source is parsed by **one zod schema per layer** in `contracts`. *WP 1-15a:* the environment's is
+  `RoleEnvironmentSchema` (zod 4.6.7). It checks shape; values that need a parser `contracts` cannot
+  import (the origin, the listen address, the key file) are parsed in the app. Startup fails closed
   on an invalid environment; an invalid repo file produces a Check Run note and falls back to defaults.
 - `.jury-forge.yml` v1 keys: `version`, `review.on`, `review.drafts`, `review.preset`,
   `review.paths.include|exclude`, `review.authors.exclude`, `charges[]`, `gate` (`neutral`/`critical`/`charges`),

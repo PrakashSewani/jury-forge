@@ -17,6 +17,8 @@
     }
   },
   "dependencies": {
+    "@jury-forge/contracts": "workspace:*",
+    "@jury-forge/crypto": "workspace:*",
     "@jury-forge/domain": "workspace:*",
     "@jury-forge/pipeline": "workspace:*",
     "@jury-forge/store": "workspace:*",

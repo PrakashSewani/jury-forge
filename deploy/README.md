@@ -22,11 +22,14 @@ From a checkout of the repository:
 ```sh
 cd deploy
 cp .env.example .env
-sudo ./init-secrets.sh      # secrets/database_url (uid 65532) and secrets/db_password (uid 70), 0400
+sudo ./init-secrets.sh      # database_url and master_key (uid 65532), db_password (uid 70); 0400
 docker compose up -d --wait # builds jury-forge:local from the checkout the first time
 docker compose ps
 curl -s http://127.0.0.1:8080/healthz
 ```
+
+Back up `secrets/master_key` apart from the database: the stored secrets cannot be opened without
+it, and `app` and `worker` refuse to start with another key (`encryption_key_mismatch`).
 
 The images are built from the checkout until the release pipeline publishes signed images
 (WP 4-05). `init-secrets.sh` refuses to overwrite and prints fingerprints only; `jury-forge init`

@@ -59,6 +59,7 @@ const MIGRATIONS = [
   '0004_sessions',
   '0005_budgets_usage',
   '0006_audit_append_only',
+  '0007_key_probe',
 ];
 
 const PG_MIGRATE_LOCK_ID = '7241865325823964';

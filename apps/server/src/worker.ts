@@ -3,11 +3,13 @@
 // The image runs it as `main.js worker`. On SIGTERM it stops taking jobs and waits for running
 // ones, aborting them after graphile-worker's 5 s timeout, so the Compose stop grace period is
 // above that (spike S-A R4). A fenced worker exits 1 and the restart policy starts a fresh one.
+// It refuses to start when the master key does not open the key probe (WP 1-15a).
 
 import { createStore, GraphileJobQueue, type QueueLogLevel } from '@jury-forge/store';
 import type { Logger } from 'pino';
 import { EnvError, loadRoleEnv, type RoleEnv } from './env.ts';
 import { createLogger } from './logger.ts';
+import { MasterKeyCheckError, verifyMasterKeyAtStart } from './master-key-check.ts';
 import { waitForSignal } from './shutdown.ts';
 
 export interface RunningWorker {
@@ -27,6 +29,12 @@ export interface StartWorkerOptions {
 export async function startWorker(options: StartWorkerOptions): Promise<RunningWorker> {
   const { env, logger } = options;
   const store = createStore({ databaseUrl: env.databaseUrl, maxConnections: 5 });
+  try {
+    await verifyMasterKeyAtStart(store, env.masterKey);
+  } catch (error) {
+    await store.destroy();
+    throw error;
+  }
   let onFenced: (poolId: string) => void = () => {};
   const fenced = new Promise<string>((resolve) => {
     onFenced = resolve;
@@ -79,7 +87,11 @@ export async function runWorker(
     running = await startWorker({ env: roleEnv, logger });
   } catch (error) {
     dispose();
-    logger.fatal({ err: error }, 'worker failed to start');
+    if (error instanceof MasterKeyCheckError) {
+      logger.fatal({ code: error.code }, error.message);
+    } else {
+      logger.fatal({ err: error }, 'worker failed to start');
+    }
     return 1;
   }
   logger.info({ poolId: running.poolId }, 'worker started');
