@@ -11,9 +11,13 @@ migrations), **v1.1**, or **v1.2**. Nothing is built ahead of its tier.
 
 ## Design rules
 
-1. **Every row is tenant-scoped** by `org_id`, directly or through a parent. The `store` package's
-   repositories always filter by org, and cross-tenant tests prove it. Row-level security is **not
-   used in v1**; revisit it with multi-installation (technical-approach §3.2).
+1. **Every tenant-owned table has `org_id NOT NULL`** ([ADR-0035](../decisions/ADR-0035-tenant-key-on-every-table.md)),
+   even where a column list below does not repeat it. Tenant foreign keys are composite,
+   `(org_id, <parent>_id) → <parent> (org_id, id)`, so the database refuses a cross-tenant link.
+   The exceptions are `users`, `user_sessions`, graphile-worker's schema, and the migration table.
+   The `store` package's repositories take `org_id` as a required argument and always filter by
+   it, and cross-tenant tests prove it. Row-level security is **not used in v1**; revisit it with
+   multi-installation (technical-approach §3.2).
 2. **Configuration is versioned.** A turn references the exact reviewer versions, instruction files,
    and model bindings it used. Mutation never rewrites history.
 3. **Postgres is the only datastore.** Relational data, the queue, the audit log, and artefacts all
@@ -32,9 +36,9 @@ migrations), **v1.1**, or **v1.2**. Nothing is built ahead of its tier.
 
 | Table | Tier | Key fields | Notes |
 | ----- | ---- | ---------- | ----- |
-| `orgs` | MVP | `id`, `slug`, `name`, `owner_user_id`, `created_at` | The tenant. v1 is single-org per instance, but every table carries `org_id`. `owner_user_id` is the claimed owner (first-run-setup Stage 3). |
-| `users` | MVP | `id`, `github_id`, `login`, `display_name`, `avatar_url`, `created_at` | Identity from GitHub OAuth. OIDC is v1.2. |
-| `user_sessions` | MVP | `id`, `user_id`, `token_hash`, `created_at`, `last_seen_at`, `idle_expires_at`, `absolute_expires_at`, `revoked_at` | Opaque random IDs stored hashed; idle 8 h, absolute 7 d (technical-approach §3.9). |
+| `orgs` | MVP | `id`, `slug`, `name`, `owner_user_id`, `created_at` | The tenant. v1 is single-org per instance, but every tenant-owned table carries `org_id` (ADR-0035). The first migration creates the instance org with `owner_user_id` NULL, so rows written before the claim have a tenant; the claim sets `owner_user_id` (first-run-setup Stage 3). |
+| `users` | MVP | `id`, `github_id`, `login`, `display_name`, `avatar_url`, `created_at` | Identity from GitHub OAuth. OIDC is v1.2. Instance-level, so no `org_id` (an ADR-0035 exception); org access is checked through `orgs.owner_user_id`, GitHub repo access, and v1.2 `role_bindings`. |
+| `user_sessions` | MVP | `id`, `user_id`, `token_hash`, `created_at`, `last_seen_at`, `idle_expires_at`, `absolute_expires_at`, `revoked_at` | Opaque random IDs stored hashed; idle 8 h, absolute 7 d (technical-approach §3.9). Instance-level like `users` (no `org_id`, ADR-0035). |
 | `instance_settings` | MVP | `org_id`, `key`, `value`, `version`, `updated_by`, `updated_at` | Layer 2 of the configuration model (technical-approach §14): set through the UI, versioned, audited. Includes `public_url` (ADR-0021) and the setup state. |
 | `secrets` | MVP | `id`, `org_id`, `kind`, `ciphertext`, `wrapped_dek`, `key_id`, `created_at`, `rotated_at` | Envelope encryption: a DEK per secret, wrapped by the KEK from `JURY_MASTER_KEY_FILE`; `key_id` supports rotation (`jury-forge rotate-key`). Holds the GitHub App private key, client and webhook secrets, provider keys, and the receipt signing key. |
 | `audit_events` | MVP | `id`, `org_id`, `actor_type`, `actor_id`, `action`, `target_type`, `target_id`, `before`, `after`, `request_id`, `turn_id`, `ip`, `at` | Append-only (trigger); redacted; exportable. |

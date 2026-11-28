@@ -4,7 +4,7 @@
 - Inputs: accepted ADRs 0001, 0002, 0007–0009, 0011–0018, 0021–0025; the specs; the deep dive.
 - Decides: ADR-0003, 0004, 0005, 0006, 0010, 0020 and the areas that had no ADR yet. Those decisions
   are recorded as ADR-0026 or as amendments to the existing ADRs (ADR-0003/0004/0005/0006/0010/0020
-  are accepted; ADR-0010 is accepted as amended: a thin turn runner, no harness in v1).
+  are accepted; ADR-0010 is accepted, amended by this document: a thin turn runner, no harness in v1).
 - Evidence: package versions and licences resolved live from the npm registry on 2026-11-16
   (§13). Node v24.19.0 was observed locally (`node -v`), with pnpm 12.4.2.
 
@@ -86,6 +86,10 @@ Each row: choice, alternatives considered, why, and the risk with its mitigation
 - Tenancy: v1 is single-org per instance, but every table carries `org_id`. Row-level security is
   **not** used in v1: a repository layer that always filters by org, plus cross-tenant tests, is
   simpler to reason about. Revisit for multi-installation (Later).
+  *Amended 2026-11-28 (ADR-0035):* "every table" means every tenant-owned table, as `org_id NOT
+  NULL` with composite tenant foreign keys `(org_id, parent_id)`. `users`, `user_sessions`, and
+  graphile-worker's schema are the exceptions. The first migration creates the unclaimed instance
+  org, and every job payload carries `org_id`.
 
 ### 3.3 Queue and workers — ADR-0006 → **accept: Postgres-backed queue, `graphile-worker`**
 

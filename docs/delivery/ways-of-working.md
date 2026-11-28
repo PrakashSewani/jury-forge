@@ -60,9 +60,11 @@ Feature flag, migration, docs, support.
 # ADR-XXXX: <Title>
 
 - Status: proposed | accepted | superseded by ADR-YYYY | rejected
+  (once accepted, the only later edit is a pointer: "<what> amended by ADR-YYYY (date)"; ADR-0034)
 - Date: YYYY-MM-DD
 - Owners: <role>
-- Supersedes: <ADR or —>
+- Amends: <ADR and section it changes, or —>
+- Supersedes: <ADR it replaces in full, or —>
 - Revisit trigger: <event/date>
 
 ## Context

@@ -76,8 +76,8 @@ typecheck and unit tests until then.
 
 | WP | Title | Size | Contents | Done when |
 | -- | ----- | ---- | -------- | --------- |
-| 1-08 | Migrations v0 | M | SQL migrations for the MVP schema (approach §17); `migrate` entrypoint; up/down tests | Fresh DB → latest → down → up in CI |
-| 1-09 | Store package | M | Kysely codegen; repositories with mandatory `org_id`; UUIDv7; audit append-only trigger; artefacts with expiry | Cross-tenant tests pass |
+| 1-08 | Migrations v0 | M | SQL migrations for the MVP schema (approach §17); `org_id NOT NULL` and composite tenant foreign keys on every tenant-owned table, and the unclaimed instance org row (ADR-0035); `migrate` entrypoint; up/down tests | Fresh DB → latest → down → up in CI; a test fails if a non-exempt table lacks a non-null `org_id` |
+| 1-09 | Store package | M | Kysely codegen; repositories with mandatory `org_id`; UUIDv7; audit append-only trigger; artefacts with expiry | Cross-tenant tests pass, including a database-level case: a child row that points at another org's parent is rejected |
 | 1-10 | `JobQueue` port | M | graphile-worker adapter: `enqueue`, `enqueueTx`, `cancel`, `schedule`, `onJob`; per-session `queue_name`; `job_key` debounce; cron registry; a two-worker cron test (audit Q-E, [`job-pipeline.md`](../architecture/job-pipeline.md)) | Serialization, debounce, and txn-enqueue tests pass; with two `worker` processes, each cron tick fires exactly once (until this passes, only one `worker` replica is documented as safe) |
 | 1-11 | Step runner core | M | `turn_steps` persistence, `(turn_id, step)` idempotency, generation check, `superseded` abort, retry policy | Fault-injection test: kill mid-step → resumes without duplicate effects |
 

@@ -65,12 +65,15 @@ Use `docs/delivery/ways-of-working.md#4-the-adr-template`. Keep it to one decisi
 | Licence | | | |
 | PoC fit | | | |
 
-## Superseding
+## Amending and superseding (ADR-0034)
 
-- Never edit an accepted ADR's decision.
-- Write a new ADR that says `Supersedes: ADR-XXXX`.
-- Mark the old one `superseded by ADR-YYYY`.
-- Update the index and any docs that linked the old decision.
+- Never edit an accepted ADR's body. Only mechanical fixes (a broken link, a typo, a renamed path)
+  are allowed.
+- A partial change is a new ADR with `Amends: ADR-XXXX §N`. A full replacement is a new ADR with
+  `Supersedes: ADR-XXXX`.
+- After acceptance, add a dated one-clause pointer to the old ADR's status line ("<what> amended by
+  ADR-YYYY"), or mark it `superseded by ADR-YYYY`.
+- Update the index's **Amended by** column and any docs that linked the old decision, in the same PR.
 - Explain what changed in the context, not just the new choice.
 
 ## Anti-patterns

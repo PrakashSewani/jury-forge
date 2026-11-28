@@ -1,6 +1,7 @@
 # ADR-0026: v1 stack
 
-- Status: accepted (Phase 1a, 2026-11-16; structured-output mode choice amended by ADR-0029)
+- Status: accepted (Phase 1a, 2026-11-16; structured-output mode choice amended by ADR-0029; the
+  egress module (technical-approach §3.11) by ADR-0030; tenancy (§3.2) by ADR-0035)
 - Date: 2026-11-16
 - Owners: architecture
 - Related: ADR-0003, 0004, 0005, 0006, 0010 (amended), 0020; full analysis in

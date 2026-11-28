@@ -154,7 +154,7 @@ pipeline in [`job-pipeline.md`](job-pipeline.md).
 | Queue + worker job model | Accepted (Phase 1a) | ADR-0006 |
 | Token-aware context + retrieval | Accepted (G0) | ADR-0007 |
 | Roles + trust boundaries | Accepted (G0) | ADR-0008 |
-| Agent runtime harness | Accepted as amended (Phase 1a): thin runner, no harness | ADR-0010 |
+| Agent runtime harness | Accepted (Phase 1a, amended by ADR-0026): thin runner, no harness | ADR-0010 |
 | Provider/model discovery | Accepted (G0) | ADR-0011 |
 | PR sessions + `suggest` resolution (auto/off opt-in) | Accepted (G0) | ADR-0012 |
 | Manual-first trigger + dynamic routing | Accepted (G0) | ADR-0013 |
@@ -174,6 +174,8 @@ pipeline in [`job-pipeline.md`](job-pipeline.md).
 | Helm chart runtime shape (v1.2): the Compose roles, cron in `worker` | Accepted (2026-11-28) | ADR-0031 |
 | Finding severity scale `critical`/`high`/`medium`/`low` | Accepted (2026-11-28) | ADR-0032 |
 | Comment volume: no default noise budget, a fixed 50-comment ceiling | Accepted (2026-11-28) | ADR-0033 |
+| ADR changes: frozen body, a new ADR amends or supersedes, a status-line pointer | Accepted (2026-11-28) | ADR-0034 |
+| `org_id` on every tenant-owned table, composite foreign keys | Accepted (2026-11-28) | ADR-0035 |
 
 Read next: [`agentic-review.md`](agentic-review.md) → [`components.md`](components.md) →
 [`job-pipeline.md`](job-pipeline.md) → [`security.md`](security.md) →
