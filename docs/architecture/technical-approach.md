@@ -82,6 +82,10 @@ Each row: choice, alternatives considered, why, and the risk with its mitigation
   container before `app` and `worker` start (compose `depends_on: condition: service_completed_successfully`).
   Expand/contract only; every migration has a tested down step until the release that drops it.
   Kysely types are generated from the live schema (`kysely-codegen`) in CI and checked in.
+  *WP 1-09 (2026-11-28):* the file is `packages/store/src/db.generated.ts`; an integration test
+  regenerates it from a migrated PostgreSQL 17 and fails on any difference, and `AGENTS.md` names
+  it as the one generated file allowed in the repository (owner decision). IDs come from the SQL
+  `uuid_v7()` default only.
   - Rejected: dbmate (an extra Go binary), Kysely's built-in migrator (its migrations are TS rather than SQL).
 - Tenancy: v1 is single-org per instance, but every table carries `org_id`. Row-level security is
   **not** used in v1: a repository layer that always filters by org, plus cross-tenant tests, is
@@ -529,13 +533,16 @@ as one "v1 stack" decision.
 | Package | Version | Licence | Note |
 | ------- | ------- | ------- | ---- |
 | node-pg-migrate | 9.0.0 | MIT | The latest release (2026-07-17). Plain `.sql` files with `-- Up Migration` / `-- Down Migration` markers, one transaction per run, and an advisory lock that fails fast (WP 1-08). Its peer range `pg <9.0.0` covers `pg` 8.23.1. Runtime dependencies `glob`, `jiti`, `yargs` pass the licence check. |
+| kysely | 0.29.9 | MIT | The latest release (2026-11-12), as planned above. No runtime dependencies. |
+| kysely-codegen | 0.20.0 | MIT | Dev only (WP 1-09). Reaches `argparse` (Python-2.0) through `cosmiconfig` 9 → `js-yaml` 4; covered by the Q-051 exception. Its database drivers are optional peers; only `pg` is installed. |
 
 **Licence exception for graphile-worker (Q-051, owner decision 2026-11-28):** graphile-worker 0.18.0
 pulls in `argparse` 2.0.1 (Python-2.0) through `cosmiconfig` 8.3.6 → `js-yaml` 4.3.2, and only
 js-yaml's command-line tool uses it ([spike S-A](../analysis/spikes/2026-11-28-queue-serialization-debounce.md)).
 Python-2.0 is permissive and OSI-approved, but it is not on the allowlist. It gets a **named
 exception** in `licence-policy.json` for `argparse` with `scope: all` and that reason, not a new
-allowlist entry, so any other Python-2.0 package still fails. The exception lands with WP 1-10, in
+allowlist entry, so any other Python-2.0 package still fails. *Landed early, in WP 1-09:* kysely-codegen
+(a dev dependency) reaches the same `argparse` through `cosmiconfig` 9. It was to land with WP 1-10, in
 the pull request that adds graphile-worker.
 
 **Changed from the plan:** `license-checker` (BSD-3-Clause, last published 2022) is not used.
