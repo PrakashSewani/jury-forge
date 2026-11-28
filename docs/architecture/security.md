@@ -199,6 +199,18 @@ a lint rule or code review checklist. `org_id NOT NULL` on every tenant-owned ta
 tenant foreign keys, so the database refuses a cross-tenant reference (ADR-0035). Row-level
 security is not used in v1 (technical-approach §3.2).
 
+**Built (WP 1-08, WP 1-09, 2026-11-28):**
+- **Database:** composite tenant keys, with migration tests that read the catalog and fail on a
+  table without `org_id` or a tenant foreign key that is not composite.
+- **Store:** `forOrg(orgId)`, the only path to a tenant table. It filters reads, updates, and deletes
+  by `org_id`, overwrites any `org_id` on insert, and refuses an update to `org_id`. Code outside the
+  store gets no raw Kysely instance.
+- **Tests:** cross-tenant tests that prove another org's rows cannot be read, changed, or deleted, and
+  that the database rejects a child pointing at another org's parent.
+
+**Residual risk:** a scoped query that joins on a column that is not a foreign key could read across
+orgs. Joins must follow foreign-key columns; this is a review checklist item until a lint exists.
+
 ## 5. Authentication and session design
 
 - **User auth:** GitHub OAuth in v1; OIDC/SSO is v1.2. Authorization code flow with state; PKCE if
@@ -300,6 +312,11 @@ A single egress policy module decides whether a request may leave:
   request id, run id, timestamp, IP.
 - Data-egress events: provider, model, token counts, redactions, policy decision.
 - Export as JSON/CSV; retention configurable; deletion is audited.
+- **Append-only, enforced in the database** (migration 0006): `UPDATE` and `TRUNCATE` on
+  `audit_events` always fail. `DELETE` works only in a transaction that names its reason
+  (`retention` or `org_purge`), and the retention job records each such deletion as a new audit
+  event (WP 1-28a). The guard stops application mistakes; a database superuser can still bypass it,
+  which is why audit export and backups matter.
 - **Retention defaults (v1):** raw prompts/responses 30 days; findings, sessions, and receipts 1 year;
   audit 1 year; per-repo purge. All configurable.
 - **Egress preview (v1):** the owner can see the exact redacted payload for a repo before the first

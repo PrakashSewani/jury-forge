@@ -150,7 +150,10 @@ workflow prompt is [`.pi/prompts/docs-chain.md`](.pi/prompts/docs-chain.md).
 - Pull requests state: what changed, why, evidence, docs touched, checks run, and open questions.
 - Documentation-only PRs may merge with the docs checks; product PRs require the full check
   command once it exists.
-- No generated files, build output, secrets, or editor state in the repository.
+- No generated files, build output, secrets, or editor state in the repository. One named
+  exception (owner, 2026-11-28): `packages/store/src/db.generated.ts`, the Kysely types generated
+  from the migrated schema, is checked in so typecheck needs no database; an integration test
+  regenerates it and fails on any difference (technical-approach §3.2).
 - Keep the tree portable: LF line endings, UTF-8, no OS-specific paths in docs or scripts.
 
 ## Definition of done

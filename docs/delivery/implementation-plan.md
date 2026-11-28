@@ -99,14 +99,30 @@ function, and the unclaimed instance org. `migrate()` in the store runs them, an
 
 The audit append-only trigger and the store's own UUIDv7 generation stay in WP 1-09.
 
+**Progress (2026-11-28): WP 1-09 is written.** Its three scope decisions (owner, 2026-11-28):
+- the generated types are checked in, with a drift test (`AGENTS.md` exception);
+- audit deletes need a named reason;
+- the store is a tenant-scoped layer plus the artefact and audit repositories; the other
+  repositories land with the features that use them.
+
+What it contains:
+- **Migration 0006**, the audit guard.
+- **`db.generated.ts`** from kysely-codegen, with its drift test.
+- **`createStore`**, with `forOrg`, `instance`, `transaction`, `allowAuditDelete`, and
+  `deleteExpiredArtefacts`.
+- **The repositories** `putArtefact`/`getArtefact` and `appendAudit`.
+
+UUIDv7 stays the SQL default only, so there is one generator. The Q-051 `argparse` exception landed
+here, because kysely-codegen brings the same package.
+
 **Carried from spike S-A and the decisions it led to.** The owner closed both S-A questions on
 2026-11-28. The recommendations R1–R9 are not decided; each WP settles its own.
 
 - **WP 1-08:** the `worker_heartbeats` table, and its place in the migration test's list of tables
   without `org_id` (ADR-0037).
 - **WP 1-10:**
-  - the named `argparse` licence exception in `licence-policy.json`, in the same pull request as
-    graphile-worker (Q-051, technical-approach §13);
+  - the named `argparse` licence exception is already in `licence-policy.json` (WP 1-09); graphile-worker
+    adds no new licence (Q-051, technical-approach §13);
   - the heartbeat, fencing, and release of ADR-0037, with its two tests (a killed worker's job runs
     again within one sweep; a silent live worker is fenced and no session runs two turns at once);
   - complete and fail writes awaited on shutdown (R3), with a graceful-stop test;

@@ -24,6 +24,12 @@
       "licence": "MPL-2.0",
       "scope": "dev",
       "reason": "Platform binaries of lightningcss; same reason as lightningcss."
+    },
+    {
+      "name": "argparse",
+      "licence": "Python-2.0",
+      "scope": "all",
+      "reason": "Q-051 (owner, 2026-11-28): permissive and OSI-approved; reached through cosmiconfig -> js-yaml, which uses it only in its command-line tool. Arrives with kysely-codegen (dev, WP 1-09) and graphile-worker (production, WP 1-10). Python-2.0 itself is not allowlisted."
     }
   ]
 }

@@ -20,7 +20,13 @@ first three against the live catalog):
   Optional references to rows with their own retention (artefacts, turns) use
   `ON DELETE SET NULL (column)`.
 - **IDs:** UUIDv7 from the SQL function `uuid_v7()`, the default of every `id` (PostgreSQL 17 has no
-  built-in generator). The store may also supply its own UUIDv7 values (WP 1-09).
+  built-in generator). It is the only generator: the store reads new ids back with `returning`
+  (WP 1-09).
+- **Types:** `packages/store/src/db.generated.ts` is generated from the migrated schema by
+  kysely-codegen and checked in; an integration test regenerates it and fails on any difference.
+- **Tenant access (security.md T-12):** code outside the store never holds a raw Kysely instance.
+  `forOrg(orgId)` filters every read, update, and delete by `org_id`, sets it on every insert, and
+  refuses an update to `org_id`; instance-level tables go through `instance`.
 - **Enumerations** are `text` with a `CHECK`, so a value can be added in an expand step.
 - **Migrations** are plain SQL files run by node-pg-migrate in one transaction, with a tested down
   step each; the bookkeeping table is `pgmigrations`.
@@ -50,7 +56,11 @@ migrations), **v1.1**, or **v1.2**. Nothing is built ahead of its tier.
    locks can be released (ADR-0037); it holds no jobs.
 5. **Every external effect has an idempotency key.** Step results are unique by `(turn_id, step)`;
    a publish checks a stored `external_id` before posting (technical-approach §3.3).
-6. **Audit is append-only.** A trigger blocks `UPDATE` and `DELETE` on `audit_events`.
+6. **Audit is append-only.** Triggers block `UPDATE` and `TRUNCATE` on `audit_events` always, and
+   `DELETE` unless the transaction names its reason in `jury_forge.audit_delete`: `retention` (the
+   daily job) or `org_purge` (deleting an org, which cascades to its audit rows); the store sets it with
+   `allowAuditDelete` (migration 0006, owner decision 2026-11-28). Any other delete fails with
+   SQLSTATE `JF001`. The guard stops application mistakes, not a database superuser.
 7. **IDs are UUIDv7; times are UTC** (technical-approach §15).
 8. **Deletion is explicit and cascading.** Retention is a policy run by the daily retention job.
 

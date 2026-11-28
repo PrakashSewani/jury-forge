@@ -19,18 +19,55 @@ one phase `in progress` and exactly one next action.
 
 **Phase:** 1b, milestone **M1.1 (data layer and queue)**. M1.0 has its exit evidence (WP 1-01 to
 1-05 in PR #5 with a green CI run, S-C closed, S-A done), and the owner said start M1.1 on
-2026-11-28. WP 1-08 (migrations v0) is written (below).
+2026-11-28. WP 1-08 (migrations v0) is merged (PR #13, green CI); WP 1-09 (store package) is
+written (below).
 
-**Branch:** `feat/migrations-v0` (WP 1-08); it lands in `dev` through its pull request.
-`docs/spike-s-a-queue` is merged into `dev` (PR #12).
+**Branch:** `feat/store-package` (WP 1-09); it lands in `dev` through its pull request.
+`feat/migrations-v0` is merged into `dev` (PR #13).
 
-**Next action:** **WP 1-09 (store package)**, after WP 1-08 merges: Kysely codegen from the live
-schema, repositories with a mandatory `org_id`, UUIDv7 in the store, the audit append-only trigger,
-and artefacts with expiry; its exit is the cross-tenant tests.
+**Next action:** **WP 1-10 (`JobQueue` port)**, after WP 1-09 merges: the graphile-worker adapter
+(`enqueue`, `enqueueTx`, `cancel`, `schedule`, `onJob`), per-session `queue_name`, `job_key`
+debounce, the cron registry, the ADR-0037 heartbeat and fenced release, and the spike S-A carry-over
+items; its exit includes the two-worker cron test.
+
+### Landed this session (2026-11-28, WP 1-09 store package)
+
+**Owner decisions (2026-11-28):**
+
+1. The Kysely types are checked in with a drift test; `AGENTS.md` names the one exception.
+2. Audit deletes need a named reason, `retention` or `org_purge`.
+3. WP 1-09 builds the tenant-scoped layer plus the artefact and audit repositories; the other
+   repositories land with their features.
+
+What landed:
+- **Migration 0006:** `audit_events` triggers. `UPDATE` and `TRUNCATE` always fail, and `DELETE` only
+  in a transaction that set `jury_forge.audit_delete` (SQLSTATE `JF001` otherwise).
+- **`db.generated.ts`** (kysely-codegen 0.20.0, checked in), with a drift test that regenerates it and
+  fails on any difference. It is excluded from Biome.
+- **`createStore`:**
+  - `forOrg(orgId)` filters reads, updates, and deletes by `org_id`, sets it on inserts (overwriting
+    a smuggled one), and refuses an update to it;
+  - `instance` serves the tables without `org_id`;
+  - `transaction` refuses nesting, and `allowAuditDelete` works only inside a transaction;
+  - `deleteExpiredArtefacts` serves the retention job.
+
+  `TENANT_TABLES` is checked against both the types and the live catalog.
+- **Repositories:** `putArtefact` and `getArtefact` (the 2 MiB cap is checked before the database,
+  the size and SHA-256 are computed, an expiry in the future is required, and an expired artefact or
+  one in another org returns null), and `appendAudit`.
+- **The Q-051 `argparse` exception** in `licence-policy.json`: it landed early, because kysely-codegen
+  brings the same package.
+- **Docs:**
+  - `AGENTS.md` (the codegen exception);
+  - `data-model.md` (rule 6 and the conventions);
+  - technical-approach §3.2 and §13;
+  - `security.md` (T-12, now built, with its residual join risk; audit §10);
+  - the plan, Q-051's closing row, and this file.
+- **UUIDv7:** one generator, the SQL default; the store reads ids back with `returning`.
 
 ### Landed this session (2026-11-28, WP 1-08 migrations v0)
 
-The first product code of M1.1, on `feat/migrations-v0`.
+Merged into `dev` through PR #13 (merge `37649eb`, CI green on all three jobs).
 
 - **Five SQL migrations** in `packages/store/migrations/`, run by node-pg-migrate 9.0.0 (verified
   live; technical-approach §13). They create the 30 MVP tables, the `uuid_v7()` function (the default
@@ -546,6 +583,31 @@ while `AGENTS.md` and `decisions/README.md` say to supersede; the status list ha
   v1.1/v1.2, with a critical path and per-milestone exit evidence.
 
 ## Verified this session (2026-11-28)
+
+**WP 1-09 locally (Windows 11, Node v24.19.0, Docker Engine 29.9.3):**
+
+- 28 integration tests in 5 files pass on `postgres:17.12-alpine`. They cover:
+  - the migrations, now 6, including a down/up snapshot that compares triggers;
+  - the drift check on the generated types;
+  - the store;
+  - the entrypoint (6 migrations applied).
+- **Cross-tenant (the WP 1-09 exit):**
+  - org A reads only its rows;
+  - an update or delete aimed at org B's row touches 0 rows;
+  - a smuggled `org_id` on insert is overwritten, and the type system also rejects it
+    (`@ts-expect-error`);
+  - an update to `org_id` throws;
+  - a child row pointing at org B's parent is rejected by the database (`23503`).
+- **Audit:** `UPDATE`, `TRUNCATE`, and an unflagged `DELETE` fail with `JF001`; a `retention`
+  delete inside a transaction works, and the next unflagged delete fails again. The org deletion in
+  the migration tests is refused without `org_purge` and succeeds with it.
+- **Artefacts:** the round trip returns the right SHA-256; another org or an expired row gets null;
+  every kind is accepted; oversize or already-expired bytes are refused; exactly 2 MiB is accepted;
+  `deleteExpiredArtefacts` removes only expired rows, across orgs, and nulls the webhook delivery's
+  reference.
+- **The drift test fails on a stale file:** with one field type changed in `db.generated.ts`, it
+  failed under `CI=1`. The file was then regenerated and is byte-identical to the original.
+- **Not verified yet:** CI (the WP 1-09 pull request).
 
 **WP 1-08 locally (Windows 11, Node v24.19.0, Docker Engine 29.9.3):**
 

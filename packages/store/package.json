@@ -9,11 +9,13 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
+    "kysely": "0.29.9",
     "node-pg-migrate": "9.0.0",
     "pg": "8.23.1"
   },
   "devDependencies": {
     "@jury-forge/testkit": "workspace:*",
-    "@types/pg": "8.23.1"
+    "@types/pg": "8.23.1",
+    "kysely-codegen": "0.20.0"
   }
 }
