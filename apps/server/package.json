@@ -18,11 +18,13 @@
   },
   "dependencies": {
     "@jury-forge/pipeline": "workspace:*",
-    "@jury-forge/store": "workspace:*"
+    "@jury-forge/store": "workspace:*",
+    "fastify": "5.12.8",
+    "pino": "10.4.0"
   },
   "devDependencies": {
     "@jury-forge/testkit": "workspace:*",
-    "pg": "8.23.1",
-    "@types/pg": "8.23.1"
+    "@types/pg": "8.23.1",
+    "pg": "8.23.1"
   }
 }

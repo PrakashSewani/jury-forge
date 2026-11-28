@@ -287,6 +287,65 @@ to the `postgres` image, not to Jury Forge. There is no session secret: sessions
 hashed (technical-approach §3.9). The full v1 environment list is in
 [`operations.md`](operations.md#3-configuration).
 
+### The bundle as built (WP 1-13, 2026-11-28)
+
+The files are [`deploy/compose.yaml`](../../deploy/compose.yaml), [`deploy/Caddyfile`](../../deploy/Caddyfile),
+[`deploy/.env.example`](../../deploy/.env.example), and [`deploy/init-secrets.sh`](../../deploy/init-secrets.sh).
+[`scripts/compose-smoke-test.sh`](../../scripts/compose-smoke-test.sh) is the exit check, and CI runs
+it on fresh amd64 and arm64 runner VMs. Where they differ from the illustrative shape above:
+
+- **Networks:** three, not two.
+  - `edge` carries Caddy's published ports and its ACME egress.
+  - `internal` is `internal: true` (no egress) on the pinned `172.28.0.0/24`. Every service is on
+    it, and `postgres` and `migrate` are on nothing else.
+  - `egress` gives `app` and `worker` their outbound calls (GitHub, providers).
+- **Secrets:**
+  - Compose bind-mounts a file secret with its host owner and mode, and ignores the long-syntax
+    `uid`, `gid`, and `mode` for file secrets (Compose file reference, `secrets` in the container
+    specification). So each file is owned by the container user that reads it, mode `0400`:
+    `database_url` by 65532 (the image's `nonroot`) and `db_password` by 70 (`postgres` in the
+    Alpine image).
+  - `init-secrets.sh` creates them as root. It refuses to overwrite and prints fingerprints only.
+    `jury-forge init` (WP 1-17) replaces it.
+  - **Limitation:** a Docker daemon with user-namespace remapping or in rootless mode shifts those
+    uids, so the files are unreadable there. It is not supported until `init` handles it.
+- **Users:**
+  - `postgres` runs as `70:70`, so it needs no capability. A new volume inherits the image's data
+    directory, which that user owns. `/var/run/postgresql` is a `tmpfs`.
+  - `caddy` runs as the image's root with every capability dropped except `NET_BIND_SERVICE`.
+  - `migrate`, `app`, and `worker` run as `nonroot`.
+  - All five run with a read-only root filesystem, `no-new-privileges`, memory and CPU limits,
+    and `json-file` log rotation (10 MB × 3).
+- **Health:**
+  - `app` is probed by `main.js healthcheck http://127.0.0.1:3000/readyz`. The distroless image has
+    no curl, and the command accepts only plain-HTTP loopback URLs.
+  - `caddy` is probed by `nc -z 127.0.0.1 443`. A probe of its admin API would log a line every
+    10 s.
+  - `postgres` is probed by `pg_isready` over TCP, since the image's first-start initialisation
+    answers on the socket only.
+  - `worker` has no probe: process up, as the table above says.
+- **Roles:** the command is the role (`migrate`, `app`, `worker`). The image reads no `ROLE`
+  variable.
+- **Stop:** `worker` has a 15 s stop grace period, above graphile-worker's 5 s abort timeout (spike
+  S-A R4). On `SIGTERM` it stops in about a second when idle, exits 0, and removes its heartbeat.
+- **Not yet in the file:**
+  - the master key (`JURY_MASTER_KEY_FILE`, WP 1-15);
+  - `TRUSTED_PROXIES`, `PUBLIC_URL`, and the `front` variant (WP 1-14);
+  - digest-pinned Jury Forge images: until the release pipeline (WP 4-05), `build` makes
+    `jury-forge:local` from the checkout.
+- **Caddy:** the Caddyfile is the minimum for WP 1-13. The `ask` endpoint arrives with WP 1-14;
+  until then `app` answers 404, so Caddy issues no certificate and `:443` refuses every handshake.
+  Health, metrics, and `/api/internal/*` answer 404 on the public listener.
+- **Setup listener:** `0.0.0.0:8080` inside the container, published on `127.0.0.1:8080` only. The
+  other containers on `internal` can also reach it; the bootstrap token (WP 1-15) is what guards it
+  from them.
+
+Measured in the WP 1-13 smoke test:
+- First start: `migrate` applies 6 migrations, and the stack is healthy in about 40 s
+  (Docker-in-Docker, amd64).
+- After `down` and `up`: `migrate` applies 0, and the volume is kept.
+- A `SIGKILL`ed `app` is restarted by the restart policy.
+
 ### Reference `Caddyfile` (on-demand TLS for a runtime-configured origin)
 
 ```caddyfile

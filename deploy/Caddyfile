@@ -1,0 +1,28 @@
+# Jury Forge — Caddy in front of `app` (WP 1-13; deployment.md §4).
+#
+# Certificates are issued on demand, and Caddy asks `app` before each one. The `ask` endpoint
+# arrives with WP 1-14 (the origin step, ADR-0021, and both TLS modes of ADR-0036). Until then the
+# app answers it with 404, so Caddy issues no certificate for any name: `:443` has none on a cold
+# start, which is the documented state before an origin is set.
+{
+	on_demand_tls {
+		ask http://app:3000/api/internal/tls/allow
+	}
+}
+
+:80 {
+	# Caddy answers ACME HTTP-01 challenges itself; everything else moves to HTTPS.
+	redir https://{host}{uri} permanent
+}
+
+:443 {
+	tls {
+		on_demand
+	}
+
+	# Health, metrics, and internal routes are for the Docker network, not the internet.
+	@internal path /healthz /readyz /metrics /api/internal/*
+	respond @internal 404
+
+	reverse_proxy app:3000
+}

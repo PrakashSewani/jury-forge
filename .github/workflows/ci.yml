@@ -98,6 +98,11 @@ jobs:
           done
           grep -Eq 'migrate: [1-9][0-9]* migration\(s\) applied' "$RUNNER_TEMP/migrate-first.log"
           grep -q 'migrate: 0 migration(s) applied' "$RUNNER_TEMP/migrate-second.log"
+      # WP 1-13 exit: deploy/ comes up healthy on a clean VM and its boundaries hold.
+      - name: Compose bundle
+        run: |
+          docker tag jury-forge:ci jury-forge:local
+          scripts/compose-smoke-test.sh
 
   typescript-5:
     name: typecheck (TypeScript 5.x fallback)

@@ -1,6 +1,7 @@
 // Kysely repositories, SQL migrations, queue adapter (technical-approach §4).
 // M1.1: the SQL migrations (WP 1-08), the tenant-scoped store with the artefact and audit
 // repositories (WP 1-09), and the graphile-worker `JobQueue` adapter (WP 1-10).
+// M1.2: the readiness checks behind `/readyz` (WP 1-13).
 export {
   ARTEFACT_KINDS,
   ARTEFACT_MAX_BYTES,
@@ -31,6 +32,13 @@ export {
   type ReleasedPool,
   releaseDeadWorkers,
 } from './queue.ts';
+export {
+  type ComponentState,
+  checkReadiness,
+  type ReadinessOptions,
+  type StoreReadiness,
+  shippedMigrations,
+} from './readiness.ts';
 export {
   type AuditDeleteReason,
   createStore,

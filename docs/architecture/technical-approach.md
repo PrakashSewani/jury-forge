@@ -328,6 +328,17 @@ persisted result. Model access goes through our **provider gateway**, built on t
     `nonroot` with a read-only root filesystem and all capabilities dropped.
 - **Compose:** `caddy`, `migrate` (one-shot), `app`, `worker`, `postgres`, with healthchecks and
   `restart: unless-stopped`. Setup listens on `127.0.0.1:8080` only (ADR-0021).
+  *WP 1-13 (2026-11-28), as built:* `deploy/compose.yaml`, with the differences from the
+  illustrative shape in `deployment.md` §3 ("The bundle as built"):
+  - three networks, the service-to-service one without egress;
+  - secret files owned by the container user that reads them, because Compose ignores `uid`/`mode`
+    for file secrets;
+  - `app` probed by `main.js healthcheck`.
+
+  `app` serves `/healthz` and `/readyz` with Fastify. `/readyz` covers the database, migrations at
+  head, and the queue schema, and the master key joins with WP 1-15. `worker` runs the queue with
+  its heartbeat and no tasks yet. `scripts/compose-smoke-test.sh` is the exit check, run by the CI
+  `image` job on both architectures.
 - **Caddy** (Apache-2.0) handles TLS with on-demand certificates, using the `ask` endpoint on `app`
   to approve the configured domain (this fixes install-readiness blocker B2).
 - **Release bundle (ADR-0020):** a `.tar.gz` with `compose.yaml`, `Caddyfile`, `.env.example` and
@@ -623,6 +634,8 @@ packages in WP 1-12.)
   (sessions are random IDs stored hashed, §3.9); `BOOTSTRAP_TOKEN` is always generated (§3.13,
   first-run-setup Stage 1); the provider egress allowlist is derived from configured provider
   origins (§3.11); `OBJECT_STORAGE_*` arrives with the v1.2 S3 adapter.
+  *Amended 2026-11-28 (WP 1-13):* `ROLE` is not read. The image's command is the role (`migrate`,
+  `app`, `worker`; §3.13), so one variable less can disagree with the command.
 - Every config source is parsed by **one zod schema per layer** in `contracts`. Startup fails closed
   on an invalid environment; an invalid repo file produces a Check Run note and falls back to defaults.
 - `.jury-forge.yml` v1 keys: `version`, `review.on`, `review.drafts`, `review.preset`,
