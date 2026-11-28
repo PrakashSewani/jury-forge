@@ -9,7 +9,7 @@ one phase `in progress` and exactly one next action.
 | ----- | ----- | ------ |
 | 0 | Product definition and documentation | **done — G0 passed 2026-11-16** |
 | 1a | Technology and approach (decisions only, no code) | **done — accepted 2026-11-16** |
-| 1b | Foundation and walking skeleton (MVP, gate G1) | **in progress — owner go 2026-11-27; M1.0 exit evidence complete 2026-11-28; M1.1 in progress (WP 1-08)** |
+| 1b | Foundation and walking skeleton (MVP, gate G1) | **in progress — owner go 2026-11-27; M1.0 exit evidence complete 2026-11-28; M1.1 written (WP 1-11 in review); M1.2 next** |
 | 2 | Trust and security | not started |
 | 3 | Review quality | not started |
 | 4 | Operations and release | not started |
@@ -17,23 +17,55 @@ one phase `in progress` and exactly one next action.
 
 ## Current handoff
 
-**Phase:** 1b, milestone **M1.1 (data layer and queue)**. M1.0 has its exit evidence (WP 1-01 to
-1-05 in PR #5 with a green CI run, S-C closed, S-A done), and the owner said start M1.1 on
-2026-11-28. WP 1-08 (PR #13) and WP 1-09 (PR #14) are merged with green CI; WP 1-10 (`JobQueue`
-port) is written (below).
+**Phase:** 1b, milestone **M1.1 (data layer and queue)**, its last WP in review. WP 1-08 (PR #13),
+WP 1-09 (PR #14), and WP 1-10 (PR #15) are merged with green CI; WP 1-11 (step runner core) is
+written (below). Its merge completes M1.1.
 
-**Branch:** `feat/job-queue` (WP 1-10); it lands in `dev` through its pull request.
-`feat/store-package` is merged into `dev` (PR #14).
+**Branch:** `feat/step-runner` (WP 1-11); it lands in `dev` through its pull request.
+`feat/job-queue` is merged into `dev` (PR #15).
 
-**Next action:** **WP 1-11 (step runner core)**, the last WP of M1.1, after WP 1-10 merges:
-- `turn_steps` persistence with `(turn_id, step)` idempotency, the generation check and the
-  `superseded` abort, and the retry policy;
-- spike S-A R1 (ids-only payloads, inputs read at `resolve`), R2 (orphaned turns closed at
-  `resolve`), and R4 (the abort signal within 5 s).
+**Next action:** **M1.2 (install and setup), starting with WP 1-12 (image)**, after WP 1-11 merges:
+- a multi-stage distroless image, non-root, with a read-only root filesystem, for amd64 and arm64,
+  at most 250 MB;
+- spike S-B: tree-sitter WASM on distroless and arm64, with its note.
 
-Its exit is a fault-injection test: kill mid-step, and the turn resumes without duplicate effects.
+The rest of M1.2 (Compose, Caddy and the origin, bootstrap and crypto, the GitHub App, and CLI v0)
+leads to the first install on the owner's VPS.
 
-### Landed this session (2026-11-28, WP 1-10 `JobQueue` port)
+### Landed this session (2026-11-28, WP 1-11 step runner core)
+
+- **`domain`:**
+  - `canonicalJson`, RFC 8785 style, which refuses anything that is not JSON (lone surrogates,
+    non-finite numbers, class instances);
+  - `decideFailure`: `transient` and unknown errors retry while attempts remain, then fail with the
+    job left permanently failed; `terminal` fails now; `budget` is `budget_stopped`; an abort is
+    rethrown and never finished.
+
+  11 tests, including fast-check properties, at 100% branch coverage.
+- **`contracts`:** the `TurnStore` port.
+- **`pipeline`:** `runTurn`:
+  - start once, close older unfinished turns (R2), and check the abort and the generation before
+    every step;
+  - hash each step's input, read a finished step back, and record a new result with first write
+    wins;
+  - apply the retry policy.
+
+  10 unit tests, including a fast-check property: with any sequence of crashes, every effect lands
+  once and a step runs again only when a crash was inside it.
+- **`store`:** `createTurnStore`, with 4 integration tests: tenant scoping, the first start time
+  kept, first write wins with JSON arrays kept, token totals, a finished turn never reopened, and
+  the R2 closing rules.
+- **The exit test** (`apps/server`, real processes): a worker SIGKILLed inside step `b`; after the
+  ADR-0037 release, another worker ran `b` again and then `c`. `a` did not run again, each effect
+  landed once, and the turn completed with 21 tokens.
+- **Docs:** `job-pipeline.md` ("The runner as built"), the `data-model.md` stop reasons,
+  technical-approach §3.4, and the plan. R1 (`resolve` reads the pending inputs) and the per-step
+  5 s abort are M1.5 work.
+
+### Landed earlier this session (2026-11-28, WP 1-10 `JobQueue` port)
+
+Merged into `dev` through PR #15 (merge `e4f7629`, CI green on all three jobs).
+
 
 - **The port:** `JobQueue` in `contracts`, where port interfaces now live because `contracts` is
   the leaf that `pipeline` and the implementing packages both import. Every payload carries
@@ -617,6 +649,15 @@ while `AGENTS.md` and `decisions/README.md` say to supersede; the status list ha
   v1.1/v1.2, with a critical path and per-milestone exit evidence.
 
 ## Verified this session (2026-11-28)
+
+**WP 1-11 locally (Windows 11, Node v24.19.0, Docker Engine 29.9.3):**
+
+- `pnpm check` exited 0: typecheck, Biome, dependency rules (60 modules, 0 violations; `pipeline`
+  imports only `contracts` and `domain`), licences, 62 unit tests, and 42 integration tests.
+- `domain` coverage: 100% of statements, branches, functions, and lines (threshold 90%).
+- The fault-injection test passed with the exact run sequence: `a` attempt 1 on w1, `b` attempt 1
+  on w1 (killed), then `b` and `c` at attempt 2 on w2; three effects and three `turn_steps` rows.
+- **Not verified yet:** CI (the WP 1-11 pull request).
 
 **WP 1-10 locally (Windows 11, Node v24.19.0, Docker Engine 29.9.3):**
 

@@ -7,5 +7,12 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@jury-forge/contracts": "workspace:*",
+    "@jury-forge/domain": "workspace:*"
+  },
+  "devDependencies": {
+    "fast-check": "4.11.0"
   }
 }

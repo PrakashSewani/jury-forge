@@ -135,6 +135,20 @@ here, because kysely-codegen brings the same package.
   instead of completing, because graphile-worker completes a job by id whoever holds it
   (`job-pipeline.md`).
 
+**Progress (2026-11-28): WP 1-11 is written, so M1.1's four WPs are complete.**
+- **The parts:**
+  - `runTurn` in `pipeline`, over the `TurnStore` port in `contracts`;
+  - `createTurnStore` in `store`;
+  - `canonicalJson` (step input hashes) and `decideFailure` (the retry policy) in `domain`, at 100%
+    branch coverage.
+- **Behaviour:** `(turn_id, step)` idempotency with first write wins, a generation check before
+  every step, the `superseded` abort, older unfinished turns closed at start (R2), and the abort
+  signal honoured at step boundaries and passed to each step (R4).
+- **The exit test** (`apps/server`): a worker killed inside a step; another worker resumes the turn
+  through the ADR-0037 release; finished steps are not run again and no effect is duplicated.
+- **Left for M1.5:** the `resolve` step that reads pending inputs (R1; payloads already carry ids
+  only), and steps that stop within 5 s of the abort (R4).
+
 **Carried from spike S-A and the decisions it led to.** The owner closed both S-A questions on
 2026-11-28. The recommendations R1–R9 are not decided; each WP settles its own.
 
@@ -144,8 +158,9 @@ here, because kysely-codegen brings the same package.
   heartbeat, fencing, and release with both tests; complete and fail writes awaited on shutdown (R3)
   with a graceful-stop test; `maxAttempts` explicit (R7); `GraphileJobQueue.cleanup()` (R6; the
   retention cron that calls it is WP 1-28a); the debounce bound written down (R8, `job-pipeline.md`).
-- **WP 1-11:** turn jobs carry IDs only and `resolve` reads the pending inputs (R1); orphaned turns are
-  closed at `resolve` (R2); steps honour the abort signal within 5 s (R4).
+- **WP 1-11 (done 2026-11-28):** orphaned turns are closed when a turn starts (R2), and the runner
+  honours and passes on the abort signal (R4). Still open for M1.5: `resolve` reads the pending inputs
+  (R1), and each step stops within 5 s of the abort (R4).
 - **WP 1-13:** the `worker` stop grace period is above graphile-worker's 5 s abort timeout (R4).
 - **WP 1-14:** both TLS modes of [ADR-0036](../decisions/ADR-0036-tls-terminated-in-front.md),
   `caddy` and `front`, with `first-run-setup` criterion 23; the `front` path is first run on the
