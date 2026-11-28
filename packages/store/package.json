@@ -8,6 +8,15 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "files": [
+    "dist",
+    "migrations"
+  ],
+  "publishConfig": {
+    "exports": {
+      ".": "./dist/index.js"
+    }
+  },
   "dependencies": {
     "@jury-forge/contracts": "workspace:*",
     "graphile-worker": "0.18.0",

@@ -1,6 +1,6 @@
 # PR check (technical-approach.md §18, WP 1-05). Actions are pinned to commit SHAs; Renovate
-# updates the digests. The image build and size gate join this workflow when the Dockerfile lands
-# (M1.2); until then there is no image to build.
+# updates the digests. The image build, size gate, and smoke test run natively on amd64 and arm64
+# (WP 1-12).
 name: CI
 
 on:
@@ -50,6 +50,54 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm run typecheck
       - run: pnpm test
+
+  image:
+    name: image (${{ matrix.platform }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-24.04
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build (no push)
+        run: docker build -t jury-forge:ci .
+      # technical-approach.md §6: image <= 250 MB, measured as the unpacked root filesystem.
+      - name: Size gate
+        run: |
+          cid=$(docker create jury-forge:ci)
+          bytes=$(docker export "$cid" | wc -c)
+          docker rm "$cid" > /dev/null
+          echo "unpacked root filesystem: $bytes bytes (limit 250000000)"
+          test "$bytes" -le 250000000
+      - name: Migrate as nonroot on a read-only root filesystem
+        run: |
+          test "$(docker image inspect jury-forge:ci --format '{{.Config.User}}')" = nonroot
+          docker network create jf
+          docker run -d --name pg --network jf -e POSTGRES_PASSWORD=ci -e POSTGRES_DB=jury_forge \
+            postgres:17.12-alpine
+          # TCP, not the socket: the image's init phase answers on the socket before it is ready.
+          for i in $(seq 1 60); do
+            docker exec pg pg_isready -h 127.0.0.1 -U postgres && break
+            sleep 1
+          done
+          printf 'postgres://postgres:ci@pg:5432/jury_forge\n' > "$RUNNER_TEMP/database_url"
+          for run in first second; do
+            docker run --rm --network jf --read-only --tmpfs /tmp --cap-drop ALL \
+              --security-opt no-new-privileges:true \
+              -v "$RUNNER_TEMP/database_url:/run/secrets/database_url:ro" \
+              -e DATABASE_URL_FILE=/run/secrets/database_url \
+              jury-forge:ci migrate | tee "$RUNNER_TEMP/migrate-$run.log"
+          done
+          grep -Eq 'migrate: [1-9][0-9]* migration\(s\) applied' "$RUNNER_TEMP/migrate-first.log"
+          grep -q 'migrate: 0 migration(s) applied' "$RUNNER_TEMP/migrate-second.log"
 
   typescript-5:
     name: typecheck (TypeScript 5.x fallback)

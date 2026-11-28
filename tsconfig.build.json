@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "$comment": "Emit settings for the production build (technical-approach §3.1: production runs plain JS). Each runtime package extends this with its own rootDir and outDir. Development and tests run the TypeScript sources.",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "rewriteRelativeImportExtensions": true,
+    "declaration": false,
+    "sourceMap": false,
+    "removeComments": false
+  }
+}

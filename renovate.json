@@ -42,6 +42,24 @@
       "matchStrings": ["POSTGRES_IMAGE = '(?<depName>postgres):(?<currentValue>[^']+)'"],
       "datasourceTemplate": "docker",
       "versioningTemplate": "docker"
+    },
+    {
+      "description": "Base images in the Dockerfile, pinned by tag and multi-arch digest (WP 1-12).",
+      "customType": "regex",
+      "managerFilePatterns": ["/(^|/)Dockerfile$/"],
+      "matchStrings": [
+        "ARG [A-Z_]+_IMAGE=(?<depName>[^:@\\s]+):(?<currentValue>[^@\\s]+)@(?<currentDigest>sha256:[a-f0-9]{64})"
+      ],
+      "datasourceTemplate": "docker",
+      "versioningTemplate": "docker"
+    },
+    {
+      "description": "PostgreSQL image of the CI image smoke test; same version as the testkit image.",
+      "customType": "regex",
+      "managerFilePatterns": ["/\\.github/workflows/ci\\.yml$/"],
+      "matchStrings": ["(?<depName>postgres):(?<currentValue>17[^\\s]*)"],
+      "datasourceTemplate": "docker",
+      "versioningTemplate": "docker"
     }
   ]
 }
