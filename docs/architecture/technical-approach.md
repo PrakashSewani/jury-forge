@@ -250,6 +250,13 @@ persisted result. Model access goes through our **provider gateway**, built on t
   `function | method | class`.
 - Parsing runs in a worker thread pool, with a 2 s per-file timeout and a 1 MB file cap. On timeout
   the fallback is used and the coverage manifest says so.
+- *Spike S-B (2026-11-28, [note](../analysis/spikes/2026-11-28-tree-sitter-distroless.md)):*
+  - `web-tree-sitter` 0.27.2 runs in the distroless image on amd64 and arm64 (arm64 under QEMU),
+    read-only and as `nonroot`.
+  - The ten upstream grammar `.wasm` files total 15.9 MB, but the grammar npm packages are about
+    227 MB, so only the `.wasm` files ship.
+  - On amd64 a 1 MB file parses in 153–311 ms. Native arm64 timing is still to measure.
+  - WASM memory is not returned, so the worker pool needs a bound and recycling.
 
 ### 3.9 Cryptography and secrets — **`node:crypto` only (no third-party crypto)**
 
@@ -305,6 +312,20 @@ persisted result. Model access goes through our **provider gateway**, built on t
 - **Image:** a multi-stage build onto a distroless Node 24 base (or `node:24-slim` if distroless blocks
   tree-sitter WASM; decided in the spike). It runs non-root with a read-only root filesystem, built
   for amd64 and arm64. The target is ≤ 250 MB.
+  *WP 1-12 (2026-11-28), as built:*
+  - **Bases:** the build stage is `node:24-trixie-slim`, and the runtime is
+    `gcr.io/distroless/nodejs24-debian13:nonroot`, both pinned by multi-arch digest.
+  - **Build:** `pnpm run build` emits `dist/` per runtime package. `pnpm deploy --prod` assembles
+    the server with its production dependencies, and `scripts/apply-publish-config.ts` points each
+    workspace package at its `dist` (pnpm 12's deploy keeps `files` but not
+    `publishConfig.exports`).
+  - **Running it:** the entrypoint is `node /app/dist/main.js`, and the command is the role
+    (`migrate` today).
+  - **Size,** measured as the unpacked root filesystem (`docker export`): 207.6 MB on amd64 and
+    213.5 MB on arm64. Of that, 31.1 MB is `typescript`, a resolved optional peer of graphile-worker's
+    `cosmiconfig`.
+  - **CI** builds natively on both architectures, applies the size gate, and runs `migrate` as
+    `nonroot` with a read-only root filesystem and all capabilities dropped.
 - **Compose:** `caddy`, `migrate` (one-shot), `app`, `worker`, `postgres`, with healthchecks and
   `restart: unless-stopped`. Setup listens on `127.0.0.1:8080` only (ADR-0021).
 - **Caddy** (Apache-2.0) handles TLS with on-demand certificates, using the `ask` endpoint on `app`
@@ -495,6 +516,8 @@ as one "v1 stack" decision.
 ## 12. Open technical questions (resolved 2026-11-16)
 
 - TQ-1: Distroless vs `node:24-slim` → **default distroless**; S-B may switch it to slim if WASM or arm64 fails. The result is recorded in ADR-0026.
+  *Result (S-B, 2026-11-28):* distroless works on both architectures, so ADR-0026's default stands
+  unchanged.
 - TQ-2: CLI → **bash wrapper over `docker compose` for v1** (no build toolchain needed on the host);
   the offline receipt verifier ships as a small Node script in the bundle. Revisit a Node SEA in v1.1.
 - TQ-3: KEK in backups → **no by default**; `backup --include-key` is opt-in; restore asks for the key file.
@@ -549,6 +572,15 @@ as one "v1 stack" decision.
 | kysely-codegen | 0.20.0 | MIT | Dev only (WP 1-09). Reaches `argparse` (Python-2.0) through `cosmiconfig` 9 → `js-yaml` 4; covered by the Q-051 exception. Its database drivers are optional peers; only `pg` is installed. |
 | graphile-worker | 0.18.0 | MIT | The latest release, as planned above (WP 1-10). Its tree has `argparse` (Python-2.0), covered by the Q-051 exception; nothing else needed a new licence. |
 
+**WP 1-12, verified live 2026-11-28:**
+
+| Item | Version | Licence | Note |
+| ---- | ------- | ------- | ---- |
+| `node:24-trixie-slim` | index `sha256:4d00acb4…` | — | Build stage only; corepack installs the pinned pnpm. |
+| `gcr.io/distroless/nodejs24-debian13:nonroot` | index `sha256:675c5324…` (Node v24.22.3) | — | The runtime base; amd64 and arm64. |
+| web-tree-sitter | 0.27.2 | MIT | Spike S-B; not in the image yet (T0+ is v1). |
+| tree-sitter grammar packages | typescript 0.23.2, javascript 0.25.0, python 0.25.0, go 0.25.0, java 0.23.5, c-sharp 0.24.0, rust 0.24.0, ruby 0.23.1, php 0.24.2 | MIT (each) | Spike S-B; only their `.wasm` files are to ship. |
+
 **Licence exception for graphile-worker (Q-051, owner decision 2026-11-28):** graphile-worker 0.18.0
 pulls in `argparse` 2.0.1 (Python-2.0) through `cosmiconfig` 8.3.6 → `js-yaml` 4.3.2, and only
 js-yaml's command-line tool uses it ([spike S-A](../analysis/spikes/2026-11-28-queue-serialization-debounce.md)).
@@ -564,8 +596,9 @@ evaluator in `scripts/check-licences.ts`, with the policy in `licence-policy.jso
 dependency and checks the production set separately: a `dev`-scoped exception (today only
 `lightningcss`, MPL-2.0, through Vite) is void if the package becomes reachable from production.
 
-Not yet verified live: Caddy, minisign, cosign, syft, Playwright, Radix, Tailwind, kysely-codegen,
-and the tree-sitter grammar packages. Verify each in the milestone that first uses it.
+Not yet verified live: Caddy, minisign, cosign, syft, Playwright, Radix, Tailwind. Verify each in the
+milestone that first uses it. (kysely-codegen was verified in WP 1-09, and the tree-sitter grammar
+packages in WP 1-12.)
 
 ---
 

@@ -179,6 +179,24 @@ here, because kysely-codegen brings the same package.
 | 1-16 | GitHub App and OAuth | L | App manifest flow, installation callback, verify-before-claim, OAuth login, first-owner claim, user sessions (hashed, cookie flags), CSRF | Clean-VM setup reaches "claimed" |
 | 1-17 | CLI v0 ∥ | S | Bash `jury-forge`: `install`, `setup domain`, `doctor` (DB, migrations, queue, App auth, clock, disk, KEK) | `doctor` catches seeded faults |
 
+**Progress (2026-11-28): WP 1-12 is written.**
+- **The image:** the `Dockerfile` builds onto distroless Node 24 (Debian 13, `nonroot`), with both
+  bases pinned by multi-arch digest. Its entrypoint is `node /app/dist/main.js <command>`, and it
+  holds plain JS emitted by `pnpm run build`.
+- **Size,** as the unpacked root filesystem: 207.6 MB on amd64 and 213.5 MB on arm64, against the
+  250 MB gate.
+- **Checks:** `migrate` runs as `nonroot` with a read-only root filesystem and all capabilities
+  dropped, on both architectures (arm64 under QEMU locally). The CI `image` job builds natively on
+  amd64 and arm64, applies the size gate, and runs that smoke test.
+- **Renovate** regex managers keep the base-image digests and the CI `postgres` tag current.
+- **Spike S-B is done** ([note](../analysis/spikes/2026-11-28-tree-sitter-distroless.md)): distroless
+  stays.
+- **Carried forward:**
+  - to the `parsing` WP (v1, T0+): ship only the grammar `.wasm` files, measure arm64 natively, and
+    bound the worker pool (S-B R1–R3);
+  - before T0+: remove the 31 MB `typescript` optional peer from the image (S-B R4).
+- **Also moved here from WP 1-05:** the image build and size gate.
+
 ### M1.3 — Providers and egress
 
 | WP | Title | Size | Contents | Done when |

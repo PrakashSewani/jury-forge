@@ -8,6 +8,14 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "exports": {
+      ".": "./dist/index.js"
+    }
+  },
   "dependencies": {
     "@jury-forge/pipeline": "workspace:*",
     "@jury-forge/store": "workspace:*"

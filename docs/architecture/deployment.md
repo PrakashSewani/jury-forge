@@ -200,7 +200,7 @@ services:
 
   migrate:
     image: ghcr.io/jury-forge/app@sha256:...
-    command: ["migrate"]                 # one-shot; the exact entrypoint is fixed in M1.2
+    command: ["migrate"]                 # one-shot; the image runs `node /app/dist/main.js <command>`
     environment:
       DATABASE_URL_FILE: /run/secrets/database_url
     secrets: [database_url]

@@ -9,7 +9,7 @@ one phase `in progress` and exactly one next action.
 | ----- | ----- | ------ |
 | 0 | Product definition and documentation | **done — G0 passed 2026-11-16** |
 | 1a | Technology and approach (decisions only, no code) | **done — accepted 2026-11-16** |
-| 1b | Foundation and walking skeleton (MVP, gate G1) | **in progress — owner go 2026-11-27; M1.0 exit evidence complete 2026-11-28; M1.1 written (WP 1-11 in review); M1.2 next** |
+| 1b | Foundation and walking skeleton (MVP, gate G1) | **in progress — owner go 2026-11-27; M1.0 exit evidence complete 2026-11-28; M1.1 complete 2026-11-28; M1.2 in progress (WP 1-12)** |
 | 2 | Trust and security | not started |
 | 3 | Review quality | not started |
 | 4 | Operations and release | not started |
@@ -17,22 +17,57 @@ one phase `in progress` and exactly one next action.
 
 ## Current handoff
 
-**Phase:** 1b, milestone **M1.1 (data layer and queue)**, its last WP in review. WP 1-08 (PR #13),
-WP 1-09 (PR #14), and WP 1-10 (PR #15) are merged with green CI; WP 1-11 (step runner core) is
-written (below). Its merge completes M1.1.
+**Phase:** 1b, milestone **M1.2 (install and setup)**. **M1.1 is complete:** WP 1-08 to 1-11 are
+merged with green CI (PRs #13–#16). WP 1-12 (image, with spike S-B) is written (below).
 
-**Branch:** `feat/step-runner` (WP 1-11); it lands in `dev` through its pull request.
-`feat/job-queue` is merged into `dev` (PR #15).
+**Branch:** `feat/image` (WP 1-12); it lands in `dev` through its pull request.
+`feat/step-runner` is merged into `dev` (PR #16).
 
-**Next action:** **M1.2 (install and setup), starting with WP 1-12 (image)**, after WP 1-11 merges:
-- a multi-stage distroless image, non-root, with a read-only root filesystem, for amd64 and arm64,
-  at most 250 MB;
-- spike S-B: tree-sitter WASM on distroless and arm64, with its note.
+**Next action:** **WP 1-13 (Compose bundle)**, after WP 1-12 merges:
+- `compose.yaml` with `caddy`, `migrate`, `app`, `worker`, and `postgres`, healthchecks, the loopback
+  `SETUP_BIND`, volumes, and `.env.example`;
+- exit: `docker compose up` is healthy on a clean VM.
 
-The rest of M1.2 (Compose, Caddy and the origin, bootstrap and crypto, the GitHub App, and CLI v0)
-leads to the first install on the owner's VPS.
+To settle at its start: the image has only the `migrate` command, and a healthy Compose stack needs
+`app` and `worker` roles with `/healthz` and `/readyz` (technical-approach §3.12). Their minimal form
+is part of WP 1-13 or the start of WP 1-15/1-16.
 
-### Landed this session (2026-11-28, WP 1-11 step runner core)
+### Landed this session (2026-11-28, WP 1-12 image and spike S-B)
+
+- **The image** (`Dockerfile`, `.dockerignore`):
+  - a multi-stage build: `node:24-trixie-slim` builds, and `gcr.io/distroless/nodejs24-debian13:nonroot`
+    runs, both pinned by multi-arch digest;
+  - `pnpm run build` emits `dist/` (`tsconfig.build.json`, with `.ts` imports rewritten to `.js`);
+  - `pnpm deploy --prod` assembles the server, and `scripts/apply-publish-config.ts` points the
+    workspace packages at `dist` (pnpm 12's deploy keeps `files` but not `publishConfig.exports`;
+    unit-tested);
+  - the entrypoint is `node /app/dist/main.js <command>`, with a new dispatcher, `main.ts`, whose
+    one command is `migrate`.
+
+  Measured as the unpacked root filesystem: **207.6 MB on amd64 and 213.5 MB on arm64**. `migrate`
+  ran as `nonroot` with a read-only root filesystem, all capabilities dropped, and the URL from a
+  file secret: 6 migrations, then 0. The arm64 build ran under QEMU.
+- **CI:** a new `image` job builds natively on `ubuntu-24.04` and `ubuntu-24.04-arm`, gates the
+  size at 250 MB, and runs the read-only `migrate` smoke test twice.
+- **Renovate:** regex managers for the Dockerfile base images (tag plus digest) and the CI
+  `postgres` tag, checked against the files.
+- **Spike S-B** ([note](../analysis/spikes/2026-11-28-tree-sitter-distroless.md)):
+  - `web-tree-sitter` 0.27.2 and ten upstream grammar `.wasm` files run in the distroless image on
+    amd64 and arm64, read-only and as `nonroot`, with identical results;
+  - a 1 MB file parses in 153–311 ms on amd64, and 2.2–4.8 s on arm64 under QEMU (native arm64 is
+    not measured);
+  - the `.wasm` files are 15.9 MB, but the grammar packages are about 227 MB, so only the `.wasm`
+    files ship;
+  - TQ-1 stays distroless, and ADR-0026 is unchanged.
+- **Found:** 31.1 MB of the image is `typescript`, a resolved optional peer of graphile-worker's
+  `cosmiconfig`. Removing it is recommended before T0+ adds the grammars (S-B R4).
+- **Docs:** technical-approach §3.8, §3.13, §12 (TQ-1), and §13; `deployment.md` (the `migrate`
+  command); the spike index; and the plan.
+
+### Landed earlier this session (2026-11-28, WP 1-11 step runner core)
+
+Merged into `dev` through PR #16 (merge `150fd5f`, CI green on all three jobs). **M1.1 complete.**
+
 
 - **`domain`:**
   - `canonicalJson`, RFC 8785 style, which refuses anything that is not JSON (lone surrogates,
@@ -649,6 +684,20 @@ while `AGENTS.md` and `decisions/README.md` say to supersede; the status list ha
   v1.1/v1.2, with a critical path and per-milestone exit evidence.
 
 ## Verified this session (2026-11-28)
+
+**WP 1-12 locally (Windows 11, Docker Engine 29.9.3):**
+
+- `docker build` on amd64 (37 s); `docker buildx build --platform linux/arm64` under QEMU (66 s).
+- Image: user `nonroot` (UID 65532), Node v24.22.3, entrypoint `/nodejs/bin/node /app/dist/main.js`.
+  Unpacked root filesystem (`docker export | wc -c`): 207,618,048 bytes on amd64 and 213,493,760 on
+  arm64. (Docker Desktop's containerd store lists 288 MB, which counts more than the root filesystem.)
+- `migrate` on both architectures, with `--read-only --tmpfs /tmp --cap-drop ALL --security-opt
+  no-new-privileges:true` and `DATABASE_URL_FILE`: 6 migrations applied, then 0. An unknown command
+  exits 2.
+- The deploy tree also ran outside Docker with plain Node (no type stripping): `migrate` applied 6.
+- `apply-publish-config` has 3 unit tests. The Renovate regexes match exactly the intended values in
+  the Dockerfile, `ci.yml`, and the testkit file (a script; Renovate itself was not run).
+- **Not verified yet:** the new CI `image` job (it runs on the WP 1-12 pull request).
 
 **WP 1-11 locally (Windows 11, Node v24.19.0, Docker Engine 29.9.3):**
 

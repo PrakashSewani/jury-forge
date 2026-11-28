@@ -1,0 +1,16 @@
+# The build context is the source tree only: no dependencies, build output, history, or docs.
+**/node_modules
+**/dist
+**/coverage
+.git
+.github
+.claude
+.agents
+.pi
+docs
+*.md
+!README.md
+.env
+.env.*
+*.pem
+*.key
