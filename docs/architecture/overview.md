@@ -176,6 +176,8 @@ pipeline in [`job-pipeline.md`](job-pipeline.md).
 | Comment volume: no default noise budget, a fixed 50-comment ceiling | Accepted (2026-11-28) | ADR-0033 |
 | ADR changes: frozen body, a new ADR amends or supersedes, a status-line pointer | Accepted (2026-11-28) | ADR-0034 |
 | `org_id` on every tenant-owned table, composite foreign keys | Accepted (2026-11-28) | ADR-0035 |
+| TLS terminated in front: GitHub's verified delivery is the readiness proof | Accepted (2026-11-28) | ADR-0036 |
+| Dead worker's queue locks: heartbeats and a fenced release | Accepted (2026-11-28) | ADR-0037 |
 
 Read next: [`agentic-review.md`](agentic-review.md) → [`components.md`](components.md) →
 [`job-pipeline.md`](job-pipeline.md) → [`security.md`](security.md) →

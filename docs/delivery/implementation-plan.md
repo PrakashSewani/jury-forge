@@ -60,7 +60,7 @@ repos.
 | 1-03 | Test harness | S | vitest workspaces, fast-check, testcontainers Postgres helper, coverage thresholds (`domain` ≥ 90 % branches) | Sample tests run in CI on Linux amd64 |
 | 1-04 | Licence and supply chain | S | Licence allowlist check, Renovate config, pinned versions verified live (the remaining tools in approach §13) | A BSL/SSPL test dependency fails CI |
 | 1-05 | CI pipeline | S | GitHub Actions: PR check stages (approach §18), cache, multi-arch build (no push) | Green PR on `feat/walking-skeleton` |
-| 1-06 | Spike S-A (queue) ∥ | S | graphile-worker serialization and debounce under concurrency; pg-boss adapter proof | Written result in `docs/analysis/spikes/` |
+| 1-06 | Spike S-A (queue) ∥ | S | graphile-worker serialization and debounce under concurrency; pg-boss adapter proof. **Done 2026-11-28** ([result](../analysis/spikes/2026-11-28-queue-serialization-debounce.md)): criterion met, graphile-worker stays, no ADR amendment; Q-051 and Q-052 opened and closed the same day (a licence exception; ADR-0037) | Written result in `docs/analysis/spikes/` |
 | 1-07 | Spike S-C (structured output) ∥ | S | `ai` SDK structured output across OpenAI-compatible, Anthropic, and Ollama; measure the repair rate. **Partly done 2026-11-27** (CommandCode, both API formats; [result](../analysis/spikes/2026-11-27-commandcode-structured-output.md)); **closed 2026-11-28** by owner decision: the OpenAI-compatible result freezes the gateway interface; Ollama and a Claude model are skipped for now, and the capability probe (WP 1-19a) covers each provider at bind time | Written result; gateway interface frozen |
 
 **Exit evidence:** a CI run link; both spike notes; ADR amendments if a spike failed.
@@ -72,6 +72,11 @@ Still open: spike 1-06 (1-07 closed 2026-11-28). The image build and size gate i
 move to M1.2, when there is a Dockerfile to build; CI covers linux/amd64 and linux/arm64 with
 typecheck and unit tests until then.
 
+**Progress (2026-11-28):** spike 1-06 (S-A) is done, so the M1.0 exit evidence is complete: the CI
+run above, the [S-A note](../analysis/spikes/2026-11-28-queue-serialization-debounce.md), and the
+[S-C note](../analysis/spikes/2026-11-27-commandcode-structured-output.md). Neither spike failed its
+criterion, so no ADR is amended.
+
 ### M1.1 — Data layer and queue
 
 | WP | Title | Size | Contents | Done when |
@@ -80,6 +85,28 @@ typecheck and unit tests until then.
 | 1-09 | Store package | M | Kysely codegen; repositories with mandatory `org_id`; UUIDv7; audit append-only trigger; artefacts with expiry | Cross-tenant tests pass, including a database-level case: a child row that points at another org's parent is rejected |
 | 1-10 | `JobQueue` port | M | graphile-worker adapter: `enqueue`, `enqueueTx`, `cancel`, `schedule`, `onJob`; per-session `queue_name`; `job_key` debounce; cron registry; a two-worker cron test (audit Q-E, [`job-pipeline.md`](../architecture/job-pipeline.md)) | Serialization, debounce, and txn-enqueue tests pass; with two `worker` processes, each cron tick fires exactly once (until this passes, only one `worker` replica is documented as safe) |
 | 1-11 | Step runner core | M | `turn_steps` persistence, `(turn_id, step)` idempotency, generation check, `superseded` abort, retry policy | Fault-injection test: kill mid-step → resumes without duplicate effects |
+
+**Carried from spike S-A and the decisions it led to.** The owner closed both S-A questions on
+2026-11-28. The recommendations R1–R9 are not decided; each WP settles its own.
+
+- **WP 1-08:** the `worker_heartbeats` table, and its place in the migration test's list of tables
+  without `org_id` (ADR-0037).
+- **WP 1-10:**
+  - the named `argparse` licence exception in `licence-policy.json`, in the same pull request as
+    graphile-worker (Q-051, technical-approach §13);
+  - the heartbeat, fencing, and release of ADR-0037, with its two tests (a killed worker's job runs
+    again within one sweep; a silent live worker is fenced and no session runs two turns at once);
+  - complete and fail writes awaited on shutdown (R3), with a graceful-stop test;
+  - `max_attempts` set per job (R7);
+  - graphile-worker's `cleanup` in the retention cron (R6, with WP 1-28a);
+  - the debounce bound written down (R8).
+- **WP 1-11:** turn jobs carry IDs only and `resolve` reads the pending inputs (R1); orphaned turns are
+  closed at `resolve` (R2); steps honour the abort signal within 5 s (R4).
+- **WP 1-13:** the `worker` stop grace period is above graphile-worker's 5 s abort timeout (R4).
+- **WP 1-14:** both TLS modes of [ADR-0036](../decisions/ADR-0036-tls-terminated-in-front.md),
+  `caddy` and `front`, with `first-run-setup` criterion 23; the `front` path is first run on the
+  owner's VPS behind a Cloudflare Tunnel (`deployment.md` §4 C1).
+- **WP 1-28a:** the stuck-turn sweep calls the ADR-0037 release.
 
 ### M1.2 — Install and setup
 

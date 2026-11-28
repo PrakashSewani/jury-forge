@@ -1,6 +1,6 @@
 # Spec: First-run setup and instance bootstrap
 
-- Status: **MVP gate — MVP-tier rows approved by the owner on 2026-11-28.** Later tiers stay draft and are approved before their milestone (per-milestone approval, 2026-11-27). Revised 2026-11-27 in the MVP spec review (release tiers, ADR alignment; see `delivery/status.md`).
+- Status: **MVP gate — MVP-tier rows approved by the owner on 2026-11-28.** Later tiers stay draft and are approved before their milestone (per-milestone approval, 2026-11-27). Revised 2026-11-27 in the MVP spec review (release tiers, ADR alignment; see `delivery/status.md`). **Amended 2026-11-28 by [ADR-0036](../../decisions/ADR-0036-tls-terminated-in-front.md)** (the `front` TLS mode in Stage 1.5, the failure table, criterion 23; owner approved).
 - Date: 2026-11-15
 - Owner: product + operations + security
 - Principles: 1 (operator owns the instance), 4 (secure and private by default), 6 (secure by
@@ -145,14 +145,20 @@ on the host, or `jury-forge setup domain <host>` — never by exposing setup on 
    non-HTTPS values are rejected with a typed reason (DEP-08).
 2. **Pre-save validation** (the origin is not yet stored):
    - **DNS:** A/AAAA resolves; if it points elsewhere, explain the proxy/CDN case and require an
-     explicit "I terminate TLS in front" confirmation.
+     explicit "I terminate TLS in front" confirmation. The confirmation sets the TLS mode to `front`
+     and is audited as `origin.tls_mode_set`; without it the mode is `caddy` (ADR-0036). It is asked
+     even when `PUBLIC_URL` freezes the origin.
    - **Ports:** 80/443 reachable from the public internet (best-effort; GitHub's callback is the
-     authoritative test later).
+     authoritative test later). Skipped in `front` mode, where the host may open no inbound port.
 3. Confirmation writes `instance.public_url` and audits `origin.set` (actor, old, new, IP).
 4. **Post-save validation** (the origin is stored, so Caddy can authorize it):
    - **TLS:** Caddy's `ask` endpoint authorizes `public_url`; Caddy issues on demand. The UI shows
      `tls_pending`/`issued` and the certificate issuer, not a spinner. `ready` stays false until
      issued.
+   - **TLS in `front` mode (ADR-0036):** Caddy's issuance is not waited for. The UI shows
+     `tls_front_unverified` until the proof passes: the webhook self-test (Stage 2) succeeds, and
+     `GET /app/hook/config` returns `insecure_ssl` = `0` and a `url` on the stored origin. Then it
+     shows `tls_front`. `ready` stays false until then.
    - **Host enforcement:** a request with any other `Host` returns `421`, proving the origin is
      pinned.
    - If TLS fails, the origin remains saved; `ready` stays false with a typed error and the repair
@@ -165,12 +171,14 @@ on the host, or `jury-forge setup domain <host>` — never by exposing setup on 
 
 Until an origin is set, `:443` has no certificate and only the loopback listener answers; `/readyz`
 reports `origin_unset`. After the origin is saved but before TLS is issued, `/readyz` reports
-`tls_pending`; other hosts get `421` once the app knows the origin.
+`tls_pending` (`tls_front_unverified` in `front` mode); other hosts get `421` once the app knows the
+origin.
 
 ### Stage 2 — GitHub App and installation
 
 Requires a saved origin from Stage 1.5. TLS issuance may still be pending; the App can be created and
-the owner claim can proceed, but `ready` waits for TLS and the webhook self-test. **The App is created
+the owner claim can proceed, but `ready` waits for TLS (in `front` mode, the ADR-0036 proof) and the
+webhook self-test. **The App is created
 before the owner claim**, because the claim uses the App's OAuth client. **Manifest flow (default,
 github.com):** the server builds the manifest from the stored origin, the operator authorizes it on
 GitHub, the callback stores the app credentials **encrypted**, and the server verifies permissions and
@@ -301,6 +309,7 @@ Presented as a checklist with "remind me later" (advisory, not gating `ready`):
 | Bad domain / DNS not pointing at the host | Typed `dns_mismatch` with the records to create; origin is not saved |
 | Ports 80/443 blocked | `tls_unreachable`; the origin may be saved but `ready` is false; checklist for firewall/security group and retry |
 | TLS not issued after save | `tls_pending`; origin saved; `ready` false; fix DNS/firewall/proxy and retry; no need to re-enter the origin |
+| TLS ends in front, proof not yet passed | `tls_front_unverified`; origin saved; `ready` false; check the proxy or tunnel path, the `Host` header, the edge certificate, and challenge pages on `/api/webhooks/*`; `insecure_ssl` must be `0` (ADR-0036) |
 | Origin frozen by `PUBLIC_URL` | Field read-only; change env + restart, then `doctor` |
 | Setup abandoned mid-way | State is `bootstrapping`/`claimed`; `/setup` resumes at the first incomplete step and shows how long it has waited; after 7 days `doctor` warns and `/metrics` reports it (no cron job; audit Q-D) |
 | Reinstall on existing volumes | Detected by migrations + instance row; setup resumes, never silently re-initialises |
@@ -380,6 +389,11 @@ Presented as a checklist with "remind me later" (advisory, not gating `ready`):
 22. **The setup listener is reachable on host loopback only.** Compose binds `0.0.0.0:8080` inside
     the container and publishes `127.0.0.1:8080:8080`; a native install binds `127.0.0.1:8080`. It is
     not reachable on the host's public interface.
+23. **TLS terminated in front (ADR-0036):** after the "I terminate TLS in front" confirmation, setup
+    never waits for Caddy to issue. `ready` is reached only when a signed webhook delivery has
+    arrived and `GET /app/hook/config` shows `insecure_ssl` = `0`; with `insecure_ssl` = `1`, or with no
+    verified delivery, the instance stays `tls_front_unverified` and never reports `ready`. The
+    confirmation is audited, and a request header can never set the mode.
 
 ## Metrics
 
@@ -411,6 +425,9 @@ the security test.
 - The origin is saved after DNS/port validation and before TLS issuance; `ask` authorizes only
   `public_url`, so no certificate is issued for a candidate host. Issuance is capped, so the instance
   cannot be used to obtain certificates for other names.
+- In `front` mode a load balancer or tunnel provider terminates TLS and can read inbound traffic;
+  setup and `doctor` say so. The readiness proof relies on GitHub's certificate verification
+  (`insecure_ssl` = `0`), so setting it to `1` blocks `ready` (ADR-0036).
 - Bootstrap token: 256-bit random, hashed at rest, single use, expiry, attempt counters, audit; never
   in a URL after the exchange (claim intent is short-lived and single use).
 - Secrets are generated, not defaulted; `jury-forge init` writes `.env` and `secrets/*` with `0600`

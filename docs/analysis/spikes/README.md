@@ -14,12 +14,13 @@ before it trusts a model ([ADR-0029](../../decisions/ADR-0029-model-capability-p
 | Date | Spike | Question | Outcome | Changed |
 | ---- | ----- | -------- | ------- | ------- |
 | 2026-11-27 | [CommandCode discovery + structured output](2026-11-27-commandcode-structured-output.md) | Can `/models` validate a key? Which structured-output mode is reliable? | `/models` is public; the forced-tool mode was 18/18; two modes fail in ways the SDK does not report up front | ADR-0029, `provider-model-discovery.md` §1–§3, `technical-approach.md` §3.4 |
+| 2026-11-28 | [Queue serialization, debounce, and the pg-boss swap](2026-11-28-queue-serialization-debounce.md) (S-A) | Does graphile-worker keep one job per session and debounce under concurrency? Does a pg-boss adapter fit the same port? | Both libraries: 0 overlaps in 4,000 runs, one turn per debounced burst. graphile-worker strands a session for 4 h after a crash or a default graceful stop; its tree has a Python-2.0 package | `job-pipeline.md`, `technical-approach.md` §3.3 and §13, Q-051, ADR-0037 |
 
 Planned spikes from [`technical-approach.md`](../../architecture/technical-approach.md) §4:
 
 | Spike | Topic | Status |
 | ----- | ----- | ------ |
-| S-A | graphile-worker serialization and debounce; pg-boss swap | not started |
+| S-A | graphile-worker serialization and debounce; pg-boss swap | **done 2026-11-28** ([note](2026-11-28-queue-serialization-debounce.md)): criterion met; graphile-worker stays; Q-051 (licence exception) and Q-052 (ADR-0037) closed the same day |
 | S-B | web-tree-sitter in distroless on arm64 | not started |
 | S-C | `ai` SDK structured output and repair rate | **closed 2026-11-28** (owner): the CommandCode result is enough for the MVP; Ollama and a Claude model skipped for now, covered at bind time by the capability probe (ADR-0029) |
 | S-D | GitHub review-thread GraphQL resolve and reaction limits | not started |

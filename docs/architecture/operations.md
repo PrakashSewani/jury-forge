@@ -273,8 +273,13 @@ Checks (technical-approach §3.12, first-run-setup acceptance criterion 2):
 | GitHub API 403 `ip_allow_list` | Org IP allowlist blocks the instance | Add the instance egress IPs to the org allowlist (or the App's allowlist entry) |
 | Webhook never arrives, API works | Org/repo webhook blocked or URL unreachable | Test “Redeliver” in the App's Advanced page; check DNS/TLS and the stored origin |
 | Webhook 401 | Wrong webhook secret or body modified by proxy | Re-enter secret; disable body rewriting. |
+| Tunnel (C1): every request gets `421` | The tunnel sends a `Host` other than the origin | Set the tunnel's HTTP Host Header to the origin hostname ([deployment.md §4 C1](deployment.md#c1-outbound-tunnel-cloudflare-tunnel-as-the-worked-example)). |
+| Tunnel (C1): GitHub shows failed deliveries with an HTML challenge page | Bot Fight Mode, a WAF challenge, or Access in front of `/api/webhooks/*` | Turn Bot Fight Mode off for the zone (it cannot be skipped per path); remove challenges and Access from `/api/webhooks/*` and `/api/auth/*`. |
+| Setup stays `tls_front_unverified` | TLS ends in front (`front` mode) and no signed webhook delivery has arrived, or the App's `insecure_ssl` is `1` | Fix the proxy or tunnel path, then use "Redeliver" in the App's Advanced page; set `insecure_ssl` back to `0` (ADR-0036). |
+| Tunnel (C1): live progress stops with `524` | Cloudflare's 125 s proxy read timeout | The stream must send keepalive data well inside 125 s (checked in M1.7). |
 | Jobs stuck queued | `worker` not running or cannot reach Postgres | Check worker logs, queue age in `/metrics`, DB connectivity. |
-| A job stays locked after a crash | The worker died mid-job | It runs again after the queue's lock timeout and skips finished steps; check worker restarts. |
+| A job stays locked after a crash | The worker died mid-job | The stuck-turn sweep releases it within about 7 minutes once the worker's heartbeat has been silent for 2 minutes ([ADR-0037](../decisions/ADR-0037-dead-worker-lock-release.md)); graphile-worker on its own would wait 4 hours. `doctor` lists the worker pools and any release. Finished steps are skipped when it runs again. |
+| A worker restarts itself with "fenced" in its log | Its heartbeat was silent for 2 minutes (a stall or a database outage), so its locks were released | Expected and safe (ADR-0037). If it repeats, check worker CPU and memory limits and database latency. |
 | Publish 422 | Review body/comment limit, stale SHA | Inspect the publish plan; budget/limits. |
 | Provider 401 | Wrong key or base URL | Check credential binding, re-enter key. |
 | Provider 429 | Rate limit | Lower concurrency, add capacity, retry. |

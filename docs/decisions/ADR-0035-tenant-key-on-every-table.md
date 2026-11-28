@@ -1,6 +1,6 @@
 # ADR-0035: `org_id` on every tenant-owned table, enforced by composite foreign keys
 
-- Status: accepted (owner delegated the decision, 2026-11-28; readiness review)
+- Status: accepted (owner delegated the decision, 2026-11-28; readiness review; the exception list amended by ADR-0037, 2026-11-28)
 - Date: 2026-11-28
 - Owners: architecture + security
 - Amends: [`../architecture/data-model.md`](../architecture/data-model.md) design rule 1 ("directly
