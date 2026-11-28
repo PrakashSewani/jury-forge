@@ -2,9 +2,28 @@
 
 Field-level reference for the PostgreSQL 17 schema of the accepted v1 stack
 ([`technical-approach.md`](technical-approach.md) §3.2 and §17, ADR-0004, ADR-0026). Table names
-are normative for docs and contracts; column lists and types are indicative, and the SQL migrations
-written in M1.1 (WP 1-08) are the DDL. If this document and a migration disagree, fix one of them in
-the same pull request.
+are normative for docs and contracts. The DDL is the SQL in
+[`packages/store/migrations/`](../../packages/store/migrations/) (WP 1-08, 2026-11-28); the MVP
+column lists below follow it, with the types and constraints left to the SQL. If this document and
+a migration disagree, fix one of them in the same pull request.
+
+**Schema conventions** (every migration follows them; the WP 1-08 integration tests check the
+first three against the live catalog):
+
+- **Tenant key (ADR-0035):** every tenant-owned table has `org_id uuid not null references orgs`
+  and `unique (org_id, id)`, and references other tenant tables with composite keys that lead with
+  `org_id`. Where a row names a thread or a turn, it names it with its session,
+  `(org_id, session_id, …)`, so it cannot point at another session's thread or turn.
+- **Deletes:** ownership edges cascade (org → installation → repository → session → turn → step),
+  so deleting an org removes every row it owns. Reference edges (to reviewer versions, provider
+  models, users) keep the default `NO ACTION`, so deleting a row that history still points at fails.
+  Optional references to rows with their own retention (artefacts, turns) use
+  `ON DELETE SET NULL (column)`.
+- **IDs:** UUIDv7 from the SQL function `uuid_v7()`, the default of every `id` (PostgreSQL 17 has no
+  built-in generator). The store may also supply its own UUIDv7 values (WP 1-09).
+- **Enumerations** are `text` with a `CHECK`, so a value can be added in an expand step.
+- **Migrations** are plain SQL files run by node-pg-migrate in one transaction, with a tested down
+  step each; the bookkeeping table is `pgmigrations`.
 
 Each table carries a **tier**: **MVP** (the first migrations, gate G1), **v1** (added by the v1
 migrations), **v1.1**, or **v1.2**. Nothing is built ahead of its tier.
@@ -39,7 +58,7 @@ migrations), **v1.1**, or **v1.2**. Nothing is built ahead of its tier.
 
 | Table | Tier | Key fields | Notes |
 | ----- | ---- | ---------- | ----- |
-| `orgs` | MVP | `id`, `slug`, `name`, `owner_user_id`, `created_at` | The tenant. v1 is single-org per instance, but every tenant-owned table carries `org_id` (ADR-0035). The first migration creates the instance org with `owner_user_id` NULL, so rows written before the claim have a tenant; the claim sets `owner_user_id` (first-run-setup Stage 3). |
+| `orgs` | MVP | `id`, `slug`, `name`, `owner_user_id`, `created_at` | The tenant root (no `org_id` of its own). `slug` and `name` stay null until the owner claim fills them (WP 1-16). v1 is single-org per instance, but every tenant-owned table carries `org_id` (ADR-0035). The first migration creates the instance org with `owner_user_id` NULL, so rows written before the claim have a tenant; the claim sets `owner_user_id` (first-run-setup Stage 3). |
 | `users` | MVP | `id`, `github_id`, `login`, `display_name`, `avatar_url`, `created_at` | Identity from GitHub OAuth. OIDC is v1.2. Instance-level, so no `org_id` (an ADR-0035 exception); org access is checked through `orgs.owner_user_id`, GitHub repo access, and v1.2 `role_bindings`. |
 | `user_sessions` | MVP | `id`, `user_id`, `token_hash`, `created_at`, `last_seen_at`, `idle_expires_at`, `absolute_expires_at`, `revoked_at` | Opaque random IDs stored hashed; idle 8 h, absolute 7 d (technical-approach §3.9). Instance-level like `users` (no `org_id`, ADR-0035). |
 | `instance_settings` | MVP | `org_id`, `key`, `value`, `version`, `updated_by`, `updated_at` | Layer 2 of the configuration model (technical-approach §14): set through the UI, versioned, audited. Includes `public_url` (ADR-0021), its TLS mode, `caddy` or `front` (ADR-0036), and the setup state. |
@@ -53,26 +72,26 @@ migrations), **v1.1**, or **v1.2**. Nothing is built ahead of its tier.
 
 | Table | Tier | Key fields | Notes |
 | ----- | ---- | ---------- | ----- |
-| `installations` | MVP | `id`, `org_id`, `forge` (`github`), `external_id`, `account_login`, `account_type`, `base_url`, `app_secret_ids`, `status`, `created_at` | `base_url` leaves room for GHES (v1.1). App credentials are rows in `secrets`. |
+| `installations` | MVP | `id`, `org_id`, `forge` (`github`), `external_id`, `account_login`, `account_type` (`user`/`organization`), `base_url`, `status` (`active`/`suspended`/`removed`), `created_at`, `updated_at` | Unique `(forge, base_url, external_id)`. `base_url` leaves room for GHES (v1.1). The GitHub App is one per instance: its id, slug, and client id are instance settings, and its private key, client secret, and webhook secret are rows in `secrets` (the draft column `app_secret_ids` was dropped: an id array cannot have a foreign key). |
 | `repositories` | MVP | `id`, `org_id`, `installation_id`, `external_id`, `full_name`, `private`, `default_branch`, `language`, `created_at` | No enable toggle (ADR-0013); review is manual-first and automatic review is config-as-code. |
-| `webhook_deliveries` | MVP | `id`, `org_id`, `installation_id`, `delivery_id`, `event`, `action`, `payload_artefact_id`, `received_at`, `processed_at`, `status` | Unique `delivery_id`; inserted in the same transaction as its job (technical-approach §5.1). The raw payload is an artefact, kept 30 days. |
+| `webhook_deliveries` | MVP | `id`, `org_id`, `installation_id` (nullable: the `installation` event arrives before its row), `delivery_id`, `event`, `action`, `payload_artefact_id`, `received_at`, `processed_at`, `status` (`received`/`processed`/`ignored`/`failed`) | Unique `delivery_id`; inserted in the same transaction as its job (technical-approach §5.1). The raw payload is an artefact, kept 30 days. |
 
 ## Providers and models
 
 | Table | Tier | Key fields | Notes |
 | ----- | ---- | ---------- | ----- |
 | `providers` | MVP | `id`, `org_id`, `kind` (`openai_compatible`/`anthropic_compatible`/`local`), `name`, `base_url`, `allowed_origin`, `pinned_addresses`, `secret_id`, `status`, `created_at`, `last_verified_at` | Keys are write-only and origin-bound (ADR-0011). `pinned_addresses` applies only to the `local` kind (ADR-0030). |
-| `provider_models` | MVP | `id`, `provider_id`, `model_id`, `display_name`, `context_window`, `max_output`, `input_price`, `output_price`, `cache_read_price`, `cache_write_price`, `capabilities`, `supported_endpoints`, `pricing_source`, `source`, `status`, `last_seen_at` | Fetched from `/models` and enriched from the bundled registry snapshot. A binding can only name a row here (no free-text model IDs). |
-| `model_probes` | MVP | `id`, `provider_id`, `model_id`, `endpoint`, `probe_version`, `sdk_version`, `status` (`passed`/`failed`/`running`), `chosen_mode`, `mode_results`, `reasoning_share`, `cache_read_seen`, `tokens_used`, `triggered_by`, `actor_id`, `started_at`, `finished_at` | ADR-0029. A binding needs a `passed` probe for its provider, model, endpoint, and current probe version. Synthetic fixtures only. |
+| `provider_models` | MVP | `id`, `org_id`, `provider_id`, `model_id`, `display_name`, `context_window`, `max_output`, `input_price`, `output_price`, `cache_read_price`, `cache_write_price`, `capabilities`, `supported_endpoints`, `pricing_source` (`provider`/`registry`/`admin`), `source`, `status` (`available`/`removed`), `last_seen_at` | Prices are per 1M tokens and null when unknown; the currency is not yet specified (one per instance is assumed). Fetched from `/models` and enriched from the bundled registry snapshot. A binding can only name a row here (no free-text model IDs). |
+| `model_probes` | MVP | `id`, `org_id`, `provider_model_id` (one key for the provider and model), `endpoint`, `probe_version`, `sdk_version`, `status` (`passed`/`failed`/`running`), `chosen_mode`, `mode_results`, `reasoning_share`, `cache_read_seen`, `tokens_used`, `triggered_by`, `actor_id`, `started_at`, `finished_at` | ADR-0029. A binding needs a `passed` probe for its provider, model, endpoint, and current probe version. Synthetic fixtures only. |
 
 ## Reviewers
 
 | Table | Tier | Key fields | Notes |
 | ----- | ---- | ---------- | ----- |
 | `reviewers` | MVP | `id`, `org_id`, `slug`, `name`, `role` (`security`/`correctness`/`tests`/…), `built_in`, `status`, `created_at`, `archived_at` | MVP binds one juror; v1 ships three built-in jurors (Security, Correctness, Tests) plus the non-voting verifier (ADR-0025). |
-| `reviewer_versions` | MVP | `id`, `reviewer_id`, `version`, `prompt_file_id`, `prompt_hash`, `instructions`, `model_role` (`reasoning`/`fast`), `provider_model_id` (override), `params`, `output_schema`, `content_hash`, `created_by`, `created_at`, `activated_at` | Immutable once active. The factory default is a versioned prompt file; an operator edit creates a new version (technical-approach §16). |
+| `reviewer_versions` | MVP | `id`, `org_id`, `reviewer_id`, `version`, `prompt_file_id`, `prompt_hash`, `instructions`, `model_role` (`reasoning`/`fast`), `provider_model_id` (override), `params`, `output_schema`, `content_hash`, `created_by`, `created_at`, `activated_at` | Immutable once active. The factory default is a versioned prompt file; an operator edit creates a new version (technical-approach §16). |
 | `model_role_bindings` | v1 | `org_id`, `role` (`reasoning`/`fast`), `provider_model_id`, `updated_by`, `updated_at` | ADR-0025 §5. A reviewer may override `reasoning`. |
-| `reviewer_repo_bindings` | MVP | `id`, `repo_id`, `reviewer_id`, `reviewer_version_id`, `enabled`, `selection` (`required`/`default`; `capability` is v1.2), `paths_include`, `paths_exclude`, `languages`, `budget`, `created_by`, `updated_at` | The binding is the enablement: no reviewer runs on a repo without an enabled binding, and the Check Run appears on PR open only in a bound repo (ADR-0013, ADR-0016, `agentic-review-sessions` §6). The MVP has one built-in reviewer and one binding; v1 adds path/language scopes for the three jurors. Added to technical-approach §17 on 2026-11-28. |
+| `reviewer_repo_bindings` | MVP | `id`, `org_id`, `repository_id`, `reviewer_id`, `reviewer_version_id` (a pinned version of the same reviewer; null follows its active version, `reviewer-assignment-and-roles`), `enabled`, `selection` (`required`/`default`; `capability` is v1.2), `paths_include`, `paths_exclude`, `languages`, `budget`, `created_by`, `updated_at` | The binding is the enablement: no reviewer runs on a repo without an enabled binding, and the Check Run appears on PR open only in a bound repo (ADR-0013, ADR-0016, `agentic-review-sessions` §6). The MVP has one built-in reviewer and one binding; v1 adds path/language scopes for the three jurors. Added to technical-approach §17 on 2026-11-28. |
 | `capabilities`, `capability_labels`, `reviewer_capabilities`, `reviewer_approvals`, `fallback_comments` | v1.2 | — | The capability registry and `jury:cap:*` labels (ADR-0016, capabilities.md v1.2). |
 
 ## Sessions and turns
@@ -80,16 +99,16 @@ migrations), **v1.1**, or **v1.2**. Nothing is built ahead of its tier.
 | Table | Tier | Key fields | Notes |
 | ----- | ---- | ---------- | ----- |
 | `pr_sessions` | MVP | `id`, `org_id`, `installation_id`, `repository_id`, `pr_number`, `state`, `generation`, `needs_human_reason`, `last_turn_at`, `archived_at` | One per `(installation_id, repository_id, pr_number)`. `state` = `created`/`active`/`waiting_for_user`/`resolved`/`archived` (`session-capacity-and-visibility` §2). |
-| `session_threads` | MVP | `id`, `session_id`, `github_thread_id`, `file`, `line`, `created_by`, `owner_reviewer_id`, `state`, `resolved_by`, `resolved_at` | One per review-comment thread; only bot-owned threads can be bot-resolved (`auto`). |
-| `session_messages` | MVP | `id`, `session_id`, `thread_id`, `role` (`user`/`agent`/`system`), `reviewer_version_id`, `github_comment_id`, `author_login`, `created_at` | Append-only; the body lives in `message_versions`. |
-| `message_versions` | MVP | `id`, `session_message_id`, `body_hash`, `body`, `observed_at`, `answered_by_turn_id` | ADR-0024 §3; a turn answers one version. |
-| `session_turns` | MVP | `id`, `session_id`, `generation`, `trigger`, `intent`, `status` (`queued`/`running`/`completed`/`failed`/`superseded`/`budget_stopped`), `config_snapshot`, `cost_micros`, `tokens`, `started_at`, `finished_at` | The durable unit of work, serialized per session by the queue (`queue_name = session:<id>`). `config_snapshot` freezes reviewer versions, prompt hashes, instruction-file hashes, and model bindings. |
-| `turn_steps` | MVP | `turn_id`, `step`, `input_hash`, `output`, `tokens`, `ms`, `created_at` | Unique `(turn_id, step)`. A retried job reads finished steps back instead of redoing them (technical-approach §3.3). Large outputs reference an artefact. |
-| `session_findings` | MVP | `id`, `session_id`, `thread_id`, `turn_id`, `reviewer_version_id`, `fingerprint`, `category`, `severity`, `file`, `line`, `start_line`, `anchor_hash`, `status`, `evidence`, `confidence`, `external_id` | `status` = `open`/`fix_candidate`/`verified_fixed`/`outdated`/`addressed`/`dismissed`/`resolved`/`reopened` (ADR-0024). `external_id` is the GitHub comment ID used for idempotent publishing. |
-| `finding_fingerprints` | MVP | `fingerprint`, `repository_id`, `category`, `path`, `anchor_hash`, `first_seen_turn_id`, `last_state` | ADR-0024 §4; unique `(repository_id, fingerprint)`. Code-assigned only. |
-| `coverage_manifests` | MVP | `id`, `turn_id`, `files` (path, state `reviewed`/`expanded`/`summarised`/`skipped`/`excluded`, reason, tokens) | ADR-0025 §2; part of the receipt. `expanded` appears from v1 (T0+). |
-| `resolutions` | MVP | `id`, `thread_id`, `actor_type`, `actor_id`, `mode` (`suggest`/`auto`/`off`), `evidence`, `confidence`, `created_at` | In `suggest`, the actor is the human who resolved; in `auto`, the bot resolution is guarded (ADR-0024 §6). |
-| `finding_feedback` | MVP | `finding_id`, `user_id`, `source` (`button`/`reaction`), `verdict` (`helpful`/`wrong`/`fixed`/`duplicate`), `reason`, `created_at` | The learning loop; reactions are polled (cron). |
+| `session_threads` | MVP | `id`, `org_id`, `session_id`, `github_thread_id`, `file`, `line`, `created_by`, `owner_reviewer_id`, `state`, `resolved_by` (the GitHub login), `resolved_at` | `state` = `open`/`resolved`/`outdated`; `created_by` = `agent`/`user`. One per review-comment thread; only bot-owned threads can be bot-resolved (`auto`). |
+| `session_messages` | MVP | `id`, `org_id`, `session_id`, `thread_id`, `role` (`user`/`agent`/`system`), `reviewer_version_id`, `github_comment_id`, `author_login`, `created_at` | Append-only; the body lives in `message_versions`. |
+| `message_versions` | MVP | `id`, `org_id`, `session_message_id`, `body_hash`, `body`, `observed_at`, `answered_by_turn_id` | ADR-0024 §3; a turn answers one version. |
+| `session_turns` | MVP | `id`, `org_id`, `session_id`, `generation`, `trigger` (`check_run`/`label`/`ui`/`reply`/`push`/`policy`), `intent`, `status` (`queued`/`running`/`completed`/`failed`/`superseded`/`budget_stopped`), `stop_reason` (why a turn that did not complete stopped, for example `stuck` or `verifier_unavailable`), `config_snapshot`, `cost_micros`, `tokens`, `started_at`, `finished_at` | The durable unit of work, serialized per session by the queue (`queue_name = session:<id>`). `config_snapshot` freezes reviewer versions, prompt hashes, instruction-file hashes, and model bindings. |
+| `turn_steps` | MVP | `org_id`, `turn_id`, `step`, `input_hash`, `output`, `tokens`, `ms`, `created_at` | Unique `(turn_id, step)`. A retried job reads finished steps back instead of redoing them (technical-approach §3.3). Large outputs reference an artefact. |
+| `session_findings` | MVP | `id`, `org_id`, `session_id`, `thread_id`, `turn_id`, `reviewer_version_id`, `fingerprint`, `category`, `severity`, `file`, `line`, `start_line`, `anchor_hash`, `status`, `evidence`, `confidence`, `external_id` | `status` = `open`/`fix_candidate`/`verified_fixed`/`outdated`/`addressed`/`dismissed`/`resolved`/`reopened` (ADR-0024). `external_id` is the GitHub comment ID used for idempotent publishing. |
+| `finding_fingerprints` | MVP | `org_id`, `fingerprint`, `repository_id`, `category`, `path`, `anchor_hash`, `first_seen_turn_id`, `last_state` | ADR-0024 §4; the primary key is `(org_id, repository_id, fingerprint)` (ADR-0035 decision 3). Code-assigned only. |
+| `coverage_manifests` | MVP | `id`, `org_id`, `turn_id`, `files` (path, state `reviewed`/`expanded`/`summarised`/`skipped`/`excluded`, reason, tokens) | ADR-0025 §2; part of the receipt. `expanded` appears from v1 (T0+). |
+| `resolutions` | MVP | `id`, `org_id`, `thread_id`, `actor_type`, `actor_id`, `mode` (`suggest`/`auto`/`off`), `evidence`, `confidence`, `created_at` | In `suggest`, the actor is the human who resolved; in `auto`, the bot resolution is guarded (ADR-0024 §6). |
+| `finding_feedback` | MVP | `id`, `org_id`, `finding_id`, `user_id` (a UI vote), `author_login` (a GitHub reaction; at least one of the two), `source` (`button`/`reaction`), `verdict` (`helpful`/`wrong`/`fixed`/`duplicate`), `reason`, `created_at` | The learning loop; reactions are polled (cron). |
 | `session_findings` jury and verifier columns | v1 | `agreement`, `jurors`, `verifier_verdict` (`confirmed`/`unconfirmed`/`wrong`), `verifier_reason` | ADR-0025 §4. |
 | `appeals` | v1 | `id`, `finding_id`, `appellant_user_id`, `argument_message_id`, `outcome` (`upheld`/`downgraded`/`withdrawn`/`escalated`), `votes`, `turn_id` | S1; one appeal per finding. |
 | `suppressions` | v1 | `id`, `repository_id`, `fingerprint`, `category`, `path_glob`, `reason`, `source` (`feedback`/`appeal`/`reaction`), `created_by`, `expires_at`, `revoked_at` | S4; never applies to `critical`. |
@@ -118,8 +137,8 @@ migrations), **v1.1**, or **v1.2**. Nothing is built ahead of its tier.
 | Table | Tier | Key fields | Notes |
 | ----- | ---- | ---------- | ----- |
 | `artefacts` | MVP | `id`, `org_id`, `kind` (`diff`/`provider_request`/`provider_response`/`webhook_payload`/`export`), `bytes` (`bytea`), `size`, `sha256`, `redacted`, `created_at`, `expires_at` | ≤ 2 MB each; the daily retention job deletes expired rows (technical-approach §3.2). Never logged, never a span attribute. |
-| `budgets` | MVP | `id`, `org_id`, `scope_type` (`session`/`repo`/`installation`/`requester`), `scope_id`, `period` (`turn`/`day`/`week`/`month`), `token_limit`, `cost_limit_micros`, `action` (`warn`/`block`), `created_at` | ADR-0024 §7 hard budgets fail closed; checked in `domain` before every model call. |
-| `usage_rollups` | MVP | `org_id`, `scope_type`, `scope_id`, `period_start`, `tokens`, `cost_micros`, `turns` | Materialised for the dashboard and the scorecard. |
+| `budgets` | MVP | `id`, `org_id`, `scope_type` (`session`/`repo`/`installation`/`requester`), `scope_id` (text: an id, or a requester's GitHub login; null applies to every scope of the type), `period` (`turn`/`day`/`week`/`month`), `token_limit`, `cost_limit_micros`, `action` (`warn`/`block`), `created_at` | ADR-0024 §7 hard budgets fail closed; checked in `domain` before every model call. |
+| `usage_rollups` | MVP | `org_id`, `scope_type`, `scope_id` (text, as in `budgets`), `period_start`, `tokens`, `cost_micros`, `turns` | Materialised for the dashboard and the scorecard. |
 
 ## Repository graph (v1.1) and knowledge (v1.2)
 

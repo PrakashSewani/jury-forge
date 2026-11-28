@@ -7,5 +7,11 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@jury-forge/store": "workspace:*"
+  },
+  "devDependencies": {
+    "@jury-forge/testkit": "workspace:*"
   }
 }

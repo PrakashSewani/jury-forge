@@ -86,6 +86,19 @@ criterion, so no ADR is amended.
 | 1-10 | `JobQueue` port | M | graphile-worker adapter: `enqueue`, `enqueueTx`, `cancel`, `schedule`, `onJob`; per-session `queue_name`; `job_key` debounce; cron registry; a two-worker cron test (audit Q-E, [`job-pipeline.md`](../architecture/job-pipeline.md)) | Serialization, debounce, and txn-enqueue tests pass; with two `worker` processes, each cron tick fires exactly once (until this passes, only one `worker` replica is documented as safe) |
 | 1-11 | Step runner core | M | `turn_steps` persistence, `(turn_id, step)` idempotency, generation check, `superseded` abort, retry policy | Fault-injection test: kill mid-step → resumes without duplicate effects |
 
+**Progress (2026-11-28): WP 1-08 is written.** Five SQL migrations in `packages/store/migrations/`
+create the 30 MVP tables (technical-approach §17 plus `worker_heartbeats`), the `uuid_v7()` id
+function, and the unclaimed instance org. `migrate()` in the store runs them, and
+`apps/server/src/migrate.ts` is the entrypoint. Integration tests on PostgreSQL 17:
+- fresh → latest → all down → up gives an identical schema, and one-at-a-time down works;
+- a non-exempt table without a non-null `org_id` that references `orgs` fails the check, as does a
+  tenant foreign key that is not composite on `org_id` (each check has a negative case);
+- a cross-tenant child row is rejected;
+- deleting an org removes its rows in every tenant table and nothing else;
+- the entrypoint reads `DATABASE_URL_FILE` and never prints the password.
+
+The audit append-only trigger and the store's own UUIDv7 generation stay in WP 1-09.
+
 **Carried from spike S-A and the decisions it led to.** The owner closed both S-A questions on
 2026-11-28. The recommendations R1–R9 are not decided; each WP settles its own.
 

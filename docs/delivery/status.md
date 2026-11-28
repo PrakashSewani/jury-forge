@@ -9,7 +9,7 @@ one phase `in progress` and exactly one next action.
 | ----- | ----- | ------ |
 | 0 | Product definition and documentation | **done — G0 passed 2026-11-16** |
 | 1a | Technology and approach (decisions only, no code) | **done — accepted 2026-11-16** |
-| 1b | Foundation and walking skeleton (MVP, gate G1) | **in progress — owner go 2026-11-27; M1.0 exit evidence complete 2026-11-28; M1.1 next** |
+| 1b | Foundation and walking skeleton (MVP, gate G1) | **in progress — owner go 2026-11-27; M1.0 exit evidence complete 2026-11-28; M1.1 in progress (WP 1-08)** |
 | 2 | Trust and security | not started |
 | 3 | Review quality | not started |
 | 4 | Operations and release | not started |
@@ -17,17 +17,42 @@ one phase `in progress` and exactly one next action.
 
 ## Current handoff
 
-**Phase:** 1b. Milestone **M1.0 (repository and CI)** has its exit evidence: WP 1-01 to 1-05 are
-merged into `dev` (PR #5) with a green CI run, S-C (WP 1-07) is closed, and S-A (WP 1-06) is done
-(below). Next is **M1.1 (data layer and queue)**.
+**Phase:** 1b, milestone **M1.1 (data layer and queue)**. M1.0 has its exit evidence (WP 1-01 to
+1-05 in PR #5 with a green CI run, S-C closed, S-A done), and the owner said start M1.1 on
+2026-11-28. WP 1-08 (migrations v0) is written (below).
 
-**Branch:** `docs/spike-s-a-queue` (the S-A note, the Cloudflare Tunnel variant, and ADR-0036 and
-ADR-0037); it lands in `dev` through its pull request. `docs/readiness-gaps` is merged into `dev`
-(PR #11).
+**Branch:** `feat/migrations-v0` (WP 1-08); it lands in `dev` through its pull request.
+`docs/spike-s-a-queue` is merged into `dev` (PR #12).
 
-**Next action:** start **M1.1 with WP 1-08 (migrations v0)** once the owner has seen this M1.0
-report (implementation-plan, "Immediate next steps", step 3). Nothing blocks M1.1: Q-051, Q-052, and
-DEP-13 were closed on 2026-11-28 (below).
+**Next action:** **WP 1-09 (store package)**, after WP 1-08 merges: Kysely codegen from the live
+schema, repositories with a mandatory `org_id`, UUIDv7 in the store, the audit append-only trigger,
+and artefacts with expiry; its exit is the cross-tenant tests.
+
+### Landed this session (2026-11-28, WP 1-08 migrations v0)
+
+The first product code of M1.1, on `feat/migrations-v0`.
+
+- **Five SQL migrations** in `packages/store/migrations/`, run by node-pg-migrate 9.0.0 (verified
+  live; technical-approach §13). They create the 30 MVP tables, the `uuid_v7()` function (the default
+  of every `id`), and the unclaimed instance org (ADR-0035 decision 5).
+  - **Conventions:** `org_id not null references orgs` and composite tenant keys on every tenant
+    table; ownership edges cascade, references `NO ACTION`; enumerations are `text` with `CHECK`.
+- **Code:** `migrate()` and `resolveDatabaseUrl()` in the store (`DATABASE_URL_FILE` or
+  `DATABASE_URL`, never both; no error repeats the URL), and the entrypoint
+  `apps/server/src/migrate.ts` (`up` only).
+- **Docs:** `data-model.md` (the DDL is now the SQL; schema conventions; every MVP row aligned with
+  the migrations), technical-approach §13 (node-pg-migrate), and the WP 1-08 progress note in the
+  plan.
+- **Modelling choices made in the SQL (recorded in `data-model.md`):**
+  - `installations.app_secret_ids` was dropped: the App's credentials are instance settings plus
+    `secrets` rows.
+  - `model_probes` keys on `provider_model_id`.
+  - Bindings use `repository_id`, and a null `reviewer_version_id` follows the active version.
+  - `session_turns` gains `stop_reason` and the trigger value `ui`.
+  - `finding_feedback` gains `id` and `author_login`.
+  - The budget and usage `scope_id` columns are text.
+- **Open, not blocking:** the docs name no currency for prices and costs; the schema assumes one
+  per instance.
 
 ### Landed this session (2026-11-28, spike S-A)
 
@@ -521,6 +546,22 @@ while `AGENTS.md` and `decisions/README.md` say to supersede; the status list ha
   v1.1/v1.2, with a critical path and per-milestone exit evidence.
 
 ## Verified this session (2026-11-28)
+
+**WP 1-08 locally (Windows 11, Node v24.19.0, Docker Engine 29.9.3):**
+
+- `pnpm check` exited 0: typecheck, Biome, dependency rules (36 modules, 0 violations), licences
+  (276 package versions, node-pg-migrate's tree included), 36 unit tests, and 16 integration tests on
+  `postgres:17.12-alpine`.
+- The migration tests cover: up from empty, a second up that does nothing, all down and up to an
+  identical schema snapshot, one-at-a-time down, the tenant-key and composite-key checks with a
+  negative case each, cross-tenant rejection, org deletion across all 26 tenant tables, a referenced
+  reviewer version that cannot be deleted, UUIDv7 format and order, the 2 MiB artefact cap, and the
+  fail-fast advisory lock.
+- The entrypoint tests run the real process: it applies 5 migrations from `DATABASE_URL_FILE`, then
+  0; it exits 1 on a wrong password without printing it; it refuses both URL forms; it exits 2 on an
+  unknown command.
+- **Not verified yet:** CI (runs on the WP 1-08 pull request), Linux and arm64, and the migrations in
+  the real `migrate` container (M1.2).
 
 **Spike S-A (throwaway code outside the repository; Windows 11, Node v24.19.0, Docker Engine
 29.9.3):**
