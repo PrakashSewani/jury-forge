@@ -161,7 +161,8 @@ here, because kysely-codegen brings the same package.
 - **WP 1-11 (done 2026-11-28):** orphaned turns are closed when a turn starts (R2), and the runner
   honours and passes on the abort signal (R4). Still open for M1.5: `resolve` reads the pending inputs
   (R1), and each step stops within 5 s of the abort (R4).
-- **WP 1-13:** the `worker` stop grace period is above graphile-worker's 5 s abort timeout (R4).
+- **WP 1-13 (done 2026-11-28):** the `worker` stop grace period is 15 s, above graphile-worker's
+  5 s abort timeout (R4).
 - **WP 1-14:** both TLS modes of [ADR-0036](../decisions/ADR-0036-tls-terminated-in-front.md),
   `caddy` and `front`, with `first-run-setup` criterion 23; the `front` path is first run on the
   owner's VPS behind a Cloudflare Tunnel (`deployment.md` §4 C1).
@@ -196,6 +197,48 @@ here, because kysely-codegen brings the same package.
     bound the worker pool (S-B R1–R3);
   - before T0+: remove the 31 MB `typescript` optional peer from the image (S-B R4).
 - **Also moved here from WP 1-05:** the image build and size gate.
+
+**Progress (2026-11-28): WP 1-13 is written.**
+- **The bundle:** `deploy/` holds `compose.yaml`, `Caddyfile`, `.env.example`, and
+  `init-secrets.sh`. `deployment.md` §3 ("The bundle as built") lists where it differs from the
+  illustrative shape: three networks, secret ownership, users, probes, and the stop grace.
+- **The roles,** in the image:
+  - `app`: Fastify with `/healthz` and `/readyz` (database, migrations at head, queue schema; 503
+    with a breakdown and no error text), plus the setup listener on `SETUP_BIND` with `/healthz`;
+  - `worker`: the queue with its ADR-0037 heartbeat; exit 0 on `SIGTERM`, exit 1 when fenced;
+  - `healthcheck <url>`: loopback HTTP only.
+- **Image size:** 217.9 MB on amd64 with Fastify and pino, against the 250 MB gate.
+- **The exit check:** `scripts/compose-smoke-test.sh`. CI runs it on fresh amd64 and arm64 runner
+  VMs in the `image` job. It checks:
+  - first start healthy, and `migrate` exit 0;
+  - hardening on all five containers;
+  - setup on host loopback only;
+  - `:80` redirects, and `:443` issues no certificate;
+  - postgres and port 3000 not published, and no egress on `internal`;
+  - a clean worker stop;
+  - `down` and `up` with 0 migrations.
+
+  A mutation run (setup published on `0.0.0.0`) fails it as expected.
+- **Tests:** `checkReadiness` (5 integration tests); the role tests (3 integration tests:
+  readiness before and after `migrate`, the heartbeat, fencing); and unit tests for the listen
+  address, the environment, the logger, HTTP, and the healthcheck.
+- **Carried forward:**
+  - **WP 1-14:** the Compose healthcheck needs `/readyz` to return 200 before an origin exists,
+    because `caddy` waits for `app` to be healthy. Report `origin_unset` and `tls_pending` in the
+    body without failing readiness, or the stack cannot start (first-run-setup Stage 1.5 vs
+    `observability.md` §9).
+  - **WP 1-14 also:** the `ask` endpoint, `TRUSTED_PROXIES` on the pinned subnet, and the `front`
+    variant without published ports. Caddy 2.11's `on_demand_tls` needs checking for the `interval`
+    and `burst` the reference Caddyfile names.
+  - **WP 1-15:** the master key secret file, its `/readyz` component, and the zod environment
+    schema in `contracts` (technical-approach §14). WP 1-13 parses its three variables by hand.
+  - **WP 1-17:** `jury-forge init` replaces `init-secrets.sh`, including the file ownership.
+  - **WP 4-05:** digest-pinned published images replace `build:` in `compose.yaml`.
+  - **Open, not owned by a WP yet:**
+    - TLS to the bundled Postgres; the connection stays on the `internal` network;
+    - a least-privilege database role for `app` and `worker`; today all three roles connect as
+      `jury_forge`, the cluster's owner;
+    - user-namespace-remapped and rootless Docker (secret uids).
 
 ### M1.3 — Providers and egress
 

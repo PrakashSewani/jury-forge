@@ -9,7 +9,7 @@ one phase `in progress` and exactly one next action.
 | ----- | ----- | ------ |
 | 0 | Product definition and documentation | **done — G0 passed 2026-11-16** |
 | 1a | Technology and approach (decisions only, no code) | **done — accepted 2026-11-16** |
-| 1b | Foundation and walking skeleton (MVP, gate G1) | **in progress — owner go 2026-11-27; M1.0 exit evidence complete 2026-11-28; M1.1 complete 2026-11-28; M1.2 in progress (WP 1-12)** |
+| 1b | Foundation and walking skeleton (MVP, gate G1) | **in progress — owner go 2026-11-27; M1.0 exit evidence complete 2026-11-28; M1.1 complete 2026-11-28; M1.2 in progress (WP 1-13)** |
 | 2 | Trust and security | not started |
 | 3 | Review quality | not started |
 | 4 | Operations and release | not started |
@@ -18,21 +18,53 @@ one phase `in progress` and exactly one next action.
 ## Current handoff
 
 **Phase:** 1b, milestone **M1.2 (install and setup)**. **M1.1 is complete:** WP 1-08 to 1-11 are
-merged with green CI (PRs #13–#16). WP 1-12 (image, with spike S-B) is written (below).
+merged with green CI (PRs #13–#16). WP 1-12 (image, with spike S-B) is merged (PR #17). WP 1-13
+(Compose bundle) is written (below).
 
-**Branch:** `feat/image` (WP 1-12); it lands in `dev` through its pull request.
-`feat/step-runner` is merged into `dev` (PR #16).
+**Branch:** `feat/compose` (WP 1-13); it lands in `dev` through its pull request.
+`feat/image` is merged into `dev` (PR #17, merge `bce0f24`).
 
-**Next action:** **WP 1-13 (Compose bundle)**, after WP 1-12 merges:
-- `compose.yaml` with `caddy`, `migrate`, `app`, `worker`, and `postgres`, healthchecks, the loopback
-  `SETUP_BIND`, volumes, and `.env.example`;
-- exit: `docker compose up` is healthy on a clean VM.
+**Next action:** **WP 1-14 (Caddy and origin)**, after WP 1-13 merges:
+- on-demand TLS with the `ask` endpoint, the origin step (ADR-0021), and the `PUBLIC_URL` freeze;
+- both TLS modes of ADR-0036, with the `front` path first run on the owner's VPS behind a
+  Cloudflare Tunnel (`deployment.md` §4 C1);
+- exit: a valid certificate for the configured domain, and every other name refused.
 
-To settle at its start: the image has only the `migrate` command, and a healthy Compose stack needs
-`app` and `worker` roles with `/healthz` and `/readyz` (technical-approach §3.12). Their minimal form
-is part of WP 1-13 or the start of WP 1-15/1-16.
+To settle at its start: the Compose healthcheck needs `/readyz` to return 200 before an origin
+exists, because `caddy` waits for a healthy `app`. First-run-setup says `/readyz` "reports"
+`origin_unset`. WP 1-13 reads that as a field in the body, not a 503; the owner confirms it, or
+the healthcheck changes (implementation-plan, WP 1-13 carried forward).
 
-### Landed this session (2026-11-28, WP 1-12 image and spike S-B)
+### Landed this session (2026-11-28, WP 1-13 Compose bundle)
+
+- **The bundle** (`deploy/`):
+  - `compose.yaml`: `caddy`, `migrate`, `app`, `worker`, and `postgres`, with healthchecks, the
+    start order, the setup port on host loopback only, named volumes, and file secrets;
+  - three networks: `edge`, `internal` without egress on the pinned `172.28.0.0/24`, and `egress`
+    for `app` and `worker`;
+  - all five containers run with a read-only root filesystem, every capability dropped (`caddy`
+    keeps `NET_BIND_SERVICE`), `no-new-privileges`, limits, and log rotation;
+  - a minimal `Caddyfile` that issues no certificate until WP 1-14's `ask` endpoint, plus
+    `.env.example` and `init-secrets.sh`.
+
+  Compose ignores `uid`/`mode` for file secrets, so each secret file is owned by the container user
+  that reads it (`deployment.md` §3, "The bundle as built").
+- **The roles,** in the image:
+  - `app`: Fastify 5.12.8 and pino 10.4.0, serving `/healthz` and `/readyz` (database, migrations at
+    head, queue schema), and the setup listener on `SETUP_BIND`;
+  - `worker`: the queue with its heartbeat, no tasks yet;
+  - `healthcheck`: loopback HTTP only, because distroless has no curl.
+
+  The image is 217.9 MB on amd64.
+- **The exit check:** `scripts/compose-smoke-test.sh`, run by the CI `image` job on fresh amd64 and
+  arm64 VMs.
+- **Docs:** `deployment.md` §3 (as built), `operations.md` §3 (`ROLE` is not read),
+  technical-approach §3.13 and §14, and the plan (progress and carried items).
+
+### Landed earlier this session (2026-11-28, WP 1-12 image and spike S-B)
+
+Merged into `dev` through PR #17 (merge `bce0f24`, CI green on all five jobs).
+
 
 - **The image** (`Dockerfile`, `.dockerignore`):
   - a multi-stage build: `node:24-trixie-slim` builds, and `gcr.io/distroless/nodejs24-debian13:nonroot`
@@ -685,6 +717,29 @@ while `AGENTS.md` and `decisions/README.md` say to supersede; the status list ha
 
 ## Verified this session (2026-11-28)
 
+**WP 1-13 locally (Windows 11, Docker Engine 29.9.3; the stack in Docker-in-Docker 29.10.1, Compose
+v5.8.0, for real Linux file ownership):**
+
+- `pnpm check` exited 0: typecheck, Biome (89 files), dependency rules (83 modules, 0 violations),
+  licences (363 package versions, 258 production), 117 unit tests, and 50 integration tests.
+- Image: 217,896,960 bytes unpacked on amd64 (WP 1-12: 207,618,048; Fastify and pino add
+  10.3 MB).
+- `scripts/compose-smoke-test.sh` passed in Docker-in-Docker:
+  - first start healthy in about 40 s, and `migrate` exit 0 with 6 applied;
+  - hardening on all five containers; `nonroot` for `migrate`, `app`, and `worker`, and `70:70`
+    for `postgres`;
+  - setup answers on `127.0.0.1:8080` and refuses on the host's other address;
+  - `:80` returns 301, and `:443` fails the handshake (curl exit 35). The app logged Caddy's
+    `ask` from `172.28.0.5`, the pinned subnet, and answered it 404;
+  - no egress from `internal`;
+  - the worker stopped on `SIGTERM` in about 1 s with exit 0 and no heartbeat left;
+  - `down` and `up` kept the volume, and `migrate` applied 0.
+- Mutation: the setup port published on all interfaces fails the smoke test at the loopback check.
+- By hand: a `SIGKILL`ed `app` process came back through the restart policy (restart count 1,
+  healthy).
+- **Not verified yet:** the smoke test in CI on the amd64 and arm64 runners (it runs on the WP 1-13
+  pull request), and the stack on the owner's VPS.
+
 **WP 1-12 locally (Windows 11, Docker Engine 29.9.3):**
 
 - `docker build` on amd64 (37 s); `docker buildx build --platform linux/arm64` under QEMU (66 s).
@@ -697,7 +752,9 @@ while `AGENTS.md` and `decisions/README.md` say to supersede; the status list ha
 - The deploy tree also ran outside Docker with plain Node (no type stripping): `migrate` applied 6.
 - `apply-publish-config` has 3 unit tests. The Renovate regexes match exactly the intended values in
   the Dockerfile, `ci.yml`, and the testkit file (a script; Renovate itself was not run).
-- **Not verified yet:** the new CI `image` job (it runs on the WP 1-12 pull request).
+- **CI on PR #17** (run 46149236643): all five jobs passed. The `image` job measured the same sizes
+  as the local builds: 207,618,048 bytes on amd64 and 213,493,760 on arm64. Native arm64 `migrate`
+  applied 6, then 0.
 
 **WP 1-11 locally (Windows 11, Node v24.19.0, Docker Engine 29.9.3):**
 
@@ -914,9 +971,9 @@ while `AGENTS.md` and `decisions/README.md` say to supersede; the status list ha
 - **M1.1 and M1.2:** none. Q-051, Q-052, and DEP-13 were closed by the owner on 2026-11-28.
 - **Specs:** none for the MVP. The six MVP-gate specs were approved on 2026-11-28 (MVP rows only).
   Every other spec is approved before the milestone that implements it (Phase 2 onward).
-- **Installability is still unproven.** There is no compose file, CLI, Dockerfile, or signed release.
-  The three documentation defects from the install dry run (B1–B3) are fixed in the docs, but no
-  build exists to test. See [`../analysis/install-readiness-2026-11-15.md`](../analysis/install-readiness-2026-11-15.md).
+- **Installability is partly proven.** The image and the Compose bundle come up healthy on a clean
+  Linux host (WP 1-13), and install dry-run defect D1 (the loopback setup listener) is fixed and
+  tested. There is still no setup flow, CLI, or signed release. See [`../analysis/install-readiness-2026-11-15.md`](../analysis/install-readiness-2026-11-15.md).
 
 ## Open owner questions
 

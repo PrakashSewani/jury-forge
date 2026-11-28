@@ -134,7 +134,7 @@ critical value.
 | `METRICS_BIND` | no | Prometheus listener; internal network only. |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | no | Optional OpenTelemetry export to the operator collector; off when unset. |
 | `HTTPS_PROXY` | no | Optional outbound proxy. |
-| `ROLE` | yes | `app` or `worker` (one image, two commands). |
+| `ROLE` | — | Not read. The image's command is the role: `migrate`, `app`, or `worker` (one image; WP 1-13). |
 
 This is the complete v1 list ([`technical-approach.md`](technical-approach.md) §14, amended
 2026-11-27). Everything else lives in the database. Names from earlier drafts that v1 does not read
