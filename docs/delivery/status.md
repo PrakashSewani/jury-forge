@@ -9,7 +9,7 @@ one phase `in progress` and exactly one next action.
 | ----- | ----- | ------ |
 | 0 | Product definition and documentation | **done — G0 passed 2026-11-16** |
 | 1a | Technology and approach (decisions only, no code) | **done — accepted 2026-11-16** |
-| 1b | Foundation and walking skeleton (MVP, gate G1) | **in progress — owner go 2026-11-27; M1.0 exit evidence complete 2026-11-28; M1.1 complete 2026-11-28; M1.2 in progress (WP 1-14)** |
+| 1b | Foundation and walking skeleton (MVP, gate G1) | **in progress — owner go 2026-11-27; M1.0 exit evidence complete 2026-11-28; M1.1 complete 2026-11-28; M1.2 in progress (WP 1-15)** |
 | 2 | Trust and security | not started |
 | 3 | Review quality | not started |
 | 4 | Operations and release | not started |
@@ -18,22 +18,52 @@ one phase `in progress` and exactly one next action.
 ## Current handoff
 
 **Phase:** 1b, milestone **M1.2 (install and setup)**. **M1.1 is complete:** WP 1-08 to 1-11 are
-merged with green CI (PRs #13–#16). WP 1-12 (image) and WP 1-13 (Compose bundle) are merged
-(PRs #17, #18). WP 1-14 (Caddy and origin, split by the owner) is written (below).
+merged with green CI (PRs #13–#16). WP 1-12, 1-13, and 1-14 are merged (PRs #17–#19). WP 1-15 is
+two PRs (owner, 2026-11-28); 1-15a (the master key) is written (below).
 
-**Branch:** `feat/origin` (WP 1-14); it lands in `dev` through its pull request.
-`feat/compose` is merged into `dev` (PR #18, merge `3df3755`).
+**Branch:** `feat/master-key` (WP 1-15a); it lands in `dev` through its pull request.
+`feat/origin` is merged into `dev` (PR #19, merge `72df9c2`).
 
-**Next action:** **WP 1-15 (bootstrap and crypto)**, after WP 1-14 merges:
-- KEK file loading, envelope encryption (`crypto`), the bootstrap token, and the setup state
-  machine;
-- from the WP 1-14 split, the Stage 1.5 setup route behind the token: pre-save DNS and port
-  validation, the "I terminate TLS in front" confirmation, and `TRUSTED_PROXIES`;
-- exit: unit and integration tests, and the key never appears in logs.
+**Next action:** **WP 1-15b**, after 1-15a merges:
+- the bootstrap token (256-bit, SHA-256 at rest, 24 h, the 5-failures-in-15-minutes pause, and
+  rotation by `jury-forge setup token`);
+- the setup state machine (compare-and-set, audited transitions);
+- the Stage 1.5 origin route behind the token, with the "resolves publicly" DNS check and the
+  "I terminate TLS in front" confirmation;
+- `Host` checks on the setup listener against DNS rebinding.
 
-**Owner decision (2026-11-28):** ADR-0038 (the app-side issuance limit) is accepted.
+### Landed this session (2026-11-28, WP 1-15a master key)
 
-### Landed this session (2026-11-28, WP 1-14 Caddy and origin)
+- **Owner decisions:**
+  - WP 1-15 is two PRs;
+  - the key file is one line of base64 (32 bytes);
+  - `setup token` rotates, because the token is stored as a hash;
+  - the pre-save DNS check is "resolves publicly". The last two are in first-run-setup, for 1-15b.
+- **`crypto`:**
+  - the key loader;
+  - `MasterKey`, which never prints its bytes;
+  - AES-256-GCM envelope encryption bound to `<org_id>/<kind>`;
+  - `encryption_key_mismatch` versus an integrity error.
+
+  100% coverage, gated at 90%.
+- **`store`:** migration 0007 (`key_probe`, at most one per org) and `ensureKeyProbe`.
+- **`contracts`:** `RoleEnvironmentSchema` (zod 4.6.7), replacing the hand parsing (TA §14).
+- **`app`, `worker`:** the probe opens at start or the process refuses to run; `/readyz` has a
+  `master_key` component.
+- **`deploy`:** a `master_key` secret for `app` and `worker` only. `init-secrets.sh` writes it
+  and prints its id.
+- **Build guard:** the image build refuses a workspace package that would ship TypeScript.
+- **Fixed:** the logger's verbose warning overwrote pino's `level` field.
+- **Docs:**
+  - technical-approach §3.9 and §14;
+  - `security.md` §7, `data-model.md` (secrets), and `operations.md` §3 (`JURY_MASTER_KEY_FILE`);
+  - `deployment.md` §3, first-run-setup Stages 1 and 1.5, `deploy/README.md`, and the plan.
+
+### Landed earlier this session (2026-11-28, WP 1-14 Caddy and origin)
+
+Merged into `dev` through PR #19 (merge `72df9c2`, CI green on all five jobs). ADR-0038 was accepted
+by the owner on 2026-11-28.
+
 
 - **Owner decisions:**
   - WP 1-14 is split: the origin plumbing now, the setup route with WP 1-15, and the `front` proof
@@ -745,6 +775,24 @@ while `AGENTS.md` and `decisions/README.md` say to supersede; the status list ha
 
 ## Verified this session (2026-11-28)
 
+**WP 1-15a locally (Windows 11, Docker Engine 29.9.3; the stack in Docker-in-Docker 29.10.1):**
+
+- `pnpm check` exited 0: typecheck, Biome (109 files), dependency rules (106 modules, 0
+  violations), licences (363 package versions), 233 unit tests, and 66 integration tests.
+- `crypto`: 100% statements, branches, functions, and lines.
+- The smoke test passed every phase. The master-key phase:
+  - `master_key` is owned by 65532 with mode 0400;
+  - `/readyz` reports `"master_key":"ok"`;
+  - no container log contains the key;
+  - with another key, `compose run app` exited 1 with `"code":"encryption_key_mismatch"`;
+  - with the original restored, the stack was ready again.
+- `init-secrets.sh` printed the same key id as `MasterKey.keyId` (checked with one key in both).
+- Mutation: removing `crypto`'s `publishConfig` fails the image build with "would ship TypeScript
+  exports".
+- Image: 224,681,984 bytes unpacked on amd64.
+- **Not verified yet:** CI on the 1-15a pull request.
+
+
 **WP 1-14 locally (Windows 11, Docker Engine 29.9.3; the stack in Docker-in-Docker 29.10.1):**
 
 - `pnpm check` exited 0: typecheck, Biome (99 files), dependency rules (94 modules, 0 violations),
@@ -759,8 +807,10 @@ while `AGENTS.md` and `decisions/README.md` say to supersede; the status list ha
   - `/readyz`, `/healthz`, `/metrics`, and `ask` answered `404` from outside;
   - `/readyz` reported `tls_issued`, `frozen: true`.
 - Image: 217,922,048 bytes unpacked on amd64.
-- **Not verified yet:** the Pebble phase in CI on amd64 and arm64 (it runs on the WP 1-14 pull
-  request), and a real ACME certificate (the owner's VPS).
+- **CI on PR #19** (run 46166345192, head `a36b810`): all five jobs passed. The Pebble phase passed on
+  both runners, with a certificate for `review.jury-forge.test` and `tls_issued`. Unpacked image:
+  217,922,048 bytes on amd64 and 223,797,760 on arm64.
+- **Not verified yet:** a real ACME certificate (the owner's VPS).
 
 
 **WP 1-13 locally (Windows 11, Docker Engine 29.9.3; the stack in Docker-in-Docker 29.10.1, Compose

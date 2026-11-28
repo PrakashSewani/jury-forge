@@ -128,7 +128,7 @@ critical value.
 | `PUBLIC_URL` | no | Optional: **freezes** the origin (pre-provisioned installs). Normally unset and configured in setup (ADR-0021). |
 | `SETUP_BIND` | no | Bootstrap listener. Compose binds `0.0.0.0:8080` inside the container and publishes `127.0.0.1:8080:8080`; a native install binds `127.0.0.1:8080`. The host publish is the loopback boundary. |
 | `DATABASE_URL` / `DATABASE_URL_FILE` | yes | Postgres connection; TLS by default. Prefer the file form — a DSN in env leaks the password via `docker inspect`. |
-| `JURY_MASTER_KEY_FILE` | yes | The 32-byte master key (KEK); a Docker secret or file, mode 0400; never an env value, never logged. |
+| `JURY_MASTER_KEY_FILE` | yes (`app`, `worker`) | The 32-byte master key (KEK): one line, 32 random bytes in base64 (owner, 2026-11-28). A Docker secret or file, mode 0400, never group- or world-readable (refused at start); in Compose owned by 65532. Never an env value, never logged. A malformed or non-random value is refused; a key that does not open the stored probe stops the process with `encryption_key_mismatch`. `migrate` does not read it. |
 | `TRUSTED_PROXIES` | yes behind a proxy | CIDRs allowed to set forwarded headers: the pinned Compose subnet of the bundled Caddy, or the operator load balancer. Never `0.0.0.0/0`. |
 | `LOG_LEVEL` | no | `info` default; `debug` warns. |
 | `METRICS_BIND` | no | Prometheus listener; internal network only. |

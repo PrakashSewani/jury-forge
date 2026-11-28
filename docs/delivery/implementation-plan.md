@@ -265,13 +265,57 @@ origin plumbing, and the origin is set only by `PUBLIC_URL` until WP 1-15.
     `writeOriginSetting`, and `OriginService.invalidate()`, and adds:
     - pre-save DNS and port validation;
     - the "I terminate TLS in front" confirmation (it sets `front`);
-    - `TRUSTED_PROXIES`, for the token's per-IP limit;
     - the read-only origin field when `PUBLIC_URL` freezes it.
+
+    *Corrected in WP 1-15a:* `TRUSTED_PROXIES` is not needed for the token. The setup listener has
+    no proxy in front of it, so its per-peer limit uses the socket address. The variable arrives with
+    the first limit behind Caddy that is keyed on a client address (WP 1-16, OAuth and webhooks).
   - **WP 1-16:**
     - the ADR-0036 proof, a verified delivery plus `insecure_ssl` = 0, which makes `tls_front`;
     - `PATCH /app` and re-login on an origin change, and the 3-changes-per-hour cap;
     - the `front` deployment files for the owner's VPS (Caddy on plain HTTP, no published ports).
   - **WP 1-17:** `doctor` reports the origin, the mode, and the `ask` refusals.
+
+**Progress (2026-11-28): WP 1-15a is written; WP 1-15 is two PRs (owner).** 1-15a is the master key;
+1-15b is the bootstrap token, the setup state machine, and the Stage 1.5 route.
+- **Owner decisions (2026-11-28):**
+  - the split;
+  - the key file is one line of base64 (32 bytes);
+  - `jury-forge setup token` rotates the token, because only its hash is stored;
+  - the pre-save DNS check is "resolves publicly" (`dns_unresolved`, `dns_private`), with the
+    path to this host proven after the save.
+
+  The last two are recorded in first-run-setup and built in 1-15b.
+- **Built:**
+  - **`crypto`:** the key loader (format, non-random values, file permissions) and `MasterKey`,
+    which never shows its bytes; AES-256-GCM envelope encryption with context binding.
+    `encryption_key_mismatch` versus an integrity error. 100% coverage, now gated at 90% like
+    `domain`.
+  - **`store`:** migration 0007 (the `key_probe` kind, at most one per org) and `ensureKeyProbe`.
+  - **`contracts`:** `RoleEnvironmentSchema` (zod 4.6.7).
+  - **`apps/server`:** `app` and `worker` open the probe at start and refuse another key. `/readyz`
+    gains a `master_key` component.
+  - **`deploy`:** the `master_key` secret, for `app` and `worker` only. `init-secrets.sh` prints
+    the key id.
+  - **The image build** now refuses a workspace package that would ship TypeScript exports
+    (`scripts/apply-publish-config.ts`). `crypto` had no production build setup, and that was found
+    only when `migrate` crashed in the smoke test.
+- **The exit:** unit and integration tests, and the key never appears in logs. Checked by:
+  - the role test, which logs the whole environment at `trace` and starts, stops, and is refused;
+  - the smoke test, which greps every container's log for the key file's content.
+
+  The smoke test also swaps the key and expects `encryption_key_mismatch`.
+- **Image:** 224.7 MB on amd64 (+6.8 MB, almost all zod), against the 250 MB gate. With the T0+
+  grammars (about 20.6 MB) the headroom is small, so removing the 31 MB `typescript` peer (S-B R4)
+  moves up in priority.
+- **Fixed on the way:** the logger's verbose-mode warning wrote `{ level }`, which overwrote pino's
+  own `level` field, so the warning was labelled `"debug"`, not 40.
+- **Carried forward:**
+  - **WP 1-15b:** the bootstrap token (256-bit, SHA-256 at rest, 24 h, 5 failures in 15 minutes
+    pause it, rotation by `setup token`), the setup state machine with compare-and-set, the
+    Stage 1.5 route with the DNS check, and `Host` checks on the setup listener against DNS
+    rebinding.
+  - **Later:** `rotate-key` (a keyring) and backups with the key.
 
 ### M1.3 — Providers and egress
 

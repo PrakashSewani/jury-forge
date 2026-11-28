@@ -132,6 +132,9 @@ remedy and a docs anchor; no raw stack traces.
   `jury-forge setup disable`. Disabled means `410` plus a documented recovery (`create-admin`).
 - No claim cookie is required to bootstrap; the session cookie is only issued after GitHub OAuth
   succeeds, so plain-HTTP and LAN installs are not blocked by `Secure` (F-013, PoC cookie flaw).
+- *Owner decision 2026-11-28:* only a hash is stored, so the token cannot be printed again.
+  `jury-forge setup token` therefore **rotates** it: with host access, it disables the old token,
+  prints a new one once, and audits the rotation. Built in WP 1-15b.
 
 ### Stage 1.5 — Public origin (domain)
 
@@ -150,6 +153,14 @@ on the host, or `jury-forge setup domain <host>` — never by exposing setup on 
      even when `PUBLIC_URL` freezes the origin.
    - **Ports:** 80/443 reachable from the public internet (best-effort; GitHub's callback is the
      authoritative test later). Skipped in `front` mode, where the host may open no inbound port.
+   - *Owner decision 2026-11-28:* the container cannot learn the host's public address without
+     calling an outside service, so the pre-save DNS check is:
+     - the name has at least one A or AAAA record (else `dns_unresolved`);
+     - none of them is private, loopback, or link-local (else `dns_private`).
+
+     Whether the name reaches this host is proven after the save: by Caddy's issuance
+     (`tls_pending` until then), or in `front` mode by the ADR-0036 proof. No egress beyond DNS.
+     Built in WP 1-15b.
 3. Confirmation writes `instance.public_url` and audits `origin.set` (actor, old, new, IP).
 4. **Post-save validation** (the origin is stored, so Caddy can authorize it):
    - **TLS:** Caddy's `ask` endpoint authorizes `public_url`; Caddy issues on demand. The UI shows
