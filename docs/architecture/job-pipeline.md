@@ -144,6 +144,42 @@ The turn runner is a thin, explicit step pipeline (ADR-0010 as amended, technica
 Each step stores `{input_hash, output, tokens, ms}` in `turn_steps`, unique by `(turn_id, step)`.
 Replay of a stored turn from its recorded inputs is v1.1.
 
+**The runner as built (WP 1-11):** `runTurn` in `pipeline`, over the `TurnStore` port in
+`contracts`, implemented by `createTurnStore` in `store`.
+
+1. **Start.** A turn that is missing or already finished does nothing: a duplicate or late job. An
+   open turn is marked `running`; its first start time is kept across retries.
+2. **Close older turns (spike S-A R2).** Older turns of the session that never finished are closed:
+   - a `queued` one was coalesced into this turn: `superseded`, reason `coalesced`;
+   - a `running` one with a lower generation: `superseded`, reason `generation_moved`;
+   - any other `running` one lost its job: `failed`, reason `orphaned`.
+
+   Newer turns are left alone.
+3. **Before each step:**
+   - the abort signal is checked;
+   - the session generation is re-read, and a moved one ends the turn as `superseded`
+     (`generation_moved`);
+   - the step's input is built from the turn and the earlier outputs, and hashed: SHA-256 of its
+     canonical JSON (`domain/canonical-json.ts`, RFC 8785 style).
+4. **A finished step is read back, never run again.** If its stored input hash differs, the turn
+   fails (`step_input_changed:<step>`), because inputs come from the turn snapshot and earlier
+   outputs, so a difference is a bug.
+5. **A new result is recorded with first write wins.** If a stale copy recorded the step first, its
+   result is the one used.
+6. **On a failure, `decideFailure` in `domain` decides:**
+
+   | Failure | Outcome |
+   | ------- | ------- |
+   | `transient`, or any error that is not a `StepFailure` | The job is retried while attempts remain. On the last attempt the turn is `failed` and the job stays permanently failed. |
+   | `terminal` | The turn is `failed` now, with the reason; no retry. |
+   | `budget` | The turn is `budget_stopped`. |
+   | An abort | The error is rethrown and nothing is written, because the job runs again elsewhere. |
+
+7. **End.** A completed turn records the sum of its steps' tokens.
+
+The WP 1-11 fault-injection test kills a worker inside a step. Another worker resumes the turn: the
+finished steps are not run again, and no effect is duplicated.
+
 ## Idempotency rules
 
 1. **Webhook:** `webhook_deliveries.delivery_id` is unique, and `webhook.ingest` is keyed by it. A

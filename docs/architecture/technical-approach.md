@@ -198,6 +198,11 @@ persisted result. Model access goes through our **provider gateway**, built on t
 - **Risk:** the `ai` SDK changes fast (major 7). Mitigation: the gateway exposes our own
   `complete({model, messages, schema, caps})` interface; `ai` is an implementation detail behind
   it, and its version is pinned.
+- *WP 1-11 (2026-11-28):* the runner core is built: `runTurn` in `pipeline`, over the `TurnStore`
+  port in `contracts`; the store implements the port, and `domain` holds canonical JSON (for step
+  input hashes) and the retry policy. Each step is an `input` function plus a `run` function, and the
+  runner persists the result. The behaviour is in [`job-pipeline.md`](job-pipeline.md), "The runner
+  as built". The review steps arrive with M1.5.
 
 ### 3.5 HTTP server — **Fastify 5.12.8 (MIT)**
 
