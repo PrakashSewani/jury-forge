@@ -54,7 +54,7 @@ for status, and its **Amended by** column shows the chain.
 | [ADR-0018](ADR-0018-release-tiering-and-quality-first-sequencing.md) | Release tiering and quality-first sequencing | accepted | ADR-0023, ADR-0025 | 2026-11-15 |
 | [ADR-0019](ADR-0019-pr-review-context-tiers.md) | PR review context tiers (T1 bounded reads) — rejected; T0+ accepted instead (ADR-0025) | rejected | — | 2026-11-15 |
 | [ADR-0020](ADR-0020-install-and-update-channel.md) | Install and update channel: signed release bundle, no pipe-to-shell | accepted | — | 2026-11-15 |
-| [ADR-0021](ADR-0021-runtime-configured-origin.md) | Runtime-configured public origin (domain is a setup step) | accepted | — | 2026-11-15 |
+| [ADR-0021](ADR-0021-runtime-configured-origin.md) | Runtime-configured public origin (domain is a setup step) | accepted | ADR-0036 | 2026-11-15 |
 | [ADR-0022](ADR-0022-helm-chart-in-v1.md) | Helm chart (moved to v1.2 by ADR-0023; component list amended by ADR-0031) | accepted | ADR-0023, ADR-0031 | 2026-11-15 |
 | [ADR-0023](ADR-0023-product-direction.md) | Product direction: the auditable review layer, not a review platform | accepted | ADR-0025, ADR-0027, ADR-0028 | 2026-11-15 |
 | [ADR-0024](ADR-0024-conversation-safety-and-finding-identity.md) | Conversation safety, finding identity, and evidence-gated resolution | accepted | — | 2026-11-16 |
@@ -68,7 +68,9 @@ for status, and its **Amended by** column shows the chain.
 | [ADR-0032](ADR-0032-finding-severity-scale.md) | Finding severity scale (`critical`/`high`/`medium`/`low`) and ranking weights (8/4/2/1) | accepted | ADR-0033 | 2026-11-28 |
 | [ADR-0033](ADR-0033-comment-volume.md) | Comment volume: no default noise budget, an optional repo cap, a fixed 50-comment safety ceiling | accepted | — | 2026-11-28 |
 | [ADR-0034](ADR-0034-adr-amendments.md) | How an accepted ADR changes: frozen body, a new ADR that amends or supersedes, a status-line pointer | accepted | — | 2026-11-28 |
-| [ADR-0035](ADR-0035-tenant-key-on-every-table.md) | `org_id` on every tenant-owned table, enforced by composite foreign keys | accepted | — | 2026-11-28 |
+| [ADR-0035](ADR-0035-tenant-key-on-every-table.md) | `org_id` on every tenant-owned table, enforced by composite foreign keys | accepted | ADR-0037 | 2026-11-28 |
+| [ADR-0036](ADR-0036-tls-terminated-in-front.md) | TLS terminated in front of the instance: GitHub's verified delivery is the readiness proof | accepted | — | 2026-11-28 |
+| [ADR-0037](ADR-0037-dead-worker-lock-release.md) | Releasing a dead worker's queue locks: worker heartbeats and a fenced release | accepted | — | 2026-11-28 |
 
 **Phase 1a (2026-11-16):** the stack ADRs were accepted from
 [`../architecture/technical-approach.md`](../architecture/technical-approach.md).

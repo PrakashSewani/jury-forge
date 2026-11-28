@@ -90,6 +90,7 @@ Each row: choice, alternatives considered, why, and the risk with its mitigation
   NULL` with composite tenant foreign keys `(org_id, parent_id)`. `users`, `user_sessions`, and
   graphile-worker's schema are the exceptions. The first migration creates the unclaimed instance
   org, and every job payload carries `org_id`.
+  *Amended 2026-11-28 (ADR-0037):* `worker_heartbeats` is a further exception.
 
 ### 3.3 Queue and workers — ADR-0006 → **accept: Postgres-backed queue, `graphile-worker`**
 
@@ -116,6 +117,10 @@ coalesce) plus transactional enqueue (webhook row and job in one transaction).
       p95 completion target, configurable; `review-progress-and-completion` RP-03) is failed with
       reason `stuck`, its job is released, and its Check Run is completed under that spec's failure
       rules. Worst case, a stuck Check Run ends about 25 min after it started.
+      *Amended 2026-11-28 (ADR-0037):* the same sweep releases the queue locks of a dead worker,
+      whose pool has sent no heartbeat for 2 minutes: it fences the pool, then calls
+      `forceUnlockWorkers`. A crashed worker's sessions then resume within about 7 minutes instead
+      of graphile-worker's 4 hours.
     - **Catalog refresh** (MVP): each provider's `/models`, once a day and staggered, plus the
       on-demand refresh. A removed model marks its reviewers `configuration_error` and never switches
       a binding (`provider-model-discovery`). The catalog diff shown on refresh is v1.
@@ -129,6 +134,17 @@ coalesce) plus transactional enqueue (webhook row and job in one transaction).
 - Risk: graphile-worker is pre-1.0. Mitigation: the queue sits behind a 5-function `JobQueue`
   interface (`enqueue`, `enqueueTx`, `cancel`, `schedule`, `onJob`), and the pg-boss adapter is
   written in the Phase 1b spike as proof that the swap works.
+- *Spike S-A, 2026-11-28 ([note](../analysis/spikes/2026-11-28-queue-serialization-debounce.md)):*
+  the choice stands. Both libraries kept one job per session (0 overlaps in 4,000 runs) and
+  collapsed concurrent triggers into one turn; the pg-boss adapter fits the same port. Three
+  corrections to the table above:
+  - "Strictly in order" is one at a time, ordered by `priority, run_at`.
+  - pg-boss 12.38.2 has a `key_strict_fifo` policy, so its serialization no longer "needs extra work",
+    but a failed job blocks its key.
+  - graphile-worker holds a crashed worker's lock for 4 hours.
+
+  Both questions it raised were closed by the owner the same day: Q-051 (a named licence exception
+  for `argparse`, §13) and Q-052 (ADR-0037, above).
 
 ### 3.4 Agent runtime — ADR-0010 → **change the recommendation: thin turn runner, no harness**
 
@@ -476,8 +492,8 @@ as one "v1 stack" decision.
 | typescript | 7.0.2 | Apache-2.0 |
 | fastify | 5.12.8 | MIT |
 | hono | 4.13.18 | MIT |
-| graphile-worker | 0.18.0 | MIT |
-| pg-boss | 12.38.2 | MIT |
+| graphile-worker | 0.18.0 | MIT (its tree includes `argparse` 2.0.1, Python-2.0; see the note below) |
+| pg-boss | 12.38.2 | MIT (12.40.0 is the latest on 2026-11-28; re-check before any switch) |
 | kysely | 0.29.9 | MIT |
 | drizzle-orm | 0.45.4 | Apache-2.0 |
 | node-pg-migrate | 9.0.0 | MIT |
@@ -507,6 +523,14 @@ as one "v1 stack" decision.
 | testcontainers, @testcontainers/postgresql | 12.2.2 | MIT | Test image `postgres:17.12-alpine`. |
 | pg | 8.23.1 | MIT | |
 | dependency-cruiser | 18.9.0 | MIT | Gets its own TypeScript 5.9.3 through `packageExtensions`: it needs the compiler JS API, which TypeScript 7.0 lacks (supported: <7.0 or >=7.1). Without it, it cruises 0 modules and passes silently. |
+
+**Licence exception for graphile-worker (Q-051, owner decision 2026-11-28):** graphile-worker 0.18.0
+pulls in `argparse` 2.0.1 (Python-2.0) through `cosmiconfig` 8.3.6 → `js-yaml` 4.3.2, and only
+js-yaml's command-line tool uses it ([spike S-A](../analysis/spikes/2026-11-28-queue-serialization-debounce.md)).
+Python-2.0 is permissive and OSI-approved, but it is not on the allowlist. It gets a **named
+exception** in `licence-policy.json` for `argparse` with `scope: all` and that reason, not a new
+allowlist entry, so any other Python-2.0 package still fails. The exception lands with WP 1-10, in
+the pull request that adds graphile-worker.
 
 **Changed from the plan:** `license-checker` (BSD-3-Clause, last published 2022) is not used.
 The licence check is `pnpm licenses list --json` (built into pnpm) plus a small SPDX-expression

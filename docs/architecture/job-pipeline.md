@@ -15,17 +15,31 @@ without another service.
 
 - **graphile-worker 0.18.0 (MIT)** runs inside `worker`, against the same Postgres. It owns its own
   schema; Jury Forge defines no job, lease, or dead-letter tables.
-- **Per-session serialization:** `queue_name = session:<id>` runs a session's jobs strictly in order,
-  so there is at most one running turn per PR session.
+- **Per-session serialization:** `queue_name = session:<id>` runs a session's jobs one at a time, so
+  there is at most one running turn per PR session. The order inside the queue is `priority, run_at`,
+  not insertion: jobs added in one transaction tie, and a retried job goes behind jobs that are
+  already due ([spike S-A](../analysis/spikes/2026-11-28-queue-serialization-debounce.md) E1, E6b).
+  Queue order never decides which turn publishes; the generation check does.
 - **Debounce:** `job_key = session:<id>:pending` with `run_at = now + 30 s` and `job_key_mode:
-  replace`. Several replies inside the window collapse into one turn.
+  replace`. Several replies inside the window collapse into one turn (S-A E2: 20 concurrent triggers,
+  one run). The debounce is trailing (each trigger moves `run_at`), and the surviving payload is
+  whichever write committed last. Replace mode only replaces a job that has not started: when the
+  session's job is running, graphile-worker clears that job's key, **removes its remaining retries**,
+  and adds a new job (S-A E3). So the turn job should carry IDs only, with `resolve` reading the
+  pending inputs from the database (S-A R1; settled in WP 1-10).
 - **Transactional enqueue:** `add_job` runs in the same transaction as the state change that causes
   it (for example the `webhook_deliveries` insert). That is the outbox; there is no separate outbox
   table.
 - **Low latency:** `LISTEN/NOTIFY`; the queue-pickup budget is p95 < 2 s (technical-approach §6).
 - **Port:** the code sees a five-function `JobQueue` interface (`enqueue`, `enqueueTx`, `cancel`,
-  `schedule`, `onJob`). graphile-worker is pre-1.0, so a pg-boss adapter is written in spike S-A to
-  prove the swap works. No other backend (Redis, a managed queue) is planned.
+  `schedule`, `onJob`). graphile-worker is pre-1.0, so spike S-A wrote a pg-boss adapter behind the
+  same port; it passed the same serialization, debounce, and transaction tests. Its differences
+  (queues declared up front, one key, polling to tune, a failed job that blocks its session) are in
+  the spike note. No other backend (Redis, a managed queue) is planned.
+- **Housekeeping:** each session leaves a row in graphile-worker's queue table, every fetch locks the
+  available rows, and nothing removes them on its own. Pickup p95 was 7 ms with none and 284 ms with
+  100,000 (S-A E8). graphile-worker's `cleanup` (`GC_JOB_QUEUES`, `GC_TASK_IDENTIFIERS`) removes them
+  and should run from the daily retention cron (S-A R6; settled in WP 1-10).
 
 ## Jobs
 
@@ -44,7 +58,8 @@ without another service.
 
 Cron runs inside `worker`; there is no separate scheduler process. graphile-worker is designed to
 fire each cron tick once across workers; an M1.1 integration test must prove that with two worker
-replicas. The list is technical-approach §3.3 (amended 2026-11-28, audit Q-D). Abandoned setup is
+replicas. Spike S-A previewed it: 3 of 3 ticks fired once with two workers (E7), which is not yet the
+test. The list is technical-approach §3.3 (amended 2026-11-28, audit Q-D). Abandoned setup is
 not a cron job: `/metrics` and `doctor` report it.
 
 ## Turn lifecycle
@@ -62,7 +77,18 @@ turn row and its `turn_steps` are what survive.
 ```
 
 - A job that crashes mid-turn is picked up again after graphile-worker's lock timeout, with
-  `attempt + 1`. Finished steps are read back from `turn_steps` and are not redone.
+  `attempt + 1`. Finished steps are read back from `turn_steps` and are not redone. That timeout is
+  **4 hours**, hard-coded, and the session's queue stays locked with the job (S-A E6). So a dead
+  worker's lock is released explicitly ([ADR-0037](../decisions/ADR-0037-dead-worker-lock-release.md)):
+  each worker process records a heartbeat every 30 s in `worker_heartbeats`, and the 5-minute
+  stuck-turn sweep fences any pool silent for 2 minutes, then calls `forceUnlockWorkers` (635 ms in
+  the spike). A fenced worker that was only slow stops its jobs and exits. A crashed worker's sessions
+  resume within about 7 minutes.
+- On a graceful stop (SIGTERM, `docker stop`), graphile-worker fires the running jobs' abort signal
+  after 5 s. With its default settings, a job that then fails has its failure lost, and stays locked
+  like a crash;
+  `completeJobBatchDelay: 0` and `failJobBatchDelay: 0` fixed it in the spike (S-A E6b, R3). Steps
+  should honour the job's abort signal within those 5 s (S-A R4; settled in WP 1-10 and WP 1-11).
 - A job that exhausts its attempts stays in graphile-worker's tables as permanently failed: it is
   inspectable, and an admin can retry it with audit (ADR-0006). The turn becomes `failed`, and the
   Check Run says why.
@@ -175,6 +201,10 @@ Every job and step emits:
 | Budget exhausted | The turn stops before the next call; the summary says why. |
 | Database unavailable | Webhooks fail fast (GitHub retries); `/readyz` reports it; no data loss. |
 | Cron with two workers | Each tick fires once (M1.1 test). |
+| Worker killed mid-turn | Other sessions keep running; within one sweep after the 2-minute heartbeat threshold the lock is released and the turn retried, in the session's order (ADR-0037). |
+| Worker alive but silent for 2 min | It is fenced: it stops taking jobs, aborts its running ones, and exits; no turn of a session runs twice at once (ADR-0037). |
+| Graceful stop mid-turn | The job is aborted within 5 s, released, and retried by another worker (S-A E6b). |
+| New trigger while a turn runs, then that turn fails | The new turn handles the pending inputs; the failed turn is closed, not left `running` (S-A E3, R2). |
 
 ## What the PoC did instead
 

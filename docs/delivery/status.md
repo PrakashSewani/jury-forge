@@ -9,7 +9,7 @@ one phase `in progress` and exactly one next action.
 | ----- | ----- | ------ |
 | 0 | Product definition and documentation | **done — G0 passed 2026-11-16** |
 | 1a | Technology and approach (decisions only, no code) | **done — accepted 2026-11-16** |
-| 1b | Foundation and walking skeleton (MVP, gate G1) | **in progress — owner go 2026-11-27; M1.0** |
+| 1b | Foundation and walking skeleton (MVP, gate G1) | **in progress — owner go 2026-11-27; M1.0 exit evidence complete 2026-11-28; M1.1 next** |
 | 2 | Trust and security | not started |
 | 3 | Review quality | not started |
 | 4 | Operations and release | not started |
@@ -17,19 +17,107 @@ one phase `in progress` and exactly one next action.
 
 ## Current handoff
 
-**Phase:** 1b, milestone **M1.0 (repository and CI)**. The owner said go on 2026-11-27. WP 1-01
-to 1-05 are merged into `dev` (PR #5) with a green CI run; spikes 1-06 and 1-07 remain.
+**Phase:** 1b. Milestone **M1.0 (repository and CI)** has its exit evidence: WP 1-01 to 1-05 are
+merged into `dev` (PR #5) with a green CI run, S-C (WP 1-07) is closed, and S-A (WP 1-06) is done
+(below). Next is **M1.1 (data layer and queue)**.
 
-**Branch:** `docs/readiness-gaps` (the plan and tracker fixes from the readiness review below).
-`chore/dev-readiness` is merged into `dev` (PR #10).
+**Branch:** `docs/spike-s-a-queue` (the S-A note, the Cloudflare Tunnel variant, and ADR-0036 and
+ADR-0037); it lands in `dev` through its pull request. `docs/readiness-gaps` is merged into `dev`
+(PR #11).
 
-**Next action:** run **spike S-A (WP 1-06)**: graphile-worker serialization and debounce under
-concurrency, plus the pg-boss adapter proof, written up in `docs/analysis/spikes/`. It needs a
-container runtime: start Docker first (the engine, 29.9.3, ran earlier on 2026-11-28 but was not
-running at the readiness review). S-C (WP 1-07) is closed (owner decision below). The S-A note
-closes M1.0; then M1.1.
+**Next action:** start **M1.1 with WP 1-08 (migrations v0)** once the owner has seen this M1.0
+report (implementation-plan, "Immediate next steps", step 3). Nothing blocks M1.1: Q-051, Q-052, and
+DEP-13 were closed on 2026-11-28 (below).
 
-### Landed this session (2026-11-28, readiness review)
+### Landed this session (2026-11-28, spike S-A)
+
+[Spike S-A](../analysis/spikes/2026-11-28-queue-serialization-debounce.md) ran graphile-worker 0.18.0
+and pg-boss 12.38.2 behind one throwaway `JobQueue` port on PostgreSQL 17.12, with two worker
+processes, ten experiments, and synthetic payloads only.
+
+- **Criterion met; graphile-worker stays; no ADR amended.** 0 same-session overlaps in 4,000 job
+  runs on both libraries; 20 concurrent triggers per session became exactly one turn; a rolled-back
+  enqueue never ran; cron fired 3 of 3 ticks once with two workers. The pg-boss adapter fits the
+  same port.
+- **Found (graphile-worker):**
+  - A crashed worker's lock and its session's queue are held for **4 hours**, hard-coded.
+  - A default graceful stop loses the aborted job's failure write, with the same effect; batch
+    delays of 0 fixed it.
+  - A trigger during a running turn removes that turn's retries.
+  - Queue order is `priority, run_at`, not insertion.
+  - Per-session queue rows accumulate (pickup p95 7 ms → 284 ms at 100,000) until `cleanup` runs.
+  - Its tree includes `argparse` 2.0.1 (Python-2.0), which `licence-policy.json` does not allow.
+- **Found (pg-boss):** `key_strict_fifo` serializes, but a permanently failed job blocks its
+  session; the default polling drained 500 jobs in 30.7 s (3.8 s tuned); crash recovery took 60 s.
+- **Docs changed:** [`job-pipeline.md`](../architecture/job-pipeline.md) (ordering, debounce while
+  running, the pg-boss proof, housekeeping, crash and graceful-stop behaviour, three failure-matrix
+  rows), technical-approach §3.3 (a dated S-A note), the spike index, WP 1-06 and the S-A carry-over
+  list in [`implementation-plan.md`](implementation-plan.md), and two new questions, Q-051 and Q-052, in
+  [`open-questions.md`](../analysis/open-questions.md). The spike changed no ADR or spec; both questions
+  were closed later the same day (below).
+
+### Landed this session (2026-11-28, Cloudflare Tunnel ingress)
+
+**Owner (2026-11-28):** the first install is a test instance on the owner's 1 vCPU / 4 GB VPS, one
+repository at a time, behind a Cloudflare Tunnel; document the tunnel as a supported ingress. The VPS
+is below the 2 vCPU floor (Q-048), which stays as it is; the install gives the first real numbers.
+
+- **[`deployment.md` §4 C1](../architecture/deployment.md#c1-outbound-tunnel-cloudflare-tunnel-as-the-worked-example):**
+  an outbound tunnel as a model C variant, with Cloudflare Tunnel as the example. It covers:
+  - the ADR-0001 boundary (an operator-chosen ingress, not a product dependency) and the privacy
+    trade-off (the edge sees inbound traffic in plain text);
+  - an illustrative `cloudflared` service with `--token-file`, and a plain-HTTP Caddyfile that trusts
+    only the pinned `edge` subnet;
+  - the `Host` header setting, Bot Fight Mode (off for the zone), and keeping Access and challenges
+    off the GitHub paths;
+  - the request-body limit and the 125 s proxy read timeout.
+  The facts were checked against Cloudflare's and Caddy's documentation on 2026-11-28; nothing was
+  run.
+- **New DEP-13:** the approved `first-run-setup` spec's post-save TLS check waits for Caddy to issue a
+  certificate, which never happens when TLS ends in front. Decided the same day by ADR-0036 (below).
+- **`operations.md`:** three tunnel troubleshooting rows, and the crashed-job row now states the
+  4-hour lock from spike S-A.
+
+### Landed this session (2026-11-28, gaps closed)
+
+**Owner (2026-11-28):** close the three open gaps with their recorded defaults, consistent with the
+Cloudflare Tunnel decision, then merge this branch into `dev`.
+
+- **Q-051 closed:** `argparse` 2.0.1 (Python-2.0) gets a named `scope: all` exception in
+  `licence-policy.json`, with its reason, in the WP 1-10 pull request that adds graphile-worker.
+  Python-2.0 is not added to the allowlist (technical-approach §13).
+- **Q-052 closed by [ADR-0037](../decisions/ADR-0037-dead-worker-lock-release.md):**
+  - every worker process writes a heartbeat every 30 s to a new instance-level table,
+    `worker_heartbeats`;
+  - the 5-minute stuck-turn sweep fences any pool silent for 2 minutes, then calls
+    `forceUnlockWorkers`; a fenced worker aborts its jobs and exits;
+  - a crashed worker's sessions resume within about 7 minutes instead of 4 hours.
+
+  It adds fencing to the recorded default, so that a slow but live worker cannot run a session's
+  turn at the same time as its retry. It amends ADR-0035's exception list (status-line pointer
+  added) and technical-approach §3.2 and §3.3.
+- **DEP-13 closed by [ADR-0036](../decisions/ADR-0036-tls-terminated-in-front.md):**
+  - the "I terminate TLS in front" confirmation sets a `front` TLS mode, and setup no longer
+    waits for Caddy to issue;
+  - `ready` needs the signed webhook delivery that setup already requires, plus `insecure_ssl` =
+    `0` on the App's webhook (`GET /app/hook/config`), so GitHub's certificate check proves the
+    path.
+
+  **Changed from the recorded default:** that default was a request from the instance to its own
+  origin. It was rejected because it needs NAT hairpinning and an egress exception; the intent (skip
+  Caddy issuance, prove that HTTPS reaches this instance) is kept. It amends ADR-0021 (status-line
+  pointer added) and the approved `first-run-setup` MVP rows: Stage 1.5, `/readyz`, Stage 2, the
+  failure table, the security notes, and a new criterion 23. The owner approved this with the
+  instruction to close the gaps.
+- **Also updated:**
+  - `data-model.md`: rule 1, rule 4, the `worker_heartbeats` row, and the TLS mode in
+    `instance_settings`;
+  - `job-pipeline.md` (two failure-matrix rows), `operations.md` (two rows), and
+    `deployment.md` (C1 setup, DEP-13);
+  - the WP carry-over list (WP 1-08, 1-10, 1-14, 1-28a), the ADR index, `overview.md`, the spike
+    index, and `open-questions.md`.
+
+### Landed earlier this session (2026-11-28, readiness review)
 
 A full pass over the docs, the plan, and the gates against the approved MVP specs and
 technical-approach found MVP work that no work package owned, and a G1 checklist that asked for
@@ -434,6 +522,20 @@ while `AGENTS.md` and `decisions/README.md` say to supersede; the status list ha
 
 ## Verified this session (2026-11-28)
 
+**Spike S-A (throwaway code outside the repository; Windows 11, Node v24.19.0, Docker Engine
+29.9.3):**
+
+- Package versions resolved live from npm before installing: graphile-worker 0.18.0 (latest),
+  pg-boss 12.38.2 (pinned; 12.40.0 is latest), pg 8.23.1. Installed with `--ignore-scripts`.
+- Every number in the note comes from a run against `postgres:17.12-alpine`, measured on the
+  database clock for overlaps and on the Node clock for latency. Results were kept as JSON in the
+  scratch folder.
+- Each library behaviour the note explains is cited to a file and line in the installed package;
+  the two fixes (batch delays, `forceUnlockWorkers`) were run, not only read. The graceful-stop fix
+  was run twice.
+- **Not verified:** Linux or arm64, a real SIGTERM (Windows cannot deliver one to a child process),
+  more than 500 jobs and 16 slots, and Postgres resource use.
+
 **Architecture audit and alignment (docs only):**
 
 - Every document in `docs/architecture/` was read in full; findings cite the pre-fix line numbers
@@ -551,8 +653,8 @@ while `AGENTS.md` and `decisions/README.md` say to supersede; the status list ha
 
 ## Blocked by
 
-- **M1.0 exit:** the CI run is green (PR #5) and S-C (1-07) is closed; only spike 1-06 (S-A) is
-  left, and it needs a running container runtime.
+- **M1.0 exit:** none. The CI run is green (PR #5), S-C (1-07) is closed, and S-A (1-06) is done.
+- **M1.1 and M1.2:** none. Q-051, Q-052, and DEP-13 were closed by the owner on 2026-11-28.
 - **Specs:** none for the MVP. The six MVP-gate specs were approved on 2026-11-28 (MVP rows only).
   Every other spec is approved before the milestone that implements it (Phase 2 onward).
 - **Installability is still unproven.** There is no compose file, CLI, Dockerfile, or signed release.
@@ -561,8 +663,9 @@ while `AGENTS.md` and `decisions/README.md` say to supersede; the status list ha
 
 ## Open owner questions
 
-The open list is now Q-001, Q-010, Q-011, Q-017, Q-018, Q-020, and Q-030 (Q-031, Q-049, Q-050, and
-SF-01 were closed by the owner on 2026-11-28); each has a recorded default and a close condition in
+The open list is now Q-001, Q-010, Q-011, Q-017, Q-018, Q-020, and Q-030 (Q-031, Q-049, Q-050, Q-051,
+Q-052, and SF-01 were closed by the owner on 2026-11-28);
+each has a recorded default and a close condition in
 [`../analysis/open-questions.md`](../analysis/open-questions.md).
 Everything else is closed by an accepted ADR (see the two closed tables there). None of the open
 items blocks Phase 1b.
@@ -595,7 +698,7 @@ The checklist and its evidence live in [`quality-gates.md`](quality-gates.md#g0-
 | ADR-0018 | accepted (G0) | Release tiering; eval harness + hard caps in Phase 1. |
 | ADR-0019 | rejected | T1 bounded reads for PR review; T0+ (ADR-0025) is the narrower accepted path. |
 | ADR-0020 | accepted (Phase 1a) | Signed release bundle, verify before extract, no pipe-to-shell. |
-| ADR-0021 | accepted (G0) | Runtime-configured public origin; domain is a setup step. |
+| ADR-0021 | accepted (G0; TLS gate amended by ADR-0036) | Runtime-configured public origin; domain is a setup step. |
 | ADR-0022 | accepted (G0; amended by ADR-0023, ADR-0031) | Helm chart, moved to v1.2 by ADR-0023. |
 | ADR-0023 | accepted (G0) | Product direction: the auditable review layer; v1 is the trust loop. |
 | ADR-0024 | accepted (G0) | Conversation safety, finding identity, evidence-gated resolution. |
@@ -609,7 +712,9 @@ The checklist and its evidence live in [`quality-gates.md`](quality-gates.md#g0-
 | ADR-0032 | accepted (owner, 2026-11-28) | Finding severity `critical`/`high`/`medium`/`low`; ranking weights 8/4/2/1. |
 | ADR-0033 | accepted (owner, 2026-11-28) | No default noise budget; optional repo cap; fixed 50-comment safety ceiling. |
 | ADR-0034 | accepted (owner delegated, 2026-11-28) | Accepted ADR bodies are frozen; a new ADR amends or supersedes; the old one gets a status-line pointer. |
-| ADR-0035 | accepted (owner delegated, 2026-11-28) | `org_id NOT NULL` on every tenant-owned table, composite foreign keys; the instance org exists before setup. |
+| ADR-0035 | accepted (owner delegated, 2026-11-28; exceptions amended by ADR-0037) | `org_id NOT NULL` on every tenant-owned table, composite foreign keys; the instance org exists before setup. |
+| ADR-0036 | accepted (owner, 2026-11-28) | TLS terminated in front: a `front` mode whose readiness proof is a signed webhook delivery plus `insecure_ssl` = `0`; closes DEP-13. |
+| ADR-0037 | accepted (owner, 2026-11-28) | Dead worker's queue locks: 30 s heartbeats, a fenced release by the stuck-turn sweep after 2 min; closes Q-052. |
 
 ## History
 

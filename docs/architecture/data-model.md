@@ -14,7 +14,8 @@ migrations), **v1.1**, or **v1.2**. Nothing is built ahead of its tier.
 1. **Every tenant-owned table has `org_id NOT NULL`** ([ADR-0035](../decisions/ADR-0035-tenant-key-on-every-table.md)),
    even where a column list below does not repeat it. Tenant foreign keys are composite,
    `(org_id, <parent>_id) → <parent> (org_id, id)`, so the database refuses a cross-tenant link.
-   The exceptions are `users`, `user_sessions`, graphile-worker's schema, and the migration table.
+   The exceptions are `users`, `user_sessions`, `worker_heartbeats` (ADR-0037), graphile-worker's
+   schema, and the migration table.
    The `store` package's repositories take `org_id` as a required argument and always filter by
    it, and cross-tenant tests prove it. Row-level security is **not used in v1**; revisit it with
    multi-installation (technical-approach §3.2).
@@ -25,7 +26,9 @@ migrations), **v1.1**, or **v1.2**. Nothing is built ahead of its tier.
    `artefacts`, each at most 2 MB, with `expires_at`. There is no object store in v1; an optional
    S3 adapter is v1.2.
 4. **The queue is graphile-worker's own schema.** Jury Forge does not define job, lease, or
-   dead-letter tables. Durable progress lives in `session_turns` and `turn_steps`.
+   dead-letter tables. Durable progress lives in `session_turns` and `turn_steps`. The one table
+   beside the queue is `worker_heartbeats`, which records worker liveness so that a dead worker's
+   locks can be released (ADR-0037); it holds no jobs.
 5. **Every external effect has an idempotency key.** Step results are unique by `(turn_id, step)`;
    a publish checks a stored `external_id` before posting (technical-approach §3.3).
 6. **Audit is append-only.** A trigger blocks `UPDATE` and `DELETE` on `audit_events`.
@@ -39,7 +42,8 @@ migrations), **v1.1**, or **v1.2**. Nothing is built ahead of its tier.
 | `orgs` | MVP | `id`, `slug`, `name`, `owner_user_id`, `created_at` | The tenant. v1 is single-org per instance, but every tenant-owned table carries `org_id` (ADR-0035). The first migration creates the instance org with `owner_user_id` NULL, so rows written before the claim have a tenant; the claim sets `owner_user_id` (first-run-setup Stage 3). |
 | `users` | MVP | `id`, `github_id`, `login`, `display_name`, `avatar_url`, `created_at` | Identity from GitHub OAuth. OIDC is v1.2. Instance-level, so no `org_id` (an ADR-0035 exception); org access is checked through `orgs.owner_user_id`, GitHub repo access, and v1.2 `role_bindings`. |
 | `user_sessions` | MVP | `id`, `user_id`, `token_hash`, `created_at`, `last_seen_at`, `idle_expires_at`, `absolute_expires_at`, `revoked_at` | Opaque random IDs stored hashed; idle 8 h, absolute 7 d (technical-approach §3.9). Instance-level like `users` (no `org_id`, ADR-0035). |
-| `instance_settings` | MVP | `org_id`, `key`, `value`, `version`, `updated_by`, `updated_at` | Layer 2 of the configuration model (technical-approach §14): set through the UI, versioned, audited. Includes `public_url` (ADR-0021) and the setup state. |
+| `instance_settings` | MVP | `org_id`, `key`, `value`, `version`, `updated_by`, `updated_at` | Layer 2 of the configuration model (technical-approach §14): set through the UI, versioned, audited. Includes `public_url` (ADR-0021), its TLS mode, `caddy` or `front` (ADR-0036), and the setup state. |
+| `worker_heartbeats` | MVP | `pool_id`, `host`, `started_at`, `last_seen_at`, `released_at` | One row per running `worker` process, keyed by graphile-worker's pool ID (its `locked_by`); `last_seen_at` is updated every 30 s on the database clock. The stuck-turn sweep releases the locks of pools silent for 2 minutes and sets `released_at`, which fences the worker (ADR-0037). Instance-level, so no `org_id` (an ADR-0035 exception, added by ADR-0037). |
 | `secrets` | MVP | `id`, `org_id`, `kind`, `ciphertext`, `wrapped_dek`, `key_id`, `created_at`, `rotated_at` | Envelope encryption: a DEK per secret, wrapped by the KEK from `JURY_MASTER_KEY_FILE`; `key_id` supports rotation (`jury-forge rotate-key`). Holds the GitHub App private key, client and webhook secrets, provider keys, and the receipt signing key. |
 | `audit_events` | MVP | `id`, `org_id`, `actor_type`, `actor_id`, `action`, `target_type`, `target_id`, `before`, `after`, `request_id`, `turn_id`, `ip`, `at` | Append-only (trigger); redacted; exportable. |
 | `memberships` / `role_bindings` | v1.2 | `org_id`, `principal`, `role`, `scope` | The admin, SME, member, viewer, and auditor roles (ADR-0008, ADR-0016). In v1, maintainer and reader are derived from GitHub repo access at request time and are not stored as grants (`session-capacity-and-visibility` §4). |

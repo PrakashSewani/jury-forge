@@ -15,7 +15,7 @@ Postgres as the only durable state — everything else is replaceable.
 | ----- | ------ | ----- | ------------- | ------ |
 | **A. Compose, bundled** | Public HTTPS, Caddy + Let's Encrypt | Bundled Postgres 17, local volume | Default: small team on a VPS/VM/homelab | Reference (v1) |
 | **B. Compose, external Postgres** | Public HTTPS, operator proxy or bundled Caddy | Operator's Postgres (17; 16 is tested, technical-approach TQ-4) | Teams with an existing database platform, HA | Supported (v1) |
-| **C. Compose behind an existing LB** | Operator's LB terminates TLS | As A or B | Orgs that already run ingress/SSO | Supported (v1) |
+| **C. Compose behind an existing LB** | Operator's LB, or an outbound tunnel (§4 C1), terminates TLS | As A or B | Orgs that already run ingress/SSO; hosts that should open no inbound port | Supported (v1); the tunnel variant is untested until M1.2 |
 | **D. All-in-one, local** | `http://localhost:PORT` or a tunnel | Bundled Postgres | Evaluation, personal use, demos | Labelled evaluation mode, after G1 (Q-030) |
 | **E. Kubernetes / Helm** | Operator ingress (cert-manager or TLS secret) | Operator Postgres | Platform teams, scale | **v1.2** (ADR-0022 as amended by ADR-0023); none in v1 |
 | **F. Air-gapped** | Internal HTTPS | Local model + mirrored images | Regulated/classified | Not in v1 (technical-approach §3.11: v1.1+; Q-018) |
@@ -373,6 +373,103 @@ generous idle timeouts for SSE. The app does not trust `X-Forwarded-*` from any 
 disabled in Caddy when the LB owns certificates; the origin is still written in setup (or frozen with
 `PUBLIC_URL`) so redirects and webhook URLs are built from it, not from `Host`.
 
+### C1. Outbound tunnel (Cloudflare Tunnel as the worked example)
+
+A tunnel agent on the host dials out to the tunnel provider's edge, and the edge forwards the
+public hostname's traffic back through that connection. The host then opens **no inbound port**,
+not even 80/443. This is model C with the tunnel edge as the load balancer: the edge terminates TLS,
+and Caddy serves plain HTTP on the Docker network.
+
+- **What it is not:** a Cloudflare dependency. The product ships no Cloudflare code, configuration,
+  or required service, and Caddy with Let's Encrypt stays the default (ADR-0001 rejects Cloudflare
+  as the *runtime target*; an ingress the operator chooses is the operator's network policy). Any
+  tunnel that preserves the request body and the `Host` header fits the same rules.
+- **Privacy trade-off, the operator's call:** TLS ends at the provider's edge, so the provider sees
+  inbound traffic in plain text: webhook payloads (PR titles and bodies, comment text) and every
+  dashboard page, including findings, code excerpts, and session cookies. Diffs are fetched and model
+  calls are made outbound by `worker`, so they do not pass through the tunnel.
+- **Status:** not tested. The first install, on the owner's 1 vCPU / 4 GB VPS in M1.2, is the test.
+
+**Compose (illustrative).** Add a `cloudflared` service on the `edge` network only, so it can reach
+Caddy and nothing else, pin the `edge` subnet, and remove the `ports` of `caddy`:
+
+```yaml
+networks:
+  edge:
+    ipam:
+      config: [{ subnet: 172.28.1.0/24 }]   # pinned, so Caddy can trust exactly this range
+
+services:
+  caddy:
+    # no `ports:` at all in this variant; the tunnel is the only way in
+    networks: [edge, internal]
+
+  cloudflared:
+    image: cloudflare/cloudflared@sha256:...   # 2025.4.0 or later (needed for --token-file)
+    command: ["tunnel", "run", "--token-file", "/run/secrets/tunnel_token"]
+    secrets: [tunnel_token]
+    networks: [edge]
+    restart: unless-stopped
+    # the same hardening as the other services (read_only, cap_drop, no-new-privileges),
+    # to be confirmed against this image in M1.2
+
+secrets:
+  tunnel_token: { file: ./secrets/tunnel_token }   # a file, like every other secret (§7)
+```
+
+**Caddyfile.** Serve the configured hostname over plain HTTP, with no `on_demand_tls`, no `:80`
+redirect, and no `tls` block; keep the `handle` blocks of the reference file. Caddy trusts only the
+`edge` subnet for forwarded client IPs:
+
+```caddyfile
+{
+    servers {
+        trusted_proxies static 172.28.1.0/24
+        client_ip_headers CF-Connecting-IP
+    }
+}
+
+http://review.example.com {
+    # the same @forge, /api/*, and default handle blocks as the reference Caddyfile
+}
+```
+
+By default Caddy trusts no proxy and reads only `X-Forwarded-For`; `CF-Connecting-IP` holds the single
+visitor IP that Cloudflare saw. `app` keeps `TRUSTED_PROXIES` at the internal subnet, so only Caddy may
+set forwarded headers for it. The M1.2 test confirms which IP reaches `app` as the rate-limit key and
+that a forged `X-Forwarded-For` sent from the internet is not trusted.
+
+**Tunnel settings (Cloudflare dashboard):**
+
+- Public hostname: the instance origin (for example `review.example.com`) → service `http://caddy:80`.
+- **HTTP Host Header** (`httpHostHeader`): set it to the same public hostname. `app` answers `421` to
+  any other `Host`, and Cloudflare's documentation does not say which `Host` is sent when this is unset.
+
+**Must stay off the GitHub paths** (`/api/webhooks/*` and `/api/auth/*`), because GitHub cannot pass a
+challenge or a login page:
+
+- **Bot Fight Mode: off for the whole zone.** It cannot be skipped per path with WAF custom rules or
+  Page Rules. Super Bot Fight Mode (paid plans) supports a Skip rule for the two paths instead.
+- No managed challenge, "Under Attack" mode, or challenging rate-limit rule on those paths.
+- **Cloudflare Access** may protect the dashboard, but those two paths must be excluded from it.
+- No Workers, Transform Rules, or cache rules on `/api/*`.
+
+**Limits checked against Cloudflare's documentation (2026-11-28):**
+
+| Limit | Value | Effect here |
+| ----- | ----- | ----------- |
+| Request body, Free plan | 100 MB | Above the app's 25 MB webhook cap |
+| Proxy read timeout | 125 s, then HTTP `524` (configurable on Enterprise only) | The live-progress stream (SSE) must send data well inside it; Cloudflare does not document how this applies to streams, so M1.7 tests it |
+
+**Setup.** Reach setup over SSH as usual; the loopback listener is never routed through the tunnel.
+DNS for the origin points at Cloudflare, so Stage 1.5 asks for the "I terminate TLS in front"
+confirmation, which sets the origin's TLS mode to `front` (`first-run-setup` Stage 1.5,
+[ADR-0036](../decisions/ADR-0036-tls-terminated-in-front.md)). Freezing the origin with `PUBLIC_URL`
+is recommended for this variant; the confirmation is still asked. Setup does not wait for Caddy to
+issue a certificate. `ready` comes when a signed GitHub webhook delivery has arrived through the
+tunnel and the App's webhook still verifies certificates (`insecure_ssl` = `0`); until then setup
+shows `tls_front_unverified`.
+
 ### D. All-in-one / local (evaluation only, after G1)
 
 One container with app, worker, and a bundled Postgres. No public origin by default, so the manifest
@@ -414,7 +511,9 @@ are v1.1+ (technical-approach §3.11; Q-018) and need a dedicated install test.
 ## 5. Networking and egress
 
 **Inbound:** 80 (ACME redirect), 443 (proxy) from the internet; the setup listener on host loopback
-only; optional metrics from the monitoring network only. Nothing else.
+only; optional metrics from the monitoring network only. Nothing else. With an outbound tunnel (§4
+C1) there is no inbound port at all; the tunnel agent needs outbound access to its provider's edge
+(see the provider's firewall requirements).
 
 **Outbound (required):**
 
@@ -586,3 +685,4 @@ support matrix, Phase 4).
 | DEP-10 | Bare LAN/IP origins (`https://192.168.1.20`) | **Decided 2026-11-15: rejected.** No public TLS for a private IP; local/homelab uses the labelled evaluation mode with a fixture forge (or a tunnel with a real domain). A self-signed/pre-loaded cert mode is not in v1 |
 | DEP-11 | Advanced deployment models in v1 | **Decided 2026-11-15 (Option 2), amended 2026-11-16 by ADR-0023:** models A–C in v1, D after G1, **E (Helm) in v1.2**; F not in v1 |
 | DEP-12 | Kubernetes support policy | **v1.2:** Kubernetes 1.29+ (n-2 window), Helm 3.14+, ingress-nginx tested, Traefik documented (ADR-0022); reconfirmed when the chart is specified |
+| DEP-13 | Post-save TLS check when TLS ends in front of the instance (model C, the C1 tunnel) | **Decided 2026-11-28 ([ADR-0036](../decisions/ADR-0036-tls-terminated-in-front.md)).** The "I terminate TLS in front" confirmation sets the TLS mode to `front`; Caddy issuance is not waited for; `ready` needs a signed webhook delivery plus `insecure_ssl` = `0` on the App's webhook (`GET /app/hook/config`). A self-request to the origin was rejected: it needs NAT hairpinning and an egress exception |
