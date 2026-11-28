@@ -201,7 +201,28 @@ function instanceScope(db: Kysely<DB>): InstanceScope {
   } as InstanceScope;
 }
 
+/**
+ * The Kysely executor behind each Store, for this package's own adapters (the queue runs
+ * `graphile_worker.add_job` in the caller's transaction). Not exported from the package.
+ */
+const executors = new WeakMap<Store, Kysely<DB>>();
+
+/** @internal The executor of a Store created by this package. */
+export function executorOf(store: Store): Kysely<DB> {
+  const db = executors.get(store);
+  if (db === undefined) {
+    throw new StoreUsageError('This Store was not created by createStore.');
+  }
+  return db;
+}
+
 function storeOver(db: Kysely<DB>, inTransaction: boolean): Store {
+  const store = buildStore(db, inTransaction);
+  executors.set(store, db);
+  return store;
+}
+
+function buildStore(db: Kysely<DB>, inTransaction: boolean): Store {
   return {
     forOrg: (orgId) => scopeFor(db, orgId),
     instance: instanceScope(db),
