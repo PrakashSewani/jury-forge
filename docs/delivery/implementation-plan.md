@@ -115,27 +115,43 @@ What it contains:
 UUIDv7 stays the SQL default only, so there is one generator. The Q-051 `argparse` exception landed
 here, because kysely-codegen brings the same package.
 
+**Progress (2026-11-28): WP 1-10 is written.**
+- **The port** is `JobQueue` in `contracts` (where port interfaces now live). The adapter is
+  `GraphileJobQueue` in `store`, with `start`, `stop`, `cleanup`, and `releaseDeadWorkers`.
+  `migrate` also installs graphile-worker's schema.
+- **Integration tests with worker processes:**
+  - one job at a time per serial key, in order, across two workers;
+  - 50 concurrent coalescing triggers become one run per key;
+  - transactional enqueue: none on rollback, one after commit;
+  - cancel;
+  - each cron tick fires once with two worker processes (two consecutive ticks);
+  - a graceful stop hands the aborted job to another worker (R3);
+  - a killed worker's locks are released once its heartbeat is silent, and the session resumes in
+    order;
+  - a live worker with a silent heartbeat is fenced and exits before its job runs elsewhere;
+  - queue cleanup (R6).
+- **As built, ADR-0037's release waits one heartbeat plus 5 s** between marking a pool and
+  unlocking it, so a slow but live worker stops first. A fenced handler that still finishes throws
+  instead of completing, because graphile-worker completes a job by id whoever holds it
+  (`job-pipeline.md`).
+
 **Carried from spike S-A and the decisions it led to.** The owner closed both S-A questions on
 2026-11-28. The recommendations R1–R9 are not decided; each WP settles its own.
 
 - **WP 1-08:** the `worker_heartbeats` table, and its place in the migration test's list of tables
   without `org_id` (ADR-0037).
-- **WP 1-10:**
-  - the named `argparse` licence exception is already in `licence-policy.json` (WP 1-09); graphile-worker
-    adds no new licence (Q-051, technical-approach §13);
-  - the heartbeat, fencing, and release of ADR-0037, with its two tests (a killed worker's job runs
-    again within one sweep; a silent live worker is fenced and no session runs two turns at once);
-  - complete and fail writes awaited on shutdown (R3), with a graceful-stop test;
-  - `max_attempts` set per job (R7);
-  - graphile-worker's `cleanup` in the retention cron (R6, with WP 1-28a);
-  - the debounce bound written down (R8).
+- **WP 1-10 (done 2026-11-28):** the `argparse` exception (landed in WP 1-09); the ADR-0037
+  heartbeat, fencing, and release with both tests; complete and fail writes awaited on shutdown (R3)
+  with a graceful-stop test; `maxAttempts` explicit (R7); `GraphileJobQueue.cleanup()` (R6; the
+  retention cron that calls it is WP 1-28a); the debounce bound written down (R8, `job-pipeline.md`).
 - **WP 1-11:** turn jobs carry IDs only and `resolve` reads the pending inputs (R1); orphaned turns are
   closed at `resolve` (R2); steps honour the abort signal within 5 s (R4).
 - **WP 1-13:** the `worker` stop grace period is above graphile-worker's 5 s abort timeout (R4).
 - **WP 1-14:** both TLS modes of [ADR-0036](../decisions/ADR-0036-tls-terminated-in-front.md),
   `caddy` and `front`, with `first-run-setup` criterion 23; the `front` path is first run on the
   owner's VPS behind a Cloudflare Tunnel (`deployment.md` §4 C1).
-- **WP 1-28a:** the stuck-turn sweep calls the ADR-0037 release.
+- **WP 1-28a:** the stuck-turn sweep calls `releaseDeadWorkers` and writes the `queue.lock_released`
+  audit event; the retention cron calls `GraphileJobQueue.cleanup()`.
 
 ### M1.2 — Install and setup
 

@@ -19,18 +19,52 @@ one phase `in progress` and exactly one next action.
 
 **Phase:** 1b, milestone **M1.1 (data layer and queue)**. M1.0 has its exit evidence (WP 1-01 to
 1-05 in PR #5 with a green CI run, S-C closed, S-A done), and the owner said start M1.1 on
-2026-11-28. WP 1-08 (migrations v0) is merged (PR #13, green CI); WP 1-09 (store package) is
-written (below).
+2026-11-28. WP 1-08 (PR #13) and WP 1-09 (PR #14) are merged with green CI; WP 1-10 (`JobQueue`
+port) is written (below).
 
-**Branch:** `feat/store-package` (WP 1-09); it lands in `dev` through its pull request.
-`feat/migrations-v0` is merged into `dev` (PR #13).
+**Branch:** `feat/job-queue` (WP 1-10); it lands in `dev` through its pull request.
+`feat/store-package` is merged into `dev` (PR #14).
 
-**Next action:** **WP 1-10 (`JobQueue` port)**, after WP 1-09 merges: the graphile-worker adapter
-(`enqueue`, `enqueueTx`, `cancel`, `schedule`, `onJob`), per-session `queue_name`, `job_key`
-debounce, the cron registry, the ADR-0037 heartbeat and fenced release, and the spike S-A carry-over
-items; its exit includes the two-worker cron test.
+**Next action:** **WP 1-11 (step runner core)**, the last WP of M1.1, after WP 1-10 merges:
+- `turn_steps` persistence with `(turn_id, step)` idempotency, the generation check and the
+  `superseded` abort, and the retry policy;
+- spike S-A R1 (ids-only payloads, inputs read at `resolve`), R2 (orphaned turns closed at
+  `resolve`), and R4 (the abort signal within 5 s).
 
-### Landed this session (2026-11-28, WP 1-09 store package)
+Its exit is a fault-injection test: kill mid-step, and the turn resumes without duplicate effects.
+
+### Landed this session (2026-11-28, WP 1-10 `JobQueue` port)
+
+- **The port:** `JobQueue` in `contracts`, where port interfaces now live because `contracts` is
+  the leaf that `pipeline` and the implementing packages both import. Every payload carries
+  `org_id`, and `maxAttempts` is required.
+- **The adapter:** `GraphileJobQueue` in `store`.
+  - The serial key is `queue_name`, `coalesce` is `job_key <key>:pending` in replace mode,
+    `enqueueTx` adds the job in a store transaction, `cancel` uses `remove_job`, and crons are
+    registered with handlers.
+  - Concurrency is 2 and the poll interval 1000 ms. The batch delays are 0, so a graceful stop
+    writes the aborted job's failure.
+  - Handlers get one abort signal for shutdown and fencing. `cleanup()` runs graphile-worker's queue
+    GC.
+- **`migrate`** also installs graphile-worker's schema. The generated types now cover `public` only.
+- **ADR-0037 as built:**
+  - a 30 s heartbeat in `worker_heartbeats`, and a worker fences itself when its row is released;
+  - `releaseDeadWorkers` marks silent pools, **waits one heartbeat plus 5 s**, then force-unlocks
+    what they still hold, so a slow but live worker stops before its job runs elsewhere;
+  - found in graphile-worker's source: it completes a job by deleting it by id, whoever holds it
+    (`dist/sql/completeJobs.js`), so a fenced handler that finishes anyway throws `FencedError`
+    instead of completing.
+
+  These refine how ADR-0037 is carried out; its order (mark, then unlock) and its "about 7 minutes"
+  stand.
+- **Docs:** `job-pipeline.md` (the port and adapter, settings, the cron task-name rule, cleanup, the
+  debounce bound, the two-worker cron result, the release as built), `deployment.md` (more than one
+  `worker` replica is safe for cron), technical-approach §3.3, §4 (where ports live), and §13
+  (graphile-worker), and the plan.
+
+### Landed earlier this session (2026-11-28, WP 1-09 store package)
+
+Merged into `dev` through PR #14 (merge `e2ed831`, CI green on all three jobs).
 
 **Owner decisions (2026-11-28):**
 
@@ -583,6 +617,36 @@ while `AGENTS.md` and `decisions/README.md` say to supersede; the status list ha
   v1.1/v1.2, with a critical path and per-milestone exit evidence.
 
 ## Verified this session (2026-11-28)
+
+**WP 1-10 locally (Windows 11, Node v24.19.0, Docker Engine 29.9.3):**
+
+- `pnpm check` exited 0: typecheck, Biome, dependency rules (49 modules, 0 violations), licences
+  (317 package versions), 41 unit tests, and 37 integration tests on `postgres:17.12-alpine`.
+- **Queue integration tests:** 9 tests, using worker processes spawned from `queue.fixture.ts`
+  (133 s, most of it the cron test waiting for two minute boundaries).
+  - **The WP exit:**
+    - 8 sessions × 5 jobs across two workers ran in order, with no overlap within a session and
+      more than one job running at once;
+    - 50 concurrent coalescing triggers gave one run for each of 5 keys and left no job behind;
+    - a rolled-back transaction added no job and its delivery row was gone, and a committed one
+      added one;
+    - each cron tick fired once across two worker processes, for two consecutive ticks 60 s apart.
+  - **Carry-over:**
+    - cancel removed a pending job;
+    - a graceful stop: the aborted job was retried by the other worker and the heartbeat row was
+      removed;
+    - SIGKILL: nothing was released while the heartbeat was recent, then 1 job was released and
+      the session ran attempt 2 and then its next job, in order;
+    - fencing: the worker exited with code 3 and its job was force-unlocked 0 times (it released
+      the job itself), and the retry started after the aborted attempt ended;
+    - cleanup removed 500 stale queue rows.
+- **Unit tests:** 5 on input checks (`org_id`, `maxAttempts`, `coalesce` without a key, the cron
+  grammar, duplicate handlers).
+- **The drift check failed** when `migrate` began installing graphile-worker's schema (the types
+  picked up its tables). It was fixed by introspecting `public` only, and then passed under `CI=1`
+  with the committed file unchanged.
+- **Not verified yet:** CI (the WP 1-10 pull request), and a real SIGTERM (Windows cannot deliver
+  one; the graceful test uses the runner's `stop()`).
 
 **WP 1-09 locally (Windows 11, Node v24.19.0, Docker Engine 29.9.3):**
 
