@@ -17,8 +17,9 @@ choose a runtime that serves the product rather than one that constrains it.
 ## Current phase
 
 **Phase 0 (G0) and Phase 1a (technology and approach) are done (2026-11-16). Phase 1b — walking
-skeleton — is in progress: the owner said go on 2026-11-27, starting with M1.0 (repository and
-CI) on `feat/walking-skeleton`.**
+skeleton — is in progress: the owner said go on 2026-11-27. M1.0 (repository and CI) is merged into `dev`
+except spike S-A; the six MVP-gate specs were approved on 2026-11-28. The current milestone and
+next action are in [`docs/delivery/status.md`](docs/delivery/status.md).**
 
 The stack is accepted (ADR-0026, `docs/architecture/technical-approach.md`). Implementation
 follows [`docs/delivery/implementation-plan.md`](docs/delivery/implementation-plan.md), one
@@ -99,7 +100,7 @@ Rules for the chain:
   evidence pack. Security and quality review can proceed in parallel on a frozen design. The
   critic runs after both. Never run two writers in parallel.
 - **Stop on contradiction.** If a new instruction conflicts with an accepted ADR, stop and raise
-  it. Do not rewrite history; supersede with a new ADR.
+  it. Do not rewrite history; amend or supersede with a new ADR (ADR-0034).
 
 The role definitions live in [`.pi/agents/`](.pi/agents/). The orchestration skill lives in
 [`.agents/skills/project-chain/SKILL.md`](.agents/skills/project-chain/SKILL.md). The canonical
@@ -114,7 +115,8 @@ workflow prompt is [`.pi/prompts/docs-chain.md`](.pi/prompts/docs-chain.md).
    architecture may not.
 3. **Record decisions.** One durable choice per ADR in [`docs/decisions/`](docs/decisions/).
    Include context, options, decision, consequences, security/operations impact, and a revisit
-   trigger. Supersede; never rewrite an accepted ADR.
+   trigger. Never rewrite an accepted ADR's body: a new ADR amends (`Amends:`) or supersedes it,
+   and the old ADR gets only a status-line pointer (ADR-0034).
 4. **Keep the tracker honest.** [`docs/delivery/status.md`](docs/delivery/status.md) holds the
    current phase, what is in progress, what was verified, blockers, and the single next action.
    Update it as work lands, not retrospectively.

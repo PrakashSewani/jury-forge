@@ -20,15 +20,58 @@ one phase `in progress` and exactly one next action.
 **Phase:** 1b, milestone **M1.0 (repository and CI)**. The owner said go on 2026-11-27. WP 1-01
 to 1-05 are merged into `dev` (PR #5) with a green CI run; spikes 1-06 and 1-07 remain.
 
-**Branch:** `chore/dev-readiness` (the development-readiness check: owner decisions, doc alignment,
-and a local test-config fix).
+**Branch:** `docs/readiness-gaps` (the plan and tracker fixes from the readiness review below).
+`chore/dev-readiness` is merged into `dev` (PR #10).
 
 **Next action:** run **spike S-A (WP 1-06)**: graphile-worker serialization and debounce under
 concurrency, plus the pg-boss adapter proof, written up in `docs/analysis/spikes/`. It needs a
-container runtime; Docker now runs on this machine (engine 29.9.3, 2026-11-28). S-C (WP 1-07) is
-closed (owner decision below). The S-A note closes M1.0; then M1.1.
+container runtime: start Docker first (the engine, 29.9.3, ran earlier on 2026-11-28 but was not
+running at the readiness review). S-C (WP 1-07) is closed (owner decision below). The S-A note
+closes M1.0; then M1.1.
 
-### Landed this session (2026-11-28, development-readiness check)
+### Landed this session (2026-11-28, readiness review)
+
+A full pass over the docs, the plan, and the gates against the approved MVP specs and
+technical-approach found MVP work that no work package owned, and a G1 checklist that asked for
+v1 behaviour. Fixed in [`implementation-plan.md`](implementation-plan.md) and
+[`quality-gates.md`](quality-gates.md):
+
+- **WP 1-26a (new), router, bindings, and fallback:** G1 and the approved `agentic-review-sessions`
+  §6 require bindings, the router's reasons, and the configuration fallback; no WP built them.
+- **WP 1-28a (new), MVP maintenance crons:** the stuck-turn sweep and catalog refresh (MVP since the
+  audit Q-D decision) and the daily retention job (MVP in `job-pipeline.md`) had no WP.
+- **WP 1-10:** now includes the two-worker cron test (audit Q-E); until it passes, only one `worker`
+  replica is documented as safe.
+- **WP 1-28:** the reconciler covers the `jury:pr-review` label only; the PR-checkbox trigger is v1
+  (WP 2-32). The reconciler is built in the MVP ahead of its v1 capability row.
+- **G1:** "Stack ADRs accepted" ticked with evidence; `auto` removed (v1, gated at G2); "tool call"
+  records replaced by step records and the router's reasons (tool calls are v1.1); a stuck-turn
+  sweep row added; `npm run check` → `pnpm check`.
+- **Tracker drift:** this file's "Blocked by" and open-question list, the decision table (ADR-0033),
+  the `overview.md` decision table (ADR-0031–0033), and the `AGENTS.md` phase line.
+
+**Decided (the owner delegated both decisions, 2026-11-28):**
+
+1. **[ADR-0034](../decisions/ADR-0034-adr-amendments.md), how an accepted ADR changes.** An accepted
+   ADR's body is frozen. A change to its decision is a new ADR with `Amends:` (partial) or
+   `Supersedes:` (whole), and the older ADR gets only a dated status-line pointer. The
+   [ADR index](../decisions/README.md) gains an **Amended by** column. "Accepted as amended" is
+   retired as a status: ADR-0010 and ADR-0022 now read `accepted` with pointers. The missing pointers
+   were added to ADR-0008, ADR-0014, ADR-0016, ADR-0018, ADR-0023, and ADR-0026. Earlier in-place body
+   edits are not reverted. The rule is propagated to `AGENTS.md` (rule 3, "stop on contradiction"),
+   the ADR template in `ways-of-working.md`, the `docs-editor` agent, and the `architecture-decisions`
+   skill.
+2. **[ADR-0035](../decisions/ADR-0035-tenant-key-on-every-table.md), the tenant key.** `org_id NOT
+   NULL` goes on every tenant-owned table, with composite tenant foreign keys
+   `(org_id, parent_id) → parent (org_id, id)`, so the database refuses a cross-tenant link.
+   - The exceptions are `users` and `user_sessions` (instance-level identity), graphile-worker's
+     schema, and the migration table.
+   - The first migration creates the unclaimed instance org, so rows written before the owner claim
+     have a tenant. Every job payload carries `org_id`.
+   - Propagated to `data-model.md` (rule 1, `orgs`, `users`, `user_sessions`), technical-approach
+     §3.2, `security.md` T-12, WP 1-08 and WP 1-09, and the ADR-0008 and ADR-0026 status lines.
+
+### Landed earlier this session (2026-11-28, development-readiness check)
 
 A final sanity check before development continues. **The six MVP-gate specs are approved** for
 their MVP-tier rows, so M1.1 onward is unblocked.
@@ -351,6 +394,7 @@ spike stays dropped (ADR-0023).
 
 Also noted, not changed: ADRs are amended in place (`accepted as amended`, edited status lines),
 while `AGENTS.md` and `decisions/README.md` say to supersede; the status list has no `amended`.
+*(Decided 2026-11-28 by ADR-0034.)*
 
 ### Earlier: 2026-11-16 consistency pass
 
@@ -507,25 +551,19 @@ while `AGENTS.md` and `decisions/README.md` say to supersede; the status list ha
 
 ## Blocked by
 
-- **M1.0 exit:** the CI run is green (PR #5); spikes 1-06 (S-A, needs a container runtime) and
-  1-07 (S-C: Ollama and an Anthropic-native model are left, which needs the owner's key or a local
-  Ollama).
-- **M1.2 onward:** approval of the six MVP-gate specs (revised 2026-11-27, not yet approved) before the work packages that implement them — first-run-setup before M1.2, provider-model-discovery before M1.3:
-  [`first-run-setup.md`](../product/specs/first-run-setup.md),
-  [`provider-model-discovery.md`](../product/specs/provider-model-discovery.md),
-  [`agentic-review-sessions.md`](../product/specs/agentic-review-sessions.md),
-  [`review-progress-and-completion.md`](../product/specs/review-progress-and-completion.md),
-  [`large-pr-handling.md`](../product/specs/large-pr-handling.md), and
-  [`session-capacity-and-visibility.md`](../product/specs/session-capacity-and-visibility.md).
-  M1.0 implements none of them. No technical blocker is open.
+- **M1.0 exit:** the CI run is green (PR #5) and S-C (1-07) is closed; only spike 1-06 (S-A) is
+  left, and it needs a running container runtime.
+- **Specs:** none for the MVP. The six MVP-gate specs were approved on 2026-11-28 (MVP rows only).
+  Every other spec is approved before the milestone that implements it (Phase 2 onward).
 - **Installability is still unproven.** There is no compose file, CLI, Dockerfile, or signed release.
   The three documentation defects from the install dry run (B1–B3) are fixed in the docs, but no
   build exists to test. See [`../analysis/install-readiness-2026-11-15.md`](../analysis/install-readiness-2026-11-15.md).
 
 ## Open owner questions
 
-The open list is now Q-001, Q-010, Q-011, Q-017, Q-018, Q-020, Q-030, Q-031, Q-049, and Q-050; each has a recorded
-default and a close condition in [`../analysis/open-questions.md`](../analysis/open-questions.md).
+The open list is now Q-001, Q-010, Q-011, Q-017, Q-018, Q-020, and Q-030 (Q-031, Q-049, Q-050, and
+SF-01 were closed by the owner on 2026-11-28); each has a recorded default and a close condition in
+[`../analysis/open-questions.md`](../analysis/open-questions.md).
 Everything else is closed by an accepted ADR (see the two closed tables there). None of the open
 items blocks Phase 1b.
 
@@ -546,7 +584,7 @@ The checklist and its evidence live in [`quality-gates.md`](quality-gates.md#g0-
 | ADR-0007 | accepted (G0) | Token-aware context; PR review context is T0+ per ADR-0025. |
 | ADR-0008 | accepted (G0) | Roles and trust boundaries. |
 | ADR-0009 | accepted (owner directive) | MIT licence, no CLA. |
-| ADR-0010 | accepted as amended (Phase 1a) | Thin turn runner; no agent harness in v1. |
+| ADR-0010 | accepted (Phase 1a; amended by ADR-0026) | Thin turn runner; no agent harness in v1. |
 | ADR-0011 | accepted (G0) | Provider/model discovery; no free-text model; encrypted keys. |
 | ADR-0012 | accepted (G0) | PR sessions; `suggest` default resolution, `auto`/`off` opt-in. |
 | ADR-0013 | accepted (G0) | Manual-first triggering and dynamic agent routing. |
@@ -558,7 +596,7 @@ The checklist and its evidence live in [`quality-gates.md`](quality-gates.md#g0-
 | ADR-0019 | rejected | T1 bounded reads for PR review; T0+ (ADR-0025) is the narrower accepted path. |
 | ADR-0020 | accepted (Phase 1a) | Signed release bundle, verify before extract, no pipe-to-shell. |
 | ADR-0021 | accepted (G0) | Runtime-configured public origin; domain is a setup step. |
-| ADR-0022 | accepted as amended (G0) | Helm chart, moved to v1.2 by ADR-0023. |
+| ADR-0022 | accepted (G0; amended by ADR-0023, ADR-0031) | Helm chart, moved to v1.2 by ADR-0023. |
 | ADR-0023 | accepted (G0) | Product direction: the auditable review layer; v1 is the trust loop. |
 | ADR-0024 | accepted (G0) | Conversation safety, finding identity, evidence-gated resolution. |
 | ADR-0025 | accepted (G0) | v1 pipeline: T0+ context, verifier, code-first chair, model roles. |
@@ -569,6 +607,9 @@ The checklist and its evidence live in [`quality-gates.md`](quality-gates.md#g0-
 | ADR-0030 | accepted (owner, 2026-11-27) | Egress rule for local model servers: a pinned, owner-only exception for the `local` kind. |
 | ADR-0031 | accepted (owner, 2026-11-28) | The v1.2 Helm chart runs the Compose roles; cron in `worker`, no scheduler Deployment. |
 | ADR-0032 | accepted (owner, 2026-11-28) | Finding severity `critical`/`high`/`medium`/`low`; ranking weights 8/4/2/1. |
+| ADR-0033 | accepted (owner, 2026-11-28) | No default noise budget; optional repo cap; fixed 50-comment safety ceiling. |
+| ADR-0034 | accepted (owner delegated, 2026-11-28) | Accepted ADR bodies are frozen; a new ADR amends or supersedes; the old one gets a status-line pointer. |
+| ADR-0035 | accepted (owner delegated, 2026-11-28) | `org_id NOT NULL` on every tenant-owned table, composite foreign keys; the instance org exists before setup. |
 
 ## History
 

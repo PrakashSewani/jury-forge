@@ -1,6 +1,6 @@
 # ADR-0010: Agent runtime harness
 
-- Status: **accepted as amended** (Phase 1a, 2026-11-16): **no harness in v1.** A thin turn runner
+- Status: **accepted** (Phase 1a, 2026-11-16; amended by ADR-0026): **no harness in v1.** A thin turn runner
   (persisted steps) with a provider gateway on the `ai` SDK replaces the LangGraph spike. The
   options analysis below is kept for history; the binding decision is
   [`../architecture/technical-approach.md`](../architecture/technical-approach.md) §3.4.

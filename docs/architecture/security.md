@@ -195,8 +195,9 @@ secrets in the prompt, rate limits.
 **Attack/accident:** a query misses `org_id`, exposing another tenant's data.
 
 **Controls:** tenant-scoped repository layer, mandatory `org_id` in queries, cross-tenant tests,
-a lint rule or code review checklist. Row-level security is not used in v1 (technical-approach
-§3.2).
+a lint rule or code review checklist. `org_id NOT NULL` on every tenant-owned table, with composite
+tenant foreign keys, so the database refuses a cross-tenant reference (ADR-0035). Row-level
+security is not used in v1 (technical-approach §3.2).
 
 ## 5. Authentication and session design
 

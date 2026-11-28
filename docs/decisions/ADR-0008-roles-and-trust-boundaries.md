@@ -1,6 +1,7 @@
 # ADR-0008: Roles and trust boundaries
 
-- Status: accepted (G0, 2026-11-16; v1 roles are owner/maintainer/reader per ADR-0023)
+- Status: accepted (G0, 2026-11-16; v1 roles are owner/maintainer/reader per ADR-0023; tenant scoping
+  made concrete by ADR-0035, 2026-11-28: `org_id` on every tenant-owned table, composite foreign keys)
 - Date: 2026-11-14
 - Owners: security + architecture
 - Supersedes: the PoC's single-owner access model

@@ -1,6 +1,7 @@
 # ADR-0014: Diff-only PR review with an incremental repository graph
 
-- Status: accepted (G0, 2026-11-16; graph and branch review are v1.1, measurement-gated)
+- Status: accepted (G0, 2026-11-16; graph and branch review are v1.1, measurement-gated; PR review
+  context amended by ADR-0025: T0+ reads only files already in the diff)
 - Date: 2026-11-15
 - Owners: AI pipeline + architecture
 - Supersedes: the PoC's diff-only context + literal reference paths (as the context strategy)

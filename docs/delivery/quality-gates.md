@@ -39,7 +39,10 @@ and Q-032–Q-048; a link check (0 broken) and a consistency pass across the doc
 
 ## G1 — Walking skeleton
 
-- [ ] Stack ADRs accepted (runtime, deployment, storage, queue, auth, harness).
+- [x] Stack ADRs accepted (runtime, deployment, storage, queue, auth, harness). Evidence
+      (2026-11-16, Phase 1a): ADR-0005 (runtime), ADR-0003 (deployment), ADR-0004 (storage),
+      ADR-0006 (queue), ADR-0010 as amended (harness), and ADR-0026 with technical-approach §3.9
+      (auth) are accepted; see the [ADR index](../decisions/README.md).
 - [ ] A clean Ubuntu 24.04 host with Docker 24+/Compose v2 installed reaches a first review in ≤15 min median / ≤60 min p90 from a verified bundle; Docker install, DNS, provider account, and org admin work are measured separately.
 - [ ] The setup listener is reachable on host loopback only; it is not reachable on the host's public interface.
 - [ ] The one-shot `migrate` container exits `0`; then `caddy`, `app` (API + UI), `worker` (cron included; no separate scheduler), and `postgres` start; `/healthz` and `/readyz` pass.
@@ -60,11 +63,12 @@ and Q-032–Q-048; a link check (0 broken) and a consistency pass across the doc
 - [ ] The Check Run moves `queued → in_progress → completed`; the review is the completion; no duplicate comment.
 - [ ] One-click finding feedback is recorded.
 - [ ] A human reply resumes the session and produces a second agent response with prior context.
-- [ ] `suggest` resolution works: the agent proposes, the human resolves natively/UI; `auto` is opt-in and guarded; a new reply reopens.
+- [ ] `suggest` resolution works: the agent proposes, the human resolves natively/UI; a new reply reopens. (`auto` and `off` are v1 and gated at G2.)
 - [ ] No-reviewers/no-match fallback comment is posted with setup/retrigger instructions; no review posted.
-- [ ] Session, turn, tool call, finding, and publish records are visible in the timeline.
+- [ ] Session, turn, step, finding, and publish records are visible in the timeline, with the router's reason for each reviewer that ran or was skipped. (Tool-call records are v1.1: PR review runs no model tool loop.)
 - [ ] A duplicate delivery does not create a duplicate turn; a failed turn is retryable/idempotent.
-- [ ] `npm run check` (or the equivalent) passes; tests cover the happy path, duplicate, and resume.
+- [ ] A turn stuck `running` past the threshold is failed by the stuck-turn sweep and its Check Run is completed with the reason (technical-approach §3.3).
+- [ ] `pnpm check` passes; tests cover the happy path, duplicate, and resume.
 - [ ] The PoC can be turned off; a real PR gets a conversational review from the new stack.
 
 **Evidence:** a recorded install log, a run trace, a PR link, and the check output.
