@@ -1,0 +1,142 @@
+# Jury Forge — the Compose bundle (WP 1-13; deployment.md §3, technical-approach §3.13).
+#
+# Start order: postgres healthy → migrate exits 0 → app and worker start → app ready (/readyz) →
+# caddy serves. Run from this directory after creating the secret files (README.md):
+#   ./init-secrets.sh && docker compose up -d --wait
+#
+# Until the release pipeline publishes signed images (WP 4-05), the Jury Forge image is built from
+# this checkout. The release bundle replaces `build` with a digest-pinned `image`.
+#
+# Secrets are files, never environment values (deployment.md §3). Compose bind-mounts a file secret
+# with its host owner and mode, so each file is owned by the container user that reads it and is
+# mode 0400: `database_url` by 65532 (the image's `nonroot`), `db_password` by 70 (`postgres` in
+# the Alpine image). `init-secrets.sh` creates them.
+
+name: jury-forge
+
+x-hardening: &hardening
+  read_only: true
+  tmpfs: [/tmp]
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  logging:
+    driver: json-file
+    options: { max-size: 10m, max-file: "3" }
+
+x-jury-forge: &jury-forge
+  <<: *hardening
+  image: jury-forge:local
+  build: { context: .., dockerfile: Dockerfile }
+  environment: &jury-forge-env
+    DATABASE_URL_FILE: /run/secrets/database_url
+    LOG_LEVEL: ${LOG_LEVEL:-info}
+  secrets: [database_url]
+
+networks:
+  # Caddy's published ports, and its egress for ACME.
+  edge: {}
+  # Service-to-service traffic. No egress, and a pinned subnet so TRUSTED_PROXIES can be exact.
+  internal:
+    internal: true
+    ipam:
+      config: [{ subnet: 172.28.0.0/24 }]
+  # Outbound calls from app and worker: GitHub and the configured model providers.
+  egress: {}
+
+services:
+  caddy:
+    <<: *hardening
+    image: caddy:2.11.9-alpine@sha256:003a97808e781aa9f7e75cc2f43d34d461099031faf5e20faefb9f61126836f0
+    # The image runs as root; with every other capability dropped it can only bind 80 and 443.
+    cap_add: [NET_BIND_SERVICE]
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks: [edge, internal]
+    depends_on:
+      app: { condition: service_healthy }
+    healthcheck:
+      # The HTTPS listener is up. (A probe of the admin API would log a line every interval.)
+      test: ["CMD", "nc", "-z", "127.0.0.1", "443"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    deploy: { resources: { limits: { cpus: "1.0", memory: 256m } } }
+    restart: unless-stopped
+
+  migrate:
+    <<: *jury-forge
+    command: ["migrate"]
+    networks: [internal]
+    depends_on:
+      postgres: { condition: service_healthy }
+    deploy: { resources: { limits: { cpus: "1.0", memory: 512m } } }
+    restart: "no"
+
+  app:
+    <<: *jury-forge
+    command: ["app"]
+    environment:
+      <<: *jury-forge-env
+      # Inside the container; the host publish below is the loopback boundary (ADR-0021).
+      SETUP_BIND: 0.0.0.0:8080
+    networks: [internal, egress]
+    expose: ["3000"]
+    ports: ["127.0.0.1:8080:8080"] # host loopback only; never publish it on 0.0.0.0
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    healthcheck:
+      test: ["CMD", "/nodejs/bin/node", "/app/dist/main.js", "healthcheck", "http://127.0.0.1:3000/readyz"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    deploy: { resources: { limits: { cpus: "1.0", memory: 1g } } }
+    restart: unless-stopped
+
+  worker:
+    <<: *jury-forge
+    command: ["worker"]
+    networks: [internal, egress]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    # Above graphile-worker's 5 s abort timeout, so running jobs are released, not killed (S-A R4).
+    stop_grace_period: 15s
+    # Only for a `local` model server on the Docker host (ADR-0030):
+    # extra_hosts: ["host.docker.internal:host-gateway"]
+    deploy: { replicas: 1, resources: { limits: { cpus: "1.0", memory: 2g } } }
+    restart: unless-stopped
+
+  postgres:
+    <<: *hardening
+    image: postgres:17.12-alpine@sha256:f9cf3e1f0066f0eb0c48707d864f0ac5941e9ff454a072077d97a4d278d07d73
+    # The image's own `postgres` user (70), so no capability is needed; the new volume inherits the
+    # image's data directory, which that user owns.
+    user: "70:70"
+    tmpfs: [/tmp, /var/run/postgresql]
+    environment:
+      POSTGRES_USER: jury_forge
+      POSTGRES_DB: jury_forge
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password # read by the postgres image itself
+    secrets: [db_password]
+    volumes: ["postgres-data:/var/lib/postgresql/data"]
+    networks: [internal]
+    healthcheck:
+      # Over TCP: the image's first-start initialisation listens on the socket only.
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "jury_forge", "-d", "jury_forge"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    deploy: { resources: { limits: { cpus: "1.0", memory: 1g } } }
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  caddy-data:
+  caddy-config:
+
+secrets:
+  database_url: { file: ./secrets/database_url }
+  db_password: { file: ./secrets/db_password }

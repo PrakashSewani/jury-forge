@@ -40,3 +40,6 @@ backups/
 playwright-report/
 test-results/
 .harness/
+
+# Compose secret files (deploy/init-secrets.sh)
+deploy/secrets/
