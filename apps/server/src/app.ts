@@ -7,7 +7,9 @@ import type { Logger } from 'pino';
 import { EnvError, loadRoleEnv, type RoleEnv } from './env.ts';
 import { APP_PORT, buildAppServer, buildSetupServer } from './http.ts';
 import { createLogger } from './logger.ts';
+import { OriginService } from './origin-service.ts';
 import { waitForSignal } from './shutdown.ts';
+import { createTlsProbe, type TlsProbe } from './tls-probe.ts';
 
 export interface RunningApp {
   /** The bound addresses, for tests that listen on port 0. */
@@ -23,13 +25,21 @@ export interface StartAppOptions {
   appPort?: number;
   /** Defaults to 0.0.0.0, the container's interfaces; tests pass 127.0.0.1. */
   appHost?: string;
+  /** Defaults to a TLS handshake with `caddy:443`; tests pass a fake. */
+  tlsProbe?: TlsProbe;
 }
 
 export async function startApp(options: StartAppOptions): Promise<RunningApp> {
   const { env, logger } = options;
   const store = createStore({ databaseUrl: env.databaseUrl, maxConnections: 5 });
+  const origin = new OriginService({
+    store,
+    publicUrl: env.publicUrl,
+    probe: options.tlsProbe ?? createTlsProbe(),
+  });
   const app = buildAppServer({
     logger,
+    origin,
     readiness: () =>
       checkReadiness(store, {
         onError: (component, error) =>
@@ -53,6 +63,9 @@ export async function startApp(options: StartAppOptions): Promise<RunningApp> {
   } catch (error) {
     await stop();
     throw error;
+  }
+  if (env.publicUrl !== null) {
+    logger.info({ origin: env.publicUrl.url }, 'PUBLIC_URL freezes the origin');
   }
   return { appPort: portOf(app.server.address()), setupPort: portOf(setup.server.address()), stop };
 }

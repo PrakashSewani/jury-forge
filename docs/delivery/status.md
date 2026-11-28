@@ -9,7 +9,7 @@ one phase `in progress` and exactly one next action.
 | ----- | ----- | ------ |
 | 0 | Product definition and documentation | **done — G0 passed 2026-11-16** |
 | 1a | Technology and approach (decisions only, no code) | **done — accepted 2026-11-16** |
-| 1b | Foundation and walking skeleton (MVP, gate G1) | **in progress — owner go 2026-11-27; M1.0 exit evidence complete 2026-11-28; M1.1 complete 2026-11-28; M1.2 in progress (WP 1-13)** |
+| 1b | Foundation and walking skeleton (MVP, gate G1) | **in progress — owner go 2026-11-27; M1.0 exit evidence complete 2026-11-28; M1.1 complete 2026-11-28; M1.2 in progress (WP 1-14)** |
 | 2 | Trust and security | not started |
 | 3 | Review quality | not started |
 | 4 | Operations and release | not started |
@@ -18,24 +18,52 @@ one phase `in progress` and exactly one next action.
 ## Current handoff
 
 **Phase:** 1b, milestone **M1.2 (install and setup)**. **M1.1 is complete:** WP 1-08 to 1-11 are
-merged with green CI (PRs #13–#16). WP 1-12 (image, with spike S-B) is merged (PR #17). WP 1-13
-(Compose bundle) is written (below).
+merged with green CI (PRs #13–#16). WP 1-12 (image) and WP 1-13 (Compose bundle) are merged
+(PRs #17, #18). WP 1-14 (Caddy and origin, split by the owner) is written (below).
 
-**Branch:** `feat/compose` (WP 1-13); it lands in `dev` through its pull request.
-`feat/image` is merged into `dev` (PR #17, merge `bce0f24`).
+**Branch:** `feat/origin` (WP 1-14); it lands in `dev` through its pull request.
+`feat/compose` is merged into `dev` (PR #18, merge `3df3755`).
 
-**Next action:** **WP 1-14 (Caddy and origin)**, after WP 1-13 merges:
-- on-demand TLS with the `ask` endpoint, the origin step (ADR-0021), and the `PUBLIC_URL` freeze;
-- both TLS modes of ADR-0036, with the `front` path first run on the owner's VPS behind a
-  Cloudflare Tunnel (`deployment.md` §4 C1);
-- exit: a valid certificate for the configured domain, and every other name refused.
+**Next action:** **WP 1-15 (bootstrap and crypto)**, after WP 1-14 merges:
+- KEK file loading, envelope encryption (`crypto`), the bootstrap token, and the setup state
+  machine;
+- from the WP 1-14 split, the Stage 1.5 setup route behind the token: pre-save DNS and port
+  validation, the "I terminate TLS in front" confirmation, and `TRUSTED_PROXIES`;
+- exit: unit and integration tests, and the key never appears in logs.
 
-To settle at its start: the Compose healthcheck needs `/readyz` to return 200 before an origin
-exists, because `caddy` waits for a healthy `app`. First-run-setup says `/readyz` "reports"
-`origin_unset`. WP 1-13 reads that as a field in the body, not a 503; the owner confirms it, or
-the healthcheck changes (implementation-plan, WP 1-13 carried forward).
+**Owner decision (2026-11-28):** ADR-0038 (the app-side issuance limit) is accepted.
 
-### Landed this session (2026-11-28, WP 1-13 Compose bundle)
+### Landed this session (2026-11-28, WP 1-14 Caddy and origin)
+
+- **Owner decisions:**
+  - WP 1-14 is split: the origin plumbing now, the setup route with WP 1-15, and the `front` proof
+    with WP 1-16;
+  - `/readyz` reports the origin state in its body without failing readiness;
+  - the app checks issuance with a TLS handshake to Caddy;
+  - Pebble in CI proves the exit.
+- **`domain`:** `parseOrigin`, with typed reasons for DEP-08 and DEP-10, and `hostOf`; a token
+  bucket. 100% branch coverage.
+- **`store`:** the `origin` setting, with compare-and-set, the race on the first insert as a
+  conflict, and audit only for what changed (`origin.set`, `origin.changed`,
+  `origin.tls_mode_set`). Validated on read and write.
+- **`app`:**
+  - `OriginService`: `PUBLIC_URL` freezes the origin, and the stored mode applies;
+  - the `ask` endpoint: the origin only, in `caddy` mode, 5 per 2 minutes;
+  - `Host` pinning (`421`, and `503 origin_unset`);
+  - internal routes refuse proxied requests;
+  - the TLS handshake check, and the origin state in `/readyz`.
+- **ADR-0038 (accepted 2026-11-28):** Caddy 2.11 refuses `interval`, so the issuance limit is the app's alone.
+  ADR-0021 has a status-line pointer.
+- **The exit check:** the smoke test's Pebble phase. Renovate tracks the Pebble pin.
+- **Docs:**
+  - `deployment.md` §2 and §3 (the origin and TLS as built, and the reference Caddyfile);
+  - `observability.md` §9 and first-run-setup Stage 1.5 (the `/readyz` decision);
+  - technical-approach §3.13, and the plan.
+
+### Landed earlier this session (2026-11-28, WP 1-13 Compose bundle)
+
+Merged into `dev` through PR #18 (merge `3df3755`, CI green on all five jobs).
+
 
 - **The bundle** (`deploy/`):
   - `compose.yaml`: `caddy`, `migrate`, `app`, `worker`, and `postgres`, with healthchecks, the
@@ -717,6 +745,24 @@ while `AGENTS.md` and `decisions/README.md` say to supersede; the status list ha
 
 ## Verified this session (2026-11-28)
 
+**WP 1-14 locally (Windows 11, Docker Engine 29.9.3; the stack in Docker-in-Docker 29.10.1):**
+
+- `pnpm check` exited 0: typecheck, Biome (99 files), dependency rules (94 modules, 0 violations),
+  licences (363 package versions), 193 unit tests, and 61 integration tests.
+- `caddy validate` (`caddy:2.11.9-alpine`) refuses `interval 2m` in `on_demand_tls` with "no longer
+  supported" (ADR-0038).
+- `scripts/compose-smoke-test.sh` passed both phases in Docker-in-Docker. With `PUBLIC_URL` set:
+  - Caddy (pointed at Pebble 2.10.3) got a certificate with SAN `DNS:review.jury-forge.test`, from
+    `Pebble Intermediate CA`;
+  - `other.jury-forge.test` failed the handshake (curl exit 35), and the app logged `other_name`;
+  - `Host: evil.jury-forge.test` got `421`;
+  - `/readyz`, `/healthz`, `/metrics`, and `ask` answered `404` from outside;
+  - `/readyz` reported `tls_issued`, `frozen: true`.
+- Image: 217,922,048 bytes unpacked on amd64.
+- **Not verified yet:** the Pebble phase in CI on amd64 and arm64 (it runs on the WP 1-14 pull
+  request), and a real ACME certificate (the owner's VPS).
+
+
 **WP 1-13 locally (Windows 11, Docker Engine 29.9.3; the stack in Docker-in-Docker 29.10.1, Compose
 v5.8.0, for real Linux file ownership):**
 
@@ -737,8 +783,9 @@ v5.8.0, for real Linux file ownership):**
 - Mutation: the setup port published on all interfaces fails the smoke test at the loopback check.
 - By hand: a `SIGKILL`ed `app` process came back through the restart policy (restart count 1,
   healthy).
-- **Not verified yet:** the smoke test in CI on the amd64 and arm64 runners (it runs on the WP 1-13
-  pull request), and the stack on the owner's VPS.
+- **CI on PR #18** (run 46163765980): all five jobs passed. The smoke test printed its `OK` line on
+  both runners. Unpacked image: 217,896,960 bytes on amd64 and 223,772,672 on arm64.
+- **Not verified yet:** the stack on the owner's VPS.
 
 **WP 1-12 locally (Windows 11, Docker Engine 29.9.3):**
 

@@ -1,6 +1,6 @@
 # ADR-0021: Runtime-configured public origin
 
-- Status: accepted (G0, 2026-11-16; the TLS gate for TLS terminated in front amended by ADR-0036, 2026-11-28)
+- Status: accepted (G0, 2026-11-16; the TLS gate for TLS terminated in front amended by ADR-0036, 2026-11-28; the issuance limit amended by ADR-0038, 2026-11-28)
 - Date: 2026-11-15
 - Owners: architecture + operations + security
 - Supersedes: the "set `PUBLIC_URL` in `.env` before first start" assumption in the ops draft

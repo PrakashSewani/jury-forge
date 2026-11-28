@@ -1,9 +1,10 @@
-# Jury Forge — Caddy in front of `app` (WP 1-13; deployment.md §4).
+# Jury Forge — Caddy in front of `app` (deployment.md §4; WP 1-13, WP 1-14).
 #
-# Certificates are issued on demand, and Caddy asks `app` before each one. The `ask` endpoint
-# arrives with WP 1-14 (the origin step, ADR-0021, and both TLS modes of ADR-0036). Until then the
-# app answers it with 404, so Caddy issues no certificate for any name: `:443` has none on a cold
-# start, which is the documented state before an origin is set.
+# Certificates are issued on demand, and Caddy asks `app` before each one. `app` allows only the
+# configured origin (stored in setup, or frozen by PUBLIC_URL), only in the `caddy` TLS mode, and at
+# most 5 approvals per 2 minutes. That app-side limit is ADR-0021's issuance limit: Caddy 2.11 no
+# longer accepts `interval` and `burst` in `on_demand_tls`. Before an origin exists every name is
+# refused, so `:443` has no certificate on a cold start.
 {
 	on_demand_tls {
 		ask http://app:3000/api/internal/tls/allow

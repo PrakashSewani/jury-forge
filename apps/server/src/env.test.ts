@@ -20,6 +20,7 @@ describe('loadRoleEnv', () => {
       databaseUrl: URL_VALUE,
       logLevel: 'info',
       setupBind: { host: '0.0.0.0', port: 8080, loopback: false },
+      publicUrl: null,
     });
   });
 
@@ -28,8 +29,21 @@ describe('loadRoleEnv', () => {
     expect(env.setupBind).toEqual({ host: '127.0.0.1', port: 8080, loopback: true });
   });
 
+  it('parses PUBLIC_URL into the canonical origin', () => {
+    const env = loadRoleEnv({ DATABASE_URL: URL_VALUE, PUBLIC_URL: 'https://Review.Example.com/' });
+    expect(env.publicUrl).toEqual({
+      url: 'https://review.example.com',
+      host: 'review.example.com',
+    });
+  });
+
   it.each([
     [{}, /DATABASE_URL_FILE/],
+    [
+      { DATABASE_URL: URL_VALUE, PUBLIC_URL: 'http://review.example.com' },
+      /PUBLIC_URL .*not_https/,
+    ],
+    [{ DATABASE_URL: URL_VALUE, PUBLIC_URL: 'https://review.example.com/jf' }, /has_path/],
     [{ DATABASE_URL_FILE: '/missing' }, /Cannot read DATABASE_URL_FILE/],
     [{ DATABASE_URL: URL_VALUE, SETUP_BIND: 'localhost:8080' }, /^SETUP_BIND: /],
     [{ DATABASE_URL: URL_VALUE, LOG_LEVEL: 'loud' }, /^LOG_LEVEL /],

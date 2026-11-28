@@ -17,6 +17,7 @@
     }
   },
   "dependencies": {
+    "@jury-forge/domain": "workspace:*",
     "@jury-forge/pipeline": "workspace:*",
     "@jury-forge/store": "workspace:*",
     "fastify": "5.12.8",

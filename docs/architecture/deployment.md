@@ -80,8 +80,10 @@ The bootstrap surface is never exposed publicly.
 | **Wrong/typo origin** | Webhook self-test fails; setup stays incomplete and shows the exact URLs to compare; no `ready` |
 
 The origin change is capped (3 per hour) and audited. Certificates are issued only for the single
-configured host, with Caddy `on_demand_tls { ask … interval 2m burst 5 }` plus an app-side limit, so
-an attacker cannot turn the instance into an ACME proxy.
+configured host: Caddy's `on_demand_tls { ask … }` asks the app, which approves only that host and
+at most 5 times per 2 minutes, so an attacker cannot turn the instance into an ACME proxy. Caddy 2.11
+no longer has `interval` and `burst`, so the limit is the app's alone
+([ADR-0038](../decisions/ADR-0038-app-side-issuance-limit.md), accepted 2026-11-28).
 
 Notes:
 
@@ -333,9 +335,9 @@ it on fresh amd64 and arm64 runner VMs. Where they differ from the illustrative 
   - `TRUSTED_PROXIES`, `PUBLIC_URL`, and the `front` variant (WP 1-14);
   - digest-pinned Jury Forge images: until the release pipeline (WP 4-05), `build` makes
     `jury-forge:local` from the checkout.
-- **Caddy:** the Caddyfile is the minimum for WP 1-13. The `ask` endpoint arrives with WP 1-14;
-  until then `app` answers 404, so Caddy issues no certificate and `:443` refuses every handshake.
-  Health, metrics, and `/api/internal/*` answer 404 on the public listener.
+- **Caddy:** the Caddyfile is the minimum for WP 1-13. Health, metrics, and `/api/internal/*`
+  answer 404 on the public listener. WP 1-14 added the `ask` endpoint (below); with no origin it
+  refuses every name, so `:443` refuses every handshake.
 - **Setup listener:** `0.0.0.0:8080` inside the container, published on `127.0.0.1:8080` only. The
   other containers on `internal` can also reach it; the bootstrap token (WP 1-15) is what guards it
   from them.
@@ -346,14 +348,61 @@ Measured in the WP 1-13 smoke test:
 - After `down` and `up`: `migrate` applies 0, and the volume is kept.
 - A `SIGKILL`ed `app` is restarted by the restart policy.
 
+### The origin and TLS as built (WP 1-14, 2026-11-28)
+
+WP 1-14 is split (owner, 2026-11-28). The origin plumbing is built. The setup route that sets the
+origin waits for the bootstrap token (WP 1-15), and the `front` proof's GitHub calls wait for the
+App (WP 1-16). Until then the origin is set only by `PUBLIC_URL` (in `.env`; `compose.yaml` passes
+it to `app`).
+
+- **The origin:**
+  - `parseOrigin` (`domain`) accepts `https://<host>` only. It refuses, each with a typed reason:
+    `not_a_url`, `not_https`, `has_credentials`, `has_port` (including an explicit `:443`),
+    `has_path`, `ip_address` (DEP-10), and `not_public_name` (one label, `localhost`, non-LDH).
+  - It stores a canonical form: lowercase, punycode, no trailing dot or slash.
+  - The stored origin is the `origin` row of `instance_settings`: `{url, tls_mode}`, written with
+    a compare-and-set on `version`. Each write audits `origin.set`, `origin.changed`, or
+    `origin.tls_mode_set`, only for what changed.
+  - `PUBLIC_URL` freezes the URL, not the mode. An invalid `PUBLIC_URL` stops `app` at start.
+- **`ask`** (`GET /api/internal/tls/allow?domain=`):
+  - `200` only for the origin's host, case- and trailing-dot-insensitive, in `caddy` mode, within
+    5 approvals per 2 minutes;
+  - otherwise `403` (`not_configured`, `other_name`, `front_mode`) or `429` (`rate_limited`), and
+    `503` when the setting cannot be read;
+  - every decision is logged.
+- **`Host` pinning** on port 3000:
+  - every route except the internal ones answers `503 origin_unset` before an origin exists, and
+    `421 misdirected_request` for any other `Host`;
+  - `:443` and a trailing dot are accepted, and `X-Forwarded-Host` is ignored;
+  - internal routes (`/healthz`, `/readyz`, `ask`) skip pinning but answer `404` to any request
+    carrying forwarding headers (`Forwarded`, `X-Forwarded-*`, `Via`). Caddy adds them to
+    everything it proxies, so these routes cannot be reached through Caddy even if the Caddyfile
+    block on them were removed.
+- **Issuance check:** the app opens a TLS connection to `caddy:443` over the internal network, with
+  the origin as SNI. It verifies the chain against the public roots Node trusts, and the name.
+  - No hairpinning and no new egress (owner, 2026-11-28). The handshake also starts on-demand
+    issuance.
+  - Results are reused for 30 s while pending and 10 min once issued.
+- **`/readyz`:** its status code covers the process's own dependencies only. `origin` is a field in
+  the body (owner, 2026-11-28; `observability.md` §9):
+  - `origin_unset`, `tls_pending` (with the handshake's reason), `tls_issued` (issuer and expiry),
+    or `tls_front_unverified`;
+  - `tls_front` needs the ADR-0036 proof, which arrives with WP 1-16;
+  - an unreadable origin setting is `{state: "error"}`, and only then a 503.
+
+Checked end to end by `scripts/compose-smoke-test.sh` against Pebble, Let's Encrypt's test ACME
+server, which is test-only and not shipped:
+- the configured name gets a valid certificate, and another name fails the handshake;
+- another `Host` gets `421`, and `/readyz`, `/healthz`, `/metrics`, and `ask` answer `404` from
+  outside;
+- `/readyz` reports `tls_issued`.
+
 ### Reference `Caddyfile` (on-demand TLS for a runtime-configured origin)
 
 ```caddyfile
 {
     on_demand_tls {
-        ask http://app:3000/api/internal/tls/allow
-        interval 2m
-        burst 5
+        ask http://app:3000/api/internal/tls/allow   # the app limits approvals (ADR-0038)
     }
 }
 

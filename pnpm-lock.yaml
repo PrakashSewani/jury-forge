@@ -194,6 +194,9 @@ importers:
 
   apps/server:
     dependencies:
+      '@jury-forge/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
       '@jury-forge/pipeline':
         specifier: workspace:*
         version: link:../../packages/pipeline
@@ -253,6 +256,9 @@ importers:
       '@jury-forge/contracts':
         specifier: workspace:*
         version: link:../contracts
+      '@jury-forge/domain':
+        specifier: workspace:*
+        version: link:../domain
       graphile-worker:
         specifier: 0.18.0
         version: 0.18.0(supports-color@7.2.0)(typescript@7.0.2)
