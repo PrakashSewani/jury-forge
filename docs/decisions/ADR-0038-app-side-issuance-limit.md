@@ -1,6 +1,6 @@
 # ADR-0038: On-demand certificate issuance is rate-limited by the app alone
 
-- Status: proposed (2026-11-28; implemented in WP 1-14 before acceptance, see Consequences)
+- Status: accepted (owner, 2026-11-28; implemented in WP 1-14 just before acceptance, see Consequences)
 - Date: 2026-11-28
 - Owners: architecture + operations + security
 - Amends: ADR-0021 (the "TLS is on-demand" bullet: "issuance is rate-limited (Caddy interval/burst

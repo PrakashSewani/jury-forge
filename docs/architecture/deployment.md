@@ -83,7 +83,7 @@ The origin change is capped (3 per hour) and audited. Certificates are issued on
 configured host: Caddy's `on_demand_tls { ask … }` asks the app, which approves only that host and
 at most 5 times per 2 minutes, so an attacker cannot turn the instance into an ACME proxy. Caddy 2.11
 no longer has `interval` and `burst`, so the limit is the app's alone
-([ADR-0038](../decisions/ADR-0038-app-side-issuance-limit.md), proposed).
+([ADR-0038](../decisions/ADR-0038-app-side-issuance-limit.md), accepted 2026-11-28).
 
 Notes:
 

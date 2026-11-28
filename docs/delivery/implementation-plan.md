@@ -253,7 +253,7 @@ origin plumbing, and the origin is set only by `PUBLIC_URL` until WP 1-15.
     body;
   - the issuance check is a handshake to Caddy;
   - Pebble in CI proves the exit.
-- **ADR-0038 (proposed):** the issuance limit is the app's alone, 5 per 2 minutes, because Caddy
+- **ADR-0038 (accepted by the owner 2026-11-28):** the issuance limit is the app's alone, 5 per 2 minutes, because Caddy
   2.11 refuses `interval`.
 - **The exit:** `scripts/compose-smoke-test.sh` phase 2, with `PUBLIC_URL` set and Caddy pointed at
   Pebble:

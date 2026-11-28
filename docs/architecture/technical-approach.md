@@ -343,7 +343,7 @@ persisted result. Model access goes through our **provider gateway**, built on t
   to approve the configured domain (this fixes install-readiness blocker B2).
   *WP 1-14 (2026-11-28), as built:* the `ask` endpoint approves only the origin, in `caddy` mode, at
   most 5 times per 2 minutes. Caddy 2.11 has no `interval`/`burst`, so that limit is the app's alone
-  (ADR-0038, proposed). The app checks issuance with a TLS handshake to `caddy:443` over the
+  (ADR-0038, accepted 2026-11-28). The app checks issuance with a TLS handshake to `caddy:443` over the
   internal network. `deployment.md` §3, "The origin and TLS as built", has the details.
 - **Release bundle (ADR-0020):** a `.tar.gz` with `compose.yaml`, `Caddyfile`, `.env.example` and
   the `jury-forge` CLI, signed with **minisign** (ISC). Images are signed with **cosign keyless**

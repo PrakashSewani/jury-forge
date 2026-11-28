@@ -31,8 +31,7 @@ merged with green CI (PRs #13–#16). WP 1-12 (image) and WP 1-13 (Compose bundl
   validation, the "I terminate TLS in front" confirmation, and `TRUSTED_PROXIES`;
 - exit: unit and integration tests, and the key never appears in logs.
 
-**Waiting on the owner:** ADR-0038 (the app-side issuance limit) is `proposed`; WP 1-14 implements
-it.
+**Owner decision (2026-11-28):** ADR-0038 (the app-side issuance limit) is accepted.
 
 ### Landed this session (2026-11-28, WP 1-14 Caddy and origin)
 
@@ -53,7 +52,7 @@ it.
   - `Host` pinning (`421`, and `503 origin_unset`);
   - internal routes refuse proxied requests;
   - the TLS handshake check, and the origin state in `/readyz`.
-- **ADR-0038 (proposed):** Caddy 2.11 refuses `interval`, so the issuance limit is the app's alone.
+- **ADR-0038 (accepted 2026-11-28):** Caddy 2.11 refuses `interval`, so the issuance limit is the app's alone.
   ADR-0021 has a status-line pointer.
 - **The exit check:** the smoke test's Pebble phase. Renovate tracks the Pebble pin.
 - **Docs:**
